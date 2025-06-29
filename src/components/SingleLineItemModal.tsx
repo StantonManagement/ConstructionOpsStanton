@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
-import { LineItem } from './LineItemEditorModal';
+import { LineItem } from './LineItemEditor';
 
 interface SingleLineItemModalProps {
   open: boolean;
@@ -12,11 +12,11 @@ interface SingleLineItemModalProps {
 const defaultValues: LineItem = {
   itemNo: '',
   description: '',
-  scheduledValue: 0,
-  fromPrevious: 0,
-  thisPeriod: 0,
-  materialStored: 0,
-  percentGC: 0,
+  scheduledValue: '',
+  fromPrevious: '',
+  thisPeriod: '',
+  materialStored: '',
+  percentGC: '',
 };
 
 const SingleLineItemModal: React.FC<SingleLineItemModalProps> = ({ open, onClose, onSave, initialValues }) => {
@@ -38,7 +38,7 @@ const SingleLineItemModal: React.FC<SingleLineItemModalProps> = ({ open, onClose
     const newErrors: Record<string, string> = {};
     if (!form.itemNo) newErrors.itemNo = 'Item number is required';
     if (!form.description) newErrors.description = 'Description is required';
-    if (isNaN(form.scheduledValue) || form.scheduledValue < 0) newErrors.scheduledValue = 'Must be a positive number';
+    if (isNaN(Number(form.scheduledValue)) || Number(form.scheduledValue) < 0) newErrors.scheduledValue = 'Must be a positive number';
     return newErrors;
   };
 
@@ -48,7 +48,7 @@ const SingleLineItemModal: React.FC<SingleLineItemModalProps> = ({ open, onClose
   };
 
   const handleNumberChange = (field: keyof LineItem) => (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm(prev => ({ ...prev, [field]: Number(e.target.value) }));
+    setForm(prev => ({ ...prev, [field]: e.target.value }));
     if (errors[field]) setErrors(prev => ({ ...prev, [field]: '' }));
   };
 
