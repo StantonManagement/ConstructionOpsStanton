@@ -9,7 +9,7 @@ const QUESTIONS = [
   'What percent complete is your work for this period?',
   'Have you uploaded all required photos? (YES/NO)',
   'Is a lien waiver required? (YES/NO)',
-  'Any notes for the PM?'
+  'Any notes for the Project Manager?'
 ];
 
 export async function POST(req: NextRequest) {
@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
         .update({ status: 'submitted' })
         .eq('id', conv.payment_app_id);
       console.log('Update to completed result:', updateError1, updateError2);
-      twiml.message('Thank you! Your payment application is submitted for PM review.');
+      twiml.message('Thank you! Your payment application is submitted for Project Manager review.');
     }
   } else {
     twiml.message('This payment application conversation is already complete.');

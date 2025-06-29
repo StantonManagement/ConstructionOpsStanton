@@ -2,7 +2,7 @@
 // PUT: Update line item percentages and photos
 export async function GET() {
   // TODO: Implement logic
-  return Response.json({ message: 'Payment app data for PM verification' });
+  return Response.json({ message: 'Payment app data for Project Manager verification' });
 }
 
 export async function PUT() {
