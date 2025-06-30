@@ -84,12 +84,14 @@ export async function POST(req: NextRequest) {
       // Update percent_completed for the current line item
       const lineItemId = lineItems[idx].id;
       const percent = parseFloat(body);
-      if (!isNaN(percent)) {
-        await supabase
-          .from('project_line_items')
-          .update({ percent_completed: percent })
-          .eq('id', lineItemId);
+      if (isNaN(percent) || percent < 0 || percent > 100) {
+        twiml.message('Please reply with a valid percent (0-100).');
+        return new Response(twiml.toString(), { headers: { 'Content-Type': 'text/xml' } });
       }
+      await supabase
+        .from('project_line_items')
+        .update({ percent_completed: percent })
+        .eq('id', lineItemId);
     }
 
     idx++;
