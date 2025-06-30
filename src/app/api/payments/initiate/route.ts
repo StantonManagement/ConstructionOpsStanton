@@ -49,7 +49,18 @@ export async function POST(req: NextRequest) {
         continue;
       }
 
-      // Create payment_sms_conversations
+      // Fetch project line items for this contractor and project
+      const { data: lineItems, error: lineItemsError } = await supabase
+        .from('project_line_items')
+        .select('id, description')
+        .eq('project_id', projectId)
+        .eq('contractor_id', contractor.id);
+      if (lineItemsError) {
+        results.push({ contractorId: contractor.id, error: 'Failed to fetch line items' });
+        continue;
+      }
+
+      // Create payment_sms_conversations with line_items
       const { error: smsConvError } = await supabase
         .from('payment_sms_conversations')
         .insert({
@@ -57,6 +68,7 @@ export async function POST(req: NextRequest) {
           contractor_phone: contractor.phone,
           conversation_state: 'awaiting_start',
           responses: [],
+          line_items: lineItems || [],
         });
       if (smsConvError) {
         results.push({ contractorId: contractor.id, error: 'Failed to create sms conversation' });
