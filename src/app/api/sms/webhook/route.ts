@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
         .update({ conversation_state: 'in_progress', current_question_index: 0 })
         .eq('id', conv.id);
       if (numLineItems > 0) {
-        twiml.message(`What percent complete is your work for: ${lineItems[0].description}?`);
+        twiml.message(`What percent complete is your work for: ${lineItems[0].description_of_work}?`);
       } else {
         // If no line items, skip to additional questions
         twiml.message(ADDITIONAL_QUESTIONS[0]);
@@ -97,7 +97,7 @@ export async function POST(req: NextRequest) {
 
     if (idx < numLineItems) {
       // Ask next line item question
-      nextQuestion = `What percent complete is your work for: ${lineItems[idx].description}?`;
+      nextQuestion = `What percent complete is your work for: ${lineItems[idx].description_of_work}?`;
     } else if (idx - numLineItems < ADDITIONAL_QUESTIONS.length) {
       // Ask additional questions
       nextQuestion = ADDITIONAL_QUESTIONS[idx - numLineItems];
