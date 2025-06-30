@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
 
       // Send SMS via Twilio
       if (contractor.phone && TWILIO_PHONE_NUMBER) {
-        const message = `${contractor.name} payment app for ${project.name}. Ready for 4 quick questions? Reply YES to start.`;
+        const message = `${contractor.name} payment app for ${project.name}. Ready for some quick questions? Reply YES to start.`;
         try {
           await twilioClient.messages.create({
             body: message,
