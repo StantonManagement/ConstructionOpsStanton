@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
       // Fetch project line items for this contractor and project
       const { data: lineItems, error: lineItemsError } = await supabase
         .from('project_line_items')
-        .select('id, description')
+        .select('id, description_of_work')
         .eq('project_id', projectId)
         .eq('contractor_id', contractor.id);
       if (lineItemsError) {
