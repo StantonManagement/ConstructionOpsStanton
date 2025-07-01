@@ -16,7 +16,8 @@ const OverviewView: React.FC = () => {
             </div>
             <div className="bg-white rounded-lg border shadow-sm p-4">
                  <h3 className="text-lg font-semibold text-gray-900 mb-4">📋 Decisions Queue</h3>
-                 <p className="text-sm text-gray-500">High-priority items needing attention.</p>
+                 <p className="text-sm text-black">High-priority items needing attention.</p>
+                 <p className="text-xs text-black mt-2">(Project cards now show a budget usage tracker.)</p>
                  {/* This would be populated from data */}
             </div>
         </div>
