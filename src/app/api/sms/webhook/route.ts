@@ -52,8 +52,6 @@ export async function POST(req: NextRequest) {
 
   // Define additional questions after line items
   const ADDITIONAL_QUESTIONS = [
-    'Have you uploaded all required photos? (YES/NO)',
-    'Is a lien waiver required? (YES/NO)',
     'Any notes for the Project Manager?'
   ];
 
