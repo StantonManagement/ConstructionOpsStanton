@@ -1,5 +1,5 @@
-import docusign from 'docusign-esign';
 import { createClient } from '@supabase/supabase-js';
+import fetch from 'node-fetch';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -14,53 +14,52 @@ export default async function handler(req, res) {
   const { data: paymentApp } = await supabase.from('payment_applications').select('*').eq('id', paymentAppId).single();
   const { data: contractor } = await supabase.from('contractors').select('*').eq('id', paymentApp.contractor_id).single();
 
-  // 2. Download PDF buffer (fetch from storage)
+  // 2. Download PDF buffer
   const pdfRes = await fetch(doc.url);
-  const pdfBuffer = await pdfRes.arrayBuffer();
+  const pdfBuffer = await pdfRes.buffer();
 
-  // 3. Set up DocuSign envelope
-  const apiClient = new docusign.ApiClient();
-  apiClient.setBasePath('https://demo.docusign.net/restapi');
-  apiClient.addDefaultHeader('Authorization', 'Bearer ' + process.env.DOCUSIGN_ACCESS_TOKEN);
+  // 3. Upload PDF to PDFfiller
+  const uploadRes = await fetch('https://api.pdffiller.com/v2.0/filled-forms', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${process.env.PDFFILLER_ACCESS_TOKEN}`,
+      'Content-Type': 'application/pdf',
+    },
+    body: pdfBuffer,
+  });
+  const uploadData = await uploadRes.json();
 
-  const envelopeDefinition = {
-    emailSubject: 'Please sign the payment application',
-    documents: [
-      {
-        documentBase64: Buffer.from(pdfBuffer).toString('base64'),
-        name: 'Payment Application.pdf',
-        fileExtension: 'pdf',
-        documentId: '1',
-      },
-    ],
-    recipients: {
+  if (!uploadRes.ok) {
+    res.status(500).json({ error: 'Failed to upload PDF to PDFfiller', details: uploadData });
+    return;
+  }
+
+  // 4. Send signature request (example, see PDFfiller API docs for exact endpoint and payload)
+  // This is a placeholder; you may need to adjust the endpoint and payload
+  const signatureRes = await fetch(`https://api.pdffiller.com/v2.0/signature-requests`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${process.env.PDFFILLER_ACCESS_TOKEN}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      document_id: uploadData.id, // or uploadData.document_id, depending on API response
       signers: [
         {
           email: contractor.email,
           name: contractor.name,
-          recipientId: '1',
-          routingOrder: '1',
-          tabs: {},
-        },
+          // You may need to specify fields or roles depending on your PDFfiller template
+        }
       ],
-    },
-    status: 'sent',
-  };
+      // Add any other required fields per PDFfiller API
+    }),
+  });
+  const signatureData = await signatureRes.json();
 
-  // 4. Send envelope
-  const envelopesApi = new docusign.EnvelopesApi(apiClient);
-  const accountId = process.env.DOCUSIGN_ACCOUNT_ID;
-  if (!accountId) {
-    res.status(500).json({ error: 'DOCUSIGN_ACCOUNT_ID is not set in environment variables.' });
+  if (!signatureRes.ok) {
+    res.status(500).json({ error: 'Failed to send signature request via PDFfiller', details: signatureData });
     return;
   }
-  const results = await envelopesApi.createEnvelope(accountId, { envelopeDefinition });
 
-  // 5. Save envelope ID to payment_documents
-  await supabase.from('payment_documents').update({
-    docusign_envelope_id: results.envelopeId,
-    status: 'sent_for_signature',
-  }).eq('id', doc.id);
-
-  res.status(200).json({ envelopeId: results.envelopeId });
+  res.status(200).json({ message: 'PDF sent for signature via PDFfiller', signatureData });
 } 
