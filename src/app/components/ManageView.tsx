@@ -904,7 +904,7 @@ const ManageView: React.FC = () => {
           aria-label="Add Vendor"
         >
           <UserPlus className="w-5 h-5" />
-          Add Vendor
+          Add Subcontractor
         </button>
         <button
           onClick={() => handleOpenForm('contract')}

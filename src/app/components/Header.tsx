@@ -1,7 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Clock } from 'lucide-react';
 
-const Header: React.FC = () => {
+interface HeaderProps {
+  onShowProfile: () => void;
+  onLogout: () => void;
+}
+
+const Header: React.FC<HeaderProps> = ({ onShowProfile, onLogout }) => {
   const [time, setTime] = useState<string>("");
 
   useEffect(() => {
@@ -25,7 +30,19 @@ const Header: React.FC = () => {
               <Clock className="w-4 h-4 inline mr-1" />
               Last updated: {time}
             </div>
-            <div className="w-8 h-8 bg-gray-300 rounded-full"></div>
+            <button
+              className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center hover:bg-gray-400 focus:outline-none"
+              title="Profile"
+              onClick={onShowProfile}
+            >
+              <span className="text-gray-700 font-bold">👤</span>
+            </button>
+            <button
+              className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 text-sm"
+              onClick={onLogout}
+            >
+              Logout
+            </button>
           </div>
         </div>
       </div>

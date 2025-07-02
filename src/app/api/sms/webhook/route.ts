@@ -90,6 +90,31 @@ export async function POST(req: NextRequest) {
         .from('project_line_items')
         .update({ percent_completed: percent })
         .eq('id', lineItemId);
+
+      // Update payment_line_item_progress.this_period using the formula
+      // this_period = round((percent_gc / 100) * scheduled_value - previous_value, 0)
+      // Fetch the latest project_line_item and payment_line_item_progress
+      const { data: pli } = await supabase
+        .from('project_line_items')
+        .select('id, percent_gc, scheduled_value')
+        .eq('id', lineItemId)
+        .single();
+      const { data: plip } = await supabase
+        .from('payment_line_item_progress')
+        .select('id, previous_value')
+        .eq('payment_app_id', conv.payment_app_id)
+        .eq('line_item_id', lineItemId)
+        .single();
+      const percentGC = Number(pli?.percent_gc) || 0;
+      const scheduledValue = Number(pli?.scheduled_value) || 0;
+      const previousValue = Number(plip?.previous_value) || 0;
+      const thisPeriod = Math.round((percentGC / 100) * scheduledValue - previousValue);
+      if (plip?.id) {
+        await supabase
+          .from('payment_line_item_progress')
+          .update({ this_period: thisPeriod })
+          .eq('id', plip.id);
+      }
     }
 
     idx++;
