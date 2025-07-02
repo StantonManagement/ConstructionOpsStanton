@@ -413,7 +413,7 @@ export default function PMDashboard() {
   // Add sendForSignature handler (placeholder)
   async function sendForSignature(paymentAppId: number) {
     // Call the new Node.js API route to send for signature via PDFfiller
-    const res = await fetch(`/api/payments/${paymentAppId}/send-docusign.js?id=${paymentAppId}`, { method: 'POST' });
+    const res = await fetch(`/api/payments/send-docusign.js?id=${paymentAppId}`, { method: 'POST' });
     if (!res.ok) {
       const data = await res.json();
       alert('Failed to send for signature (PDFfiller): ' + (data.error || res.statusText));
