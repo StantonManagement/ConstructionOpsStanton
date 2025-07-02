@@ -412,8 +412,13 @@ export default function PMDashboard() {
 
   // Add sendForSignature handler (placeholder)
   async function sendForSignature(paymentAppId: number) {
-    // Call your API route to send for signature
-    await fetch(`/api/payments/${paymentAppId}/send-docusign`, { method: 'POST' });
+    // Call the new Node.js API route to send for signature
+    const res = await fetch(`/api/payments/${paymentAppId}/send-docusign.js?id=${paymentAppId}`, { method: 'POST' });
+    if (!res.ok) {
+      const data = await res.json();
+      alert('Failed to send for signature: ' + (data.error || res.statusText));
+      return;
+    }
     alert('Sent for signature!');
   }
 
