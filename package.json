@@ -9,7 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.50.0",
+    "@supabase/supabase-js": "^2.50.2",
     "aws-sdk": "^2.1692.0",
     "docusign-esign": "^8.2.0",
     "lucide-react": "^0.518.0",
