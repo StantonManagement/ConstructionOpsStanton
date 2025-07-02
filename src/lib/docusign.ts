@@ -1,3 +1,5 @@
+// PDFfiller is now used for e-signature integration. This file is deprecated.
+
 // Lien waiver e-signatures with DocuSign
 // TODO: Implement DocuSign integration
 
