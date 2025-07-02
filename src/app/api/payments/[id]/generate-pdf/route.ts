@@ -5,11 +5,9 @@ import puppeteer from 'puppeteer';
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
-export async function POST(
-  req: NextRequest,
-  context: { params: { id: string } }
-) {
-  const paymentAppId = parseInt(context.params.id, 10);
+// @ts-ignore
+export async function POST(req: NextRequest, { params }) {
+  const paymentAppId = parseInt(params.id, 10);
 
   // 1. Fetch all required data
   const { data: paymentApp } = await supabase.from('payment_applications').select('*').eq('id', paymentAppId).single();
