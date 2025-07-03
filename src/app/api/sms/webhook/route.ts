@@ -147,6 +147,22 @@ export async function POST(req: NextRequest) {
       .eq('id', conv.id);
 
     if (finished) {
+      // Calculate total current payment for this application
+      const { data: progressRows } = await supabase
+        .from('payment_line_item_progress')
+        .select('this_period')
+        .eq('payment_app_id', conv.payment_app_id);
+
+      const totalCurrentPayment = (progressRows || []).reduce(
+        (sum, row) => sum + (Number(row.this_period) || 0),
+        0
+      );
+
+      await supabase
+        .from('payment_applications')
+        .update({ current_payment: totalCurrentPayment })
+        .eq('id', conv.payment_app_id);
+
       twiml.message('Thank you! Your payment application is submitted for Project Manager review.');
     } else {
       twiml.message(nextQuestion);

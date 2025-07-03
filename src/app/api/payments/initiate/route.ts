@@ -60,6 +60,28 @@ export async function POST(req: NextRequest) {
         continue;
       }
 
+      // Create payment_line_item_progress records for each line item
+      if (lineItems && lineItems.length > 0) {
+        const progressRecords = lineItems.map((li) => ({
+          payment_app_id: paymentApp.id,
+          line_item_id: li.id,
+          submitted_percent: 0,
+          pm_verified_percent: 0,
+          previous_percent: 0,
+          this_period_percent: 0,
+          calculated_amount: 0,
+          pm_adjustment_reason: null,
+          verification_photos_count: 0,
+        }));
+        const { error: progressError } = await supabase
+          .from('payment_line_item_progress')
+          .insert(progressRecords);
+        if (progressError) {
+          results.push({ contractorId: contractor.id, error: 'Failed to create line item progress records' });
+          continue;
+        }
+      }
+
       // Create payment_sms_conversations with line_items
       const { error: smsConvError } = await supabase
         .from('payment_sms_conversations')

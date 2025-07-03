@@ -142,7 +142,7 @@ function PaymentAppCard({ application, onVerify, getDocumentForApp, sendForSigna
         </div>
       </div>
       {doc && (
-        <div className="flex gap-2 mt-2">
+        <div className="flex flex-col gap-2 mt-2">
           <a
             href={doc.url}
             target="_blank"
@@ -151,6 +151,13 @@ function PaymentAppCard({ application, onVerify, getDocumentForApp, sendForSigna
           >
             Review PDF
           </a>
+          <iframe
+            src={doc.url}
+            width="100%"
+            height="400px"
+            style={{ border: "1px solid #ccc", borderRadius: "8px" }}
+            title="Payment Request PDF Preview"
+          />
           <button
             onClick={() => sendForSignature(application.id)}
             className="bg-blue-600 text-white px-3 py-1 rounded text-sm"
@@ -419,12 +426,12 @@ export default function PMDashboard() {
       alert('Failed to send for signature (PDFfiller): ' + (data.error || res.statusText));
       return;
     }
-    alert('Sent for signature via PDFfiller!');
+    alert('Payment request sent successfully');
   }
 
   const handleVerifyPayment = (paymentAppId: number) => {
     // Navigate to verification page
-    window.location.href = `/dashboard/payments/${paymentAppId}/verify`;
+    window.location.href = `/payments/${paymentAppId}/verify`;
   };
 
   const handleCreatePaymentApps = async (projectId: number) => {
