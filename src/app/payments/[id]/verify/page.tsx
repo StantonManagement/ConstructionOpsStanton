@@ -142,6 +142,13 @@ export default function PaymentVerificationPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8">
+      <button
+        type="button"
+        onClick={() => router.back()}
+        className="mb-4 flex items-center gap-2 px-4 py-2 border border-gray-300 rounded hover:bg-gray-100 text-gray-800"
+      >
+        <span className="text-lg">←</span> Back
+      </button>
       <div className="max-w-4xl mx-auto bg-white rounded-lg shadow p-6">
         <h1 className="text-2xl font-bold mb-2 text-gray-900">Review Payment Application</h1>
         <div className="mb-4 text-gray-800">
@@ -171,18 +178,18 @@ export default function PaymentVerificationPage() {
           </div>
         )}
         <div className="mb-6">
-          <h2 className="font-semibold mb-2">Line Items</h2>
+          <h2 className="font-semibold mb-2 text-black">Line Items</h2>
           <div className="overflow-x-auto">
-            <table className="min-w-full border text-sm">
+            <table className="min-w-full border text-sm text-black">
               <thead>
                 <tr>
-                  <th className="border px-2 py-1">#</th>
-                  <th className="border px-2 py-1">Description of Work</th>
-                  <th className="border px-2 py-1">Scheduled Value</th>
-                  <th className="border px-2 py-1">Previous %</th>
-                  <th className="border px-2 py-1">This Period %</th>
-                  <th className="border px-2 py-1">Total %</th>
-                  <th className="border px-2 py-1">Current Payment</th>
+                  <th className="border px-2 py-1 text-black">#</th>
+                  <th className="border px-2 py-1 text-black">Description of Work</th>
+                  <th className="border px-2 py-1 text-black">Scheduled Value</th>
+                  <th className="border px-2 py-1 text-black">Previous %</th>
+                  <th className="border px-2 py-1 text-black">This Period %</th>
+                  <th className="border px-2 py-1 text-black">Total %</th>
+                  <th className="border px-2 py-1 text-black">Current Payment</th>
                 </tr>
               </thead>
               <tbody>
@@ -192,14 +199,14 @@ export default function PaymentVerificationPage() {
                   </tr>
                 ) : (
                   lineItems.map((lip, idx) => (
-                    <tr key={lip.id || idx}>
-                      <td className="border px-2 py-1">{idx + 1}</td>
-                      <td className="border px-2 py-1">{lip.line_item?.description_of_work || "-"}</td>
-                      <td className="border px-2 py-1">{lip.line_item?.scheduled_value || "-"}</td>
-                      <td className="border px-2 py-1">{lip.previous_percent || "-"}</td>
-                      <td className="border px-2 py-1">{lip.percent_gc || "-"}</td>
-                      <td className="border px-2 py-1">{lip.submitted_percent || "-"}</td>
-                      <td className="border px-2 py-1">{lip.this_period || "-"}</td>
+                    <tr key={lip.id || idx} className="text-black">
+                      <td className="border px-2 py-1 text-black">{idx + 1}</td>
+                      <td className="border px-2 py-1 text-black">{lip.line_item?.description_of_work || "-"}</td>
+                      <td className="border px-2 py-1 text-black">{lip.line_item?.scheduled_value || "-"}</td>
+                      <td className="border px-2 py-1 text-black">{lip.previous_percent || "-"}</td>
+                      <td className="border px-2 py-1 text-black">{lip.percent_gc || "-"}</td>
+                      <td className="border px-2 py-1 text-black">{lip.submitted_percent || "-"}</td>
+                      <td className="border px-2 py-1 text-black">{lip.this_period || "-"}</td>
                     </tr>
                   ))
                 )}

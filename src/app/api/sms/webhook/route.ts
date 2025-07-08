@@ -63,7 +63,21 @@ export async function POST(req: NextRequest) {
         .update({ conversation_state: 'in_progress', current_question_index: 0 })
         .eq('id', conv.id);
       if (numLineItems > 0) {
-        twiml.message(`What percent complete is your work for: ${lineItems[0].description_of_work}?`);
+        // Fetch previous percent for this line item
+        let previousPercent = null;
+        try {
+          const { data: plip } = await supabase
+            .from('payment_line_item_progress')
+            .select('previous_percent')
+            .eq('payment_app_id', conv.payment_app_id)
+            .eq('line_item_id', lineItems[0].id)
+            .single();
+          previousPercent = plip?.previous_percent;
+        } catch (e) {
+          previousPercent = null;
+        }
+        const prevText = previousPercent !== null && previousPercent !== undefined ? ` (previous: ${previousPercent}%)` : '';
+        twiml.message(`What percent complete is your work for: ${lineItems[0].description_of_work}?${prevText}`);
       } else {
         // If no line items, skip to additional questions
         twiml.message(ADDITIONAL_QUESTIONS[0]);
@@ -79,50 +93,21 @@ export async function POST(req: NextRequest) {
     let finished = false;
 
     if (idx < numLineItems) {
-      // Update percent_completed for the current line item
-      const lineItemId = lineItems[idx].id;
-      const percent = parseFloat(body);
-      if (isNaN(percent) || percent < 0 || percent > 100) {
-        twiml.message('Please reply with a valid percent (0-100).');
-        return new Response(twiml.toString(), { headers: { 'Content-Type': 'text/xml' } });
-      }
-      await supabase
-        .from('project_line_items')
-        .update({ percent_completed: percent })
-        .eq('id', lineItemId);
-
-      // Update payment_line_item_progress.this_period using the formula
-      // this_period = round((percent_gc / 100) * scheduled_value - previous_value, 0)
-      // Fetch the latest project_line_item and payment_line_item_progress
-      const { data: pli } = await supabase
-        .from('project_line_items')
-        .select('id, percent_gc, scheduled_value')
-        .eq('id', lineItemId)
-        .single();
-      const { data: plip } = await supabase
-        .from('payment_line_item_progress')
-        .select('id, previous_value')
-        .eq('payment_app_id', conv.payment_app_id)
-        .eq('line_item_id', lineItemId)
-        .single();
-      const percentGC = Number(pli?.percent_gc) || 0;
-      const scheduledValue = Number(pli?.scheduled_value) || 0;
-      const previousValue = Number(plip?.previous_value) || 0;
-      const thisPeriod = Math.round((percentGC / 100) * scheduledValue - previousValue);
-      if (plip?.id) {
-        await supabase
+      // Ask next line item question, include previous percent
+      let previousPercent = null;
+      try {
+        const { data: plip } = await supabase
           .from('payment_line_item_progress')
-          .update({ this_period: thisPeriod })
-          .eq('id', plip.id);
+          .select('previous_percent')
+          .eq('payment_app_id', conv.payment_app_id)
+          .eq('line_item_id', lineItems[idx].id)
+          .single();
+        previousPercent = plip?.previous_percent;
+      } catch (e) {
+        previousPercent = null;
       }
-    }
-
-    idx++;
-    updateObj.current_question_index = idx;
-
-    if (idx < numLineItems) {
-      // Ask next line item question
-      nextQuestion = `What percent complete is your work for: ${lineItems[idx].description_of_work}?`;
+      const prevText = previousPercent !== null && previousPercent !== undefined ? ` (previous: ${previousPercent}%)` : '';
+      nextQuestion = `What percent complete is your work for: ${lineItems[idx].description_of_work}?${prevText}`;
     } else if (idx - numLineItems < ADDITIONAL_QUESTIONS.length) {
       // Ask additional questions
       nextQuestion = ADDITIONAL_QUESTIONS[idx - numLineItems];
