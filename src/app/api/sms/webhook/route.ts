@@ -94,73 +94,69 @@ export async function POST(req: NextRequest) {
         .eq('line_item_id', lineItemId)
         .single();
 
-      // Move current this_period to from_previous_application
-      if (plip?.id) {
-        await supabase
-          .from('payment_line_item_progress')
-          .update({ from_previous_application: plip.this_period })
-          .eq('id', plip.id);
-      }
-
       // Calculate new this_period
-      // If you want to use percent_gc, scheduled_value, etc., adjust here
       let scheduledValue = Number(plip?.scheduled_value) || 0;
       let thisPeriod = Math.round((percent / 100) * scheduledValue);
+      // Move current this_period to from_previous_application and update percent
       if (plip?.id) {
         await supabase
           .from('payment_line_item_progress')
-          .update({ this_period: thisPeriod })
+          .update({ 
+            from_previous_application: plip.this_period,
+            this_period: thisPeriod,
+            submitted_percent: percent // Save replied percent
+          })
           .eq('id', plip.id);
       }
-    }
 
-    idx++;
-    updateObj.current_question_index = idx;
+      idx++;
+      updateObj.current_question_index = idx;
 
-    if (idx < numLineItems) {
-      nextQuestion = `What percent complete is your work for: ${lineItems[idx].description_of_work}?`;
-    } else if (idx - numLineItems < ADDITIONAL_QUESTIONS.length) {
-      nextQuestion = ADDITIONAL_QUESTIONS[idx - numLineItems];
-    } else {
-      // Conversation complete
-      updateObj = {
-        ...updateObj,
-        current_question_index: idx,
-        conversation_state: 'completed',
-        completed_at: new Date().toISOString(),
-      };
-      await supabase
-        .from('payment_applications')
-        .update({ status: 'submitted' })
-        .eq('id', conv.payment_app_id);
-      finished = true;
-    }
-
-    await supabase
-      .from('payment_sms_conversations')
-      .update(updateObj)
-      .eq('id', conv.id);
-
-    if (finished) {
-      // Calculate total current payment for this application
-      const { data: progressRows } = await supabase
-        .from('payment_line_item_progress')
-        .select('this_period')
-        .eq('payment_app_id', conv.payment_app_id);
-
-      const totalCurrentPayment = (progressRows || []).reduce(
-        (sum, row) => sum + (Number(row.this_period) || 0),
-        0
-      );
+      if (idx < numLineItems) {
+        nextQuestion = `What percent complete is your work for: ${lineItems[idx].description_of_work}?`;
+      } else if (idx - numLineItems < ADDITIONAL_QUESTIONS.length) {
+        nextQuestion = ADDITIONAL_QUESTIONS[idx - numLineItems];
+      } else {
+        // Conversation complete
+        updateObj = {
+          ...updateObj,
+          current_question_index: idx,
+          conversation_state: 'completed',
+          completed_at: new Date().toISOString(),
+        };
+        await supabase
+          .from('payment_applications')
+          .update({ status: 'submitted' })
+          .eq('id', conv.payment_app_id);
+        finished = true;
+      }
 
       await supabase
-        .from('payment_applications')
-        .update({ current_payment: totalCurrentPayment })
-        .eq('id', conv.payment_app_id);
+        .from('payment_sms_conversations')
+        .update(updateObj)
+        .eq('id', conv.id);
 
-      twiml.message('Thank you! Your payment application is submitted for Project Manager review.');
-    } else {
-      twiml.message(nextQuestion);
+      if (finished) {
+        // Calculate total current payment for this application
+        const { data: progressRows } = await supabase
+          .from('payment_line_item_progress')
+          .select('this_period')
+          .eq('payment_app_id', conv.payment_app_id);
+
+        const totalCurrentPayment = (progressRows || []).reduce(
+          (sum, row) => sum + (Number(row.this_period) || 0),
+          0
+        );
+
+        await supabase
+          .from('payment_applications')
+          .update({ current_payment: totalCurrentPayment })
+          .eq('id', conv.payment_app_id);
+
+        twiml.message('Thank you! Your payment application is submitted for Project Manager review.');
+      } else {
+        twiml.message(nextQuestion);
+      }
     }
   } else {
     twiml.message('This payment application conversation is already complete.');
