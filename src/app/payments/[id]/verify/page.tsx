@@ -203,10 +203,10 @@ export default function PaymentVerificationPage() {
                       <td className="border px-2 py-1 text-black">{idx + 1}</td>
                       <td className="border px-2 py-1 text-black">{lip.line_item?.description_of_work || "-"}</td>
                       <td className="border px-2 py-1 text-black">{lip.line_item?.scheduled_value || "-"}</td>
-                      <td className="border px-2 py-1 text-black">{lip.previous_percent || "-"}</td>
-                      <td className="border px-2 py-1 text-black">{lip.percent_gc || "-"}</td>
-                      <td className="border px-2 py-1 text-black">{lip.submitted_percent || "-"}</td>
-                      <td className="border px-2 py-1 text-black">{lip.this_period || "-"}</td>
+                      <td className="border px-2 py-1 text-black">{lip.line_item?.from_previous_application || "-"}</td>
+                      <td className="border px-2 py-1 text-black">{lip.line_item?.percent_gc || "-"}</td>
+                      <td className="border px-2 py-1 text-black">{lip.line_item?.percent_completed || "-"}</td>
+                      <td className="border px-2 py-1 text-black">{lip.line_item?.this_period || "-"}</td>
                     </tr>
                   ))
                 )}

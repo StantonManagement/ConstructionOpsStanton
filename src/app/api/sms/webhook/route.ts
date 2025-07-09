@@ -93,6 +93,28 @@ export async function POST(req: NextRequest) {
     let finished = false;
 
     if (idx < numLineItems) {
+      // --- NEW LOGIC: Update payment_line_item_progress with replied percent ---
+      const lineItemId = lineItems[idx].id;
+      const repliedPercent = Number(body);
+      if (!isNaN(repliedPercent)) {
+        // Fetch current this_period
+        const { data: plip, error: plipError } = await supabase
+          .from('payment_line_item_progress')
+          .select('this_period')
+          .eq('payment_app_id', conv.payment_app_id)
+          .eq('line_item_id', lineItemId)
+          .single();
+        const prevThisPeriod = plip?.this_period ?? null;
+        // Update: move this_period to from_previous_application, set this_period to repliedPercent
+        await supabase
+          .from('payment_line_item_progress')
+          .update({
+            from_previous_application: prevThisPeriod,
+            this_period: repliedPercent
+          })
+          .eq('payment_app_id', conv.payment_app_id)
+          .eq('line_item_id', lineItemId);
+      }
       // Ask next line item question, include previous percent
       let previousPercent = null;
       try {
