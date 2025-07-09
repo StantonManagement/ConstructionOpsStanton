@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
       let thisPeriod = Math.round((percent / 100) * scheduledValue);
       // Move current this_period to from_previous_application and update percent
       if (plip?.id) {
-        await supabase
+        const { error: progressError } = await supabase
           .from('payment_line_item_progress')
           .update({ 
             from_previous_application: plip.this_period,
@@ -107,6 +107,14 @@ export async function POST(req: NextRequest) {
             submitted_percent: percent // Save replied percent
           })
           .eq('id', plip.id);
+        if (progressError) {
+          console.error('Failed to update payment_line_item_progress:', progressError.message);
+        }
+        // Optionally, also update project_line_items.percent_completed for visibility
+        await supabase
+          .from('project_line_items')
+          .update({ percent_completed: percent })
+          .eq('id', lineItemId);
       }
 
       idx++;
