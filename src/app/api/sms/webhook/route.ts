@@ -115,13 +115,29 @@ export async function POST(req: NextRequest) {
         console.log('Progress update result:', progressUpdate, 'Error:', progressError);
         // Optionally, also update project_line_items.percent_completed for visibility
         console.log('Updating project_line_items.percent_completed, this_period, and amount_for_this_period for line_item_id:', lineItemId);
-        const amountForThisPeriod = scheduledValue * (percent / 100);
+        // Ensure percent and scheduledValue are numbers and percent is divided by 100
+        const percentFloat = Number(percent);
+        const scheduledValueFloat = Number(scheduledValue);
+        const amountForThisPeriod = parseFloat((scheduledValueFloat * (percentFloat / 100)).toFixed(2));
+        console.log('Calculated amount_for_this_period:', amountForThisPeriod, 'scheduledValue:', scheduledValueFloat, 'percent:', percentFloat);
+        // Fetch the current project_line_item to get the previous this_period (percent)
+        const { data: currentPLI, error: currentPLIError } = await supabase
+          .from('project_line_items')
+          .select('this_period')
+          .eq('id', lineItemId)
+          .single();
+        const previousThisPeriod = Number(currentPLI?.this_period) || 0;
+        // Calculate percent_total as the sum of from_previous_application and this_period
+        const percentTotal = previousThisPeriod + percentFloat;
+        // Update project_line_items with new values and set from_previous_application and percent_total
         const { data: pliUpdate, error: pliError } = await supabase
           .from('project_line_items')
           .update({ 
-            percent_completed: percent,
-            this_period: percent,
-            amount_for_this_period: amountForThisPeriod
+            percent_completed: percentFloat,
+            this_period: percentFloat,
+            amount_for_this_period: amountForThisPeriod,
+            from_previous_application: previousThisPeriod,
+            percent_total: percentTotal
           })
           .eq('id', lineItemId)
           .select();
