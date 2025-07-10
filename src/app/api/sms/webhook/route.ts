@@ -115,29 +115,34 @@ export async function POST(req: NextRequest) {
         console.log('Progress update result:', progressUpdate, 'Error:', progressError);
         // Optionally, also update project_line_items.percent_completed for visibility
         console.log('Updating project_line_items.percent_completed, this_period, and amount_for_this_period for line_item_id:', lineItemId);
-        // Ensure percent and scheduledValue are numbers and percent is divided by 100
-        const percentFloat = Number(percent);
-        const scheduledValueFloat = Number(scheduledValue);
-        const amountForThisPeriod = parseFloat((scheduledValueFloat * (percentFloat / 100)).toFixed(2));
-        console.log('Calculated amount_for_this_period:', amountForThisPeriod, 'scheduledValue:', scheduledValueFloat, 'percent:', percentFloat);
-        // Fetch the current project_line_item to get the previous this_period (percent)
+        // Find the previous payment_app_id for this line_item_id
+        const { data: prevProgress, error: prevProgressError } = await supabase
+          .from('payment_line_item_progress')
+          .select('submitted_percent, payment_app_id')
+          .eq('line_item_id', lineItemId)
+          .lt('payment_app_id', conv.payment_app_id)
+          .order('payment_app_id', { ascending: false })
+          .limit(1)
+          .single();
+        const previousSubmittedPercent = Number(prevProgress?.submitted_percent) || 0;
+        // Fetch scheduled_value for calculation
         const { data: currentPLI, error: currentPLIError } = await supabase
           .from('project_line_items')
-          .select('this_period')
+          .select('scheduled_value')
           .eq('id', lineItemId)
           .single();
-        const previousThisPeriod = Number(currentPLI?.this_period) || 0;
-        // Calculate percent_total as the sum of from_previous_application and this_period
-        const percentTotal = previousThisPeriod + percentFloat;
-        // Update project_line_items with new values and set from_previous_application and percent_total
+        const scheduledValueFloat = Number(currentPLI?.scheduled_value) || 0;
+        // Calculate amount_for_this_period as scheduled_value * (percent / 100)
+        const percentFloat = Number(percent);
+        const amountForThisPeriod = parseFloat((scheduledValueFloat * (percentFloat / 100)).toFixed(2));
+        // Update project_line_items with new values and set from_previous_application from previous progress
         const { data: pliUpdate, error: pliError } = await supabase
           .from('project_line_items')
           .update({ 
             percent_completed: percentFloat,
             this_period: percentFloat,
             amount_for_this_period: amountForThisPeriod,
-            from_previous_application: previousThisPeriod,
-            percent_total: percentTotal
+            from_previous_application: previousSubmittedPercent
           })
           .eq('id', lineItemId)
           .select();
