@@ -86,28 +86,28 @@ export async function POST(req: NextRequest) {
         return new Response(twiml.toString(), { headers: { 'Content-Type': 'text/xml' } });
       }
 
-      // Fetch the current payment_line_item_progress row
-      const { data: plip } = await supabase
+      // Fetch the current payment_line_item_progress row and join project_line_items for scheduled_value
+      const { data: plip, error: plipError } = await supabase
         .from('payment_line_item_progress')
-        .select('id, this_period, from_previous_application, percent_gc, scheduled_value')
+        .select('id, submitted_percent, previous_percent, this_period_percent, calculated_amount, project_line_items(scheduled_value)')
         .eq('payment_app_id', conv.payment_app_id)
         .eq('line_item_id', lineItemId)
         .single();
+      console.log('Fetched plip:', plip, 'for payment_app_id:', conv.payment_app_id, 'line_item_id:', lineItemId, 'Error:', plipError);
 
-      console.log('Fetched plip:', plip, 'for payment_app_id:', conv.payment_app_id, 'line_item_id:', lineItemId);
-
-      // Calculate new this_period
-      let scheduledValue = Number(plip?.scheduled_value) || 0;
+      // Calculate new this_period using scheduled_value from joined project_line_items
+      let scheduledValue = Array.isArray(plip?.project_line_items) ? Number(plip.project_line_items[0]?.scheduled_value) || 0 : 0;
       let thisPeriod = Math.round((percent / 100) * scheduledValue);
-      // Move current this_period to from_previous_application and update percent
+      // Move current this_period_percent to previous_percent and update percent
       if (plip?.id) {
         console.log('Updating progress for payment_app_id:', conv.payment_app_id, 'line_item_id:', lineItemId);
         const { data: progressUpdate, error: progressError } = await supabase
           .from('payment_line_item_progress')
           .update({ 
-            from_previous_application: plip.this_period,
-            this_period: thisPeriod,
-            submitted_percent: percent // Save replied percent
+            previous_percent: plip.this_period_percent,
+            this_period_percent: percent,
+            submitted_percent: percent,
+            calculated_amount: thisPeriod
           })
           .eq('payment_app_id', conv.payment_app_id)
           .eq('line_item_id', lineItemId)
