@@ -114,10 +114,15 @@ export async function POST(req: NextRequest) {
           .select();
         console.log('Progress update result:', progressUpdate, 'Error:', progressError);
         // Optionally, also update project_line_items.percent_completed for visibility
-        console.log('Updating project_line_items.percent_completed for line_item_id:', lineItemId);
+        console.log('Updating project_line_items.percent_completed, this_period, and amount_for_this_period for line_item_id:', lineItemId);
+        const amountForThisPeriod = scheduledValue * (percent / 100);
         const { data: pliUpdate, error: pliError } = await supabase
           .from('project_line_items')
-          .update({ percent_completed: percent })
+          .update({ 
+            percent_completed: percent,
+            this_period: percent,
+            amount_for_this_period: amountForThisPeriod
+          })
           .eq('id', lineItemId)
           .select();
         console.log('Project line item update result:', pliUpdate, 'Error:', pliError);
