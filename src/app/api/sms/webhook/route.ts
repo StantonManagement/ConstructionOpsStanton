@@ -82,6 +82,7 @@ export async function POST(req: NextRequest) {
       const lineItemId = lineItems[idx].id;
       const percent = parseFloat(body);
       if (isNaN(percent) || percent < 0 || percent > 100) {
+        console.warn('Invalid percent reply:', body, 'at idx:', idx);
         twiml.message('Please reply with a valid percent (0-100).');
         return new Response(twiml.toString(), { headers: { 'Content-Type': 'text/xml' } });
       }
@@ -147,10 +148,13 @@ export async function POST(req: NextRequest) {
           .eq('id', lineItemId)
           .select();
         console.log('Project line item update result:', pliUpdate, 'Error:', pliError);
+      } else {
+        console.error('No payment_line_item_progress found for payment_app_id:', conv.payment_app_id, 'line_item_id:', lineItemId);
       }
 
       idx++;
       updateObj.current_question_index = idx;
+      console.log('Advancing to next question. New idx:', idx, 'numLineItems:', numLineItems);
 
       if (idx < numLineItems) {
         nextQuestion = `What percent complete is your work for: ${lineItems[idx].description_of_work}?`;
@@ -164,35 +168,46 @@ export async function POST(req: NextRequest) {
           conversation_state: 'completed',
           completed_at: new Date().toISOString(),
         };
-        await supabase
+        const { error: appUpdateError } = await supabase
           .from('payment_applications')
           .update({ status: 'submitted' })
           .eq('id', conv.payment_app_id);
+        if (appUpdateError) {
+          console.error('Error updating payment_applications status:', appUpdateError);
+        }
         finished = true;
       }
 
-      await supabase
+      const { error: convoUpdateError } = await supabase
         .from('payment_sms_conversations')
         .update(updateObj)
         .eq('id', conv.id);
+      if (convoUpdateError) {
+        console.error('Error updating payment_sms_conversations:', convoUpdateError, 'UpdateObj:', updateObj);
+      } else {
+        console.log('Updated payment_sms_conversations with:', updateObj);
+      }
 
       if (finished) {
         // Calculate total current payment for this application
-        const { data: progressRows } = await supabase
+        const { data: progressRows, error: progressRowsError } = await supabase
           .from('payment_line_item_progress')
           .select('this_period')
           .eq('payment_app_id', conv.payment_app_id);
-
+        if (progressRowsError) {
+          console.error('Error fetching progressRows for total payment:', progressRowsError);
+        }
         const totalCurrentPayment = (progressRows || []).reduce(
           (sum, row) => sum + (Number(row.this_period) || 0),
           0
         );
-
-        await supabase
+        const { error: paymentAppUpdateError } = await supabase
           .from('payment_applications')
           .update({ current_payment: totalCurrentPayment })
           .eq('id', conv.payment_app_id);
-
+        if (paymentAppUpdateError) {
+          console.error('Error updating current_payment in payment_applications:', paymentAppUpdateError);
+        }
         twiml.message('Thank you! Your payment application is submitted for Project Manager review.');
       } else {
         twiml.message(nextQuestion);
