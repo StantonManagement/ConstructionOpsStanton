@@ -116,12 +116,13 @@ export async function POST(req: NextRequest) {
         console.log('Progress update result:', progressUpdate, 'Error:', progressError);
         // Optionally, also update project_line_items.percent_completed for visibility
         console.log('Updating project_line_items.percent_completed, this_period, and amount_for_this_period for line_item_id:', lineItemId);
-        // Find the previous payment_app_id for this line_item_id
+        // Find the previous payment_app_id for this line_item_id with non-zero submitted_percent
         const { data: prevProgress, error: prevProgressError } = await supabase
           .from('payment_line_item_progress')
           .select('submitted_percent, payment_app_id')
           .eq('line_item_id', lineItemId)
           .lt('payment_app_id', conv.payment_app_id)
+          .not('submitted_percent', 'eq', '0')
           .order('payment_app_id', { ascending: false })
           .limit(1)
           .single();
