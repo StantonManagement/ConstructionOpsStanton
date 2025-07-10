@@ -94,6 +94,8 @@ export async function POST(req: NextRequest) {
         .eq('line_item_id', lineItemId)
         .single();
 
+      console.log('Fetched plip:', plip, 'for payment_app_id:', conv.payment_app_id, 'line_item_id:', lineItemId);
+
       // Calculate new this_period
       let scheduledValue = Number(plip?.scheduled_value) || 0;
       let thisPeriod = Math.round((percent / 100) * scheduledValue);
