@@ -116,6 +116,17 @@ export async function POST(req: NextRequest) {
         console.log('Progress update result:', progressUpdate, 'Error:', progressError);
         // Optionally, also update project_line_items.percent_completed for visibility
         console.log('Updating project_line_items.percent_completed, this_period, and amount_for_this_period for line_item_id:', lineItemId);
+        // Fetch the current payment_applications row for context
+        const { data: paymentApp, error: paymentAppError } = await supabase
+          .from('payment_applications')
+          .select('*')
+          .eq('id', conv.payment_app_id)
+          .single();
+        if (paymentAppError) {
+          console.error('Error fetching payment_applications for id:', conv.payment_app_id, paymentAppError);
+        } else {
+          console.log('Current payment_applications row:', paymentApp);
+        }
         // Find the previous payment_app_id for this line_item_id with non-zero submitted_percent
         const { data: prevProgress, error: prevProgressError } = await supabase
           .from('payment_line_item_progress')
