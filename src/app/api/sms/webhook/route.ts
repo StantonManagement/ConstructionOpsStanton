@@ -99,22 +99,26 @@ export async function POST(req: NextRequest) {
       let thisPeriod = Math.round((percent / 100) * scheduledValue);
       // Move current this_period to from_previous_application and update percent
       if (plip?.id) {
-        const { error: progressError } = await supabase
+        console.log('Updating progress for payment_app_id:', conv.payment_app_id, 'line_item_id:', lineItemId);
+        const { data: progressUpdate, error: progressError } = await supabase
           .from('payment_line_item_progress')
           .update({ 
             from_previous_application: plip.this_period,
             this_period: thisPeriod,
             submitted_percent: percent // Save replied percent
           })
-          .eq('id', plip.id);
-        if (progressError) {
-          console.error('Failed to update payment_line_item_progress:', progressError.message);
-        }
+          .eq('payment_app_id', conv.payment_app_id)
+          .eq('line_item_id', lineItemId)
+          .select();
+        console.log('Progress update result:', progressUpdate, 'Error:', progressError);
         // Optionally, also update project_line_items.percent_completed for visibility
-        await supabase
+        console.log('Updating project_line_items.percent_completed for line_item_id:', lineItemId);
+        const { data: pliUpdate, error: pliError } = await supabase
           .from('project_line_items')
           .update({ percent_completed: percent })
-          .eq('id', lineItemId);
+          .eq('id', lineItemId)
+          .select();
+        console.log('Project line item update result:', pliUpdate, 'Error:', pliError);
       }
 
       idx++;
