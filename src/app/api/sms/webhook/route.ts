@@ -63,14 +63,14 @@ export async function POST(req: NextRequest) {
         .update({ conversation_state: 'in_progress', current_question_index: 0 })
         .eq('id', conv.id);
       if (numLineItems > 0) {
-        // Fetch from_previous_application for first line item from project_line_items
+        // Fetch this_period for first line item from project_line_items
         const firstLineItemId = lineItems[0].id;
         const { data: pliRow } = await supabase
           .from('project_line_items')
-          .select('from_previous_application')
+          .select('this_period')
           .eq('id', firstLineItemId)
           .single();
-        const prevPercent = pliRow?.from_previous_application ?? 0;
+        const prevPercent = pliRow?.this_period ?? 0;
         twiml.message(`What percent complete is your work for: ${lineItems[0].description_of_work}? (Previous: ${prevPercent}%)`);
       } else {
         // If no line items, skip to additional questions
@@ -177,14 +177,14 @@ export async function POST(req: NextRequest) {
       console.log('Advancing to next question. New idx:', idx, 'numLineItems:', numLineItems);
 
       if (idx < numLineItems) {
-        // Fetch from_previous_application for next line item from project_line_items
+        // Fetch this_period for next line item from project_line_items
         const nextLineItemId = lineItems[idx].id;
         const { data: pliRow } = await supabase
           .from('project_line_items')
-          .select('from_previous_application')
+          .select('this_period')
           .eq('id', nextLineItemId)
           .single();
-        const prevPercent = pliRow?.from_previous_application ?? 0;
+        const prevPercent = pliRow?.this_period ?? 0;
         nextQuestion = `What percent complete is your work for: ${lineItems[idx].description_of_work}? (Previous: ${prevPercent}%)`;
       } else if (idx - numLineItems < ADDITIONAL_QUESTIONS.length) {
         nextQuestion = ADDITIONAL_QUESTIONS[idx - numLineItems];
