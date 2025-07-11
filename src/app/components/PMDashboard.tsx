@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import Header from "./Header";
 
@@ -92,6 +92,24 @@ function PaymentAppCard({ application, onVerify, getDocumentForApp, sendForSigna
   };
   const config = statusConfig[application.status] || statusConfig["needs_review"];
   const doc = getDocumentForApp(application.id);
+
+  const [grandTotal, setGrandTotal] = useState(0);
+  useEffect(() => {
+    async function fetchGrandTotal() {
+      const lineItemIds = (application.line_item_progress || []).map((lip: any) => lip.line_item?.id).filter(Boolean);
+      if (!lineItemIds.length) return setGrandTotal(0);
+      const { data, error } = await supabase
+        .from('project_line_items')
+        .select('amount_for_this_period')
+        .in('id', lineItemIds);
+      if (!error && data) {
+        const total = data.reduce((sum: number, pli: any) => sum + (Number(pli.amount_for_this_period) || 0), 0);
+        setGrandTotal(total);
+      }
+    }
+    fetchGrandTotal();
+  }, [application.line_item_progress]);
+
   return (
     <div
       className={`border rounded-lg p-4 transition-all hover:shadow-md ${config.urgent ? "border-blue-300 bg-blue-25" : "border-gray-200"}`}
@@ -109,7 +127,7 @@ function PaymentAppCard({ application, onVerify, getDocumentForApp, sendForSigna
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 text-sm mb-3">
             <div>
               <span className="text-gray-800 block">Amount:</span>
-              <div className="font-semibold text-lg">{formatCurrency(application.current_payment)}</div>
+              <div className="font-semibold text-lg">{formatCurrency(grandTotal)}</div>
             </div>
             <div>
               <span className="text-gray-800 block">Trade:</span>
@@ -294,6 +312,12 @@ export default function PMDashboard() {
   const [lastRefresh, setLastRefresh] = useState(new Date());
   const [error, setError] = useState<string | null>(null);
   const [paymentDocuments, setPaymentDocuments] = useState<any[]>([]);
+  const [sortBy, setSortBy] = useState<'status' | 'date' | 'amount'>('status');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [projectFilter, setProjectFilter] = useState<string>('all');
+  const [page, setPage] = useState(1);
+  const pageSize = 5;
 
   // Fetch user profile
   const fetchUser = useCallback(async () => {
@@ -332,10 +356,13 @@ export default function PMDashboard() {
             id,
             line_item:project_line_items(id, description_of_work)
           )
-        `);
+        `)
+        .order('created_at', { ascending: false }); // <-- Add this line
       if (appsError) throw new Error(appsError.message);
-      // Sort by created_at descending
+      // After fetching, sort so 'submitted' status comes first, then by created_at descending
       const sortedApps = (appsRaw || []).sort((a, b) => {
+        if (a.status === 'submitted' && b.status !== 'submitted') return -1;
+        if (a.status !== 'submitted' && b.status === 'submitted') return 1;
         const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
         const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
         return dateB - dateA;
@@ -444,6 +471,38 @@ export default function PMDashboard() {
     window.location.reload();
   };
 
+  // Compute filtered and sorted apps
+  const filteredApps = useMemo(() => {
+    let apps = [...paymentApps];
+    if (statusFilter !== 'all') {
+      apps = apps.filter(app => app.status === statusFilter);
+    }
+    if (projectFilter !== 'all') {
+      apps = apps.filter(app => app.project?.id === Number(projectFilter));
+    }
+    // Sorting
+    apps.sort((a, b) => {
+      if (sortBy === 'status') {
+        if (a.status === 'submitted' && b.status !== 'submitted') return -1;
+        if (a.status !== 'submitted' && b.status === 'submitted') return 1;
+      }
+      if (sortBy === 'amount') {
+        return sortDir === 'asc'
+          ? a.current_payment - b.current_payment
+          : b.current_payment - a.current_payment;
+      }
+      // Default: date
+      const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+      return sortDir === 'asc' ? dateA - dateB : dateB - dateA;
+    });
+    return apps;
+  }, [paymentApps, statusFilter, projectFilter, sortBy, sortDir]);
+
+  // Pagination
+  const totalPages = Math.ceil(filteredApps.length / pageSize);
+  const pagedApps = filteredApps.slice((page - 1) * pageSize, page * pageSize);
+
   if (loading && !user) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -479,7 +538,48 @@ export default function PMDashboard() {
           readyChecks={stats.ready_checks}
           weeklyTotal={stats.weekly_total}
         />
-        <PaymentApplicationsQueue applications={paymentApps} onVerify={handleVerifyPayment} getDocumentForApp={getDocumentForApp} sendForSignature={sendForSignature} />
+        {/* Filters and Sorting Controls */}
+        <div className="flex flex-wrap gap-4 mb-6 items-center">
+          <div>
+            <label className="text-sm font-medium text-black mr-2">Status:</label>
+            <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1); }} className="border rounded px-2 py-1 text-black">
+              <option value="all">All</option>
+              <option value="submitted">Submitted</option>
+              <option value="needs_review">Needs Review</option>
+              <option value="sms_complete">SMS Complete</option>
+              <option value="approved">Approved</option>
+              <option value="check_ready">Check Ready</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-sm font-medium text-black mr-2">Project:</label>
+            <select value={projectFilter} onChange={e => { setProjectFilter(e.target.value); setPage(1); }} className="border rounded px-2 py-1 text-black">
+              <option value="all">All</option>
+              {projects.map((proj: any) => (
+                <option key={proj.id} value={proj.id}>{proj.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="text-sm font-medium text-black mr-2">Sort By:</label>
+            <select value={sortBy} onChange={e => setSortBy(e.target.value as any)} className="border rounded px-2 py-1 text-black">
+              <option value="status">Status (Submitted First)</option>
+              <option value="date">Date</option>
+              <option value="amount">Amount</option>
+            </select>
+            <button onClick={() => setSortDir(sortDir === 'asc' ? 'desc' : 'asc')} className="ml-2 px-2 py-1 border rounded text-black">
+              {sortDir === 'asc' ? '↑' : '↓'}
+            </button>
+          </div>
+        </div>
+        {/* Payment Applications Queue with Pagination */}
+        <PaymentApplicationsQueue applications={pagedApps} onVerify={handleVerifyPayment} getDocumentForApp={getDocumentForApp} sendForSignature={sendForSignature} />
+        {/* Pagination Controls */}
+        <div className="flex justify-center items-center gap-2 my-6">
+          <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="px-3 py-1 border rounded disabled:opacity-50 text-black">Prev</button>
+          <span className="text-sm text-black">Page {page} of {totalPages}</span>
+          <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-3 py-1 border rounded disabled:opacity-50 text-black">Next</button>
+        </div>
         <ActiveProjects projects={projects} onCreatePaymentApps={handleCreatePaymentApps} />
       </main>
     </div>

@@ -23,40 +23,55 @@ export async function POST(req: NextRequest, { params }) {
 
   // 3. Render HTML
   const safeLineItemProgress = Array.isArray(lineItemProgress) ? lineItemProgress : [];
-  // Calculate this_period for each line item using the formula:
-  // this_period = round((percent_gc/100) * scheduled_value - previous_value, 0)
-  const lineItemsWithFormula = safeLineItemProgress.map((lip) => {
-    const scheduledValue = Number(lip.line_item.scheduled_value) || 0;
-    const percentGC = Number(lip.line_item.percent_gc) || 0;
-    // previous_value: try payment_line_item_progress.previous_value, fallback to 0
-    const previousValue = Number(lip.previous_value) || 0;
-    const thisPeriod = Math.round((percentGC / 100) * scheduledValue - previousValue);
+  // Fetch project_line_items for all line items in this payment application
+  const lineItemIds = safeLineItemProgress.map(lip => lip.line_item_id);
+  const { data: projectLineItems } = await supabase
+    .from('project_line_items')
+    .select('*')
+    .in('id', lineItemIds);
+
+  // Map project_line_items by id for easy lookup
+  const pliMap: Record<number, any> = {};
+  (projectLineItems || []).forEach((pli: any) => { pliMap[pli.id] = pli; });
+
+  // Build line items for the PDF
+  const lineItemsForPDF = safeLineItemProgress.map((lip, idx) => {
+    const pli = pliMap[lip.line_item_id] || {};
     return {
-      ...lip,
-      scheduled_value: scheduledValue,
-      percent_gc: percentGC,
-      previous_value: previousValue,
-      this_period: thisPeriod,
+      idx: idx + 1,
+      description_of_work: pli.description_of_work || lip.line_item?.description_of_work || '',
+      scheduled_value: Number(pli.scheduled_value) || 0,
+      previous: Number(pli.from_previous_application) || 0,
+      this_period: Number(pli.this_period) || 0,
+      total: Number(pli.percent_completed) || 0,
+      current_payment: Number(pli.amount_for_this_period) || 0,
     };
   });
+  const grandTotal = lineItemsForPDF.reduce((sum, li) => sum + li.current_payment, 0);
+
   const html = Mustache.render(template, {
     project,
     contractor,
     applicationNumber: paymentApp.id,
     applicationDate: paymentApp.created_at,
     periodTo: paymentApp.payment_period_end,
-    lineItems: lineItemsWithFormula.map((lip, idx) => `
+    lineItems: lineItemsForPDF.map(li => `
       <tr>
-        <td>${idx + 1}</td>
-        <td>${lip.line_item.description_of_work}</td>
-        <td class="number">${lip.scheduled_value}</td>
-        <td class="number">${lip.previous_percent || ''}</td>
-        <td class="number">${lip.percent_gc || ''}</td>
-        <td class="number">${lip.submitted_percent || ''}</td>
-        <td class="number">${lip.this_period}</td>
+        <td>${li.idx}</td>
+        <td>${li.description_of_work}</td>
+        <td class="number">${li.scheduled_value}</td>
+        <td class="number">${li.previous}</td>
+        <td class="number">${li.this_period}</td>
+        <td class="number">${li.total}</td>
+        <td class="number">${li.current_payment}</td>
       </tr>
-    `).join(''),
-    totalCurrentPayment: lineItemsWithFormula.reduce((sum, lip) => sum + (lip.this_period || 0), 0),
+    `).join('') + `
+      <tr class="totals">
+        <td colspan="6"><strong>GRAND TOTAL</strong></td>
+        <td class="number"><strong>${grandTotal}</strong></td>
+      </tr>
+    `,
+    totalCurrentPayment: grandTotal,
   });
 
   // 4. Generate PDF
