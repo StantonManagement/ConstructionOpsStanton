@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
 
   // Define additional questions after line items
   const ADDITIONAL_QUESTIONS = [
-    'Any notes for the Project Manager?'
+    'Please write any notes for the Project Manager here'
   ];
 
   if (conv.conversation_state === 'awaiting_start') {
