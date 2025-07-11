@@ -63,7 +63,16 @@ export async function POST(req: NextRequest) {
         .update({ conversation_state: 'in_progress', current_question_index: 0 })
         .eq('id', conv.id);
       if (numLineItems > 0) {
-        twiml.message(`What percent complete is your work for: ${lineItems[0].description_of_work}?`);
+        // Fetch previous percent for first line item
+        const firstLineItemId = lineItems[0].id;
+        const { data: prevProgress } = await supabase
+          .from('payment_line_item_progress')
+          .select('previous_percent')
+          .eq('payment_app_id', conv.payment_app_id)
+          .eq('line_item_id', firstLineItemId)
+          .single();
+        const prevPercent = prevProgress?.previous_percent ?? 0;
+        twiml.message(`What percent complete is your work for: ${lineItems[0].description_of_work}? (Previous: ${prevPercent}%)`);
       } else {
         // If no line items, skip to additional questions
         twiml.message(ADDITIONAL_QUESTIONS[0]);
@@ -169,7 +178,16 @@ export async function POST(req: NextRequest) {
       console.log('Advancing to next question. New idx:', idx, 'numLineItems:', numLineItems);
 
       if (idx < numLineItems) {
-        nextQuestion = `What percent complete is your work for: ${lineItems[idx].description_of_work}?`;
+        // Fetch previous percent for next line item
+        const nextLineItemId = lineItems[idx].id;
+        const { data: prevProgress } = await supabase
+          .from('payment_line_item_progress')
+          .select('previous_percent')
+          .eq('payment_app_id', conv.payment_app_id)
+          .eq('line_item_id', nextLineItemId)
+          .single();
+        const prevPercent = prevProgress?.previous_percent ?? 0;
+        nextQuestion = `What percent complete is your work for: ${lineItems[idx].description_of_work}? (Previous: ${prevPercent}%)`;
       } else if (idx - numLineItems < ADDITIONAL_QUESTIONS.length) {
         nextQuestion = ADDITIONAL_QUESTIONS[idx - numLineItems];
       } else {
@@ -224,6 +242,53 @@ export async function POST(req: NextRequest) {
       } else {
         twiml.message(nextQuestion);
       }
+    } else if (idx - numLineItems < ADDITIONAL_QUESTIONS.length) {
+      // Handle additional questions (e.g., notes for PM)
+      idx++;
+      updateObj.current_question_index = idx;
+      // If this was the last additional question, mark as complete
+      if ((idx - numLineItems) >= ADDITIONAL_QUESTIONS.length) {
+        updateObj = {
+          ...updateObj,
+          current_question_index: idx,
+          conversation_state: 'completed',
+          completed_at: new Date().toISOString(),
+        };
+        const { error: appUpdateError } = await supabase
+          .from('payment_applications')
+          .update({ status: 'submitted' })
+          .eq('id', conv.payment_app_id);
+        if (appUpdateError) {
+          console.error('Error updating payment_applications status:', appUpdateError);
+        }
+        const { error: convoUpdateError } = await supabase
+          .from('payment_sms_conversations')
+          .update(updateObj)
+          .eq('id', conv.id);
+        if (convoUpdateError) {
+          console.error('Error updating payment_sms_conversations:', convoUpdateError, 'UpdateObj:', updateObj);
+        } else {
+          console.log('Updated payment_sms_conversations with:', updateObj);
+        }
+        // ... update payment_applications current_payment if needed ...
+        twiml.message('Thank you! Your payment application is submitted for Project Manager review.');
+      } else {
+        // Ask next additional question
+        const nextAdditional = ADDITIONAL_QUESTIONS[idx - numLineItems];
+        const { error: convoUpdateError } = await supabase
+          .from('payment_sms_conversations')
+          .update(updateObj)
+          .eq('id', conv.id);
+        if (convoUpdateError) {
+          console.error('Error updating payment_sms_conversations:', convoUpdateError, 'UpdateObj:', updateObj);
+        } else {
+          console.log('Updated payment_sms_conversations with:', updateObj);
+        }
+        twiml.message(nextAdditional);
+      }
+    } else {
+      // Already completed
+      twiml.message('This payment application conversation is already complete.');
     }
   } else {
     twiml.message('This payment application conversation is already complete.');
