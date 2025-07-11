@@ -9,7 +9,7 @@ const QUESTIONS = [
   'What percent complete is your work for this period?',
   'Have you uploaded all required photos? (YES/NO)',
   'Is a lien waiver required? (YES/NO)',
-  'Any notes for the Project Manager?'
+  'Please write any notes for the Project Manager here'
 ];
 
 export async function POST(req: NextRequest) {
