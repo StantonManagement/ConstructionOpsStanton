@@ -272,47 +272,47 @@ export async function POST(req: NextRequest) {
       return new Response(twiml.toString(), { headers: { 'Content-Type': 'text/xml' } });
     } else if (idx - numLineItems < ADDITIONAL_QUESTIONS.length) {
       // Handle additional questions (e.g., notes for PM)
-      idx++;
-      updateObj.current_question_index = idx;
-      // If this was the last additional question, mark as complete
-      if ((idx - numLineItems) >= ADDITIONAL_QUESTIONS.length) {
-        updateObj = {
-          ...updateObj,
-          current_question_index: idx,
-          conversation_state: 'completed',
-          completed_at: new Date().toISOString(),
-        };
-        const { error: appUpdateError } = await supabase
-          .from('payment_applications')
-          .update({ status: 'submitted' })
-          .eq('id', conv.payment_app_id);
-        if (appUpdateError) {
-          console.error('Error updating payment_applications status:', appUpdateError);
-        }
-        const { error: convoUpdateError } = await supabase
+      responses[idx] = body;
+      updateObj.current_question_index = idx + 1;
+      // If this was the last additional question, show summary and ask for confirmation
+      if ((idx - numLineItems + 1) >= ADDITIONAL_QUESTIONS.length) {
+        // Show summary and ask for confirmation (reuse summary logic)
+        const { data: progressRows } = await supabase
+          .from('payment_line_item_progress')
+          .select('line_item_id, this_period_percent')
+          .eq('payment_app_id', conv.payment_app_id);
+        const { data: lineItemsData } = await supabase
+          .from('project_line_items')
+          .select('id, scheduled_value, description_of_work')
+          .in('id', (progressRows || []).map(r => r.line_item_id));
+        let summary = 'Summary of your application:\n';
+        let totalThisPeriod = 0;
+        (progressRows || []).forEach((row) => {
+          const item = (lineItemsData || []).find(li => li.id === row.line_item_id);
+          const thisPeriodPercent = Number(row.this_period_percent) || 0;
+          const scheduled = Number(item?.scheduled_value) || 0;
+          const thisPeriodDollar = scheduled * (thisPeriodPercent / 100);
+          totalThisPeriod += thisPeriodDollar;
+          const desc = item?.description_of_work || 'Item';
+          summary += `${desc} - (${thisPeriodPercent.toFixed(1)}%) = $${thisPeriodDollar.toLocaleString(undefined, { maximumFractionDigits: 2 })}\n`;
+        });
+        summary += `Total Requested = $${totalThisPeriod.toLocaleString(undefined, { maximumFractionDigits: 2 })}\n`;
+        summary += 'Please type "Yes" to submit or "No" to redo your answers.';
+        await supabase
           .from('payment_sms_conversations')
-          .update(updateObj)
+          .update({ conversation_state: 'awaiting_confirmation', current_question_index: idx + 1, responses })
           .eq('id', conv.id);
-        if (convoUpdateError) {
-          console.error('Error updating payment_sms_conversations:', convoUpdateError, 'UpdateObj:', updateObj);
-        } else {
-          console.log('Updated payment_sms_conversations with:', updateObj);
-        }
-        // ... update payment_applications current_payment if needed ...
-        twiml.message('Thank you! Your payment application is submitted for Project Manager review.');
+        twiml.message(summary);
+        return new Response(twiml.toString(), { headers: { 'Content-Type': 'text/xml' } });
       } else {
         // Ask next additional question
-        const nextAdditional = ADDITIONAL_QUESTIONS[idx - numLineItems];
-        const { error: convoUpdateError } = await supabase
+        const nextAdditional = ADDITIONAL_QUESTIONS[idx - numLineItems + 1];
+        await supabase
           .from('payment_sms_conversations')
           .update(updateObj)
           .eq('id', conv.id);
-        if (convoUpdateError) {
-          console.error('Error updating payment_sms_conversations:', convoUpdateError, 'UpdateObj:', updateObj);
-        } else {
-          console.log('Updated payment_sms_conversations with:', updateObj);
-        }
         twiml.message(nextAdditional);
+        return new Response(twiml.toString(), { headers: { 'Content-Type': 'text/xml' } });
       }
     } else {
       // All questions answered, send summary and ask for confirmation
