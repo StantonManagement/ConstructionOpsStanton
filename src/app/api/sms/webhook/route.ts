@@ -248,7 +248,7 @@ export async function POST(req: NextRequest) {
         .eq('payment_app_id', conv.payment_app_id);
       const { data: lineItemsData } = await supabase
         .from('project_line_items')
-        .select('id, scheduled_value')
+        .select('id, scheduled_value, description_of_work')
         .in('id', (progressRows || []).map(r => r.line_item_id));
       let summary = 'Summary of your application:\n';
       let totalThisPeriod = 0;
@@ -258,7 +258,8 @@ export async function POST(req: NextRequest) {
         const scheduled = Number(item?.scheduled_value) || 0;
         const thisPeriodDollar = scheduled * (thisPeriodPercent / 100);
         totalThisPeriod += thisPeriodDollar;
-        summary += `Line ${idx + 1} - (${thisPeriodPercent.toFixed(1)}%) = $${thisPeriodDollar.toLocaleString(undefined, { maximumFractionDigits: 2 })}\n`;
+        const desc = item?.description_of_work || 'Item';
+        summary += `${desc} - (${thisPeriodPercent.toFixed(1)}%) = $${thisPeriodDollar.toLocaleString(undefined, { maximumFractionDigits: 2 })}\n`;
       });
       summary += `Total Requested = $${totalThisPeriod.toLocaleString(undefined, { maximumFractionDigits: 2 })}\n`;
       summary += 'Please type "Yes" to submit or "No" to redo your answers.';
