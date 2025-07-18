@@ -241,26 +241,26 @@ export async function POST(req: NextRequest) {
         twiml.message(nextQuestion);
       }
     } else if (idx === numLineItems) {
-      // All line items answered, send summary and ask for confirmation BEFORE additional questions
-      const { data: progressRows, error: progressRowsError } = await supabase
+      // All line items answered, send concise summary and ask for confirmation BEFORE additional questions
+      const { data: progressRows } = await supabase
         .from('payment_line_item_progress')
-        .select('line_item_id, this_period')
+        .select('line_item_id, this_period_percent')
         .eq('payment_app_id', conv.payment_app_id);
-      const { data: lineItemsData, error: lineItemsError } = await supabase
+      const { data: lineItemsData } = await supabase
         .from('project_line_items')
-        .select('id, description_of_work, scheduled_value')
+        .select('id, scheduled_value')
         .in('id', (progressRows || []).map(r => r.line_item_id));
       let summary = 'Summary of your application:\n';
-      let total = 0;
-      for (const row of progressRows || []) {
+      let totalThisPeriod = 0;
+      (progressRows || []).forEach((row, idx) => {
         const item = (lineItemsData || []).find(li => li.id === row.line_item_id);
-        const percent = Number(row.this_period) || 0;
+        const thisPeriodPercent = Number(row.this_period_percent) || 0;
         const scheduled = Number(item?.scheduled_value) || 0;
-        const amount = scheduled * (percent / 100);
-        total += amount;
-        summary += `- ${item?.description_of_work || 'Item'}: ${percent.toFixed(1)}% ($${amount.toLocaleString(undefined, { maximumFractionDigits: 2 })})\n`;
-      }
-      summary += `Total requested: $${total.toLocaleString(undefined, { maximumFractionDigits: 2 })}\n`;
+        const thisPeriodDollar = scheduled * (thisPeriodPercent / 100);
+        totalThisPeriod += thisPeriodDollar;
+        summary += `Line ${idx + 1} - (${thisPeriodPercent.toFixed(1)}%) = $${thisPeriodDollar.toLocaleString(undefined, { maximumFractionDigits: 2 })}\n`;
+      });
+      summary += `Total Requested = $${totalThisPeriod.toLocaleString(undefined, { maximumFractionDigits: 2 })}\n`;
       summary += 'Please type "Yes" to submit or "No" to redo your answers.';
       // Set state to awaiting_confirmation
       await supabase
