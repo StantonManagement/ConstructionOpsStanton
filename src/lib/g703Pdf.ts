@@ -135,18 +135,18 @@ export async function generateG703Pdf({
   const colXs = [40, 75, 260, 330, 400, 470, 540, 610, 680, 750];
   const colWidths = [35, 185, 70, 70, 70, 70, 70, 70, 70, 70];
 
-  // Enhanced multi-line headers with better formatting
+  // Updated multi-line headers to match image layout
   const headers = [
-    { line1: 'ITEM', line2: 'NO.' },
-    { line1: 'DESCRIPTION OF WORK', line2: '' },
-    { line1: 'SCHEDULED', line2: 'VALUE' },
-    { line1: 'FROM PREVIOUS', line2: 'APPLICATION' },
-    { line1: 'THIS PERIOD', line2: '' },
-    { line1: 'MATERIAL', line2: 'PRESENTLY', line3: 'STORED',  },
-    { line1: 'TOTAL', line2: 'COMPLETED', line3: 'AND STORED', line4: 'TO DATE' },
-    { line1: '% (G/C)', line2: '' },
-    { line1: 'BALANCE TO', line2: 'FINISH', },
-    { line1: 'RETAINAGE', line2: '0.0%' }
+    { line1: 'NO', line2: 'ITEM' },
+    { line1: 'OF WORK', line2: 'DESCRIPTION' },
+    { line1: 'VALUE', line2:'SCHEDULED'  },
+    { line1: 'APPLICATION', line2: 'PREVIOUS', line3: 'FROM' },
+    { line1: 'PERIOD', line2: 'THIS' },
+    { line1: 'STORED', line2: 'PRESENTLY', line3:'MATERIAL'  },
+    { line1: 'DATE', line2: 'STORED TO', line3: 'COMPLETED AND', line4: 'TOTAL' },
+    { line1: '% (G/C)' },
+    { line1:  'TO FINISH', line2:'BALANCE' },
+    { line1:'RETAINAGE' , line2: '0.0%' }
   ];
 
   // Draw enhanced table header background
@@ -159,30 +159,31 @@ export async function generateG703Pdf({
     color: colors.headerGray,
     borderColor: colors.black,
   });
+
   // Draw header text with improved centering
-headers.forEach((header, i) => {
-  const fontSize = 7;
-  const lineSpacing = 8; // Reduced slightly for tighter alignment
-  const headerLines = [header.line1, header.line2, header.line3, header.line4, ]
-    .filter((line): line is string => !!line && line.trim() !== '');
+  headers.forEach((header, i) => {
+    const fontSize = 7;
+    const lineSpacing = 8;
+    const headerLines = [header.line1, header.line2, header.line3, header.line4]
+      .filter((line): line is string => !!line && line.trim() !== '');
 
-  // Calculate total height of header text block
-  const textBlockHeight = headerLines.length * lineSpacing;
-  // Center the text block vertically within the header area
-  const startY = tableStartY - headerHeight + (headerHeight - textBlockHeight) / 2 + lineSpacing;
+    // Calculate total height of header text block
+    const textBlockHeight = headerLines.length * lineSpacing;
+    // Center the text block vertically within the header area
+    const startY = tableStartY - headerHeight + (headerHeight - textBlockHeight) / 2 + lineSpacing;
 
-  headerLines.forEach((line, lineIndex) => {
-    const textWidth = fontBold.widthOfTextAtSize(line, fontSize);
-    const centerX = colXs[i] + colWidths[i] / 2; // Column midpoint
-    page.drawText(line, {
-      x: centerX - textWidth / 2, // Center each line individually
-      y: startY + (lineIndex * lineSpacing) - 4, // Adjust for baseline
-      size: fontSize,
-      font: fontBold,
-      color: colors.black,
+    headerLines.forEach((line, lineIndex) => {
+      const textWidth = fontBold.widthOfTextAtSize(line, fontSize);
+      const centerX = colXs[i] + colWidths[i] / 2;
+      page.drawText(line, {
+        x: centerX - textWidth / 2,
+        y: startY + (lineIndex * lineSpacing) - 4,
+        size: fontSize,
+        font: fontBold,
+        color: colors.black,
+      });
     });
   });
-});
 
   // Enhanced text wrapping function
   function wrapText(text: string, maxWidth: number, fontSize: number): string[] {
@@ -201,7 +202,6 @@ headers.forEach((header, i) => {
           lines.push(currentLine);
           currentLine = word;
         } else {
-          // Handle very long words
           const avgCharWidth = font.widthOfTextAtSize('M', fontSize);
           const maxChars = Math.floor(maxWidth / avgCharWidth);
           let remainingWord = word;
@@ -261,7 +261,7 @@ headers.forEach((header, i) => {
   // Enhanced data rows with better formatting
   let currentY = tableStartY - headerHeight;
   let contractTotal = 0, prevTotal = 0, thisPeriodTotal = 0, matStoredTotal = 0, 
-      totalCompleted = 0, balanceTotal = 0, retainageTotal = 0;
+      totalCompletedPercent = 0, balanceTotal = 0, retainageTotal = 0;
 
   lineItems.forEach((li: G703LineItem, idx: number) => {
     const rowH = rowHeights[idx];
@@ -275,18 +275,19 @@ headers.forEach((header, i) => {
       color: colors.black,
     });
 
-    // Calculate actual dollar amounts
+    // Calculate actual dollar amounts and percentages
     const prevValue = li.previous && li.scheduled_value ? (li.previous / 100) * li.scheduled_value : 0;
     const thisPeriodValue = li.this_period && li.scheduled_value ? (li.this_period / 100) * li.scheduled_value : 0;
+    const totalCompletedPercentValue = li.total_completed && li.scheduled_value ? (li.total_completed / li.scheduled_value) * 100 : 0;
 
     const values = [
       li.item_no?.toString() || '',
       li.description_of_work || '',
       li.scheduled_value ? `$${li.scheduled_value.toLocaleString()}` : '',
       prevValue ? `$${Math.round(prevValue).toLocaleString()}` : '',
-      thisPeriodValue ? `$${Math.round(thisPeriodValue).toLocaleString()}` : '',
+      li.this_period ? `${li.this_period.toFixed(1)}%` : '',
       li.material_presently_stored ? `$${li.material_presently_stored.toLocaleString()}` : '',
-      li.total_completed ? `$${li.total_completed.toLocaleString()}` : '',
+      totalCompletedPercentValue ? `${totalCompletedPercentValue.toFixed(1)}%` : '',
       li.total_completed && li.scheduled_value ? `${((li.total_completed / li.scheduled_value) * 100).toFixed(1)}%` : '',
       li.balance_to_finish ? `$${li.balance_to_finish.toLocaleString()}` : '',
       li.retainage ? `$${li.retainage.toLocaleString()}` : '',
@@ -337,7 +338,7 @@ headers.forEach((header, i) => {
     prevTotal += prevValue || 0;
     thisPeriodTotal += thisPeriodValue || 0;
     matStoredTotal += li.material_presently_stored || 0;
-    totalCompleted += li.total_completed || 0;
+    totalCompletedPercent += totalCompletedPercentValue || 0;
     balanceTotal += li.balance_to_finish || 0;
     retainageTotal += li.retainage || 0;
   });
@@ -362,8 +363,10 @@ headers.forEach((header, i) => {
 
   const contractTotalValues = [
     '', 'CONTRACT TOTAL', `$${contractTotal.toLocaleString()}`, `$${Math.round(prevTotal).toLocaleString()}`, 
-    `$${Math.round(thisPeriodTotal).toLocaleString()}`, `$${matStoredTotal.toLocaleString()}`, 
-    `$${totalCompleted.toLocaleString()}`, contractTotal > 0 ? `${((totalCompleted / contractTotal) * 100).toFixed(1)}%` : '',
+    thisPeriodTotal && contractTotal ? `${((thisPeriodTotal / contractTotal) * 100).toFixed(1)}%` : '',
+    `$${matStoredTotal.toLocaleString()}`, 
+    totalCompletedPercent && contractTotal ? `${(totalCompletedPercent / lineItems.length).toFixed(1)}%` : '',
+    contractTotal > 0 ? `${((totalCompletedPercent / lineItems.length)).toFixed(1)}%` : '',
     `$${balanceTotal.toLocaleString()}`, `$${retainageTotal.toLocaleString()}`
   ];
   
@@ -441,8 +444,10 @@ headers.forEach((header, i) => {
 
   const grandTotalValues = [
     '', 'GRAND TOTAL $', `$${contractTotal.toLocaleString()}`, `$${Math.round(prevTotal).toLocaleString()}`, 
-    `$${Math.round(thisPeriodTotal).toLocaleString()}`, `$${matStoredTotal.toLocaleString()}`, 
-    `$${totalCompleted.toLocaleString()}`, contractTotal > 0 ? `${((totalCompleted / contractTotal) * 100).toFixed(1)}%` : '',
+    thisPeriodTotal && contractTotal ? `${((thisPeriodTotal / contractTotal) * 100).toFixed(1)}%` : '',
+    `$${matStoredTotal.toLocaleString()}`, 
+    totalCompletedPercent && contractTotal ? `${(totalCompletedPercent / lineItems.length).toFixed(1)}%` : '',
+    contractTotal > 0 ? `${((totalCompletedPercent / lineItems.length)).toFixed(1)}%` : '',
     `$${balanceTotal.toLocaleString()}`, `$${retainageTotal.toLocaleString()}`
   ];
   

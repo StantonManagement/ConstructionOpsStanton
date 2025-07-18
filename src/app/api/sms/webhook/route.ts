@@ -285,9 +285,83 @@ export async function POST(req: NextRequest) {
         twiml.message(nextAdditional);
       }
     } else {
-      // Already completed
-      twiml.message('This payment application conversation is already complete.');
+      // All questions answered, send summary and ask for confirmation
+      // Fetch all progress and line item info for summary
+      const { data: progressRows, error: progressRowsError } = await supabase
+        .from('payment_line_item_progress')
+        .select('line_item_id, this_period')
+        .eq('payment_app_id', conv.payment_app_id);
+      const { data: lineItemsData, error: lineItemsError } = await supabase
+        .from('project_line_items')
+        .select('id, description_of_work, scheduled_value')
+        .in('id', (progressRows || []).map(r => r.line_item_id));
+      let summary = 'Summary of your application:\n';
+      let total = 0;
+      for (const row of progressRows || []) {
+        const item = (lineItemsData || []).find(li => li.id === row.line_item_id);
+        const percent = Number(row.this_period) || 0;
+        const scheduled = Number(item?.scheduled_value) || 0;
+        const amount = scheduled * (percent / 100);
+        total += amount;
+        summary += `- ${item?.description_of_work || 'Item'}: ${percent.toFixed(1)}% ($${amount.toLocaleString(undefined, { maximumFractionDigits: 2 })})\n`;
+      }
+      summary += `Total requested: $${total.toLocaleString(undefined, { maximumFractionDigits: 2 })}\n`;
+      summary += 'Reply YES to confirm and submit, or NO to revise.';
+      // Set state to awaiting_confirmation
+      await supabase
+        .from('payment_sms_conversations')
+        .update({ conversation_state: 'awaiting_confirmation', current_question_index: idx })
+        .eq('id', conv.id);
+      twiml.message(summary);
+      return new Response(twiml.toString(), { headers: { 'Content-Type': 'text/xml' } });
     }
+  } else if (conv.conversation_state === 'awaiting_confirmation') {
+    if (body === 'YES') {
+      // Mark as completed, update payment_applications, etc.
+      await supabase
+        .from('payment_sms_conversations')
+        .update({
+          conversation_state: 'completed',
+          completed_at: new Date().toISOString(),
+        })
+        .eq('id', conv.id);
+      await supabase
+        .from('payment_applications')
+        .update({ status: 'submitted' })
+        .eq('id', conv.payment_app_id);
+      // Optionally update current_payment as before
+      const { data: progressRows, error: progressRowsError } = await supabase
+        .from('payment_line_item_progress')
+        .select('this_period, line_item_id')
+        .eq('payment_app_id', conv.payment_app_id);
+      const { data: lineItemsData, error: lineItemsError } = await supabase
+        .from('project_line_items')
+        .select('id, scheduled_value')
+        .in('id', (progressRows || []).map(r => r.line_item_id));
+      let total = 0;
+      for (const row of progressRows || []) {
+        const item = (lineItemsData || []).find(li => li.id === row.line_item_id);
+        const percent = Number(row.this_period) || 0;
+        const scheduled = Number(item?.scheduled_value) || 0;
+        const amount = scheduled * (percent / 100);
+        total += amount;
+      }
+      await supabase
+        .from('payment_applications')
+        .update({ current_payment: total })
+        .eq('id', conv.payment_app_id);
+      twiml.message('Thank you! Your payment application is submitted for Project Manager review.');
+    } else if (body === 'NO') {
+      // Optionally allow restart or notify PM
+      await supabase
+        .from('payment_sms_conversations')
+        .update({ conversation_state: 'in_progress' })
+        .eq('id', conv.id);
+      twiml.message('Your application was not submitted. Please contact your Project Manager to revise or reply to continue.');
+    } else {
+      twiml.message('Please reply YES to confirm and submit, or NO to revise.');
+    }
+    return new Response(twiml.toString(), { headers: { 'Content-Type': 'text/xml' } });
   } else {
     twiml.message('This payment application conversation is already complete.');
   }
