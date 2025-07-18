@@ -240,6 +240,35 @@ export async function POST(req: NextRequest) {
       } else {
         twiml.message(nextQuestion);
       }
+    } else if (idx === numLineItems) {
+      // All line items answered, send summary and ask for confirmation BEFORE additional questions
+      const { data: progressRows, error: progressRowsError } = await supabase
+        .from('payment_line_item_progress')
+        .select('line_item_id, this_period')
+        .eq('payment_app_id', conv.payment_app_id);
+      const { data: lineItemsData, error: lineItemsError } = await supabase
+        .from('project_line_items')
+        .select('id, description_of_work, scheduled_value')
+        .in('id', (progressRows || []).map(r => r.line_item_id));
+      let summary = 'Summary of your application:\n';
+      let total = 0;
+      for (const row of progressRows || []) {
+        const item = (lineItemsData || []).find(li => li.id === row.line_item_id);
+        const percent = Number(row.this_period) || 0;
+        const scheduled = Number(item?.scheduled_value) || 0;
+        const amount = scheduled * (percent / 100);
+        total += amount;
+        summary += `- ${item?.description_of_work || 'Item'}: ${percent.toFixed(1)}% ($${amount.toLocaleString(undefined, { maximumFractionDigits: 2 })})\n`;
+      }
+      summary += `Total requested: $${total.toLocaleString(undefined, { maximumFractionDigits: 2 })}\n`;
+      summary += 'Please type "Yes" to submit or "No" to redo your answers.';
+      // Set state to awaiting_confirmation
+      await supabase
+        .from('payment_sms_conversations')
+        .update({ conversation_state: 'awaiting_confirmation', current_question_index: idx })
+        .eq('id', conv.id);
+      twiml.message(summary);
+      return new Response(twiml.toString(), { headers: { 'Content-Type': 'text/xml' } });
     } else if (idx - numLineItems < ADDITIONAL_QUESTIONS.length) {
       // Handle additional questions (e.g., notes for PM)
       idx++;
@@ -317,49 +346,44 @@ export async function POST(req: NextRequest) {
     }
   } else if (conv.conversation_state === 'awaiting_confirmation') {
     if (body === 'YES') {
-      // Mark as completed, update payment_applications, etc.
+      // Proceed to first additional question (notes for PM)
+      const nextIdx = (typeof conv.current_question_index === 'number' ? conv.current_question_index : numLineItems) + 1;
       await supabase
         .from('payment_sms_conversations')
         .update({
-          conversation_state: 'completed',
-          completed_at: new Date().toISOString(),
+          conversation_state: 'in_progress',
+          current_question_index: nextIdx
         })
         .eq('id', conv.id);
-      await supabase
-        .from('payment_applications')
-        .update({ status: 'submitted' })
-        .eq('id', conv.payment_app_id);
-      // Optionally update current_payment as before
-      const { data: progressRows, error: progressRowsError } = await supabase
-        .from('payment_line_item_progress')
-        .select('this_period, line_item_id')
-        .eq('payment_app_id', conv.payment_app_id);
-      const { data: lineItemsData, error: lineItemsError } = await supabase
-        .from('project_line_items')
-        .select('id, scheduled_value')
-        .in('id', (progressRows || []).map(r => r.line_item_id));
-      let total = 0;
-      for (const row of progressRows || []) {
-        const item = (lineItemsData || []).find(li => li.id === row.line_item_id);
-        const percent = Number(row.this_period) || 0;
-        const scheduled = Number(item?.scheduled_value) || 0;
-        const amount = scheduled * (percent / 100);
-        total += amount;
-      }
-      await supabase
-        .from('payment_applications')
-        .update({ current_payment: total })
-        .eq('id', conv.payment_app_id);
-      twiml.message('Thank you! Your payment application is submitted for Project Manager review.');
+      // Send the first additional question
+      twiml.message(ADDITIONAL_QUESTIONS[0]);
     } else if (body === 'NO') {
-      // Optionally allow restart or notify PM
+      // Restart line item questions: reset index, clear responses, set state to in_progress
       await supabase
         .from('payment_sms_conversations')
-        .update({ conversation_state: 'in_progress' })
+        .update({
+          conversation_state: 'in_progress',
+          current_question_index: 0,
+          responses: []
+        })
         .eq('id', conv.id);
-      twiml.message('Your application was not submitted. Please contact your Project Manager to revise or reply to continue.');
+      // Fetch the first line item for the question
+      if (numLineItems > 0) {
+        const firstLineItemId = lineItems[0].id;
+        const { data: pliRow } = await supabase
+          .from('project_line_items')
+          .select('this_period, description_of_work')
+          .eq('id', firstLineItemId)
+          .single();
+        const prevPercent = pliRow?.this_period ?? 0;
+        const desc = pliRow?.description_of_work || lineItems[0].description_of_work || '';
+        twiml.message(`What percent complete is your work for: ${desc}? (Previous: ${prevPercent}%)`);
+      } else {
+        twiml.message('No line items found to redo.');
+      }
+      return new Response(twiml.toString(), { headers: { 'Content-Type': 'text/xml' } });
     } else {
-      twiml.message('Please reply YES to confirm and submit, or NO to revise.');
+      twiml.message('Please type "Yes" to submit or "No" to redo your answers.');
     }
     return new Response(twiml.toString(), { headers: { 'Content-Type': 'text/xml' } });
   } else {
