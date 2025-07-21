@@ -296,6 +296,18 @@ export async function POST(req: NextRequest) {
       if (appUpdateError) {
         console.error('Error updating payment_applications status:', appUpdateError);
       }
+      // Save PM notes from last response (notes for PM)
+      if (responses && responses.length > 0) {
+        const pmNotes = responses[responses.length - 1];
+        // Save to pm_notes field in payment_applications
+        const { error: pmNotesError } = await supabase
+          .from('payment_applications')
+          .update({ pm_notes: pmNotes })
+          .eq('id', conv.payment_app_id);
+        if (pmNotesError) {
+          console.error('Error saving pm_notes:', pmNotesError);
+        }
+      }
       // Calculate total current payment
       const { data: progressRows, error: progressRowsError } = await supabase
         .from('payment_line_item_progress')
