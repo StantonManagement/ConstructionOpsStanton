@@ -23,7 +23,7 @@ const Header: React.FC<HeaderProps> = ({ onShowProfile, onLogout }) => {
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center"><span className="text-white font-bold text-sm">COC</span></div>
-            <h1 className="text-xl font-semibold text-gray-900">Construction Operations Center</h1>
+            <h1 className="text-xl font-semibold text-gray-900">Construction Ops - Stanton</h1>
           </div>
           <div className="flex items-center gap-4">
             <div className="text-sm text-gray-600">
