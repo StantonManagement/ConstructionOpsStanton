@@ -344,6 +344,7 @@ export default function PaymentVerificationPage() {
                 invoiceDate: paymentApp.created_at ? new Date(paymentApp.created_at).toLocaleDateString() : '',
                 period: '', // You can fill this with the correct value if available
                 dateSubmitted: paymentApp.created_at ? new Date(paymentApp.created_at).toLocaleDateString() : '',
+                previousDate: '', // Added to fix linter error
                 lineItems: lineItemsForTable,
               });
               const blob = new Blob([pdfBytes], { type: 'application/pdf' });
