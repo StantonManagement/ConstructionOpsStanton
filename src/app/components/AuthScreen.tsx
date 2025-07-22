@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { useRouter } from 'next/navigation';
 
 const roleRedirectMap: Record<string, string> = {
-  admin: '/admin',
+  admin: '/',
   pm: '/',
   contractor: '/',
   viewer: '/viewer',

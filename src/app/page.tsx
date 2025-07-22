@@ -64,7 +64,6 @@ export default function Page() {
   if (role === "pm") {
     return <PMDashboard />;
   }
-
   return (
     <DataProvider>
       <ConstructionDashboard />

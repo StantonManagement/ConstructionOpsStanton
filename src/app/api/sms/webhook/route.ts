@@ -24,6 +24,33 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Missing From' }, { status: 400 });
   }
 
+  // 1. Find which project this phone number manages
+  const { data: project } = await supabase
+    .from('properties')
+    .select('property_id')
+    .eq('manager_phone', from)
+    .single();
+
+  if (project) {
+    const today = new Date().toISOString().slice(0, 10);
+    // 2. Upsert the daily log
+    await supabase
+      .from('project_daily_logs')
+      .upsert({
+        project_id: project.property_id,
+        manager_id: null, // Fill if you have manager_id
+        log_date: today,
+        notes: body,
+        status: 'submitted',
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'project_id,log_date' });
+
+    // 3. Respond to the manager
+    const twiml = new MessagingResponse();
+    twiml.message('Thank you! Your daily log has been received.');
+    return new Response(twiml.toString(), { headers: { 'Content-Type': 'text/xml' } });
+  }
+
   // Find the active conversation for this phone
   const { data: conv, error } = await supabase
     .from('payment_sms_conversations')
@@ -36,6 +63,7 @@ export async function POST(req: NextRequest) {
 
   console.log('Found conversation:', conv, 'Error:', error);
 
+  // Only declare 'twiml' if it does not already exist in this scope
   const twiml = new MessagingResponse();
 
   if (error || !conv) {

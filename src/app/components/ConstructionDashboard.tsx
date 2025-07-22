@@ -20,7 +20,7 @@ const ConstructionDashboard: React.FC = () => {
 
   const handleLogout = async () => {
     await import('@/lib/supabaseClient').then(({ supabase }) => supabase.auth.signOut());
-    window.location.reload();
+    window.location.href = "/";
   };
 
   return (

@@ -83,14 +83,14 @@ const QueueCard: React.FC<{
   </div>
 );
 
-const DecisionQueueCards: React.FC = () => {
+const DecisionQueueCards: React.FC<{ role: string | null, setError: (msg: string) => void }> = ({ role, setError }) => {
   const [queue, setQueue] = useState<PaymentApplication[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setLocalError] = useState<string | null>(null); // Only for local fetch errors
 
   const fetchQueue = useCallback(async () => {
     try {
-      setError(null);
+      setLocalError(null);
       const { data, error } = await supabase
         .from('payment_applications')
         .select('id, status, current_payment, created_at, project_id, project:projects(id, name), contractor:contractors(name)')
@@ -106,7 +106,7 @@ const DecisionQueueCards: React.FC = () => {
       );
     } catch (err) {
       console.error('Error fetching queue:', err);
-      setError('Failed to load decision queue');
+      setLocalError('Failed to load decision queue');
     } finally {
       setLoading(false);
     }
@@ -204,9 +204,16 @@ const DecisionQueueCards: React.FC = () => {
                 </div>
                 <button
                   className="bg-blue-600 hover:bg-blue-700 text-white rounded px-4 py-2 font-medium transition-colors"
-                  // onClick={() => ...} // Optionally navigate to project/payments page
+                  disabled={role === null}
+                  onClick={() => {
+                    if (role === "admin") {
+                      window.location.href = "/pm-dashboard";
+                    } else if (role !== null) {
+                      setError("You are not authenticated for the page");
+                    }
+                  }}
                 >
-                  View All
+                  {role === null ? "Checking role..." : "View All"}
                 </button>
               </div>
             );
@@ -219,7 +226,28 @@ const DecisionQueueCards: React.FC = () => {
 
 const OverviewView: React.FC = () => {
   const { projects } = useData();
+  const [role, setRole] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   
+  useEffect(() => {
+    const getRole = async () => {
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      console.log("Session:", session, "Error:", sessionError);
+      if (session?.user) {
+        const { data, error } = await supabase
+          .from("users")
+          .select("role")
+          .eq("uuid", session.user.id)
+          .single();
+        console.log("User role fetch:", data, error);
+        setRole(data?.role || "unknown");
+      } else {
+        setRole("unknown");
+      }
+    };
+    getRole();
+  }, []);
+
   // Memoize calculations to prevent unnecessary recalculations
   const stats = useMemo(() => {
     const totalProjects = projects.length;
@@ -305,11 +333,18 @@ const OverviewView: React.FC = () => {
               🏗️ Active Projects ({projects.length})
             </h3>
             {projects.length > 5 && (
-              <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">
+              <button className="text-blue-600 hover:text-blue-800 text-sm font-medium" onClick={() => {
+                if (role === "admin") {
+                  window.location.href = "/pm-dashboard";
+                } else {
+                  setError("You are not authenticated for the page");
+                }
+              }}>
                 View All
               </button>
             )}
           </div>
+          {error && <div className="text-red-600 mt-2">{error}</div>}
           <div className="space-y-3 max-h-96 overflow-y-auto">
             {projects.length === 0 ? (
               <div className="text-gray-500 text-center py-8 flex flex-col items-center gap-2">
@@ -325,7 +360,7 @@ const OverviewView: React.FC = () => {
         </div>
 
         {/* Decisions Queue Cards */}
-        <DecisionQueueCards />
+        <DecisionQueueCards role={role} setError={setError} />
       </div>
     </div>
   );

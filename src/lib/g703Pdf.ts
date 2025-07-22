@@ -19,6 +19,7 @@ export interface GenerateG703PdfParams {
   invoiceDate: string;
   period: string;
   dateSubmitted: string;
+  previousDate: string;
   lineItems: G703LineItem[];
 }
 
@@ -29,15 +30,38 @@ export async function generateG703Pdf({
   invoiceDate,
   period,
   dateSubmitted,
+  previousDate,
   lineItems,
 }: GenerateG703PdfParams): Promise<{ pdfBytes: Uint8Array; filename: string }> {
   const pdfDoc = await PDFDocument.create();
-  const page = pdfDoc.addPage([842, 595]); // Landscape A4
-  const { width, height } = page.getSize();
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
-  // Constants for better maintainability
+  // Calculate totals
+  const contractTotal = lineItems.reduce((sum, li) => sum + (li.scheduled_value || 0), 0);
+  const prevTotal = lineItems.reduce((sum, li) => sum + (((li.previous || 0) / 100) * (li.scheduled_value || 0)), 0);
+  const thisPeriodTotal = lineItems.reduce((sum, li) => sum + (((li.this_period || 0) / 100) * (li.scheduled_value || 0)), 0);
+  const matStoredTotal = lineItems.reduce((sum, li) => sum + (li.material_presently_stored || 0), 0);
+  const totalCompleted = lineItems.reduce((sum, li) => sum + (li.total_completed || 0), 0);
+  const balanceTotal = lineItems.reduce((sum, li) => sum + (li.balance_to_finish || 0), 0);
+  const retainageTotal = lineItems.reduce((sum, li) => sum + (li.retainage || 0), 0);
+
+  const originalContract = contractTotal;
+  const netChange = 0;
+  const presentContract = originalContract + netChange;
+  const originalWorkCompleted = totalCompleted;
+  const netChangeWorkCompleted = 0;
+  const totalCompletedStored = originalWorkCompleted + netChangeWorkCompleted;
+  const retainageCompleted = retainageTotal;
+  const retainageStored = 0;
+  const totalRetainage = retainageCompleted + retainageStored;
+  const backCharges = 0;
+  const totalEarnedLessRet = totalCompletedStored - totalRetainage - backCharges;
+  const previousRequests = prevTotal;
+  const currentAmount = totalEarnedLessRet - previousRequests;
+  const balanceToFinishPlusRet = presentContract - totalEarnedLessRet;
+
+  // Constants for colors
   const colors = {
     black: rgb(0, 0, 0),
     lightGray: rgb(0.95, 0.95, 0.95),
@@ -45,6 +69,185 @@ export async function generateG703Pdf({
     white: rgb(1, 1, 1),
   };
 
+  // Add cover page - Portrait A4
+  const coverPage = pdfDoc.addPage([595, 842]);
+  const cWidth = 595;
+  const cHeight = 842;
+  const margin = 50;
+  let y = cHeight - margin;
+  const lineHeight = 15;
+  const smallSize = 10;
+
+  // Company name
+  coverPage.drawText('Chain-JP LLC', { x: margin, y, size: 14, font: fontBold, color: colors.black });
+
+  // Application title
+  const appTitle = 'Contractor/Vendor Application for Payment';
+  const appTitleWidth = fontBold.widthOfTextAtSize(appTitle, 12);
+  coverPage.drawText(appTitle, { x: (cWidth - appTitleWidth) / 2, y: y - lineHeight, size: 12, font: fontBold, color: colors.black });
+
+  // Exhibit "J"
+  const exhibit = 'Exhibit "J"';
+  const exhibitWidth = font.widthOfTextAtSize(exhibit, 12);
+  coverPage.drawText(exhibit, { x: cWidth - margin - exhibitWidth, y: y - lineHeight, size: 12, font, color: colors.black });
+
+  y -= 3 * lineHeight;
+
+  // To: and DATE:
+  coverPage.drawText('To:', { x: margin, y, size: smallSize, font, color: colors.black });
+  coverPage.drawText('Stanton Management LLC', { x: margin + 40, y, size: smallSize, font, color: colors.black });
+  coverPage.drawText('DATE:', { x: margin + 300, y, size: smallSize, font, color: colors.black });
+  coverPage.drawText(invoiceDate || '', { x: margin + 340, y, size: smallSize, font, color: colors.black });
+
+  y -= lineHeight;
+
+  // 421 Park St and Previous Date:
+  coverPage.drawText('421 Park St', { x: margin + 40, y, size: smallSize, font, color: colors.black });
+  coverPage.drawText('Previous Date:', { x: margin + 300, y, size: smallSize, font, color: colors.black });
+  coverPage.drawText(previousDate || '', { x: margin + 390, y, size: smallSize, font, color: colors.black });
+
+  y -= lineHeight;
+
+  // Hartford, CT 06106 and PERIOD COVERED:
+  coverPage.drawText('Hartford, CT 06106', { x: margin + 40, y, size: smallSize, font, color: colors.black });
+  coverPage.drawText('PERIOD COVERED:', { x: margin + 300, y, size: smallSize, font, color: colors.black });
+  coverPage.drawText(period || '', { x: margin + 410, y, size: smallSize, font, color: colors.black });
+
+  y -= lineHeight;
+
+  // Owner:
+  coverPage.drawText('Owner:', { x: margin, y, size: smallSize, font, color: colors.black });
+  coverPage.drawText('SREP Hartford I LLC', { x: margin + 50, y, size: smallSize, font, color: colors.black });
+
+  y -= 1.5 * lineHeight;
+
+  // FROM: and Application #:
+  coverPage.drawText('FROM:', { x: margin, y, size: smallSize, font, color: colors.black });
+  coverPage.drawText(contractor.name || 'Chain-JP LLC', { x: margin + 40, y, size: smallSize, font, color: colors.black });
+  coverPage.drawText('Application #:', { x: margin + 300, y, size: smallSize, font, color: colors.black });
+  coverPage.drawText(`${applicationNumber || ''}`, { x: margin + 390, y, size: smallSize, font, color: colors.black });
+
+  y -= lineHeight;
+
+  // 32 Blue Cliff Terrace
+  coverPage.drawText('32 Blue Cliff Terrace', { x: margin + 40, y, size: smallSize, font, color: colors.black });
+
+  y -= lineHeight;
+
+  // New Haven, CT 06513
+  coverPage.drawText('New Haven, CT 06513', { x: margin + 40, y, size: smallSize, font, color: colors.black });
+
+  y -= lineHeight;
+
+  // Officer:
+  coverPage.drawText('Officer:', { x: margin, y, size: smallSize, font, color: colors.black });
+  coverPage.drawText('Olguer Cadena', { x: margin + 50, y, size: smallSize, font, color: colors.black });
+
+  y -= lineHeight;
+
+  // Title: and Trade:
+  coverPage.drawText('Title:', { x: margin, y, size: smallSize, font, color: colors.black });
+  coverPage.drawText('Trade:', { x: margin + 300, y, size: smallSize, font, color: colors.black });
+  coverPage.drawText('Exterior Stairs/Decking/ Window Capping', { x: margin + 340, y, size: smallSize, font, color: colors.black });
+
+  y -= 1.5 * lineHeight;
+
+  // Application for Payment in connection with
+  coverPage.drawText('Application for Payment in connection with', { x: margin, y, size: smallSize, font, color: colors.black });
+  coverPage.drawText(project.name || '', { x: margin + 280, y, size: smallSize, font, color: colors.black });
+  coverPage.drawText('Hartford', { x: margin + 400, y, size: smallSize, font, color: colors.black });
+
+  y -= lineHeight;
+
+  coverPage.drawText(project.address || '', { x: cWidth - margin - font.widthOfTextAtSize(project.address || '', smallSize), y, size: smallSize, font, color: colors.black });
+
+  y -= 1.5 * lineHeight;
+
+  // Financial lines table
+  const descX = margin;
+  const dollarX = margin + 330;
+  const valueX = cWidth - margin;
+  const dottedThickness = 0.5;
+  const dottedColor = colors.black;
+  const dashArray = [1, 1];
+
+  const getValueStr = (val: number) => val === 0 ? '-' : val.toLocaleString();
+
+  const financialLines = [
+    { label: '1. Original Contract Value', hasDollar: true, value: getValueStr(originalContract) },
+    { label: '2. Net Change Order Value', hasDollar: true, value: getValueStr(netChange) },
+    { label: '3. Present Contract Value', hasDollar: true, value: getValueStr(presentContract) },
+    { label: '4. Original Contract Work Completed', hasDollar: true, value: getValueStr(originalWorkCompleted) },
+    { label: '5. Net Change Order Work Completed', hasDollar: true, value: getValueStr(netChangeWorkCompleted) },
+    { label: '6. Total Contract Work Completed & Stored To Date', hasDollar: true, value: getValueStr(totalCompletedStored) },
+    { label: '7. Retainage', hasDollar: false, value: null },
+    { label: 'a. 0 % of Completed Work', hasDollar: true, value: getValueStr(retainageCompleted), indent: 20 },
+    { label: 'b. 0 % of Stored Material', hasDollar: true, value: getValueStr(retainageStored), indent: 20 },
+    { label: 'c. Total Retainage = (5a+5b)', hasDollar: true, value: getValueStr(totalRetainage), indent: 20 },
+    { label: '8. BACK CHARGES.', hasDollar: true, value: getValueStr(backCharges) },
+    { label: '9. TOTAL EARNED LESS RETAINAGE (Line 6 less Line 7 Total).', hasDollar: true, value: getValueStr(totalEarnedLessRet) },
+    { label: '10. LESS PREVIOUS REQUESTS FOR PAYMENT', hasDollar: true, value: Math.round(previousRequests).toLocaleString() },
+    { label: '11. Balance To Finish, Plus Retainage', hasDollar: true, value: `(${getValueStr(balanceToFinishPlusRet)})` },
+    { label: '12. TOTAL AMOUNT REQUESTED THIS APPLICATION', hasDollar: true, value: currentAmount.toLocaleString() },
+  ];
+
+  for (const line of financialLines) {
+    const indent = line.indent || 0;
+    const labelX = descX + indent;
+    coverPage.drawText(line.label, { x: labelX, y, size: smallSize, font, color: colors.black });
+    const labelWidth = font.widthOfTextAtSize(line.label, smallSize);
+    const dottedStartX = labelX + labelWidth + 5;
+    const dottedEndX = line.hasDollar ? dollarX - 5 : valueX - 5;
+
+    if (line.value !== null || line.hasDollar) {
+      coverPage.drawLine({
+        start: { x: dottedStartX, y: y + smallSize / 2 },
+        end: { x: dottedEndX, y: y + smallSize / 2 },
+        thickness: dottedThickness,
+        color: dottedColor,
+        dashArray,
+        dashPhase: 0,
+      });
+    }
+
+    if (line.hasDollar) {
+      coverPage.drawText('$', { x: dollarX, y, size: smallSize, font, color: colors.black });
+    }
+
+    if (line.value !== null) {
+      const valueText = line.value;
+      const valueWidth = font.widthOfTextAtSize(valueText, smallSize);
+      coverPage.drawText(valueText, { x: valueX - valueWidth, y, size: smallSize, font, color: colors.black });
+    }
+
+    y -= lineHeight;
+  }
+
+  y -= lineHeight;
+
+  // Certification text
+  const certText = 'The undersigned certifies the above amounts to be actual values as of this date and further attests the information contained in this Application for Payment, Schedule of Values, Subcontractor\'s/Vendor\'s Affidavit and Waiver of Lien to Date to be true and correct.';
+  const certLines = wrapText(certText, cWidth - 2 * margin, smallSize);
+  certLines.forEach((line) => {
+    coverPage.drawText(line, { x: margin, y, size: smallSize, font, color: colors.black });
+    y -= 12;
+  });
+
+  y -= lineHeight;
+
+  // By: Title: Date:
+  coverPage.drawText('By:', { x: margin, y, size: smallSize, font, color: colors.black });
+  coverPage.drawLine({ start: { x: margin + 30, y: y - 2 }, end: { x: margin + 200, y: y - 2 }, thickness: 1, color: colors.black });
+  coverPage.drawText('Title:', { x: margin + 210, y, size: smallSize, font, color: colors.black });
+  coverPage.drawLine({ start: { x: margin + 250, y: y - 2 }, end: { x: margin + 400, y: y - 2 }, thickness: 1, color: colors.black });
+  coverPage.drawText('Date:', { x: margin + 410, y, size: smallSize, font, color: colors.black });
+  coverPage.drawLine({ start: { x: margin + 450, y: y - 2 }, end: { x: cWidth - margin, y: y - 2 }, thickness: 1, color: colors.black });
+
+  // Continuation sheet page - Landscape A4
+  const page = pdfDoc.addPage([842, 595]);
+  const { width, height } = page.getSize();
+
+  // Fonts constants
   const fonts = {
     header: { font: fontBold, size: 14 },
     subheader: { font: font, size: 9 },
@@ -54,7 +257,7 @@ export async function generateG703Pdf({
     tableDataBold: { font: fontBold, size: 8 },
   };
 
-  // Header section with improved spacing
+  // Header section
   const headerY = height - 30;
   page.drawText('CONTINUATION SHEET', { 
     x: 40, 
@@ -81,7 +284,7 @@ export async function generateG703Pdf({
     ...fonts.small
   });
 
-  // Project info section with better formatting
+  // Project info
   const projectInfoX = 320;
   page.drawText('Chain-JP LLC', { 
     x: projectInfoX, 
@@ -109,7 +312,7 @@ export async function generateG703Pdf({
     ...fonts.subheader
   });
 
-  // Application details with improved alignment
+  // Application details
   const rightInfoX = 580;
   const appDetails = [
     `APPLICATION NUMBER: ${applicationNumber || ''}`,
@@ -126,16 +329,14 @@ export async function generateG703Pdf({
     });
   });
 
-  // Enhanced table setup with better spacing
+  // Table setup
   const tableStartY = height - 110;
   const rowHeight = 20;
   const headerHeight = 45;
   
-  // Optimized column positions and widths
   const colXs = [40, 75, 260, 330, 400, 470, 540, 610, 680, 750];
   const colWidths = [35, 185, 70, 70, 70, 70, 70, 70, 70, 70];
 
-  // Updated multi-line headers to match image layout
   const headers = [
     { line1: 'NO', line2: 'ITEM' },
     { line1: 'OF WORK', line2: 'DESCRIPTION' },
@@ -149,7 +350,7 @@ export async function generateG703Pdf({
     { line1:'RETAINAGE' , line2: '0.0%' }
   ];
 
-  // Draw enhanced table header background
+  // Table header background
   page.drawRectangle({
     x: colXs[0],
     y: tableStartY - headerHeight,
@@ -160,16 +361,12 @@ export async function generateG703Pdf({
     borderColor: colors.black,
   });
 
-  // Draw header text with improved centering
+  // Header text
   headers.forEach((header, i) => {
     const fontSize = 7;
     const lineSpacing = 8;
-    const headerLines = [header.line1, header.line2, header.line3, header.line4]
-      .filter((line): line is string => !!line && line.trim() !== '');
-
-    // Calculate total height of header text block
+    const headerLines = [header.line1, header.line2, header.line3, header.line4].filter((line): line is string => !!line && line.trim() !== '');
     const textBlockHeight = headerLines.length * lineSpacing;
-    // Center the text block vertically within the header area
     const startY = tableStartY - headerHeight + (headerHeight - textBlockHeight) / 2 + lineSpacing;
 
     headerLines.forEach((line, lineIndex) => {
@@ -185,7 +382,7 @@ export async function generateG703Pdf({
     });
   });
 
-  // Enhanced text wrapping function
+  // Wrap text function
   function wrapText(text: string, maxWidth: number, fontSize: number): string[] {
     const words = text.split(' ');
     const lines: string[] = [];
@@ -221,7 +418,7 @@ export async function generateG703Pdf({
     return lines;
   }
 
-  // Calculate dynamic row heights
+  // Dynamic row heights
   let totalRowsHeight = 0;
   const rowHeights: number[] = [];
   
@@ -237,7 +434,7 @@ export async function generateG703Pdf({
     }
   });
   
-  // Draw vertical column lines with enhanced styling
+  // Vertical lines
   const tableEndY = tableStartY - headerHeight - totalRowsHeight - (3 * rowHeight);
   
   for (let i = 0; i <= colXs.length; i++) {
@@ -250,7 +447,7 @@ export async function generateG703Pdf({
     });
   }
 
-  // Draw horizontal line for header
+  // Horizontal header line
   page.drawLine({
     start: { x: colXs[0], y: tableStartY - headerHeight },
     end: { x: colXs[colXs.length - 1] + colWidths[colWidths.length - 1], y: tableStartY - headerHeight },
@@ -258,16 +455,13 @@ export async function generateG703Pdf({
     color: colors.black,
   });
 
-  // Enhanced data rows with better formatting
+  // Data rows
   let currentY = tableStartY - headerHeight;
-  let contractTotal = 0, prevTotal = 0, thisPeriodTotal = 0, matStoredTotal = 0, 
-      totalCompletedPercent = 0, balanceTotal = 0, retainageTotal = 0;
 
   lineItems.forEach((li: G703LineItem, idx: number) => {
     const rowH = rowHeights[idx];
     currentY -= rowH;
 
-    // Draw horizontal line for the row
     page.drawLine({
       start: { x: colXs[0], y: currentY + rowH },
       end: { x: colXs[colXs.length - 1] + colWidths[colWidths.length - 1], y: currentY + rowH },
@@ -275,7 +469,6 @@ export async function generateG703Pdf({
       color: colors.black,
     });
 
-    // Calculate actual dollar amounts and percentages
     const prevValue = li.previous && li.scheduled_value ? (li.previous / 100) * li.scheduled_value : 0;
     const thisPeriodValue = li.this_period && li.scheduled_value ? (li.this_period / 100) * li.scheduled_value : 0;
     const totalCompletedPercentValue = li.total_completed && li.scheduled_value ? (li.total_completed / li.scheduled_value) * 100 : 0;
@@ -287,26 +480,25 @@ export async function generateG703Pdf({
       prevValue ? `$${Math.round(prevValue).toLocaleString()}` : '',
       li.this_period ? `${li.this_period.toFixed(1)}%` : '',
       li.material_presently_stored ? `$${li.material_presently_stored.toLocaleString()}` : '',
-      totalCompletedPercentValue ? `${totalCompletedPercentValue.toFixed(1)}%` : '',
-      li.total_completed && li.scheduled_value ? `${((li.total_completed / li.scheduled_value) * 100).toFixed(1)}%` : '',
+      li.total_completed ? `$${li.total_completed.toLocaleString()}` : '',
+      li.total_completed && li.scheduled_value ? `${(li.total_completed / li.scheduled_value * 100).toFixed(1)}%` : '',
       li.balance_to_finish ? `$${li.balance_to_finish.toLocaleString()}` : '',
       li.retainage ? `$${li.retainage.toLocaleString()}` : '',
     ];
 
     values.forEach((value, i) => {
       if (value) {
-        if (i === 0) { 
-          // Item number - center align
+        if (i === 0) {
           const textWidth = font.widthOfTextAtSize(value, 8);
           const centerX = colXs[i] + colWidths[i] / 2;
           page.drawText(value, { 
             x: centerX - textWidth / 2, 
             y: currentY + rowH - 14, 
             size: 8, 
-            font 
+            font,
+            color: colors.black 
           });
-        } else if (i === 1) { 
-          // Description - CENTER ALIGN and multi-line
+        } else if (i === 1) {
           const descLines = wrapText(value, colWidths[i] - 8, 8);
           const centerX = colXs[i] + colWidths[i] / 2;
           const startY = currentY + rowH - 14 - ((descLines.length - 1) * 11) / 2;
@@ -317,33 +509,25 @@ export async function generateG703Pdf({
               x: centerX - textWidth / 2, 
               y: startY + (lineIdx * 11), 
               size: 8, 
-              font 
+              font,
+              color: colors.black 
             });
           });
-        } else { 
-          // Numeric values - right align with better padding
+        } else {
           const textWidth = font.widthOfTextAtSize(value, 8);
           page.drawText(value, { 
             x: colXs[i] + colWidths[i] - textWidth - 4, 
             y: currentY + rowH - 14, 
             size: 8, 
-            font 
+            font,
+            color: colors.black 
           });
         }
       }
     });
-
-    // Accumulate totals
-    contractTotal += li.scheduled_value || 0;
-    prevTotal += prevValue || 0;
-    thisPeriodTotal += thisPeriodValue || 0;
-    matStoredTotal += li.material_presently_stored || 0;
-    totalCompletedPercent += totalCompletedPercentValue || 0;
-    balanceTotal += li.balance_to_finish || 0;
-    retainageTotal += li.retainage || 0;
   });
 
-  // Enhanced Contract Total row
+  // Contract Total row
   currentY -= rowHeight;
   page.drawLine({
     start: { x: colXs[0], y: currentY + rowHeight },
@@ -352,7 +536,6 @@ export async function generateG703Pdf({
     color: colors.black,
   });
 
-  // Add subtle background for total rows
   page.drawRectangle({
     x: colXs[0],
     y: currentY,
@@ -365,31 +548,31 @@ export async function generateG703Pdf({
     '', 'CONTRACT TOTAL', `$${contractTotal.toLocaleString()}`, `$${Math.round(prevTotal).toLocaleString()}`, 
     thisPeriodTotal && contractTotal ? `${((thisPeriodTotal / contractTotal) * 100).toFixed(1)}%` : '',
     `$${matStoredTotal.toLocaleString()}`, 
-    totalCompletedPercent && contractTotal ? `${(totalCompletedPercent / lineItems.length).toFixed(1)}%` : '',
-    contractTotal > 0 ? `${((totalCompletedPercent / lineItems.length)).toFixed(1)}%` : '',
+    `$${totalCompleted.toLocaleString()}`,
+    contractTotal > 0 ? `${((totalCompleted / contractTotal) * 100).toFixed(1)}%` : '',
     `$${balanceTotal.toLocaleString()}`, `$${retainageTotal.toLocaleString()}`
   ];
   
   contractTotalValues.forEach((value, i) => {
     if (value) {
       if (i === 1) {
-        // "CONTRACT TOTAL" - center align
         const textWidth = fontBold.widthOfTextAtSize(value, 8);
         const centerX = colXs[i] + colWidths[i] / 2;
         page.drawText(value, { 
           x: centerX - textWidth / 2, 
           y: currentY + rowHeight - 14, 
           size: 8, 
-          font: fontBold 
+          font: fontBold,
+          color: colors.black 
         });
       } else {
-        // Numeric values - right align
         const textWidth = fontBold.widthOfTextAtSize(value, 8);
         page.drawText(value, { 
           x: colXs[i] + colWidths[i] - textWidth - 4, 
           y: currentY + rowHeight - 14, 
           size: 8, 
-          font: fontBold 
+          font: fontBold,
+          color: colors.black 
         });
       }
     }
@@ -412,7 +595,8 @@ export async function generateG703Pdf({
     x: changeOrderCenterX - changeOrderTextWidth / 2, 
     y: currentY + rowHeight - 14, 
     size: 8, 
-    font: fontBold 
+    font: fontBold,
+    color: colors.black 
   });
   
   const naCenterX = colXs[7] + colWidths[7] / 2;
@@ -421,10 +605,11 @@ export async function generateG703Pdf({
     x: naCenterX - naTextWidth / 2, 
     y: currentY + rowHeight - 14, 
     size: 8, 
-    font 
+    font,
+    color: colors.black 
   });
 
-  // Enhanced Grand Total row
+  // Grand Total row
   currentY -= rowHeight;
   page.drawLine({
     start: { x: colXs[0], y: currentY + rowHeight },
@@ -433,7 +618,6 @@ export async function generateG703Pdf({
     color: colors.black,
   });
 
-  // Add background for grand total
   page.drawRectangle({
     x: colXs[0],
     y: currentY,
@@ -443,40 +627,40 @@ export async function generateG703Pdf({
   });
 
   const grandTotalValues = [
-    '', 'GRAND TOTAL $', `$${contractTotal.toLocaleString()}`, `$${Math.round(prevTotal).toLocaleString()}`, 
+    '', 'GRAND TOTAL', `$${contractTotal.toLocaleString()}`, `$${Math.round(prevTotal).toLocaleString()}`, 
     thisPeriodTotal && contractTotal ? `${((thisPeriodTotal / contractTotal) * 100).toFixed(1)}%` : '',
     `$${matStoredTotal.toLocaleString()}`, 
-    totalCompletedPercent && contractTotal ? `${(totalCompletedPercent / lineItems.length).toFixed(1)}%` : '',
-    contractTotal > 0 ? `${((totalCompletedPercent / lineItems.length)).toFixed(1)}%` : '',
+    `$${totalCompleted.toLocaleString()}`,
+    contractTotal > 0 ? `${((totalCompleted / contractTotal) * 100).toFixed(1)}%` : '',
     `$${balanceTotal.toLocaleString()}`, `$${retainageTotal.toLocaleString()}`
   ];
   
   grandTotalValues.forEach((value, i) => {
     if (value) {
       if (i === 1) {
-        // "GRAND TOTAL $" - center align
         const textWidth = fontBold.widthOfTextAtSize(value, 8);
         const centerX = colXs[i] + colWidths[i] / 2;
         page.drawText(value, { 
           x: centerX - textWidth / 2, 
           y: currentY + rowHeight - 14, 
           size: 8, 
-          font: fontBold 
+          font: fontBold,
+          color: colors.black 
         });
       } else {
-        // Numeric values - right align
         const textWidth = fontBold.widthOfTextAtSize(value, 8);
         page.drawText(value, { 
           x: colXs[i] + colWidths[i] - textWidth - 4, 
           y: currentY + rowHeight - 14, 
           size: 8, 
-          font: fontBold 
+          font: fontBold,
+          color: colors.black 
         });
       }
     }
   });
 
-  // Draw enhanced outer table border
+  // Outer table border
   page.drawRectangle({
     x: colXs[0],
     y: tableEndY,
@@ -484,19 +668,19 @@ export async function generateG703Pdf({
     height: tableStartY - tableEndY,
     borderWidth: 2,
     borderColor: colors.black,
-    color: undefined,
   });
 
-  // Add "Exhibit J" with better positioning
+  // Exhibit "J" on continuation sheet
   const exhibitText = 'Exhibit "J"';
   const exhibitTextWidth = fontBold.widthOfTextAtSize(exhibitText, 12);
   page.drawText(exhibitText, { 
     x: width - exhibitTextWidth - 20, 
     y: height - 25, 
     size: 12, 
-    font: fontBold 
+    font: fontBold,
+    color: colors.black 
   });
 
   const pdfBytes = await pdfDoc.save();
-  return { pdfBytes, filename: 'CONTINUATION_SHEET.pdf' };
+  return { pdfBytes, filename: 'APPLICATION_FOR_PAYMENT.pdf' };
 }

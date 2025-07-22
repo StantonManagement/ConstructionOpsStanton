@@ -416,6 +416,10 @@ function ActiveProjects({ projects, onCreatePaymentApps }: any) {
 }
 
 export default function PMDashboard() {
+  console.log("PMDashboard rendered");
+  const [session, setSession] = useState<any>(null);
+  const [role, setRole] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
   const [stats, setStats] = useState<any>({
     pending_sms: 0,
@@ -425,7 +429,6 @@ export default function PMDashboard() {
   });
   const [paymentApps, setPaymentApps] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [lastRefresh, setLastRefresh] = useState(new Date());
   const [error, setError] = useState<string | null>(null);
   const [paymentDocuments, setPaymentDocuments] = useState<any[]>([]);
@@ -435,6 +438,11 @@ export default function PMDashboard() {
   const [projectFilter, setProjectFilter] = useState<string>("all");
   const [page, setPage] = useState(1);
   const pageSize = 5;
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Fetch user profile
   const fetchUser = useCallback(async () => {
@@ -536,6 +544,46 @@ export default function PMDashboard() {
   }, [fetchUser, paymentApps]);
 
   useEffect(() => {
+    const getSessionAndRole = async () => {
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      console.log("Session:", session, "Session error:", sessionError);
+      setSession(session);
+      if (session?.user) {
+        const { data, error } = await supabase
+          .from("users")
+          .select("role")
+          .eq("uuid", session.user.id)
+          .single();
+        console.log("User role fetch:", data, error);
+        setRole(data?.role || "unknown");
+      } else {
+        setRole("unknown");
+      }
+      setLoading(false);
+    };
+    getSessionAndRole();
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      if (session?.user) {
+        supabase
+          .from("users")
+          .select("role")
+          .eq("uuid", session.user.id)
+          .single()
+          .then(({ data, error }) => {
+            console.log("User role fetch (listener):", data, error);
+            setRole(data?.role || "unknown");
+          });
+      } else {
+        setRole("unknown");
+      }
+    });
+    return () => {
+      listener.subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
     loadDashboardData();
     const interval = setInterval(loadDashboardData, 30000);
     return () => clearInterval(interval);
@@ -580,7 +628,7 @@ export default function PMDashboard() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    window.location.reload();
+    window.location.href = "/";
   };
 
   const filteredApps = useMemo(() => {
@@ -611,33 +659,10 @@ export default function PMDashboard() {
   const totalPages = Math.ceil(filteredApps.length / pageSize);
   const pagedApps = filteredApps.slice((page - 1) * pageSize, page * pageSize);
 
-  if (loading && !user) {
-    return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin text-5xl mb-4 text-blue-600">⚙️</div>
-          <p className="text-lg text-gray-700">Loading dashboard...</p>
-        </div>
-      </div>
-    );
-  }
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-5xl mb-4 text-red-600">❌</div>
-          <p className="text-lg text-red-600">{error}</p>
-          <button
-            onClick={loadDashboardData}
-            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-all"
-            aria-label="Retry loading dashboard"
-          >
-            Retry
-          </button>
-        </div>
-      </div>
-    );
-  }
+  // TEMPORARILY COMMENT OUT THE GUARDS FOR DEBUGGING
+  // if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  // if (!session || role !== "pm") return null;
+
   return (
     <div className="min-h-screen bg-gray-100">
       <Header onShowProfile={() => {}} onLogout={handleLogout} />
@@ -645,7 +670,7 @@ export default function PMDashboard() {
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
           <div className="text-sm text-gray-600">
-            Last updated: {lastRefresh.toLocaleTimeString()}
+            Last updated: {mounted ? lastRefresh.toLocaleTimeString() : ""}
             {loading && (
               <span className="ml-2 text-blue-600 animate-pulse">🔄 Refreshing...</span>
             )}

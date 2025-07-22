@@ -7,7 +7,7 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ onShowProfile, onLogout }) => {
-  const [time, setTime] = useState<string>("");
+  const [time, setTime] = useState<string | null>(null);
 
   useEffect(() => {
     setTime(new Date().toLocaleTimeString());
@@ -28,7 +28,7 @@ const Header: React.FC<HeaderProps> = ({ onShowProfile, onLogout }) => {
           <div className="flex items-center gap-4">
             <div className="text-sm text-gray-600">
               <Clock className="w-4 h-4 inline mr-1" />
-              Last updated: {time}
+              {time ? <>Last updated: {time}</> : null}
             </div>
             <button
               className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center hover:bg-gray-400 focus:outline-none"
