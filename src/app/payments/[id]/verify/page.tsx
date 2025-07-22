@@ -281,6 +281,21 @@ export default function PaymentVerificationPage() {
           </div>
         </div>
 
+        {/* PM Notes Section */}
+        <div className="bg-yellow-50 border-l-4 border-yellow-400 rounded-xl shadow-sm mb-8 px-6 py-4">
+          <div className="flex items-start gap-3">
+            <svg className="w-6 h-6 text-yellow-400 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 20h.01" />
+            </svg>
+            <div>
+              <div className="text-sm font-semibold text-yellow-800 mb-1">Notes for Project Manager</div>
+              <div className="text-gray-800 text-base">
+                {paymentApp?.pm_notes?.trim() ? paymentApp.pm_notes : <span className="text-gray-500 italic">No notes provided.</span>}
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* PDF Preview */}
         {document?.url && (
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-8">

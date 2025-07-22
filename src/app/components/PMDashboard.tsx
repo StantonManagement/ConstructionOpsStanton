@@ -668,15 +668,15 @@ export default function PMDashboard() {
                 setStatusFilter(e.target.value);
                 setPage(1);
               }}
-              className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+              className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-neutral-700"
               aria-label="Filter by status"
             >
-              <option value="all">All</option>
-              <option value="submitted">Submitted</option>
-              <option value="needs_review">Needs Review</option>
-              <option value="sms_complete">SMS Complete</option>
-              <option value="approved">Approved</option>
-              <option value="check_ready">Check Ready</option>
+              <option value="all" className="text-neutral-700">All</option>
+              <option value="submitted" className="text-neutral-700">Submitted</option>
+              <option value="needs_review" className="text-neutral-700">Needs Review</option>
+              <option value="sms_complete" className="text-neutral-700">SMS Complete</option>
+              <option value="approved" className="text-neutral-700">Approved</option>
+              <option value="check_ready" className="text-neutral-700">Check Ready</option>
             </select>
           </div>
           <div className="flex-1">
@@ -689,12 +689,12 @@ export default function PMDashboard() {
                 setProjectFilter(e.target.value);
                 setPage(1);
               }}
-              className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+              className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-neutral-700"
               aria-label="Filter by project"
             >
-              <option value="all">All</option>
+              <option value="all" className="text-neutral-700">All</option>
               {projects.map((proj: any) => (
-                <option key={proj.id} value={proj.id}>
+                <option key={proj.id} value={proj.id} className="text-neutral-700">
                   {proj.name}
                 </option>
               ))}
@@ -708,7 +708,7 @@ export default function PMDashboard() {
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as any)}
-                className="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                 className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-neutral-700"
                 aria-label="Sort by"
               >
                 <option value="status">Status (Submitted First)</option>
@@ -717,7 +717,7 @@ export default function PMDashboard() {
               </select>
               <button
                 onClick={() => setSortDir(sortDir === "asc" ? "desc" : "asc")}
-                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
+                className=" border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-neutral-700"
                 aria-label={`Sort ${sortDir === "asc" ? "descending" : "ascending"}`}
               >
                 {sortDir === "asc" ? "↑" : "↓"}
