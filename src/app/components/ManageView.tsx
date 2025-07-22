@@ -35,6 +35,7 @@ interface FieldConfig {
   type?: string;
   validators?: ((value: string) => string | true)[];
   required?: boolean;
+  defaultValue?: string; // <-- Add this line
 }
 
 // Enhanced notification component
@@ -92,7 +93,13 @@ const AddForm: React.FC<AddFormProps> = ({
   isLoading = false,
   setDirty
 }) => {
-  const [formData, setFormData] = useState<Record<string, string>>({});
+  // Set initial formData using defaultValue if provided
+  const [formData, setFormData] = useState<Record<string, string>>(
+    () => fields.reduce((acc, field) => {
+      acc[field.name] = field.defaultValue || '';
+      return acc;
+    }, {} as Record<string, string>)
+  );
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
@@ -120,8 +127,18 @@ const AddForm: React.FC<AddFormProps> = ({
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-    
+    // Prevent deleting '+1' for phone field
+    if (name === 'phone') {
+      // Always enforce '+1' at the start
+      let newValue = value;
+      if (!newValue.startsWith('+1')) {
+        // Remove all non-digit characters and re-add '+1'
+        newValue = '+1' + newValue.replace(/[^\d]/g, '').replace(/^1*/, '');
+      }
+      setFormData(prev => ({ ...prev, [name]: newValue }));
+    } else {
+      setFormData(prev => ({ ...prev, [name]: value }));
+    }
     // Clear error when user starts typing
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
@@ -201,7 +218,7 @@ const AddForm: React.FC<AddFormProps> = ({
             <input
               type={field.type || 'text'}
               name={field.name}
-              value={formData[field.name] || ''}
+              value={formData[field.name] !== undefined ? formData[field.name] : (field.defaultValue || '')}
               onChange={handleChange}
               onBlur={handleBlur}
               className={`
@@ -853,7 +870,7 @@ const ManageView: React.FC = () => {
   const vendorFields: FieldConfig[] = [
     { name: 'name', placeholder: 'Vendor Name', required: true, validators: [validators.required] },
     { name: 'trade', placeholder: 'Trade', required: true, validators: [validators.required] },
-    { name: 'phone', placeholder: 'Phone', type: 'tel', validators: [validators.phone] },
+    { name: 'phone', placeholder: 'Phone', type: 'tel', validators: [validators.phone], defaultValue: '+1' }, // <-- Add defaultValue
     { name: 'email', placeholder: 'Email', type: 'email', validators: [validators.email] },
   ];
 
