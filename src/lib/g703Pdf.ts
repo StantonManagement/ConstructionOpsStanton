@@ -5,7 +5,7 @@ export interface G703LineItem {
   description_of_work?: string;
   scheduled_value?: number;
   previous?: number; // Stored as percentage of scheduled_value
-  this_period?: number; // Stored as percentage of scheduled_value
+  this_period?: number; // Will be computed as submitted_percent - previous
   material_presently_stored?: number;
   total_completed?: number;
   balance_to_finish?: number;
@@ -37,12 +37,22 @@ export async function generateG703Pdf({
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
-  // Calculate totals
+  // Calculate totals with this_period as difference
   const contractTotal = lineItems.reduce((sum, li) => sum + (li.scheduled_value || 0), 0);
   const prevTotal = lineItems.reduce((sum, li) => sum + (((li.previous || 0) / 100) * (li.scheduled_value || 0)), 0);
-  const thisPeriodTotal = lineItems.reduce((sum, li) => sum + (((li.this_period || 0) / 100) * (li.scheduled_value || 0)), 0);
+  const thisPeriodTotal = lineItems.reduce((sum, li) => {
+    const submittedPercent = li.this_period || 0;
+    const previousPercent = li.previous || 0;
+    const thisPeriodPercent = submittedPercent > previousPercent ? submittedPercent - previousPercent : 0;
+    return sum + ((thisPeriodPercent / 100) * (li.scheduled_value || 0));
+  }, 0);
   const matStoredTotal = lineItems.reduce((sum, li) => sum + (li.material_presently_stored || 0), 0);
-  const totalCompleted = lineItems.reduce((sum, li) => sum + (li.total_completed || 0), 0);
+  const totalCompleted = lineItems.reduce((sum, li) => {
+    const submittedPercent = li.this_period || 0;
+    const previousPercent = li.previous || 0;
+    const thisPeriodPercent = submittedPercent > previousPercent ? submittedPercent - previousPercent : 0;
+    return sum + (((previousPercent + thisPeriodPercent) / 100) * (li.scheduled_value || 0)) + (li.material_presently_stored || 0);
+  }, 0);
   const balanceTotal = lineItems.reduce((sum, li) => sum + (li.balance_to_finish || 0), 0);
   const retainageTotal = lineItems.reduce((sum, li) => sum + (li.retainage || 0), 0);
 
@@ -469,19 +479,22 @@ export async function generateG703Pdf({
       color: colors.black,
     });
 
-    const prevValue = li.previous && li.scheduled_value ? (li.previous / 100) * li.scheduled_value : 0;
-    const thisPeriodValue = li.this_period && li.scheduled_value ? (li.this_period / 100) * li.scheduled_value : 0;
-    const totalCompletedPercentValue = li.total_completed && li.scheduled_value ? (li.total_completed / li.scheduled_value) * 100 : 0;
+    const previousPercent = li.previous || 0;
+    const submittedPercent = li.this_period || 0;
+    const thisPeriodPercent = submittedPercent > previousPercent ? submittedPercent - previousPercent : 0;
+    const prevValue = previousPercent && li.scheduled_value ? (previousPercent / 100) * li.scheduled_value : 0;
+    const thisPeriodValue = thisPeriodPercent && li.scheduled_value ? (thisPeriodPercent / 100) * li.scheduled_value : 0;
+    const totalCompletedPercentValue = (previousPercent + thisPeriodPercent) && li.scheduled_value ? ((previousPercent + thisPeriodPercent) / 100) * li.scheduled_value : 0;
 
     const values = [
       li.item_no?.toString() || '',
       li.description_of_work || '',
       li.scheduled_value ? `$${li.scheduled_value.toLocaleString()}` : '',
       prevValue ? `$${Math.round(prevValue).toLocaleString()}` : '',
-      li.this_period ? `${li.this_period.toFixed(1)}%` : '',
+      thisPeriodPercent ? `${thisPeriodPercent.toFixed(1)}%` : '',
       li.material_presently_stored ? `$${li.material_presently_stored.toLocaleString()}` : '',
-      li.total_completed ? `$${li.total_completed.toLocaleString()}` : '',
-      li.total_completed && li.scheduled_value ? `${(li.total_completed / li.scheduled_value * 100).toFixed(1)}%` : '',
+      totalCompletedPercentValue ? `$${Math.round(totalCompletedPercentValue + (li.material_presently_stored || 0)).toLocaleString()}` : '',
+      li.total_completed && li.scheduled_value ? `${((li.total_completed / li.scheduled_value) * 100).toFixed(1)}%` : '',
       li.balance_to_finish ? `$${li.balance_to_finish.toLocaleString()}` : '',
       li.retainage ? `$${li.retainage.toLocaleString()}` : '',
     ];
