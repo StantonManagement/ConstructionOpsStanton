@@ -12,10 +12,93 @@ const QUESTIONS = [
   'Please write any notes for the Project Manager here'
 ];
 
+// Enhanced validation function for percentage input
+function validatePercentage(input: string, previousPercent: number): { isValid: boolean; percent?: number; errorMessage?: string } {
+  // Remove any whitespace and common characters
+  const cleanInput = input.replace(/[%\s]/g, '');
+  
+  // Check if input is empty
+  if (!cleanInput) {
+    return {
+      isValid: false,
+      errorMessage: 'Please provide a percentage value.'
+    };
+  }
+  
+  // Try to parse as number
+  const percent = parseFloat(cleanInput);
+  
+  // Check if it's a valid number
+  if (isNaN(percent)) {
+    return {
+      isValid: false,
+      errorMessage: 'Please reply with a valid number (e.g., 75 or 75.5).'
+    };
+  }
+  
+  // Check if it's within 0-100 range
+  if (percent < 0) {
+    return {
+      isValid: false,
+      errorMessage: 'Percentage cannot be negative. Please enter a value between 0 and 100.'
+    };
+  }
+  
+  if (percent > 100) {
+    return {
+      isValid: false,
+      errorMessage: 'Percentage cannot exceed 100%. Please enter a value between 0 and 100.'
+    };
+  }
+  
+  // Check if it's greater than previous percentage
+  if (percent <= previousPercent) {
+    return {
+      isValid: false,
+      errorMessage: `Percentage must be greater than the previous ${previousPercent}%. Please enter a value between ${previousPercent + 0.1} and 100.`
+    };
+  }
+  
+  // Check for reasonable decimal places (max 2)
+  const decimalPlaces = (percent.toString().split('.')[1] || '').length;
+  if (decimalPlaces > 2) {
+    return {
+      isValid: false,
+      errorMessage: 'Please limit percentage to 2 decimal places (e.g., 75.50).'
+    };
+  }
+  
+  return {
+    isValid: true,
+    percent: Math.round(percent * 100) / 100 // Round to 2 decimal places
+  };
+}
+
+// Enhanced validation for YES/NO responses
+function validateYesNo(input: string): { isValid: boolean; value?: boolean; errorMessage?: string } {
+  const cleanInput = input.toUpperCase().trim();
+  
+  const yesVariations = ['YES', 'Y', 'TRUE', '1', 'YEAH', 'YEP', 'CORRECT'];
+  const noVariations = ['NO', 'N', 'FALSE', '0', 'NOPE', 'NAH', 'INCORRECT'];
+  
+  if (yesVariations.includes(cleanInput)) {
+    return { isValid: true, value: true };
+  }
+  
+  if (noVariations.includes(cleanInput)) {
+    return { isValid: true, value: false };
+  }
+  
+  return {
+    isValid: false,
+    errorMessage: 'Please reply with YES or NO.'
+  };
+}
+
 export async function POST(req: NextRequest) {
   const formData = await req.formData();
   const from = formData.get('From');
-  const body = (formData.get('Body') || '').toString().trim().toUpperCase();
+  const body = (formData.get('Body') || '').toString().trim();
 
   console.log('Incoming SMS:', { from, body });
 
@@ -63,12 +146,11 @@ export async function POST(req: NextRequest) {
 
   console.log('Found conversation:', conv, 'Error:', error);
 
-  // Only declare 'twiml' if it does not already exist in this scope
   const twiml = new MessagingResponse();
 
   if (error || !conv) {
     console.error('No active payment application conversation found for', from);
-    twiml.message('No active payment application conversation found.');
+    twiml.message('No active payment application conversation found. Please contact your project manager to start a new payment application.');
     return new Response(twiml.toString(), { headers: { 'Content-Type': 'text/xml' } });
   }
 
@@ -84,7 +166,13 @@ export async function POST(req: NextRequest) {
   ];
 
   if (conv.conversation_state === 'awaiting_start') {
-    if (body === 'YES') {
+    const validation = validateYesNo(body);
+    if (!validation.isValid) {
+      twiml.message(`${validation.errorMessage} Reply YES when you are ready to begin your payment application.`);
+      return new Response(twiml.toString(), { headers: { 'Content-Type': 'text/xml' } });
+    }
+    
+    if (validation.value === true) {
       // Start the questions
       await supabase
         .from('payment_sms_conversations')
@@ -99,7 +187,7 @@ export async function POST(req: NextRequest) {
           .eq('id', firstLineItemId)
           .single();
         const prevPercent = pliRow?.from_previous_application ?? 0;
-        twiml.message(`What percent complete is your work for: ${lineItems[0].description_of_work}? (Previous: ${prevPercent}%)`);
+        twiml.message(`What percent complete is your work for: ${lineItems[0].description_of_work}? (Previous: ${prevPercent}%)\n\nPlease enter a number between ${prevPercent + 0.1} and 100.`);
       } else {
         // If no line items, skip to additional questions
         twiml.message(ADDITIONAL_QUESTIONS[0]);
@@ -108,33 +196,30 @@ export async function POST(req: NextRequest) {
       twiml.message('Reply YES when you are ready to begin your payment application.');
     }
   } else if (conv.conversation_state === 'in_progress') {
-    responses[idx] = body;
     let updateObj: any = { responses };
     let nextQuestion = '';
-    let finished = false;
 
     if (idx < numLineItems) {
-      // Update percent and this_period logic
+      // Validate percentage input
       const lineItemId = lineItems[idx].id;
-      const percent = parseFloat(body);
       
       // Fetch from_previous_application for validation
       const { data: pliRow } = await supabase
         .from('project_line_items')
-        .select('from_previous_application, scheduled_value')
+        .select('from_previous_application, scheduled_value, description_of_work')
         .eq('id', lineItemId)
         .single();
       const prevPercent = Number(pliRow?.from_previous_application) || 0;
 
-      // Validate percent
-      if (isNaN(percent) || percent < 0 || percent > 100) {
-        twiml.message('Please reply with a valid percent (0-100).');
+      const validation = validatePercentage(body, prevPercent);
+      
+      if (!validation.isValid) {
+        twiml.message(`${validation.errorMessage}\n\nFor: ${pliRow?.description_of_work || 'this work item'} (Previous: ${prevPercent}%)`);
         return new Response(twiml.toString(), { headers: { 'Content-Type': 'text/xml' } });
       }
-      if (percent <= prevPercent) {
-        twiml.message(`Please reply with a percentage higher than the previous ${prevPercent}%.`);
-        return new Response(twiml.toString(), { headers: { 'Content-Type': 'text/xml' } });
-      }
+
+      const percent = validation.percent!;
+      responses[idx] = percent.toString();
 
       // Calculate new this_period using scheduled_value
       const scheduledValue = Number(pliRow?.scheduled_value) || 0;
@@ -194,6 +279,7 @@ export async function POST(req: NextRequest) {
 
       idx++;
       updateObj.current_question_index = idx;
+      updateObj.responses = responses;
       console.log('Advancing to next question. New idx:', idx, 'numLineItems:', numLineItems);
 
       if (idx < numLineItems) {
@@ -205,7 +291,7 @@ export async function POST(req: NextRequest) {
           .eq('id', nextLineItemId)
           .single();
         const prevPercent = pliRow?.from_previous_application ?? 0;
-        nextQuestion = `What percent complete is your work for: ${lineItems[idx].description_of_work}? (Previous: ${prevPercent}%)`;
+        nextQuestion = `What percent complete is your work for: ${lineItems[idx].description_of_work}? (Previous: ${prevPercent}%)\n\nPlease enter a number between ${prevPercent + 0.1} and 100.`;
       } else if (idx - numLineItems < ADDITIONAL_QUESTIONS.length) {
         nextQuestion = ADDITIONAL_QUESTIONS[idx - numLineItems];
       } else {
@@ -244,17 +330,23 @@ export async function POST(req: NextRequest) {
           const desc = item?.description_of_work || 'Item';
           summary += `${desc} - (${thisPeriodPercent.toFixed(1)}%) = $${thisPeriodDollar.toLocaleString(undefined, { maximumFractionDigits: 2 })}\n`;
         });
-        summary += `Total Requested = $${totalThisPeriod.toLocaleString(undefined, { maximumFractionDigits: 2 })}\n`;
-        summary += 'Please type "Yes" to submit or "No" to redo your answers.';
+        summary += `Total Requested = $${totalThisPeriod.toLocaleString(undefined, { maximumFractionDigits: 2 })}\n\n`;
+        summary += 'Please type "YES" to submit or "NO" to redo your answers.';
         twiml.message(summary);
       } else {
         twiml.message(nextQuestion);
       }
     } else if (idx - numLineItems < ADDITIONAL_QUESTIONS.length) {
-      // Handle additional questions
+      // Handle additional questions (notes)
+      if (!body.trim()) {
+        twiml.message('Please provide your notes for the Project Manager, or type "NONE" if you have no notes.');
+        return new Response(twiml.toString(), { headers: { 'Content-Type': 'text/xml' } });
+      }
+
       responses[idx] = body;
       idx++;
       updateObj.current_question_index = idx;
+      updateObj.responses = responses;
 
       if (idx - numLineItems < ADDITIONAL_QUESTIONS.length) {
         // Ask next additional question
@@ -291,13 +383,19 @@ export async function POST(req: NextRequest) {
           const desc = item?.description_of_work || 'Item';
           summary += `${desc} - (${thisPeriodPercent.toFixed(1)}%) = $${thisPeriodDollar.toLocaleString(undefined, { maximumFractionDigits: 2 })}\n`;
         });
-        summary += `Total Requested = $${totalThisPeriod.toLocaleString(undefined, { maximumFractionDigits: 2 })}\n`;
-        summary += 'Please type "Yes" to submit or "No" to redo your answers.';
+        summary += `Total Requested = $${totalThisPeriod.toLocaleString(undefined, { maximumFractionDigits: 2 })}\n\n`;
+        summary += 'Please type "YES" to submit or "NO" to redo your answers.';
         twiml.message(summary);
       }
     }
   } else if (conv.conversation_state === 'awaiting_confirmation') {
-    if (body === 'YES') {
+    const validation = validateYesNo(body);
+    if (!validation.isValid) {
+      twiml.message(`${validation.errorMessage} Type "YES" to submit your application or "NO" to redo your answers.`);
+      return new Response(twiml.toString(), { headers: { 'Content-Type': 'text/xml' } });
+    }
+    
+    if (validation.value === true) {
       // Final submission
       const updateObj = {
         conversation_state: 'completed',
@@ -352,8 +450,8 @@ export async function POST(req: NextRequest) {
       if (paymentAppUpdateError) {
         console.error('Error updating current_payment in payment_applications:', paymentAppUpdateError);
       }
-      twiml.message('Thank you! Your payment application is submitted for Project Manager review.');
-    } else if (body === 'NO') {
+      twiml.message('✅ Thank you! Your payment application has been submitted successfully and is now under Project Manager review. You will be notified of any updates.');
+    } else {
       // Restart line item questions
       await supabase
         .from('payment_sms_conversations')
@@ -371,15 +469,13 @@ export async function POST(req: NextRequest) {
           .eq('id', firstLineItemId)
           .single();
         const prevPercent = pliRow?.from_previous_application ?? 0;
-        twiml.message(`What percent complete is your work for: ${lineItems[0].description_of_work}? (Previous: ${prevPercent}%)`);
+        twiml.message(`Let's start over.\n\nWhat percent complete is your work for: ${lineItems[0].description_of_work}? (Previous: ${prevPercent}%)\n\nPlease enter a number between ${prevPercent + 0.1} and 100.`);
       } else {
-        twiml.message(ADDITIONAL_QUESTIONS[0]);
+        twiml.message(`Let's start over.\n\n${ADDITIONAL_QUESTIONS[0]}`);
       }
-    } else {
-      twiml.message('Please type "Yes" to submit or "No" to redo your answers.');
     }
   } else {
-    twiml.message('This payment application conversation is already complete.');
+    twiml.message('This payment application conversation is already complete. Please contact your project manager if you need to submit a new application.');
   }
 
   return new Response(twiml.toString(), { headers: { 'Content-Type': 'text/xml' } });
