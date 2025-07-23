@@ -109,33 +109,35 @@ export default function PaymentVerificationPage() {
   projectLineItems.forEach((pli) => { pliMap[pli.id] = pli; });
 
   // Build line items for the table
-  const lineItemsForTable = lineItems.map((li, idx) => {
-    const pli = pliMap[li.line_item_id] || {};
-    const previous = Number(pli.from_previous_application) || 0;
-    const this_period = Number(pli.this_period) || 0;
-    const material_presently_stored = Number(pli.material_presently_stored) || 0;
-    const scheduled_value = Number(pli.scheduled_value) || 0;
-    const item_no = pli.item_no || '';
-    const description_of_work = pli.description_of_work || li.line_item?.description_of_work || '';
-    const total_completed = previous + this_period + material_presently_stored;
-    const percent = previous + this_period;
-    const balance_to_finish = scheduled_value - total_completed;
-    const retainage = 0; // Placeholder, as no DB field
-    return {
-      idx: idx + 1,
-      item_no,
-      description_of_work,
-      scheduled_value,
-      previous,
-      this_period,
-      material_presently_stored,
-      total_completed,
-      percent,
-      balance_to_finish,
-      retainage,
-      current_payment: Number(pli.amount_for_this_period) || 0,
-    };
-  });
+const lineItemsForTable = lineItems.map((li, idx) => {
+  const pli = pliMap[li.line_item_id] || {};
+  const previous = Number(pli.from_previous_application) || 0;
+  // Calculate this_period as the difference between submitted_percent and previous
+  const submittedPercent = Number(li.submitted_percent) || 0;
+  const this_period = submittedPercent > previous ? submittedPercent - previous : 0;
+  const material_presently_stored = Number(pli.material_presently_stored) || 0;
+  const scheduled_value = Number(pli.scheduled_value) || 0;
+  const item_no = pli.item_no || '';
+  const description_of_work = pli.description_of_work || li.line_item?.description_of_work || '';
+  const total_completed = previous + this_period + material_presently_stored;
+  const percent = previous + this_period;
+  const balance_to_finish = scheduled_value - total_completed;
+  const retainage = 0; // Placeholder, as no DB field
+  return {
+    idx: idx + 1,
+    item_no,
+    description_of_work,
+    scheduled_value,
+    previous,
+    this_period,
+    material_presently_stored,
+    total_completed,
+    percent,
+    balance_to_finish,
+    retainage,
+    current_payment: Number(pli.amount_for_this_period) || 0,
+  };
+});
   const grandTotal = lineItemsForTable.reduce((sum, li) => sum + li.current_payment, 0);
 
   const handleApprove = async () => {
