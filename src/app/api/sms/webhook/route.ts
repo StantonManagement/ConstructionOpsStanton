@@ -120,7 +120,7 @@ export async function POST(req: NextRequest) {
       
       // Basic validation for percent range
       if (isNaN(percent) || percent < 0 || percent > 100) {
-        console.warn('Invalid percent reply:', body, 'at idx:', idx);
+        console.warn('[Percent Validation] Invalid percent reply:', { input: body, parsed: percent, idx, lineItemId });
         twiml.message('Please reply with a valid percent (0-100).');
         return new Response(twiml.toString(), { headers: { 'Content-Type': 'text/xml' } });
       }
@@ -132,10 +132,11 @@ export async function POST(req: NextRequest) {
         .eq('id', lineItemId)
         .single();
       const prevPercent = pliRow?.this_period ?? 0;
+      console.log('[Percent Validation] Previous percent for lineItemId', lineItemId, 'is', prevPercent, 'User entered:', percent);
       
       // Validate that the new percentage is not less than the previous percentage
       if (percent < prevPercent) {
-        console.warn('Percentage lower than previous:', percent, 'previous:', prevPercent, 'at idx:', idx);
+        console.warn('[Percent Validation] Percentage lower than previous:', { input: percent, prevPercent, idx, lineItemId });
         twiml.message('Please reply with a percentage that is larger than or equal to your last application. Line items may not be reduced.');
         return new Response(twiml.toString(), { headers: { 'Content-Type': 'text/xml' } });
       }
