@@ -125,14 +125,18 @@ export async function POST(req: NextRequest) {
         return new Response(twiml.toString(), { headers: { 'Content-Type': 'text/xml' } });
       }
 
-      // Get the previous percent for this line item to validate against reduction
-      const { data: pliRow } = await supabase
-        .from('project_line_items')
-        .select('this_period')
-        .eq('id', lineItemId)
+      // Get the previous submitted percent for this line item from payment_line_item_progress
+      const { data: prevProgress } = await supabase
+        .from('payment_line_item_progress')
+        .select('submitted_percent')
+        .eq('line_item_id', lineItemId)
+        .lt('payment_app_id', conv.payment_app_id)
+        .not('submitted_percent', 'eq', '0')
+        .order('payment_app_id', { ascending: false })
+        .limit(1)
         .single();
-      const prevPercent = pliRow?.this_period ?? 0;
-      console.log('[Percent Validation] Previous percent for lineItemId', lineItemId, 'is', prevPercent, 'User entered:', percent);
+      const prevPercent = Number(prevProgress?.submitted_percent) || 0;
+      console.log('[Percent Validation] Previous submitted_percent for lineItemId', lineItemId, 'is', prevPercent, 'User entered:', percent);
       
       // Validate that the new percentage is not less than the previous percentage
       if (percent < prevPercent) {
