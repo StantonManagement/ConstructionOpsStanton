@@ -78,6 +78,13 @@ export async function POST(req: NextRequest) {
   const lineItems = Array.isArray(conv.line_items) ? conv.line_items : [];
   const numLineItems = lineItems.length;
 
+  console.log('Current conversation state:', {
+    state: conv.conversation_state,
+    currentIndex: idx,
+    numLineItems,
+    responses: responses.length
+  });
+
   // Define additional questions after line items
   const ADDITIONAL_QUESTIONS = [
     'Please write any notes for the Project Manager here'
@@ -85,6 +92,7 @@ export async function POST(req: NextRequest) {
 
   if (conv.conversation_state === 'awaiting_start') {
     if (body === 'YES') {
+      console.log('Starting payment application conversation');
       // Start the questions
       await supabase
         .from('payment_sms_conversations')
@@ -93,60 +101,85 @@ export async function POST(req: NextRequest) {
       if (numLineItems > 0) {
         // Fetch this_period for first line item from project_line_items
         const firstLineItemId = lineItems[0].id;
+        console.log('Fetching previous percentage for first line item:', firstLineItemId);
         const { data: pliRow } = await supabase
           .from('project_line_items')
           .select('this_period')
           .eq('id', firstLineItemId)
           .single();
         const prevPercent = pliRow?.this_period ?? 0;
+        console.log('First line item previous percentage:', prevPercent);
         twiml.message(`What percent complete is your work for: ${lineItems[0].description_of_work}? (Previous: ${prevPercent}%)`);
       } else {
         // If no line items, skip to additional questions
+        console.log('No line items found, moving to additional questions');
         twiml.message(ADDITIONAL_QUESTIONS[0]);
       }
     } else {
+      console.log('User did not reply YES to start, sending start prompt again');
       twiml.message('Reply YES when you are ready to begin your payment application.');
     }
   } else if (conv.conversation_state === 'in_progress') {
+    console.log('Processing in_progress state, current index:', idx, 'user input:', body);
+    
     responses[idx] = body;
     let updateObj: any = { responses };
     let nextQuestion = '';
     let finished = false;
 
     if (idx < numLineItems) {
+      console.log('Processing line item', idx + 1, 'of', numLineItems);
       const lineItemId = lineItems[idx].id;
       const percent = parseFloat(body);
+      
+      console.log('Line item ID:', lineItemId, 'User entered percent:', percent);
 
-      // --- START: MODIFIED CODE ---
-
-      // Fetch the previous percentage to validate against
-      const { data: prevProgress } = await supabase
-      .from('payment_line_item_progress')
-      .select('submitted_percent')
-      .eq('line_item_id', lineItemId)
-      .lt('payment_app_id', conv.payment_app_id)
-      .not('submitted_percent', 'eq', 0)
-      .order('payment_app_id', { ascending: false })
-      .limit(1)
-      .single();
-    const prevPercent = Number(prevProgress?.submitted_percent) ?? 0;
-
-
-      // Validation for user input
+      // Basic validation for user input
       if (isNaN(percent) || percent < 0 || percent > 100) {
-        console.warn('Invalid percent reply:', body, 'at idx:', idx);
+        console.warn('Invalid percent reply - not a valid number or out of range:', body);
         twiml.message('Please reply with a valid percent (0-100).');
         return new Response(twiml.toString(), { headers: { 'Content-Type': 'text/xml' } });
-      } else if (percent < prevPercent) {
-        // **NEW VALIDATION**: Ensure the new percentage is not less than the previous one
-        console.warn('Reduced percentage attempt:', body, 'Previous was:', prevPercent);
+      }
+
+      // --- START: VALIDATION AGAINST PREVIOUS PERCENTAGE ---
+      console.log('Fetching previous percentage for validation...');
+      
+      // Fetch the previous percentage to validate against
+      const { data: prevProgress, error: prevProgressError } = await supabase
+        .from('payment_line_item_progress')
+        .select('submitted_percent')
+        .eq('line_item_id', lineItemId)
+        .lt('payment_app_id', conv.payment_app_id)
+        .not('submitted_percent', 'eq', 0)
+        .order('payment_app_id', { ascending: false })
+        .limit(1)
+        .single();
+
+      console.log('Previous progress query result:', prevProgress, 'Error:', prevProgressError);
+      
+      const prevPercent = Number(prevProgress?.submitted_percent) ?? 0;
+      console.log('Previous submitted percentage:', prevPercent, 'Current input:', percent);
+
+      // **FIXED VALIDATION**: Ensure the new percentage is not less than the previous one
+      if (percent < prevPercent) {
+        console.warn('VALIDATION FAILED - Reduced percentage attempt:', {
+          userInput: percent,
+          previousPercent: prevPercent,
+          lineItemId: lineItemId
+        });
         twiml.message('Please reply with a percentage that is larger than or equal to your last application. Line items may not be reduced.');
         return new Response(twiml.toString(), { headers: { 'Content-Type': 'text/xml' } });
       }
 
-      // --- END: MODIFIED CODE ---
+      console.log('VALIDATION PASSED - Percentage is valid:', {
+        userInput: percent,
+        previousPercent: prevPercent,
+        lineItemId: lineItemId
+      });
+      // --- END: VALIDATION AGAINST PREVIOUS PERCENTAGE ---
 
       // Fetch the current payment_line_item_progress row and join project_line_items for scheduled_value
+      console.log('Fetching current payment line item progress for update...');
       const { data: plip, error: plipError } = await supabase
         .from('payment_line_item_progress')
         .select('id, submitted_percent, previous_percent, this_period_percent, calculated_amount, project_line_items(scheduled_value)')
@@ -158,6 +191,8 @@ export async function POST(req: NextRequest) {
       // Calculate new this_period using scheduled_value from joined project_line_items
       let scheduledValue = Array.isArray(plip?.project_line_items) ? Number(plip.project_line_items[0]?.scheduled_value) || 0 : 0;
       let thisPeriod = Math.round((percent / 100) * scheduledValue);
+      console.log('Calculated values:', { scheduledValue, thisPeriod, percent });
+      
       // Move current this_period_percent to previous_percent and update percent
       if (plip?.id) {
         console.log('Updating progress for payment_app_id:', conv.payment_app_id, 'line_item_id:', lineItemId);
@@ -173,8 +208,10 @@ export async function POST(req: NextRequest) {
           .eq('line_item_id', lineItemId)
           .select();
         console.log('Progress update result:', progressUpdate, 'Error:', progressError);
+        
         // Optionally, also update project_line_items.percent_completed for visibility
         console.log('Updating project_line_items.percent_completed, this_period, and amount_for_this_period for line_item_id:', lineItemId);
+        
         // Fetch the current payment_applications row for context
         const { data: paymentApp, error: paymentAppError } = await supabase
           .from('payment_applications')
@@ -186,8 +223,9 @@ export async function POST(req: NextRequest) {
         } else {
           console.log('Current payment_applications row:', paymentApp);
         }
+        
         // Find the previous payment_app_id for this line_item_id with non-zero submitted_percent
-        const { data: prevProgress, error: prevProgressError } = await supabase
+        const { data: prevProgressForPLI, error: prevProgressErrorForPLI } = await supabase
           .from('payment_line_item_progress')
           .select('submitted_percent, payment_app_id')
           .eq('line_item_id', lineItemId)
@@ -196,7 +234,9 @@ export async function POST(req: NextRequest) {
           .order('payment_app_id', { ascending: false })
           .limit(1)
           .single();
-        const previousSubmittedPercent = Number(prevProgress?.submitted_percent) || 0;
+        const previousSubmittedPercent = Number(prevProgressForPLI?.submitted_percent) || 0;
+        console.log('Previous submitted percent for PLI update:', previousSubmittedPercent);
+        
         // Fetch scheduled_value for calculation
         const { data: currentPLI, error: currentPLIError } = await supabase
           .from('project_line_items')
@@ -204,11 +244,15 @@ export async function POST(req: NextRequest) {
           .eq('id', lineItemId)
           .single();
         const scheduledValueFloat = Number(currentPLI?.scheduled_value) || 0;
+        console.log('Scheduled value for calculations:', scheduledValueFloat);
+        
         // Calculate amount_for_this_period as scheduled_value * (percent / 100)
         const percentFloat = Number(percent);
         const amountForThisPeriod = parseFloat((scheduledValueFloat * (percentFloat / 100)).toFixed(2));
+        console.log('Calculated amount for this period:', amountForThisPeriod);
+        
         // Update project_line_items with new values and set from_previous_application from previous progress
-        const { data: pliUpdate, error: pliErrorUpdate } = await supabase // Renamed pliError to avoid conflict
+        const { data: pliUpdate, error: pliErrorUpdate } = await supabase
           .from('project_line_items')
           .update({ 
             percent_completed: percentFloat,
@@ -230,17 +274,21 @@ export async function POST(req: NextRequest) {
       if (idx < numLineItems) {
         // Fetch this_period for next line item from project_line_items
         const nextLineItemId = lineItems[idx].id;
-        const { data: nextPliRow } = await supabase // Renamed pliRow to avoid conflict
+        console.log('Fetching data for next line item:', nextLineItemId);
+        const { data: nextPliRow } = await supabase
           .from('project_line_items')
           .select('this_period')
           .eq('id', nextLineItemId)
           .single();
-        const nextPrevPercent = nextPliRow?.this_period ?? 0; // Renamed prevPercent
+        const nextPrevPercent = nextPliRow?.this_period ?? 0;
+        console.log('Next line item previous percentage:', nextPrevPercent);
         nextQuestion = `What percent complete is your work for: ${lineItems[idx].description_of_work}? (Previous: ${nextPrevPercent}%)`;
       } else if (idx - numLineItems < ADDITIONAL_QUESTIONS.length) {
+        console.log('Moving to additional questions, index:', idx - numLineItems);
         nextQuestion = ADDITIONAL_QUESTIONS[idx - numLineItems];
       } else {
         // All questions answered, show summary and move to confirmation
+        console.log('All questions answered, moving to confirmation state');
         updateObj.conversation_state = 'awaiting_confirmation';
       }
 
@@ -255,6 +303,7 @@ export async function POST(req: NextRequest) {
       }
 
       if (updateObj.conversation_state === 'awaiting_confirmation') {
+        console.log('Generating summary for confirmation...');
         // Show summary after all questions (including additional)
         const { data: progressRows } = await supabase
           .from('payment_line_item_progress')
@@ -277,11 +326,14 @@ export async function POST(req: NextRequest) {
         });
         summary += `Total Requested = $${totalThisPeriod.toLocaleString(undefined, { maximumFractionDigits: 2 })}\n`;
         summary += 'Please type "Yes" to submit or "No" to redo your answers.';
+        console.log('Generated summary:', summary);
         twiml.message(summary);
       } else {
+        console.log('Sending next question:', nextQuestion);
         twiml.message(nextQuestion);
       }
     } else if (idx - numLineItems < ADDITIONAL_QUESTIONS.length) {
+      console.log('Handling additional question', idx - numLineItems);
       // Handle additional questions (e.g., notes for PM)
       responses[idx] = body;
       idx++;
@@ -290,6 +342,7 @@ export async function POST(req: NextRequest) {
       if (idx - numLineItems < ADDITIONAL_QUESTIONS.length) {
         // Ask next additional question
         nextQuestion = ADDITIONAL_QUESTIONS[idx - numLineItems];
+        console.log('Asking next additional question:', nextQuestion);
         await supabase
           .from('payment_sms_conversations')
           .update(updateObj)
@@ -297,6 +350,7 @@ export async function POST(req: NextRequest) {
         twiml.message(nextQuestion);
       } else {
         // All additional questions answered, show summary
+        console.log('All additional questions answered, generating summary...');
         updateObj.conversation_state = 'awaiting_confirmation';
         await supabase
           .from('payment_sms_conversations')
@@ -324,11 +378,14 @@ export async function POST(req: NextRequest) {
         });
         summary += `Total Requested = $${totalThisPeriod.toLocaleString(undefined, { maximumFractionDigits: 2 })}\n`;
         summary += 'Please type "Yes" to submit or "No" to redo your answers.';
+        console.log('Generated summary after additional questions:', summary);
         twiml.message(summary);
       }
     }
   } else if (conv.conversation_state === 'awaiting_confirmation') {
+    console.log('Processing confirmation state, user input:', body);
     if (body === 'YES') {
+      console.log('User confirmed submission, finalizing payment application...');
       // Final submission
       const updateObj = {
         conversation_state: 'completed',
@@ -346,10 +403,13 @@ export async function POST(req: NextRequest) {
         .eq('id', conv.payment_app_id);
       if (appUpdateError) {
         console.error('Error updating payment_applications status:', appUpdateError);
+      } else {
+        console.log('Payment application status updated to submitted');
       }
       // Save PM notes from last response (notes for PM)
       if (responses && responses.length > 0) {
         const pmNotes = responses[responses.length - 1];
+        console.log('Saving PM notes:', pmNotes);
         // Save to pm_notes field in payment_applications
         const { error: pmNotesError } = await supabase
           .from('payment_applications')
@@ -360,6 +420,7 @@ export async function POST(req: NextRequest) {
         }
       }
       // Calculate total current payment
+      console.log('Calculating total current payment...');
       const { data: progressRows, error: progressRowsError } = await supabase
         .from('payment_line_item_progress')
         .select('this_period_percent, line_item_id')
@@ -377,6 +438,7 @@ export async function POST(req: NextRequest) {
         const scheduled = Number(item?.scheduled_value) || 0;
         return sum + (scheduled * (percent / 100));
       }, 0);
+      console.log('Total current payment calculated:', totalCurrentPayment);
       const { error: paymentAppUpdateError } = await supabase
         .from('payment_applications')
         .update({ current_payment: totalCurrentPayment })
@@ -386,6 +448,7 @@ export async function POST(req: NextRequest) {
       }
       twiml.message('Thank you! Your payment application is submitted for Project Manager review.');
     } else if (body === 'NO') {
+      console.log('User wants to redo answers, restarting line item questions...');
       // Restart line item questions: reset index, clear responses, set state to in_progress
       await supabase
         .from('payment_sms_conversations')
@@ -405,14 +468,18 @@ export async function POST(req: NextRequest) {
           .single();
         const prevPercent = pliRow?.this_period ?? 0;
         const desc = pliRow?.description_of_work || lineItems[0].description_of_work || '';
+        console.log('Restarting with first line item:', { firstLineItemId, prevPercent, desc });
         twiml.message(`What percent complete is your work for: ${desc}? (Previous: ${prevPercent}%)`);
       } else {
+        console.log('No line items, restarting with additional questions');
         twiml.message(ADDITIONAL_QUESTIONS[0]);
       }
     } else {
+      console.log('Invalid confirmation response:', body);
       twiml.message('Please type "Yes" to submit or "No" to redo your answers.');
     }
   } else {
+    console.log('Conversation already complete, state:', conv.conversation_state);
     twiml.message('This payment application conversation is already complete.');
   }
 
