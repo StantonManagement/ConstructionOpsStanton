@@ -120,12 +120,17 @@ export async function POST(req: NextRequest) {
       // --- START: MODIFIED CODE ---
 
       // Fetch the previous percentage to validate against
-      const { data: pliRow } = await supabase
-        .from('project_line_items')
-        .select('this_period')
-        .eq('id', lineItemId)
-        .single();
-      const prevPercent = pliRow?.this_period ?? 0;
+      const { data: prevProgress } = await supabase
+      .from('payment_line_item_progress')
+      .select('submitted_percent')
+      .eq('line_item_id', lineItemId)
+      .lt('payment_app_id', conv.payment_app_id)
+      .not('submitted_percent', 'eq', 0)
+      .order('payment_app_id', { ascending: false })
+      .limit(1)
+      .single();
+    const prevPercent = Number(prevProgress?.submitted_percent) ?? 0;
+
 
       // Validation for user input
       if (isNaN(percent) || percent < 0 || percent > 100) {
