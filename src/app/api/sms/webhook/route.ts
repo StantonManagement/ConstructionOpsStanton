@@ -114,14 +114,10 @@ export async function POST(req: NextRequest) {
     let finished = false;
 
     if (idx < numLineItems) {
-      // Update percent and this_period logic
       const lineItemId = lineItems[idx].id;
       const percent = parseFloat(body);
-      if (isNaN(percent) || percent < 0 || percent > 100) {
-        console.warn('Invalid percent reply:', body, 'at idx:', idx);
-        twiml.message('Please reply with a valid percent (0-100).');
-        return new Response(twiml.toString(), { headers: { 'Content-Type': 'text/xml' } });
-      }
+
+      // --- START: MODIFIED CODE ---
 
       // Fetch the previous percentage to validate against
       const { data: pliRow } = await supabase
@@ -131,12 +127,19 @@ export async function POST(req: NextRequest) {
         .single();
       const prevPercent = pliRow?.this_period ?? 0;
 
-      // VALIDATION: Check if entered percentage is less than previous percentage
-      if (percent < prevPercent) {
-        console.warn('Percentage cannot be less than previous:', { entered: percent, previous: prevPercent });
-        twiml.message(`Error: You cannot enter ${percent}% as it's less than your previous completion of ${prevPercent}%. Please enter a percentage that is ${prevPercent}% or higher.`);
+      // Validation for user input
+      if (isNaN(percent) || percent < 0 || percent > 100) {
+        console.warn('Invalid percent reply:', body, 'at idx:', idx);
+        twiml.message('Please reply with a valid percent (0-100).');
+        return new Response(twiml.toString(), { headers: { 'Content-Type': 'text/xml' } });
+      } else if (percent < prevPercent) {
+        // **NEW VALIDATION**: Ensure the new percentage is not less than the previous one
+        console.warn('Reduced percentage attempt:', body, 'Previous was:', prevPercent);
+        twiml.message('Please reply with a percentage that is larger than or equal to your last application. Line items may not be reduced.');
         return new Response(twiml.toString(), { headers: { 'Content-Type': 'text/xml' } });
       }
+
+      // --- END: MODIFIED CODE ---
 
       // Fetch the current payment_line_item_progress row and join project_line_items for scheduled_value
       const { data: plip, error: plipError } = await supabase
@@ -200,7 +203,7 @@ export async function POST(req: NextRequest) {
         const percentFloat = Number(percent);
         const amountForThisPeriod = parseFloat((scheduledValueFloat * (percentFloat / 100)).toFixed(2));
         // Update project_line_items with new values and set from_previous_application from previous progress
-        const { data: pliUpdate, error: pliError } = await supabase
+        const { data: pliUpdate, error: pliErrorUpdate } = await supabase // Renamed pliError to avoid conflict
           .from('project_line_items')
           .update({ 
             percent_completed: percentFloat,
@@ -210,7 +213,7 @@ export async function POST(req: NextRequest) {
           })
           .eq('id', lineItemId)
           .select();
-        console.log('Project line item update result:', pliUpdate, 'Error:', pliError);
+        console.log('Project line item update result:', pliUpdate, 'Error:', pliErrorUpdate);
       } else {
         console.error('No payment_line_item_progress found for payment_app_id:', conv.payment_app_id, 'line_item_id:', lineItemId);
       }
@@ -222,13 +225,13 @@ export async function POST(req: NextRequest) {
       if (idx < numLineItems) {
         // Fetch this_period for next line item from project_line_items
         const nextLineItemId = lineItems[idx].id;
-        const { data: pliRow } = await supabase
+        const { data: nextPliRow } = await supabase // Renamed pliRow to avoid conflict
           .from('project_line_items')
           .select('this_period')
           .eq('id', nextLineItemId)
           .single();
-        const prevPercent = pliRow?.this_period ?? 0;
-        nextQuestion = `What percent complete is your work for: ${lineItems[idx].description_of_work}? (Previous: ${prevPercent}%)`;
+        const nextPrevPercent = nextPliRow?.this_period ?? 0; // Renamed prevPercent
+        nextQuestion = `What percent complete is your work for: ${lineItems[idx].description_of_work}? (Previous: ${nextPrevPercent}%)`;
       } else if (idx - numLineItems < ADDITIONAL_QUESTIONS.length) {
         nextQuestion = ADDITIONAL_QUESTIONS[idx - numLineItems];
       } else {
