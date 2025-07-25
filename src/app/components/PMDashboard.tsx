@@ -421,6 +421,7 @@ export default function PMDashboard() {
   const [role, setRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
+  const [userData, setUserData] = useState<{name: string; email: string; avatar_url: string; role: string} | null>(null);
   const [stats, setStats] = useState<any>({
     pending_sms: 0,
     review_queue: 0,
@@ -453,10 +454,19 @@ export default function PMDashboard() {
     if (error || !user) return null;
     const { data, error: userError } = await supabase
       .from("users")
-      .select("id, name, role, email, uuid")
+      .select("id, name, role, email, uuid, avatar_url")
       .eq("uuid", user.id)
       .single();
     if (userError) return null;
+    
+    // Set userData for Header component
+    setUserData({
+      name: data.name || '',
+      email: data.email || user.email || '',
+      avatar_url: data.avatar_url || '',
+      role: data.role || ''
+    });
+    
     return data;
   }, []);
 
@@ -665,7 +675,7 @@ export default function PMDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <Header onShowProfile={() => {}} onLogout={handleLogout} />
+      <Header onShowProfile={() => {}} onLogout={handleLogout} userData={userData} />
       <main className="container mx-auto px-4 py-8 max-w-7xl">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
