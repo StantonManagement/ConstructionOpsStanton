@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Header from './Header';
 import Navigation from './Navigation';
 import OverviewView from './OverviewView';
@@ -12,11 +12,59 @@ import ManageView from './ManageView';
 import SubcontractorSelectionView from './SubcontractorSelectionView';
 import UserProfile from './UserProfile';
 import { Project } from '../context/DataContext';
+import { supabase } from '@/lib/supabaseClient';
+
+interface UserData {
+  name: string;
+  email: string;
+  avatar_url: string;
+  role: string;
+}
 
 const ConstructionDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('overview');
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [showProfile, setShowProfile] = useState(false);
+  const [userData, setUserData] = useState<UserData | null>(null);
+
+  // Fetch user data on component mount
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        if (userError || !user) return;
+
+        const { data, error } = await supabase
+          .from('users')
+          .select('name, email, avatar_url, role')
+          .eq('uuid', user.id)
+          .single();
+
+        if (!error && data) {
+          setUserData({
+            name: data.name || '',
+            email: data.email || user.email || '',
+            avatar_url: data.avatar_url || '',
+            role: data.role || ''
+          });
+        }
+      } catch (err) {
+        console.error('Error fetching user data:', err);
+      }
+    };
+
+    fetchUserData();
+  }, []);
+
+  const handleProfileUpdate = (profileData: any) => {
+    // Update local user data when profile is updated
+    setUserData({
+      name: profileData.name,
+      email: profileData.email,
+      avatar_url: profileData.avatar_url,
+      role: profileData.role
+    });
+  };
 
   const handleLogout = async () => {
     await import('@/lib/supabaseClient').then(({ supabase }) => supabase.auth.signOut());
@@ -25,7 +73,7 @@ const ConstructionDashboard: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans">
-      <Header onShowProfile={() => setShowProfile(true)} onLogout={handleLogout} />
+      <Header onShowProfile={() => setShowProfile(true)} onLogout={handleLogout} userData={userData} />
       <Navigation activeTab={activeTab} setActiveTab={setActiveTab} setSelectedProject={setSelectedProject} />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {activeTab === 'overview' && <OverviewView />}
@@ -35,20 +83,11 @@ const ConstructionDashboard: React.FC = () => {
         {activeTab === 'metrics' && <MetricsView />}
         {activeTab === 'manage' && <ManageView />}
       </main>
-      {showProfile && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-lg p-6 relative w-full max-w-lg">
-            <button
-              className="absolute top-2 right-2 text-gray-500 hover:text-gray-700 text-xl"
-              onClick={() => setShowProfile(false)}
-              aria-label="Close profile"
-            >
-              ×
-            </button>
-            <UserProfile />
-          </div>
-        </div>
-      )}
+      <UserProfile 
+        isOpen={showProfile} 
+        onClose={() => setShowProfile(false)}
+        onProfileUpdate={handleProfileUpdate}
+      />
     </div>
   );
 };

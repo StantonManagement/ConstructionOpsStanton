@@ -1,12 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { Clock, User, LogOut, Menu, X } from 'lucide-react';
 
+interface UserData {
+  name: string;
+  email: string;
+  avatar_url: string;
+  role: string;
+}
+
 interface HeaderProps {
   onShowProfile: () => void;
   onLogout: () => void;
+  userData: UserData | null;
 }
 
-const Header: React.FC<HeaderProps> = ({ onShowProfile, onLogout }) => {
+const Header: React.FC<HeaderProps> = ({ onShowProfile, onLogout, userData }) => {
   const [time, setTime] = useState<string | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -41,13 +49,31 @@ const Header: React.FC<HeaderProps> = ({ onShowProfile, onLogout }) => {
               <span className="hidden lg:inline">Last updated: </span>
               {time}
             </div>
-            <button
-              className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center hover:bg-gray-200 transition-colors"
-              title="Profile"
-              onClick={onShowProfile}
-            >
-              <User className="w-4 h-4 text-gray-600" />
-            </button>
+            <div className="flex items-center gap-2">
+              {userData?.name && (
+                <span className="text-sm font-medium text-gray-700 hidden lg:inline">
+                  {userData.name}
+                </span>
+              )}
+              <button
+                className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center hover:bg-gray-200 transition-colors overflow-hidden"
+                title={userData?.name ? `${userData.name} - Profile` : "Profile"}
+                onClick={onShowProfile}
+              >
+                {userData?.avatar_url ? (
+                  <img 
+                    src={userData.avatar_url} 
+                    alt="Profile" 
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                      (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+                    }}
+                  />
+                ) : null}
+                <User className={`w-4 h-4 text-gray-600 ${userData?.avatar_url ? 'hidden' : ''}`} />
+              </button>
+            </div>
             <button
               className="bg-red-500 text-white px-3 py-1.5 rounded text-sm hover:bg-red-600 transition-colors"
               onClick={onLogout}
@@ -77,14 +103,32 @@ const Header: React.FC<HeaderProps> = ({ onShowProfile, onLogout }) => {
               </div>
               <div className="flex flex-col space-y-2 px-4">
                 <button
-                  className="flex items-center justify-center gap-2 py-2 px-4 text-gray-700 hover:bg-gray-50 rounded"
+                  className="flex items-center gap-2 py-2 px-4 text-gray-700 hover:bg-gray-50 rounded"
                   onClick={() => {
                     onShowProfile();
                     setIsMenuOpen(false);
                   }}
                 >
-                  <User className="w-4 h-4" />
-                  Profile
+                  <div className="w-6 h-6 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
+                    {userData?.avatar_url ? (
+                      <img 
+                        src={userData.avatar_url} 
+                        alt="Profile" 
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                          (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+                        }}
+                      />
+                    ) : null}
+                    <User className={`w-3 h-3 text-gray-600 ${userData?.avatar_url ? 'hidden' : ''}`} />
+                  </div>
+                  <div className="flex flex-col items-start">
+                    <span className="font-medium">{userData?.name || 'Profile'}</span>
+                    {userData?.role && (
+                      <span className="text-xs text-gray-500 capitalize">{userData.role}</span>
+                    )}
+                  </div>
                 </button>
                 <button
                   className="flex items-center justify-center gap-2 bg-red-500 text-white py-2 px-4 rounded hover:bg-red-600 transition-colors"
