@@ -22,7 +22,7 @@ const Header: React.FC<HeaderProps> = ({ onShowProfile, onLogout, userData }) =>
     const updateTime = () => {
       setTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
     };
-    updateTime(); // Set initial time
+    updateTime(); 
     const interval = setInterval(updateTime, 1000);
     return () => clearInterval(interval);
   }, []);

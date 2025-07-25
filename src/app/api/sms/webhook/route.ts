@@ -126,24 +126,38 @@ export async function POST(req: NextRequest) {
       }
 
       // Get the previous submitted percent for this line item from payment_line_item_progress
-      const { data: prevProgress } = await supabase
+      // Use a more reliable query with proper error handling
+      const { data: prevProgress, error: prevError } = await supabase
         .from('payment_line_item_progress')
-        .select('submitted_percent')
+        .select('submitted_percent, payment_app_id, payment_applications!inner(created_at)')
         .eq('line_item_id', lineItemId)
-        .lt('payment_app_id', conv.payment_app_id)
-        .not('submitted_percent', 'eq', '0')
-        .order('payment_app_id', { ascending: false })
+        .neq('submitted_percent', 0)
+        .neq('payment_app_id', conv.payment_app_id) // Exclude current application
+        .order('payment_applications(created_at)', { ascending: false })
         .limit(1)
-        .single();
-      const prevPercent = Number(prevProgress?.submitted_percent) || 0;
-      console.log('[Percent Validation] Previous submitted_percent for lineItemId', lineItemId, 'is', prevPercent, 'User entered:', percent);
-      
-      // Validate that the new percentage is not less than the previous percentage
-      if (percent < prevPercent) {
-        console.warn('[Percent Validation] Percentage lower than previous:', { input: percent, prevPercent, idx, lineItemId });
-        twiml.message('Please reply with a percentage that is larger than or equal to your last application. Line items may not be reduced.');
+        .maybeSingle(); // Use maybeSingle instead of single to handle no results gracefully
+
+      // Handle database errors explicitly
+      if (prevError) {
+        console.error('[Percent Validation] Database error fetching previous progress:', prevError);
+        twiml.message('System error occurred. Please try again later.');
         return new Response(twiml.toString(), { headers: { 'Content-Type': 'text/xml' } });
       }
+
+      const prevPercent = Number(prevProgress?.submitted_percent) || 0;
+      const currentPercent = Number(percent);
+      
+      console.log(`[Percent Validation] Line Item ${lineItemId}: Previous=${prevPercent}%, Current=${currentPercent}%, PaymentApp=${conv.payment_app_id}`);
+      console.log(`[Percent Validation] Previous progress data:`, prevProgress);
+      
+      // Validate that the new percentage is not less than the previous percentage
+      if (currentPercent < prevPercent) {
+        console.warn(`[Percent Validation] BLOCKED: ${currentPercent}% < ${prevPercent}% for line item ${lineItemId}`);
+        twiml.message(`Error: ${currentPercent}% is less than your previous submission of ${prevPercent}%. Please enter ${prevPercent}% or higher.`);
+        return new Response(twiml.toString(), { headers: { 'Content-Type': 'text/xml' } });
+      }
+
+      console.log(`[Percent Validation] PASSED: ${currentPercent}% >= ${prevPercent}% for line item ${lineItemId}`);
 
       // Fetch the current payment_line_item_progress row and join project_line_items for scheduled_value
       const { data: plip, error: plipError } = await supabase
