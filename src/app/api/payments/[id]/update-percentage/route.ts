@@ -8,9 +8,10 @@ if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
 
 const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const paymentAppId = params.id;
+    const { id } = await params;
+    const paymentAppId = id;
     const { lineItemId, submitted_percent, pm_verified_percent } = await req.json();
 
     // Validate required fields

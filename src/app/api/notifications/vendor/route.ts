@@ -48,7 +48,11 @@ export async function POST(req: NextRequest) {
       message += '\n\nYour payment will be processed according to the contract terms. Thank you for your quality work!';
     }
 
-    const results = {
+    const results: {
+      sms: { status: string; sid?: string; error?: string } | null;
+      email: { status: string; error?: string } | null;
+      notification_logged: boolean;
+    } = {
       sms: null,
       email: null,
       notification_logged: false
