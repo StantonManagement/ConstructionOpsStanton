@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import MessagingResponse from 'twilio/lib/twiml/MessagingResponse';
 
+// Force Node.js runtime for better logging
+export const runtime = 'nodejs';
+
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
 // Example questions (replace with dynamic logic as needed)
@@ -18,6 +21,7 @@ export async function POST(req: NextRequest) {
   const body = (formData.get('Body') || '').toString().trim().toUpperCase();
 
   console.log('Incoming SMS:', { from, body });
+  console.error('DEBUG: SMS webhook called at', new Date().toISOString()); // Force error-level logging
 
   if (!from) {
     console.error('No From in SMS');
@@ -126,16 +130,15 @@ export async function POST(req: NextRequest) {
       }
 
       // Get the previous submitted percent for this line item from payment_line_item_progress
-      // Use a more reliable query with proper error handling
-      const { data: prevProgress, error: prevError } = await supabase
+      // Use a simpler, more reliable query approach
+      const { data: allPrevProgress, error: prevError } = await supabase
         .from('payment_line_item_progress')
-        .select('submitted_percent, payment_app_id, payment_applications!inner(created_at)')
+        .select('submitted_percent, payment_app_id')
         .eq('line_item_id', lineItemId)
-        .neq('submitted_percent', 0)
+        .gt('submitted_percent', 0)
         .neq('payment_app_id', conv.payment_app_id) // Exclude current application
-        .order('payment_applications(created_at)', { ascending: false })
-        .limit(1)
-        .maybeSingle(); // Use maybeSingle instead of single to handle no results gracefully
+        .order('payment_app_id', { ascending: false }) // Order by payment_app_id (newer apps have higher IDs)
+        .limit(1);
 
       // Handle database errors explicitly
       if (prevError) {
@@ -144,11 +147,13 @@ export async function POST(req: NextRequest) {
         return new Response(twiml.toString(), { headers: { 'Content-Type': 'text/xml' } });
       }
 
+      const prevProgress = allPrevProgress && allPrevProgress.length > 0 ? allPrevProgress[0] : null;
       const prevPercent = Number(prevProgress?.submitted_percent) || 0;
       const currentPercent = Number(percent);
       
-      console.log(`[Percent Validation] Line Item ${lineItemId}: Previous=${prevPercent}%, Current=${currentPercent}%, PaymentApp=${conv.payment_app_id}`);
-      console.log(`[Percent Validation] Previous progress data:`, prevProgress);
+      console.error(`[Percent Validation] Line Item ${lineItemId}: Previous=${prevPercent}%, Current=${currentPercent}%, PaymentApp=${conv.payment_app_id}`);
+      console.error(`[Percent Validation] Previous progress data:`, JSON.stringify(prevProgress));
+      console.error(`[Percent Validation] All previous progress query result:`, JSON.stringify(allPrevProgress));
       
       // Validate that the new percentage is not less than the previous percentage
       if (currentPercent < prevPercent) {
@@ -205,10 +210,10 @@ export async function POST(req: NextRequest) {
           .select('submitted_percent, payment_app_id')
           .eq('line_item_id', lineItemId)
           .lt('payment_app_id', conv.payment_app_id)
-          .not('submitted_percent', 'eq', '0')
+          .gt('submitted_percent', 0)
           .order('payment_app_id', { ascending: false })
           .limit(1)
-          .single();
+          .maybeSingle();
         const previousSubmittedPercent = Number(prevProgress?.submitted_percent) || 0;
         // Fetch scheduled_value for calculation
         const { data: currentPLI, error: currentPLIError } = await supabase
