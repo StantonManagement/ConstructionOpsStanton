@@ -6,13 +6,13 @@ const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const paymentAppId = params.id;
-    const { approvalNotes } = await req.json();
+    const { rejectionNotes } = await req.json();
 
     if (!paymentAppId) {
       return NextResponse.json({ error: 'Payment application ID is required' }, { status: 400 });
     }
 
-    // Get current user for approval tracking
+    // Get current user for rejection tracking
     const authHeader = req.headers.get('authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Authorization header required' }, { status: 401 });
@@ -35,14 +35,14 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Update payment application status to approved
+    // Update payment application status to rejected
     const { data: updatedApp, error: updateError } = await supabase
       .from('payment_applications')
       .update({
-        status: 'approved',
-        approved_by: userData.id,
-        approved_at: new Date().toISOString(),
-        approval_notes: approvalNotes || null
+        status: 'rejected',
+        rejected_by: userData.id,
+        rejected_at: new Date().toISOString(),
+        rejection_notes: rejectionNotes || null
       })
       .eq('id', paymentAppId)
       .select('*, project:projects(name), contractor:contractors(name, email)')
@@ -52,30 +52,30 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       return NextResponse.json({ error: updateError.message }, { status: 500 });
     }
 
-    // Log the approval action (if table exists)
+    // Log the rejection action (if table exists)
     try {
       await supabase
         .from('payment_approval_logs')
         .insert({
           payment_app_id: paymentAppId,
-          action: 'approved',
+          action: 'rejected',
           performed_by: userData.id,
-          notes: approvalNotes || null,
+          notes: rejectionNotes || 'Payment application rejected',
           created_at: new Date().toISOString()
         });
     } catch (logError) {
       console.log('Note: payment_approval_logs table not found, skipping log entry');
     }
 
-    console.log(`Payment application ${paymentAppId} approved by ${userData.name}`);
+    console.log(`Payment application ${paymentAppId} rejected by ${userData.name}${rejectionNotes ? ' - Notes: ' + rejectionNotes : ''}`);
 
     return NextResponse.json({
-      message: 'Payment application approved successfully',
+      message: 'Payment application rejected successfully',
       paymentApp: updatedApp
     });
 
   } catch (error) {
-    console.error('Error approving payment application:', error);
+    console.error('Error rejecting payment application:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

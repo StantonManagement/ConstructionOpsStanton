@@ -19,6 +19,7 @@ interface Contractor {
 }
 interface LineItem {
   id: number;
+  line_item_id: number;
   line_item?: {
     description_of_work?: string;
     scheduled_value?: number;
@@ -27,6 +28,7 @@ interface LineItem {
   previous_percent?: number;
   percent_gc?: number;
   submitted_percent?: number;
+  pm_verified_percent?: number;
   this_period?: number;
   [key: string]: any;
 }
@@ -54,9 +56,142 @@ export default function PaymentVerificationPage() {
   const [document, setDocument] = useState<Document | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState<'approve' | 'reject' | null>(null);
+  const [rejectionReason, setRejectionReason] = useState('');
+  const [rejectionNotes, setRejectionNotes] = useState('');
+  const [approvalNotes, setApprovalNotes] = useState('');
 
   // Helper to get project_line_items for each line item
   const [projectLineItems, setProjectLineItems] = useState<any[]>([]);
+  
+  // State for PM editing percentages
+  const [editingLineItem, setEditingLineItem] = useState<number | null>(null);
+  const [editedPercentages, setEditedPercentages] = useState<Record<number, {
+    submitted_percent: number;
+    pm_verified_percent: number;
+  }>>({});
+  const [savingChanges, setSavingChanges] = useState(false);
+
+  // Functions for editing percentages
+  const startEditingLineItem = (lineItemId: number, currentSubmitted: number, currentVerified: number) => {
+    setEditingLineItem(lineItemId);
+    setEditedPercentages(prev => ({
+      ...prev,
+      [lineItemId]: {
+        submitted_percent: currentSubmitted,
+        pm_verified_percent: currentVerified || currentSubmitted
+      }
+    }));
+  };
+
+  const cancelEditingLineItem = () => {
+    if (editingLineItem !== null) {
+      setEditedPercentages(prev => {
+        const { [editingLineItem]: removed, ...rest } = prev;
+        return rest;
+      });
+    }
+    setEditingLineItem(null);
+  };
+
+  const saveLineItemPercentage = async (lineItemId: number) => {
+    if (!editedPercentages[lineItemId]) return;
+    
+    setSavingChanges(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('Authentication required');
+      }
+
+      const updatedData = editedPercentages[lineItemId];
+      
+      // Use API route instead of direct Supabase update
+      const response = await fetch(`/api/payments/${paymentAppId}/update-percentage`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          lineItemId,
+          submitted_percent: updatedData.submitted_percent,
+          pm_verified_percent: updatedData.pm_verified_percent,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update percentage');
+      }
+
+      // Update local state
+      setLineItems(prev => prev.map(li => 
+        li.line_item_id === lineItemId 
+          ? { 
+              ...li, 
+              submitted_percent: updatedData.submitted_percent,
+              pm_verified_percent: updatedData.pm_verified_percent
+            }
+          : li
+      ));
+
+      setEditingLineItem(null);
+      setEditedPercentages(prev => {
+        const { [lineItemId]: removed, ...rest } = prev;
+        return rest;
+      });
+
+    } catch (error) {
+      console.error('Error saving percentage:', error);
+      setError('Failed to save percentage changes');
+    } finally {
+      setSavingChanges(false);
+    }
+  };
+
+  // Function to send notification to vendor
+  const sendVendorNotification = async (paymentApp: any) => {
+    try {
+      // Get contractor info
+      const contractor = paymentApp.contractor;
+      const project = paymentApp.project;
+      
+      if (!contractor?.phone && !contractor?.email) {
+        throw new Error('No contact information found for contractor');
+      }
+
+      // Prepare notification data
+      const notificationData = {
+        contractorId: contractor.id,
+        contractorName: contractor.name,
+        contractorPhone: contractor.phone,
+        contractorEmail: contractor.email,
+        projectName: project.name,
+        paymentAppId: paymentApp.id,
+        approvedAmount: paymentApp.current_payment || 0,
+        approvalNotes: approvalNotes.trim() || null,
+        type: 'approval'
+      };
+
+      // Send notification via API
+      const response = await fetch('/api/notifications/vendor', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(notificationData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to send notification');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error sending vendor notification:', error);
+      throw error;
+    }
+  };
 
   useEffect(() => {
     async function fetchData() {
@@ -112,8 +247,11 @@ export default function PaymentVerificationPage() {
 const lineItemsForTable = lineItems.map((li, idx) => {
   const pli = pliMap[li.line_item_id] || {};
   const previous = Number(pli.from_previous_application) || 0;
-  // Calculate this_period as the difference between submitted_percent and previous
-  const submittedPercent = Number(li.submitted_percent) || 0;
+  
+  // Use edited percentage if available, otherwise use original
+  const submittedPercent = editedPercentages[li.line_item_id]?.submitted_percent ?? (Number(li.submitted_percent) || 0);
+  const pmVerifiedPercent = editedPercentages[li.line_item_id]?.pm_verified_percent ?? (Number(li.pm_verified_percent) || submittedPercent);
+  
   const this_period = submittedPercent > previous ? submittedPercent - previous : 0;
   const material_presently_stored = Number(pli.material_presently_stored) || 0;
   const scheduled_value = Number(pli.scheduled_value) || 0;
@@ -125,6 +263,7 @@ const lineItemsForTable = lineItems.map((li, idx) => {
   const retainage = 0; // Placeholder, as no DB field
   return {
     idx: idx + 1,
+    line_item_id: li.line_item_id,
     item_no,
     description_of_work,
     scheduled_value,
@@ -136,6 +275,8 @@ const lineItemsForTable = lineItems.map((li, idx) => {
     balance_to_finish,
     retainage,
     current_payment: Number(pli.amount_for_this_period) || 0,
+    submitted_percent: submittedPercent,
+    pm_verified_percent: pmVerifiedPercent,
   };
 });
   const grandTotal = lineItemsForTable.reduce((sum, li) => sum + li.current_payment, 0);
@@ -144,17 +285,54 @@ const lineItemsForTable = lineItems.map((li, idx) => {
     setActionLoading(true);
     setError(null);
     try {
-      const { error: updateError } = await supabase
-        .from("payment_applications")
-        .update({ status: "approved" })
-        .eq("id", paymentAppId);
-      if (updateError) throw new Error(updateError.message);
-      router.push("/dashboard");
+      // Get current session for authorization
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('Authentication required');
+      }
+
+      const response = await fetch(`/api/payments/${paymentAppId}/approve`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          approvalNotes: approvalNotes.trim() || null
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to approve payment application');
+      }
+
+      const result = await response.json();
+      console.log('Payment approved:', result);
+      
+      // Ask if user wants to send notification to vendor
+      const sendNotification = confirm(
+        'Payment application approved successfully!\n\nWould you like to send a notification to the vendor/contractor about this approval?'
+      );
+
+      if (sendNotification) {
+        try {
+          // Send notification to vendor
+          await sendVendorNotification(result.paymentApp);
+          alert('Approval notification sent to vendor successfully!');
+        } catch (notificationError) {
+          console.error('Failed to send vendor notification:', notificationError);
+          alert('Payment approved, but failed to send vendor notification. You may need to notify them manually.');
+        }
+      }
+      
+      router.push("/pm-dashboard");
     } catch (err) {
       setError((err instanceof Error ? err.message : "Failed to approve"));
     } finally {
       setActionLoading(false);
       setShowConfirmDialog(null);
+      setApprovalNotes('');
     }
   };
 
@@ -162,17 +340,40 @@ const lineItemsForTable = lineItems.map((li, idx) => {
     setActionLoading(true);
     setError(null);
     try {
-      const { error: updateError } = await supabase
-        .from("payment_applications")
-        .update({ status: "rejected" })
-        .eq("id", paymentAppId);
-      if (updateError) throw new Error(updateError.message);
-      router.push("/dashboard");
+      // Get current session for authorization
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('Authentication required');
+      }
+
+      const response = await fetch(`/api/payments/${paymentAppId}/reject`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          rejectionNotes: rejectionNotes.trim() || null
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to reject payment application');
+      }
+
+      const result = await response.json();
+      console.log('Payment rejected:', result);
+      
+      // Show success message and redirect
+      alert('Payment application rejected successfully!');
+      router.push("/pm-dashboard");
     } catch (err) {
       setError((err instanceof Error ? err.message : "Failed to reject"));
     } finally {
       setActionLoading(false);
       setShowConfirmDialog(null);
+      setRejectionNotes('');
     }
   };
 
@@ -380,8 +581,21 @@ const lineItemsForTable = lineItems.map((li, idx) => {
         {/* Line Items Table */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-8">
           <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">Line Items Breakdown</h2>
-            <p className="text-gray-600 mt-1">Detailed breakdown of work completed and payment requested</p>
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">Line Items Breakdown</h2>
+                <p className="text-gray-600 mt-1">Detailed breakdown of work completed and payment requested</p>
+                <p className="text-sm text-blue-600 mt-1">💡 Hover over PM Verified% to edit percentages</p>
+              </div>
+              {Object.keys(editedPercentages).length > 0 && (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-amber-600 font-medium">
+                    {Object.keys(editedPercentages).length} unsaved changes
+                  </span>
+                  <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></div>
+                </div>
+              )}
+            </div>
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
@@ -401,6 +615,9 @@ const lineItemsForTable = lineItems.map((li, idx) => {
                   </th>
                   <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     This Period%
+                  </th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    PM Verified%
                   </th>
                   <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Materials Stored
@@ -448,6 +665,68 @@ const lineItemsForTable = lineItems.map((li, idx) => {
                       <td className="px-4 py-4 whitespace-nowrap text-right text-sm text-gray-700">
                         {li.this_period.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                       </td>
+                      <td className="px-4 py-4 whitespace-nowrap text-right text-sm">
+                        {editingLineItem === li.line_item_id ? (
+                          <div className="flex items-center justify-end gap-2">
+                            <input
+                              type="number"
+                              min="0"
+                              max="100"
+                              step="0.1"
+                              value={editedPercentages[li.line_item_id]?.pm_verified_percent || ''}
+                              onChange={(e) => {
+                                const value = parseFloat(e.target.value) || 0;
+                                setEditedPercentages(prev => ({
+                                  ...prev,
+                                  [li.line_item_id]: {
+                                    ...prev[li.line_item_id],
+                                    pm_verified_percent: value
+                                  }
+                                }));
+                              }}
+                              className="w-16 px-2 py-1 text-xs text-gray-900 border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500"
+                              disabled={savingChanges}
+                            />
+                            <div className="flex gap-1">
+                              <button
+                                onClick={() => saveLineItemPercentage(li.line_item_id)}
+                                disabled={savingChanges}
+                                className="p-1 text-green-600 hover:text-green-700 disabled:opacity-50"
+                                title="Save"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                              </button>
+                              <button
+                                onClick={cancelEditingLineItem}
+                                disabled={savingChanges}
+                                className="p-1 text-red-600 hover:text-red-700 disabled:opacity-50"
+                                title="Cancel"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-end gap-2 group">
+                            <span className="text-gray-700 font-medium">
+                              {li.pm_verified_percent.toFixed(1)}%
+                            </span>
+                            <button
+                              onClick={() => startEditingLineItem(li.line_item_id, li.submitted_percent, li.pm_verified_percent)}
+                              className="p-1 text-gray-700 hover:text-blue-600 transition-all"
+                              title="Edit percentage"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
+                            </button>
+                          </div>
+                        )}
+                      </td>
                       <td className="px-4 py-4 whitespace-nowrap text-right text-sm text-gray-700">
                         {li.material_presently_stored.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                       </td>
@@ -480,7 +759,7 @@ const lineItemsForTable = lineItems.map((li, idx) => {
               {lineItemsForTable.length > 0 && (
                 <tfoot className="bg-blue-50">
                   <tr>
-                    <td colSpan={9} className="px-4 py-4 text-right text-sm font-semibold text-gray-900">
+                    <td colSpan={10} className="px-4 py-4 text-right text-sm font-semibold text-gray-900">
                       Total Payment Requested:
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-right text-lg font-bold text-green-600">
@@ -522,8 +801,8 @@ const lineItemsForTable = lineItems.map((li, idx) => {
 
       {/* Confirmation Dialog */}
       {showConfirmDialog && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
+        <div className="fixed inset-0  bg-opacity-90 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex items-center gap-4 mb-4">
                 <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
@@ -544,10 +823,13 @@ const lineItemsForTable = lineItems.map((li, idx) => {
                     {showConfirmDialog === 'approve' ? 'Approve Payment' : 'Reject Payment'}
                   </h3>
                   <p className="text-gray-600">
-                    Are you sure you want to {showConfirmDialog} this payment application?
+                    {showConfirmDialog === 'approve' 
+                      ? 'Add optional notes and approve this payment application' 
+                      : 'Please provide a reason for rejection'}
                   </p>
                 </div>
               </div>
+              
               <div className="bg-gray-50 rounded-lg p-4 mb-4">
                 <p className="text-sm text-gray-700">
                   <strong>Amount:</strong> {grandTotal.toLocaleString(undefined, { style: 'currency', currency: 'USD', minimumFractionDigits: 0 })}
@@ -556,9 +838,52 @@ const lineItemsForTable = lineItems.map((li, idx) => {
                   <strong>Contractor:</strong> {contractor?.name}
                 </p>
               </div>
+
+              {/* Form fields */}
+              <div className="space-y-4 mb-6">
+                {showConfirmDialog === 'approve' ? (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Approval Notes (Optional)
+                    </label>
+                    <textarea
+                      value={approvalNotes}
+                      onChange={(e) => setApprovalNotes(e.target.value)}
+                      placeholder="Add any notes for this approval..."
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 resize-none"
+                      rows={3}
+                    />
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Rejection Notes (Optional)
+                    </label>
+                    <textarea
+                      value={rejectionNotes}
+                      onChange={(e) => setRejectionNotes(e.target.value)}
+                      placeholder="Provide details about the rejection..."
+                      className="w-full px-3 py-2 border text-gray-700 border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 resize-none"
+                      rows={4}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {error && (
+                <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+                  {error}
+                </div>
+              )}
+
               <div className="flex gap-3">
                 <button
-                  onClick={() => setShowConfirmDialog(null)}
+                  onClick={() => {
+                    setShowConfirmDialog(null);
+                    setRejectionNotes('');
+                    setApprovalNotes('');
+                    setError(null);
+                  }}
                   disabled={actionLoading}
                   className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors"
                 >

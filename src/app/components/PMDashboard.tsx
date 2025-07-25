@@ -22,107 +22,78 @@ const formatCurrency = (amount: number) => {
   }).format(amount);
 };
 
-// Stat Card Component
-function StatCard({ icon, label, value, subtitle, color }: any) {
+// Mobile-Optimized Stat Card Component
+function CompactStatCard({ icon, label, value, change, color }: any) {
   const colorClasses: Record<string, string> = {
-    orange: "bg-orange-100 border-orange-500 text-orange-900",
-    blue: "bg-blue-100 border-blue-500 text-blue-900",
-    green: "bg-green-100 border-green-500 text-green-900",
-    purple: "bg-purple-100 border-purple-500 text-purple-900",
+    orange: "border-orange-400 bg-orange-50",
+    blue: "border-blue-400 bg-blue-50",
+    green: "border-green-400 bg-green-50",
+    purple: "border-purple-400 bg-purple-50",
+    red: "border-red-400 bg-red-50",
   };
+  
   return (
-    <div
-      className={`border-l-4 rounded-xl p-6 ${colorClasses[color]} shadow-sm hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1`}
-      role="region"
-      aria-label={label}
-    >
-      <div className="flex items-center gap-3 mb-3">
-        <span className="text-3xl">{icon}</span>
-        <span className="font-semibold text-lg">{label}</span>
+    <div className={`p-3 sm:p-4 rounded-lg border-l-4 ${colorClasses[color]} hover:shadow-md transition-shadow`}>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <span className="text-base sm:text-lg flex-shrink-0">{icon}</span>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">{label}</p>
+            <p className="text-lg sm:text-xl font-bold text-gray-900 truncate">{value}</p>
+          </div>
+        </div>
+        {change && (
+          <div className={`text-xs font-semibold flex-shrink-0 ml-2 ${change > 0 ? 'text-green-600' : 'text-red-600'}`}>
+            <span className="hidden sm:inline">{change > 0 ? '↗' : '↘'} {Math.abs(change)}%</span>
+            <span className="sm:hidden">{change > 0 ? '↗' : '↘'}{Math.abs(change)}%</span>
+          </div>
+        )}
       </div>
-      <div className="text-3xl font-bold">{value}</div>
-      <div className="text-sm opacity-80">{subtitle}</div>
     </div>
   );
 }
 
-function OverviewStats({ pendingSMS, reviewQueue, readyChecks, weeklyTotal }: any) {
+// Compact Stats Overview
+function CompactStats({ pendingSMS, reviewQueue, readyChecks, weeklyTotal }: any) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-      <StatCard
-        icon="🔄"
-        label="Pending SMS"
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <CompactStatCard
+        icon="📱"
+        label="SMS Pending"
         value={pendingSMS}
-        subtitle="Waiting for responses"
+        change={-5}
         color="orange"
       />
-      <StatCard
-        icon="📋"
+      <CompactStatCard
+        icon="⚠️"
         label="Review Queue"
         value={reviewQueue}
-        subtitle="Need PM verification"
-        color="blue"
+        change={12}
+        color="red"
       />
-      <StatCard
+      <CompactStatCard
         icon="✅"
-        label="Ready Checks"
+        label="Ready"
         value={readyChecks}
-        subtitle="Approved for pickup"
+        change={8}
         color="green"
       />
-      <StatCard
+      <CompactStatCard
         icon="💰"
-        label="This Week"
+        label="Weekly"
         value={formatCurrency(weeklyTotal)}
-        subtitle="Total payments"
+        change={15}
         color="purple"
       />
     </div>
   );
 }
 
-function PaymentAppCard({ application, onVerify, getDocumentForApp, sendForSignature }: any) {
-  const statusConfig: any = {
-    sms_complete: {
-      icon: "📱",
-      label: "SMS Complete",
-      color: "bg-green-100 text-green-800",
-      action: "Verify & Approve",
-      urgent: true,
-    },
-    needs_review: {
-      icon: "📋",
-      label: "PM Review",
-      color: "bg-blue-100 text-blue-800",
-      action: "Review Now",
-      urgent: true,
-    },
-    check_ready: {
-      icon: "✅",
-      label: "Check Ready",
-      color: "bg-gray-100 text-gray-800",
-      action: "View Details",
-      urgent: false,
-    },
-    submitted: {
-      icon: "📋",
-      label: "PM Review",
-      color: "bg-blue-100 text-blue-800",
-      action: "Review Now",
-      urgent: true,
-    },
-    approved: {
-      icon: "✅",
-      label: "Check Ready",
-      color: "bg-gray-100 text-gray-800",
-      action: "View Details",
-      urgent: false,
-    },
-  };
-  const config = statusConfig[application.status] || statusConfig["needs_review"];
-  const doc = getDocumentForApp(application.id);
-
+// Mobile Payment Card Component
+function PaymentCard({ application, isSelected, onSelect, onVerify, getDocumentForApp, sendForSignature }: any) {
   const [grandTotal, setGrandTotal] = useState(0);
+  const [showDetails, setShowDetails] = useState(false);
+
   useEffect(() => {
     async function fetchGrandTotal() {
       const lineItemIds = (application.line_item_progress || [])
@@ -144,163 +115,550 @@ function PaymentAppCard({ application, onVerify, getDocumentForApp, sendForSigna
     fetchGrandTotal();
   }, [application.line_item_progress]);
 
+  const statusConfig: any = {
+    submitted: { 
+      color: "bg-red-100 text-red-800 border-red-200", 
+      priority: "URGENT",
+      icon: "🚨"
+    },
+    needs_review: { 
+      color: "bg-yellow-100 text-yellow-800 border-yellow-200", 
+      priority: "HIGH",
+      icon: "⚠️"
+    },
+    sms_complete: { 
+      color: "bg-blue-100 text-blue-800 border-blue-200", 
+      priority: "READY",
+      icon: "📱"
+    },
+    approved: { 
+      color: "bg-green-100 text-green-800 border-green-200", 
+      priority: "DONE",
+      icon: "✅"
+    },
+    check_ready: { 
+      color: "bg-purple-100 text-purple-800 border-purple-200", 
+      priority: "PICKUP",
+      icon: "💰"
+    },
+  };
+
+  const config = statusConfig[application.status] || statusConfig.needs_review;
+  const doc = getDocumentForApp(application.id);
+
   return (
-    <div
-      className={`border rounded-xl p-6 shadow-sm hover:shadow-lg transition-all duration-300 ${
-        config.urgent ? "border-blue-200 bg-blue-50" : "border-gray-200 bg-white"
-      }`}
-      role="article"
-      aria-label={`Payment Application for ${application.project?.name}`}
-    >
-      <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-6">
-        <div className="flex-1">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
-            <h3 className="font-semibold text-xl text-gray-900">
-              {application.project?.name} - {application.contractor?.name}
-            </h3>
-            <span
-              className={`px-3 py-1 rounded-full text-sm font-medium ${config.color}`}
-            >
-              {config.icon} {config.label}
-            </span>
+    <div className={`bg-white border rounded-lg p-4 transition-all ${isSelected ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}>
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex items-center gap-3">
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={(e) => onSelect(application.id, e.target.checked)}
+            className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 mt-1"
+          />
+          <div className="min-w-0">
+            <h3 className="font-semibold text-gray-900 text-sm truncate">{application.project?.name}</h3>
+            <p className="text-xs text-gray-500">#{application.id}</p>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm mb-4">
-            <div>
-              <span className="text-gray-600 block">Amount</span>
-              <div className="font-semibold text-lg text-gray-900">
-                {formatCurrency(grandTotal)}
-              </div>
-            </div>
-            <div>
-              <span className="text-gray-600 block">Trade</span>
-              <div className="font-semibold text-gray-900">
-                {application.contractor?.trade}
-              </div>
-            </div>
-            <div>
-              <span className="text-gray-600 block">Submitted</span>
-              <div className="font-semibold text-gray-900">
-                {application.created_at ? formatDate(application.created_at) : "-"}
-              </div>
-            </div>
-            <div>
-              <span className="text-gray-600 block">Line Items</span>
-              <div className="font-semibold text-gray-900">
-                {(application.line_item_progress || []).filter((lip: any) => lip.line_item)
-                  .length}{" "}
-                items
-              </div>
-            </div>
-          </div>
-          {application.status === "sms_complete" && (
-            <div className="text-sm text-blue-700 bg-blue-50 p-3 rounded-lg">
-              📱 Contractor completed SMS responses - ready for site verification
-            </div>
-          )}
         </div>
-        <div className="flex flex-col gap-3 lg:ml-6">
-          <button
-            onClick={() => onVerify(application.id)}
-            className={`px-6 py-2 rounded-lg font-semibold text-white transition-all duration-200 ${
-              config.urgent
-                ? "bg-blue-600 hover:bg-blue-700"
-                : "bg-gray-600 hover:bg-gray-700"
-            }`}
-            aria-label={config.action}
-          >
-            {config.action}
-          </button>
-          {doc && (
-            <>
-              <a
-                href={doc.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-6 py-2 bg-gray-100 text-gray-800 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors text-center"
-                aria-label="Review PDF"
-              >
-                Review PDF
-              </a>
-              <button
-                onClick={() => sendForSignature(application.id)}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-                aria-label="Send for Signature"
-              >
-                Send for Signature
-              </button>
-            </>
+        <div className="flex items-center gap-2">
+          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold border ${config.color}`}>
+            {config.icon}
+          </span>
+          {config.priority === "URGENT" && (
+            <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
           )}
         </div>
       </div>
-      {doc && (
-        <div className="mt-6">
-          <iframe
-            src={doc.url}
-            width="100%"
-            height="400px"
-            className="border border-gray-200 rounded-lg"
-            title="Payment Request PDF Preview"
-          />
+
+      <div className="grid grid-cols-2 gap-3 mb-4">
+        <div>
+          <p className="text-xs text-gray-500">Contractor</p>
+          <p className="text-sm font-medium text-gray-900 truncate">{application.contractor?.name}</p>
+          {application.contractor?.trade && (
+            <p className="text-xs text-gray-500">{application.contractor.trade}</p>
+          )}
+        </div>
+        <div className="text-right">
+          <p className="text-xs text-gray-500">Amount</p>
+          <p className="text-lg font-bold text-green-600">{formatCurrency(grandTotal)}</p>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <div className="text-xs text-gray-500">
+          {application.created_at ? formatDate(application.created_at) : "-"}
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => onVerify(application.id)}
+            className={`px-3 py-1 rounded-md text-xs font-semibold transition-colors ${
+              config.priority === "URGENT" 
+                ? "bg-red-600 text-white hover:bg-red-700" 
+                : "bg-blue-600 text-white hover:bg-blue-700"
+            }`}
+          >
+            {config.priority === "URGENT" ? "Review" : "View"}
+          </button>
+          <button
+            onClick={() => setShowDetails(!showDetails)}
+            className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+            title="Toggle details"
+          >
+            <svg className={`w-4 h-4 transition-transform ${showDetails ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      {showDetails && (
+        <div className="mt-4 pt-4 border-t border-gray-200">
+          <div className="grid grid-cols-1 gap-3">
+            <div>
+              <h4 className="font-semibold text-xs text-gray-700 mb-1">Line Items</h4>
+              <p className="text-sm text-gray-600">
+                {(application.line_item_progress || []).filter((lip: any) => lip.line_item).length} items
+              </p>
+            </div>
+            {doc && (
+              <div>
+                <h4 className="font-semibold text-xs text-gray-700 mb-1">Actions</h4>
+                <div className="flex gap-2">
+                  <a
+                    href={doc.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-2 py-1 bg-gray-200 text-gray-700 rounded text-xs hover:bg-gray-300 transition-colors"
+                  >
+                    📄 PDF
+                  </a>
+                  <button
+                    onClick={() => sendForSignature(application.id)}
+                    className="px-2 py-1 bg-purple-600 text-white rounded text-xs hover:bg-purple-700 transition-colors"
+                  >
+                    ✍️ Sign
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
   );
 }
 
-function PaymentApplicationsQueue({
-  applications,
-  onVerify,
-  getDocumentForApp,
-  sendForSignature,
-}: any) {
-  const sortedApps = [...applications].sort((a, b) => {
-    const priority: any = {
-      needs_review: 3,
-      sms_complete: 2,
-      check_ready: 1,
-      submitted: 3,
-      approved: 1,
-    };
-    return (priority[b.status] || 0) - (priority[a.status] || 0);
-  });
+// Payment Application Row Component
+function PaymentRow({ application, isSelected, onSelect, onVerify, getDocumentForApp, sendForSignature }: any) {
+  const [grandTotal, setGrandTotal] = useState(0);
+  const [showDetails, setShowDetails] = useState(false);
+
+  useEffect(() => {
+    async function fetchGrandTotal() {
+      const lineItemIds = (application.line_item_progress || [])
+        .map((lip: any) => lip.line_item?.id)
+        .filter(Boolean);
+      if (!lineItemIds.length) return setGrandTotal(0);
+      const { data, error } = await supabase
+        .from("project_line_items")
+        .select("amount_for_this_period")
+        .in("id", lineItemIds);
+      if (!error && data) {
+        const total = data.reduce(
+          (sum: number, pli: any) => sum + (Number(pli.amount_for_this_period) || 0),
+          0
+        );
+        setGrandTotal(total);
+      }
+    }
+    fetchGrandTotal();
+  }, [application.line_item_progress]);
+
+  const statusConfig: any = {
+    submitted: { 
+      color: "bg-red-100 text-red-800 border-red-200", 
+      priority: "URGENT",
+      icon: "🚨"
+    },
+    needs_review: { 
+      color: "bg-yellow-100 text-yellow-800 border-yellow-200", 
+      priority: "HIGH",
+      icon: "⚠️"
+    },
+    sms_complete: { 
+      color: "bg-blue-100 text-blue-800 border-blue-200", 
+      priority: "READY",
+      icon: "📱"
+    },
+    approved: { 
+      color: "bg-green-100 text-green-800 border-green-200", 
+      priority: "DONE",
+      icon: "✅"
+    },
+    check_ready: { 
+      color: "bg-purple-100 text-purple-800 border-purple-200", 
+      priority: "PICKUP",
+      icon: "💰"
+    },
+  };
+
+  const config = statusConfig[application.status] || statusConfig.needs_review;
+  const doc = getDocumentForApp(application.id);
+
   return (
-    <div className="mb-12">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
-          💰 Payment Applications Queue
-          <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
-            {applications.length} active
-          </span>
-        </h2>
-      </div>
-      <div className="space-y-6">
-        {sortedApps.map((app) => (
-          <PaymentAppCard
-            key={app.id}
-            application={app}
-            onVerify={onVerify}
-            getDocumentForApp={getDocumentForApp}
-            sendForSignature={sendForSignature}
+    <>
+      <tr className={`hover:bg-gray-50 transition-colors ${isSelected ? 'bg-blue-50' : ''}`}>
+        <td className="px-4 py-3">
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={(e) => onSelect(application.id, e.target.checked)}
+            className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
           />
-        ))}
-        {applications.length === 0 && (
-          <div className="text-center py-12 bg-white border border-gray-200 rounded-xl shadow-sm">
-            <p className="text-lg text-gray-600 mb-2">
-              📭 No active payment applications
-            </p>
-            <p className="text-sm text-gray-500">
-              Create payment apps from projects below
-            </p>
+        </td>
+        <td className="px-4 py-3">
+          <div className="flex items-center gap-2">
+            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold border ${config.color}`}>
+              {config.icon}
+            </span>
+            {config.priority === "URGENT" && (
+              <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+            )}
           </div>
-        )}
+        </td>
+        <td className="px-4 py-3">
+          <div className="flex flex-col">
+            <span className="font-semibold text-gray-900 text-sm">{application.project?.name}</span>
+            <span className="text-xs text-gray-500">#{application.id}</span>
+          </div>
+        </td>
+        <td className="px-4 py-3">
+          <span className="text-sm text-gray-700">{application.contractor?.name}</span>
+          <div className="text-xs text-gray-500">{application.contractor?.trade}</div>
+        </td>
+        <td className="px-4 py-3 text-right">
+          <span className="font-semibold text-green-600">{formatCurrency(grandTotal)}</span>
+        </td>
+        <td className="px-4 py-3 text-sm text-gray-500">
+          {application.created_at ? formatDate(application.created_at) : "-"}
+        </td>
+        <td className="px-4 py-3">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => onVerify(application.id)}
+              className={`px-3 py-1 rounded-md text-xs font-semibold transition-colors ${
+                config.priority === "URGENT" 
+                  ? "bg-red-600 text-white hover:bg-red-700" 
+                  : "bg-blue-600 text-white hover:bg-blue-700"
+              }`}
+            >
+              {config.priority === "URGENT" ? "Review Now" : "View"}
+            </button>
+            <button
+              onClick={() => setShowDetails(!showDetails)}
+              className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+              title="Toggle details"
+            >
+              <svg className={`w-4 h-4 transition-transform ${showDetails ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+          </div>
+        </td>
+      </tr>
+      {showDetails && (
+        <tr className="bg-gray-50">
+          <td colSpan={7} className="px-4 py-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <h4 className="font-semibold text-sm text-gray-700 mb-2">Line Items</h4>
+                <p className="text-sm text-gray-600">
+                  {(application.line_item_progress || []).filter((lip: any) => lip.line_item).length} items
+                </p>
+              </div>
+              <div>
+                <h4 className="font-semibold text-sm text-gray-700 mb-2">Actions</h4>
+                <div className="flex gap-2">
+                  {doc && (
+                    <>
+                      <a
+                        href={doc.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-3 py-1 bg-gray-200 text-gray-700 rounded text-xs hover:bg-gray-300 transition-colors"
+                      >
+                        📄 PDF
+                      </a>
+                      <button
+                        onClick={() => sendForSignature(application.id)}
+                        className="px-3 py-1 bg-purple-600 text-white rounded text-xs hover:bg-purple-700 transition-colors"
+                      >
+                        ✍️ Sign
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+              <div>
+                <h4 className="font-semibold text-sm text-gray-700 mb-2">Status Info</h4>
+                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${config.color}`}>
+                  {config.icon} {config.priority}
+                </span>
+              </div>
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
+  );
+}
+
+// Pagination Component
+function Pagination({ currentPage, totalPages, onPageChange, totalItems, itemsPerPage }: any) {
+  const startItem = (currentPage - 1) * itemsPerPage + 1;
+  const endItem = Math.min(currentPage * itemsPerPage, totalItems);
+
+  const getPageNumbers = () => {
+    const pages = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      if (currentPage <= 4) {
+        for (let i = 1; i <= 5; i++) pages.push(i);
+        pages.push('...', totalPages);
+      } else if (currentPage >= totalPages - 3) {
+        pages.push(1, '...');
+        for (let i = totalPages - 4; i <= totalPages; i++) pages.push(i);
+      } else {
+        pages.push(1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages);
+      }
+    }
+    return pages;
+  };
+
+  if (totalPages <= 1) return null;
+
+  return (
+    <div className="bg-white px-4 py-3 border-t border-gray-200 flex items-center justify-between">
+      <div className="flex-1 flex justify-between sm:hidden">
+        <button
+          onClick={() => onPageChange(currentPage - 1)}
+          disabled={currentPage === 1}
+          className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Previous
+        </button>
+        <button
+          onClick={() => onPageChange(currentPage + 1)}
+          disabled={currentPage === totalPages}
+          className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Next
+        </button>
+      </div>
+      <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+        <div>
+          <p className="text-sm text-gray-700">
+            Showing <span className="font-medium">{startItem}</span> to <span className="font-medium">{endItem}</span> of{' '}
+            <span className="font-medium">{totalItems}</span> results
+          </p>
+        </div>
+        <div>
+          <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+            <button
+              onClick={() => onPageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+              className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+              </svg>
+            </button>
+            {getPageNumbers().map((page, index) => (
+              <button
+                key={index}
+                onClick={() => typeof page === 'number' ? onPageChange(page) : null}
+                disabled={page === '...'}
+                className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                  page === currentPage
+                    ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
+                    : page === '...'
+                    ? 'border-gray-300 bg-white text-gray-400 cursor-default'
+                    : 'border-gray-300 bg-white text-gray-500 hover:bg-gray-50'
+                }`}
+              >
+                {page}
+              </button>
+            ))}
+            <button
+              onClick={() => onPageChange(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+              </svg>
+            </button>
+          </nav>
+        </div>
       </div>
     </div>
   );
 }
 
+// Main Payment Table Component
+function PaymentTable({ applications, onVerify, getDocumentForApp, sendForSignature, selectedItems, onSelectItem, onSelectAll, currentPage, totalPages, onPageChange, totalItems, itemsPerPage }: any) {
+  const allSelected = applications.length > 0 && selectedItems.length === applications.length;
+  const partiallySelected = selectedItems.length > 0 && selectedItems.length < applications.length;
+
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+      {/* Desktop Table View */}
+      <div className="hidden sm:block">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-4 py-3 text-left">
+                  <input
+                    type="checkbox"
+                    checked={allSelected}
+                    ref={(el) => {
+                      if (el) el.indeterminate = partiallySelected;
+                    }}
+                    onChange={(e) => onSelectAll(e.target.checked)}
+                    className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                  />
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Project</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Contractor</th>
+                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Amount</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Date</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {applications.map((app: any) => (
+                <PaymentRow
+                  key={app.id}
+                  application={app}
+                  isSelected={selectedItems.includes(app.id)}
+                  onSelect={onSelectItem}
+                  onVerify={onVerify}
+                  getDocumentForApp={getDocumentForApp}
+                  sendForSignature={sendForSignature}
+                />
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Mobile Card View */}
+      <div className="sm:hidden">
+        {/* Mobile Select All Header */}
+        <div className="border-b border-gray-200 p-4 bg-gray-50">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                checked={allSelected}
+                ref={(el) => {
+                  if (el) el.indeterminate = partiallySelected;
+                }}
+                onChange={(e) => onSelectAll(e.target.checked)}
+                className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+              />
+              <span className="text-sm font-medium text-gray-700">
+                {selectedItems.length > 0 ? `${selectedItems.length} selected` : 'Select All'}
+              </span>
+            </div>
+            <span className="text-xs text-gray-500">
+              {applications.length} applications
+            </span>
+          </div>
+        </div>
+        
+        {/* Mobile Cards */}
+        <div className="divide-y divide-gray-200">
+          {applications.map((app: any) => (
+            <div key={app.id} className="p-4">
+              <PaymentCard
+                application={app}
+                isSelected={selectedItems.includes(app.id)}
+                onSelect={onSelectItem}
+                onVerify={onVerify}
+                getDocumentForApp={getDocumentForApp}
+                sendForSignature={sendForSignature}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {applications.length === 0 && (
+        <div className="text-center py-12">
+          <div className="text-4xl mb-4">📭</div>
+          <p className="text-gray-500 font-medium">No payment applications found</p>
+          <p className="text-sm text-gray-400">All caught up!</p>
+        </div>
+      )}
+      
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={onPageChange}
+        totalItems={totalItems}
+        itemsPerPage={itemsPerPage}
+      />
+    </div>
+  );
+}
+
+// Bulk Actions Bar
+function BulkActionsBar({ selectedCount, onDeleteSelected, onApproveSelected, onClearSelection }: any) {
+  if (selectedCount === 0) return null;
+
+  return (
+    <div className="fixed bottom-4 left-2 right-2 sm:left-1/2 sm:right-auto sm:transform sm:-translate-x-1/2 bg-white rounded-lg shadow-lg border border-gray-200 px-4 sm:px-6 py-3 flex flex-col sm:flex-row items-center gap-3 sm:gap-4 z-50 max-w-md sm:max-w-none mx-auto sm:mx-0">
+      <span className="text-sm font-medium text-gray-700 order-2 sm:order-1">
+        {selectedCount} selected
+      </span>
+      <div className="flex gap-2 w-full sm:w-auto order-1 sm:order-2">
+        <button
+          onClick={onApproveSelected}
+          className="flex-1 sm:flex-initial px-3 sm:px-4 py-2 bg-green-600 text-white rounded-md text-xs sm:text-sm font-medium hover:bg-green-700 transition-colors"
+        >
+          ✅ <span className="hidden sm:inline">Approve All</span>
+          <span className="sm:hidden">Approve</span>
+        </button>
+        <button
+          onClick={onDeleteSelected}
+          className="flex-1 sm:flex-initial px-3 sm:px-4 py-2 bg-red-600 text-white rounded-md text-xs sm:text-sm font-medium hover:bg-red-700 transition-colors"
+        >
+          🗑️ <span className="hidden sm:inline">Delete Selected</span>
+          <span className="sm:hidden">Delete</span>
+        </button>
+        <button
+          onClick={onClearSelection}
+          className="flex-1 sm:flex-initial px-3 sm:px-4 py-2 bg-gray-200 text-gray-700 rounded-md text-xs sm:text-sm font-medium hover:bg-gray-300 transition-colors"
+        >
+          Clear
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// Project Card Component
 function ProjectCard({ project, onCreatePaymentApps }: any) {
   const [loading, setLoading] = useState(false);
   const percent = project.budget > 0 ? Math.min(100, Math.round((project.spent / project.budget) * 100)) : 0;
+  
   const handleCreatePaymentApps = async () => {
     setLoading(true);
     try {
@@ -311,79 +669,55 @@ function ProjectCard({ project, onCreatePaymentApps }: any) {
       setLoading(false);
     }
   };
+
   return (
-    <div
-      className="border border-gray-200 rounded-xl p-6 bg-white shadow-sm hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1"
-      role="article"
-      aria-label={`Project ${project.name}`}
-    >
-      <div className="mb-4">
-        <h3 className="font-semibold text-xl text-gray-900">{project.name}</h3>
+    <div className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow">
+      <div className="mb-3">
+        <h3 className="font-semibold text-lg text-gray-900">{project.name}</h3>
         <p className="text-sm text-gray-600">{project.client_name}</p>
-        <div className="flex items-center gap-2 mt-3 flex-wrap">
-          <span className="text-xs bg-blue-100 text-blue-800 px-3 py-1 rounded-full">
+        <div className="flex items-center gap-2 mt-2 flex-wrap">
+          <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
             {project.current_phase}
           </span>
           {project.at_risk && (
-            <span className="text-xs bg-red-100 text-red-800 px-3 py-1 rounded-full">
+            <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full">
               ⚠️ At Risk
             </span>
           )}
         </div>
       </div>
-      <div className="space-y-3 text-sm mb-6">
+      
+      <div className="space-y-2 text-sm mb-4">
         <div className="flex justify-between">
-          <span className="text-gray-600">Active Contractors</span>
-          <span className="font-medium text-gray-900">
-            {project.active_contractors_count}
-          </span>
+          <span className="text-gray-600">Contractors</span>
+          <span className="font-medium">{project.active_contractors_count || 0}</span>
         </div>
         <div className="flex justify-between">
           <span className="text-gray-600">Pending Apps</span>
-          <span className="font-medium text-gray-900">
-            {project.pending_payment_apps}
-          </span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-gray-600">Target Completion</span>
-          <span className="font-medium text-gray-900">
-            {project.target_completion_date
-              ? formatDate(project.target_completion_date)
-              : "-"}
-          </span>
+          <span className="font-medium">{project.pending_payment_apps || 0}</span>
         </div>
         <div className="flex justify-between">
           <span className="text-gray-600">Budget</span>
-          <span className="font-medium text-gray-900">
-            {formatCurrency(project.budget)}
-          </span>
+          <span className="font-medium">{formatCurrency(project.budget || 0)}</span>
         </div>
-        <div className="flex justify-between">
-          <span className="text-gray-600">Spent</span>
-          <span className="font-medium text-gray-900">
-            {formatCurrency(project.spent)}
-          </span>
-        </div>
-        <div className="w-full bg-gray-200 rounded-full h-3">
+        <div className="w-full bg-gray-200 rounded-full h-2">
           <div
-            className={`bg-green-500 h-3 rounded-full transition-all duration-500`}
+            className={`bg-green-500 h-2 rounded-full transition-all duration-500`}
             style={{ width: `${percent}%` }}
           ></div>
         </div>
-        <div className="flex justify-between text-xs mt-2">
+        <div className="flex justify-between text-xs">
           <span className="text-gray-600">{percent}% used</span>
-          <span
-            className={percent > 90 ? "text-red-600 font-medium" : "text-green-600 font-medium"}
-          >
+          <span className={percent > 90 ? "text-red-600 font-medium" : "text-green-600 font-medium"}>
             {percent > 90 ? "⚠️ Near limit" : "On track"}
           </span>
         </div>
       </div>
+      
       <button
         onClick={handleCreatePaymentApps}
         disabled={loading}
-        className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-        aria-label="Create Payment Apps"
+        className="w-full bg-green-600 text-white py-2 rounded-md text-sm font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
         {loading ? "⏳ Loading..." : "💰 Create Payment Apps"}
       </button>
@@ -391,32 +725,344 @@ function ProjectCard({ project, onCreatePaymentApps }: any) {
   );
 }
 
-function ActiveProjects({ projects, onCreatePaymentApps }: any) {
+// Contractor Selection Modal
+function ContractorSelectionModal({ 
+  show, 
+  onClose, 
+  project, 
+  contractors, 
+  selectedContractors, 
+  onContractorToggle, 
+  onCreatePaymentApps, 
+  creating 
+}: any) {
+  if (!show) return null;
+
+  const allSelected = contractors.length > 0 && selectedContractors.length === contractors.length;
+  const noneSelected = selectedContractors.length === 0;
+
+  const handleSelectAll = () => {
+    if (allSelected) {
+      // Deselect all
+      contractors.forEach((contractor: any) => {
+        if (selectedContractors.includes(contractor.id)) {
+          onContractorToggle(contractor.id);
+        }
+      });
+    } else {
+      // Select all
+      contractors.forEach((contractor: any) => {
+        if (!selectedContractors.includes(contractor.id)) {
+          onContractorToggle(contractor.id);
+        }
+      });
+    }
+  };
+
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
-          🏗️ Active Projects
-          <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
-            {projects.length} active
-          </span>
-        </h2>
+    <div className="fixed inset-0 bg-white-500 bg-opacity-30 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
+      <div className="bg-white rounded-lg sm:rounded-xl shadow-xl w-full max-w-2xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-4 sm:p-6 text-white">
+          <div className="flex items-center justify-between">
+            <div className="min-w-0 flex-1 pr-4">
+              <h3 className="text-lg sm:text-xl font-bold truncate">Create Payment Applications</h3>
+              <p className="text-blue-100 text-sm mt-1 truncate">{project?.name}</p>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-white/20 rounded-lg transition-colors flex-shrink-0"
+            >
+              <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="p-4 sm:p-6 flex-1 overflow-y-auto">
+          <div className="mb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0 mb-3">
+              <h4 className="font-semibold text-gray-900">Select Contractors</h4>
+              <button
+                onClick={handleSelectAll}
+                className="text-sm text-blue-600 hover:text-blue-700 font-medium self-start sm:self-auto"
+              >
+                {allSelected ? 'Deselect All' : 'Select All'}
+              </button>
+            </div>
+            <p className="text-sm text-gray-600 mb-4">
+              Choose which contractors to create payment applications for. SMS will be sent to initiate the payment process.
+            </p>
+          </div>
+
+          {contractors.length === 0 ? (
+            <div className="text-center py-8">
+              <div className="text-4xl mb-4">👥</div>
+              <p className="text-gray-500 font-medium">No contractors found</p>
+              <p className="text-sm text-gray-400">Add contractors to this project first</p>
+            </div>
+          ) : (
+            <div className="space-y-3 max-h-48 sm:max-h-64 overflow-y-auto">
+              {contractors.map((contractor: any) => (
+                <div
+                  key={contractor.id}
+                  className={`border rounded-lg p-3 sm:p-4 cursor-pointer transition-all ${
+                    selectedContractors.includes(contractor.id)
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                  onClick={() => onContractorToggle(contractor.id)}
+                >
+                  <div className="flex items-start gap-3">
+                    <input
+                      type="checkbox"
+                      checked={selectedContractors.includes(contractor.id)}
+                      onChange={() => onContractorToggle(contractor.id)}
+                      className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 mt-1 flex-shrink-0"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <h5 className="font-medium text-gray-900 truncate">{contractor.name}</h5>
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-sm text-gray-600 mt-1">
+                        {contractor.trade && (
+                          <span className="bg-gray-100 px-2 py-1 rounded text-xs w-fit">
+                            {contractor.trade}
+                          </span>
+                        )}
+                        {contractor.phone && (
+                          <span className="flex items-center gap-1 truncate">
+                            📱 <span className="truncate">{contractor.phone}</span>
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="bg-gray-50 px-4 sm:px-6 py-3 sm:py-4 border-t border-gray-200">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+            <div className="text-sm text-gray-600 order-2 sm:order-1">
+              {selectedContractors.length} of {contractors.length} contractors selected
+            </div>
+            <div className="flex gap-2 sm:gap-3 order-1 sm:order-2">
+              <button
+                onClick={onClose}
+                disabled={creating}
+                className="flex-1 sm:flex-initial px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={onCreatePaymentApps}
+                disabled={creating || noneSelected || contractors.length === 0}
+                className="flex-1 sm:flex-initial px-4 sm:px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 text-sm"
+              >
+                {creating ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span className="hidden sm:inline">Creating...</span>
+                    <span className="sm:hidden">...</span>
+                  </>
+                ) : (
+                  <>
+                    📨 <span className="hidden sm:inline">Create & Send SMS</span>
+                    <span className="sm:hidden">Create</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        {projects.map((project: any) => (
-          <ProjectCard
-            key={project.id}
-            project={project}
-            onCreatePaymentApps={onCreatePaymentApps}
-          />
-        ))}
+    </div>
+  );
+}
+
+// Mobile Filter Drawer
+function MobileFilterDrawer({ show, onClose, statusFilter, setStatusFilter, projectFilter, setProjectFilter, projects, sortBy, setSortBy, sortDir, setSortDir, onFilterChange }: any) {
+  if (!show) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 sm:hidden">
+      <div className="fixed inset-0 bg-black bg-opacity-25" onClick={onClose}></div>
+      <div className="fixed bottom-0 left-0 right-0 bg-white rounded-t-xl shadow-xl max-h-[80vh] overflow-y-auto">
+        <div className="p-4">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.207A1 1 0 013 6.5V4z" />
+              </svg>
+              Filters
+            </h3>
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-gray-100 rounded-lg"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+              <select
+                value={statusFilter}
+                onChange={(e) => {
+                  setStatusFilter(e.target.value);
+                  onFilterChange();
+                }}
+                className="w-full text-gray-700 border border-gray-300 rounded-md px-3 py-3 text-base focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="all">All Statuses</option>
+                <option value="submitted">🚨 Submitted</option>
+                <option value="needs_review">⚠️ Needs Review</option>
+                <option value="sms_complete">📱 SMS Complete</option>
+                <option value="approved">✅ Approved</option>
+                <option value="check_ready">💰 Check Ready</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Project</label>
+              <select
+                value={projectFilter}
+                onChange={(e) => {
+                  setProjectFilter(e.target.value);
+                  onFilterChange();
+                }}
+                className="w-full border text-gray-700 border-gray-300 rounded-md px-3 py-3 text-base focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="all">All Projects</option>
+                {projects.map((proj: any) => (
+                  <option key={proj.id} value={proj.id}>
+                    {proj.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Sort By</label>
+              <div className="flex gap-2">
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="flex-1 text-gray-700 border border-gray-300 rounded-md px-3 py-3 text-base focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="status">Priority</option>
+                  <option value="date">Date</option>
+                  <option value="amount">Amount</option>
+                </select>
+                <button
+                  onClick={() => setSortDir(sortDir === "asc" ? "desc" : "asc")}
+                  className="px-4 py-3 text-gray-700 border border-gray-300 rounded-md text-base hover:bg-gray-50 focus:ring-blue-500 focus:border-blue-500"
+                  title={`Sort ${sortDir === "asc" ? "descending" : "ascending"}`}
+                >
+                  {sortDir === "asc" ? "↑" : "↓"}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-6 pt-4 border-t border-gray-200">
+            <button
+              onClick={onClose}
+              className="w-full py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+            >
+              Apply Filters
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Desktop Sidebar Filters
+function FilterSidebar({ statusFilter, setStatusFilter, projectFilter, setProjectFilter, projects, sortBy, setSortBy, sortDir, setSortDir, onFilterChange }: any) {
+  return (
+    <div className="hidden sm:block w-64 bg-white rounded-lg border border-gray-200 p-4 h-fit">
+      <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.207A1 1 0 013 6.5V4z" />
+        </svg>
+        Filters
+      </h3>
+      
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+          <select
+            value={statusFilter}
+            onChange={(e) => {
+              setStatusFilter(e.target.value);
+              onFilterChange();
+            }}
+            className="w-full text-gray-700 border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="all">All Statuses</option>
+            <option value="submitted">🚨 Submitted</option>
+            <option value="needs_review">⚠️ Needs Review</option>
+            <option value="sms_complete">📱 SMS Complete</option>
+            <option value="approved">✅ Approved</option>
+            <option value="check_ready">💰 Check Ready</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Project</label>
+          <select
+            value={projectFilter}
+            onChange={(e) => {
+              setProjectFilter(e.target.value);
+              onFilterChange();
+            }}
+            className="w-full border text-gray-700 border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="all">All Projects</option>
+            {projects.map((proj: any) => (
+              <option key={proj.id} value={proj.id}>
+                {proj.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Sort By</label>
+          <div className="flex gap-2">
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="flex-1 text-gray-700 border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="status">Priority</option>
+              <option value="date">Date</option>
+              <option value="amount">Amount</option>
+            </select>
+            <button
+              onClick={() => setSortDir(sortDir === "asc" ? "desc" : "asc")}
+              className="px-3 py-2 text-gray-700 border border-gray-300 rounded-md text-sm hover:bg-gray-50 focus:ring-blue-500 focus:border-blue-500"
+              title={`Sort ${sortDir === "asc" ? "descending" : "ascending"}`}
+            >
+              {sortDir === "asc" ? "↑" : "↓"}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
 }
 
 export default function PMDashboard() {
-  console.log("PMDashboard rendered");
   const [session, setSession] = useState<any>(null);
   const [role, setRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -437,9 +1083,11 @@ export default function PMDashboard() {
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [projectFilter, setProjectFilter] = useState<string>("all");
-  const [page, setPage] = useState(1);
-  const pageSize = 5;
+  const [selectedItems, setSelectedItems] = useState<number[]>([]);
   const [mounted, setMounted] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -459,7 +1107,6 @@ export default function PMDashboard() {
       .single();
     if (userError) return null;
     
-    // Set userData for Header component
     setUserData({
       name: data.name || '',
       email: data.email || user.email || '',
@@ -493,6 +1140,7 @@ export default function PMDashboard() {
         `)
         .order("created_at", { ascending: false });
       if (appsError) throw new Error(appsError.message);
+      
       const sortedApps = (appsRaw || []).sort((a, b) => {
         if (a.status === "submitted" && b.status !== "submitted") return -1;
         if (a.status !== "submitted" && b.status === "submitted") return 1;
@@ -501,27 +1149,14 @@ export default function PMDashboard() {
         return dateB - dateA;
       });
       setPaymentApps(sortedApps);
+      
       const { data: projectsRaw, error: projectsError } = await supabase
         .from("projects")
         .select("*, id, name, client_name, current_phase, at_risk, target_completion_date, budget, spent")
         .eq("status", "active");
       if (projectsError) throw new Error(projectsError.message);
-      const projectsEnriched = (projectsRaw || []).map((proj: any) => {
-        const active_contractors_count = paymentApps.filter(
-          (app) => app.project?.id === proj.id && app.status !== "approved"
-        ).length;
-        const pending_payment_apps = paymentApps.filter(
-          (app) =>
-            app.project?.id === proj.id &&
-            ["needs_review", "sms_complete", "submitted"].includes(app.status)
-        ).length;
-        return {
-          ...proj,
-          active_contractors_count,
-          pending_payment_apps,
-        };
-      });
-      setProjects(projectsEnriched);
+      setProjects(projectsRaw || []);
+      
       const { data: smsConvos } = await supabase
         .from("payment_sms_conversations")
         .select("id, conversation_state");
@@ -551,12 +1186,11 @@ export default function PMDashboard() {
     } finally {
       setLoading(false);
     }
-  }, [fetchUser, paymentApps]);
+  }, [fetchUser]);
 
   useEffect(() => {
     const getSessionAndRole = async () => {
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      console.log("Session:", session, "Session error:", sessionError);
       setSession(session);
       if (session?.user) {
         const { data, error } = await supabase
@@ -564,7 +1198,6 @@ export default function PMDashboard() {
           .select("role")
           .eq("uuid", session.user.id)
           .single();
-        console.log("User role fetch:", data, error);
         setRole(data?.role || "unknown");
       } else {
         setRole("unknown");
@@ -581,7 +1214,6 @@ export default function PMDashboard() {
           .eq("uuid", session.user.id)
           .single()
           .then(({ data, error }) => {
-            console.log("User role fetch (listener):", data, error);
             setRole(data?.role || "unknown");
           });
       } else {
@@ -622,7 +1254,7 @@ export default function PMDashboard() {
     });
     if (!res.ok) {
       const data = await res.json();
-      alert("Failed to send for signature (PDFfiller): " + (data.error || res.statusText));
+      alert("Failed to send for signature: " + (data.error || res.statusText));
       return;
     }
     alert("Payment request sent successfully");
@@ -632,13 +1264,161 @@ export default function PMDashboard() {
     window.location.href = `/payments/${paymentAppId}/verify`;
   };
 
-  const handleCreatePaymentApps = async (projectId: number) => {
-    window.location.href = `/dashboard/projects/${projectId}/contractors`;
-  };
-
   const handleLogout = async () => {
     await supabase.auth.signOut();
     window.location.href = "/";
+  };
+
+  const handleSelectItem = (id: number, selected: boolean) => {
+    if (selected) {
+      setSelectedItems([...selectedItems, id]);
+    } else {
+      setSelectedItems(selectedItems.filter(item => item !== id));
+    }
+  };
+
+  const handleSelectAll = (selected: boolean) => {
+    if (selected) {
+      setSelectedItems(paginatedApps.map(app => app.id));
+    } else {
+      setSelectedItems([]);
+    }
+  };
+
+  const [showContractorModal, setShowContractorModal] = useState(false);
+  const [selectedProjectForPayment, setSelectedProjectForPayment] = useState<any>(null);
+  const [contractors, setContractors] = useState<any[]>([]);
+  const [selectedContractors, setSelectedContractors] = useState<number[]>([]);
+  const [creatingPaymentApps, setCreatingPaymentApps] = useState(false);
+
+  const handleCreatePaymentApps = async (projectId: number) => {
+    const project = projects.find(p => p.id === projectId);
+    if (!project) return;
+
+    setSelectedProjectForPayment(project);
+    // Fetch contractors for this project
+    await fetchContractorsForProject(projectId);
+    setShowContractorModal(true);
+  };
+
+  const fetchContractorsForProject = async (projectId: number) => {
+    try {
+      const { data, error } = await supabase
+        .from('contractors')
+        .select(`
+          id, name, trade, phone,
+          project_contractors!inner(project_id)
+        `)
+        .eq('project_contractors.project_id', projectId);
+      
+      if (error) throw error;
+      setContractors(data || []);
+    } catch (error) {
+      console.error('Error fetching contractors:', error);
+      setContractors([]);
+    }
+  };
+
+  const handleContractorToggle = (contractorId: number) => {
+    setSelectedContractors(prev => 
+      prev.includes(contractorId)
+        ? prev.filter(id => id !== contractorId)
+        : [...prev, contractorId]
+    );
+  };
+
+  const handleCreatePaymentApplications = async () => {
+    if (!selectedProjectForPayment || selectedContractors.length === 0) return;
+
+    setCreatingPaymentApps(true);
+    try {
+      const response = await fetch('/api/payments/initiate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          projectId: selectedProjectForPayment.id,
+          contractorIds: selectedContractors,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create payment applications');
+      }
+
+      const result = await response.json();
+      console.log('Payment applications created:', result);
+
+      // Show success message
+      const successCount = result.results.filter((r: any) => r.status === 'sms_sent').length;
+      const errorCount = result.results.filter((r: any) => r.error).length;
+
+      if (successCount > 0) {
+        alert(`Successfully created ${successCount} payment application(s)${errorCount > 0 ? ` (${errorCount} failed)` : ''}`);
+        // Refresh dashboard data
+        await loadDashboardData();
+      } else {
+        alert('Failed to create payment applications. Please try again.');
+      }
+
+      // Close modal and reset state
+      setShowContractorModal(false);
+      setSelectedContractors([]);
+      setSelectedProjectForPayment(null);
+    } catch (error) {
+      console.error('Error creating payment applications:', error);
+      alert('Failed to create payment applications: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    } finally {
+      setCreatingPaymentApps(false);
+    }
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedItems.length === 0) return;
+    
+    const confirmed = confirm(`Are you sure you want to delete ${selectedItems.length} payment application(s)?`);
+    if (!confirmed) return;
+
+    try {
+      const { error } = await supabase
+        .from('payment_applications')
+        .delete()
+        .in('id', selectedItems);
+      
+      if (error) throw error;
+      
+      await loadDashboardData();
+      setSelectedItems([]);
+      alert(`${selectedItems.length} payment application(s) deleted successfully`);
+    } catch (error) {
+      console.error('Error deleting applications:', error);
+      alert('Failed to delete applications');
+    }
+  };
+
+  const handleApproveSelected = async () => {
+    if (selectedItems.length === 0) return;
+    
+    const confirmed = confirm(`Are you sure you want to approve ${selectedItems.length} payment application(s)?`);
+    if (!confirmed) return;
+
+    try {
+      const { error } = await supabase
+        .from('payment_applications')
+        .update({ status: 'approved' })
+        .in('id', selectedItems);
+      
+      if (error) throw error;
+      
+      await loadDashboardData();
+      setSelectedItems([]);
+      alert(`${selectedItems.length} payment application(s) approved successfully`);
+    } catch (error) {
+      console.error('Error approving applications:', error);
+      alert('Failed to approve applications');
+    }
   };
 
   const filteredApps = useMemo(() => {
@@ -666,128 +1446,151 @@ export default function PMDashboard() {
     return apps;
   }, [paymentApps, statusFilter, projectFilter, sortBy, sortDir]);
 
-  const totalPages = Math.ceil(filteredApps.length / pageSize);
-  const pagedApps = filteredApps.slice((page - 1) * pageSize, page * pageSize);
+  const totalPages = Math.ceil(filteredApps.length / itemsPerPage);
+  const paginatedApps = filteredApps.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
-  // TEMPORARILY COMMENT OUT THE GUARDS FOR DEBUGGING
-  // if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
-  // if (!session || role !== "pm") return null;
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    setSelectedItems([]); // Clear selections when changing pages
+  };
+
+  const handleFilterChange = () => {
+    setCurrentPage(1); // Reset to first page when filters change
+    setSelectedItems([]);
+  };
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gray-50">
       <Header onShowProfile={() => {}} onLogout={handleLogout} userData={userData} />
-      <main className="container mx-auto px-4 py-8 max-w-7xl">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-          <div className="text-sm text-gray-600">
-            Last updated: {mounted ? lastRefresh.toLocaleTimeString() : ""}
+      <main className="container mx-auto px-4 py-6 max-w-7xl">
+        {/* Mobile-Optimized Header */}
+        <div className="flex flex-col gap-4 mb-6 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 truncate">Payment Manager</h1>
+            <p className="text-xs sm:text-sm text-gray-600 mt-1">
+              <span className="inline-block">{filteredApps.length} applications</span>
+              <span className="hidden sm:inline"> • </span>
+              <span className="block sm:inline text-xs">
+                Updated {mounted ? lastRefresh.toLocaleTimeString() : ""}
+              </span>
+            </p>
+          </div>
+          <div className="flex items-center justify-between sm:justify-end gap-3">
+            <button
+              onClick={() => setShowMobileFilters(!showMobileFilters)}
+              className="sm:hidden flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.207A1 1 0 013 6.5V4z" />
+              </svg>
+              Filters
+            </button>
             {loading && (
-              <span className="ml-2 text-blue-600 animate-pulse">🔄 Refreshing...</span>
+              <div className="flex items-center gap-2 text-blue-600">
+                <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                <span className="text-xs sm:text-sm">Syncing...</span>
+              </div>
             )}
           </div>
         </div>
-        <OverviewStats
+
+        {/* Stats */}
+        <CompactStats
           pendingSMS={stats.pending_sms}
           reviewQueue={stats.review_queue}
           readyChecks={stats.ready_checks}
           weeklyTotal={stats.weekly_total}
         />
-        <div className="flex flex-col sm:flex-row gap-4 mb-8 bg-white p-6 rounded-xl shadow-sm">
+
+        {/* Main Content */}
+        <div className="flex gap-6 mb-8">
+          {/* Sidebar */}
+          <FilterSidebar
+            statusFilter={statusFilter}
+            setStatusFilter={setStatusFilter}
+            projectFilter={projectFilter}
+            setProjectFilter={setProjectFilter}
+            projects={projects}
+            sortBy={sortBy}
+            setSortBy={setSortBy}
+            sortDir={sortDir}
+            setSortDir={setSortDir}
+            onFilterChange={handleFilterChange}
+          />
+
+          {/* Main Table */}
           <div className="flex-1">
-            <label className="text-sm font-medium text-gray-700 block mb-1">
-              Status
-            </label>
-            <select
-              value={statusFilter}
-              onChange={(e) => {
-                setStatusFilter(e.target.value);
-                setPage(1);
-              }}
-              className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-neutral-700"
-              aria-label="Filter by status"
-            >
-              <option value="all" className="text-neutral-700">All</option>
-              <option value="submitted" className="text-neutral-700">Submitted</option>
-              <option value="needs_review" className="text-neutral-700">Needs Review</option>
-              <option value="sms_complete" className="text-neutral-700">SMS Complete</option>
-              <option value="approved" className="text-neutral-700">Approved</option>
-              <option value="check_ready" className="text-neutral-700">Check Ready</option>
-            </select>
-          </div>
-          <div className="flex-1">
-            <label className="text-sm font-medium text-gray-700 block mb-1">
-              Project
-            </label>
-            <select
-              value={projectFilter}
-              onChange={(e) => {
-                setProjectFilter(e.target.value);
-                setPage(1);
-              }}
-              className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-neutral-700"
-              aria-label="Filter by project"
-            >
-              <option value="all" className="text-neutral-700">All</option>
-              {projects.map((proj: any) => (
-                <option key={proj.id} value={proj.id} className="text-neutral-700">
-                  {proj.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex-1">
-            <label className="text-sm font-medium text-gray-700 block mb-1">
-              Sort By
-            </label>
-            <div className="flex gap-2">
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as any)}
-                 className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-neutral-700"
-                aria-label="Sort by"
-              >
-                <option value="status">Status (Submitted First)</option>
-                <option value="date">Date</option>
-                <option value="amount">Amount</option>
-              </select>
-              <button
-                onClick={() => setSortDir(sortDir === "asc" ? "desc" : "asc")}
-                className=" border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-neutral-700"
-                aria-label={`Sort ${sortDir === "asc" ? "descending" : "ascending"}`}
-              >
-                {sortDir === "asc" ? "↑" : "↓"}
-              </button>
-            </div>
+            <PaymentTable
+              applications={paginatedApps}
+              onVerify={handleVerifyPayment}
+              getDocumentForApp={getDocumentForApp}
+              sendForSignature={sendForSignature}
+              selectedItems={selectedItems}
+              onSelectItem={handleSelectItem}
+              onSelectAll={handleSelectAll}
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
+              totalItems={filteredApps.length}
+              itemsPerPage={itemsPerPage}
+            />
           </div>
         </div>
-        <PaymentApplicationsQueue
-          applications={pagedApps}
-          onVerify={handleVerifyPayment}
-          getDocumentForApp={getDocumentForApp}
-          sendForSignature={sendForSignature}
+
+        {/* Active Projects Section */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold text-gray-900 flex items-center gap-3">
+              🏗️ Active Projects
+              <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
+                {projects.length} active
+              </span>
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {projects.map((project: any) => (
+              <ProjectCard
+                key={project.id}
+                project={project}
+                onCreatePaymentApps={handleCreatePaymentApps}
+              />
+            ))}
+            {projects.length === 0 && (
+              <div className="col-span-full text-center py-12 bg-white border-2 border-dashed border-gray-300 rounded-lg">
+                <div className="text-4xl mb-4">🏗️</div>
+                <p className="text-gray-500 font-medium">No active projects</p>
+                <p className="text-sm text-gray-400">Create a new project to get started</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Bulk Actions */}
+        <BulkActionsBar
+          selectedCount={selectedItems.length}
+          onDeleteSelected={handleDeleteSelected}
+          onApproveSelected={handleApproveSelected}
+          onClearSelection={() => setSelectedItems([])}
         />
-        <div className="flex justify-center items-center gap-4 my-8">
-          <button
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={page === 1}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-            aria-label="Previous page"
-          >
-            Prev
-          </button>
-          <span className="text-sm text-gray-700">
-            Page {page} of {totalPages}
-          </span>
-          <button
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            disabled={page === totalPages}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-            aria-label="Next page"
-          >
-            Next
-          </button>
-        </div>
-        <ActiveProjects projects={projects} onCreatePaymentApps={handleCreatePaymentApps} />
+
+        {/* Contractor Selection Modal */}
+        <ContractorSelectionModal
+          show={showContractorModal}
+          onClose={() => {
+            setShowContractorModal(false);
+            setSelectedContractors([]);
+            setSelectedProjectForPayment(null);
+          }}
+          project={selectedProjectForPayment}
+          contractors={contractors}
+          selectedContractors={selectedContractors}
+          onContractorToggle={handleContractorToggle}
+          onCreatePaymentApps={handleCreatePaymentApplications}
+          creating={creatingPaymentApps}
+        />
       </main>
     </div>
   );

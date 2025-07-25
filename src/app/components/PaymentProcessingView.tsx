@@ -610,7 +610,7 @@ const PaymentProcessingView: React.FC<PaymentProcessingViewProps> = ({
         )}
       </div>
 
-      {/* Upcoming Payment Deadlines Section */}
+      {/* Upcoming Payment Deadlines Section 
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-8">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-3">
@@ -649,7 +649,7 @@ const PaymentProcessingView: React.FC<PaymentProcessingViewProps> = ({
             ))}
           </div>
         )}
-      </div>
+      </div>*/}
     </div>
   );
 };
