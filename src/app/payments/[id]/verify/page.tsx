@@ -56,7 +56,6 @@ export default function PaymentVerificationPage() {
   const [document, setDocument] = useState<Document | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState<'approve' | 'reject' | null>(null);
-  const [rejectionReason, setRejectionReason] = useState('');
   const [rejectionNotes, setRejectionNotes] = useState('');
   const [approvalNotes, setApprovalNotes] = useState('');
 
@@ -246,21 +245,32 @@ export default function PaymentVerificationPage() {
   // Build line items for the table
 const lineItemsForTable = lineItems.map((li, idx) => {
   const pli = pliMap[li.line_item_id] || {};
+  const scheduled_value = Number(pli.scheduled_value) || 0;
+  const material_presently_stored = Number(pli.material_presently_stored) || 0;
+  const item_no = pli.item_no || '';
+  const description_of_work = pli.description_of_work || li.line_item?.description_of_work || '';
+  
+  // Previous work completed (as dollar amount)
   const previous = Number(pli.from_previous_application) || 0;
   
   // Use edited percentage if available, otherwise use original
   const submittedPercent = editedPercentages[li.line_item_id]?.submitted_percent ?? (Number(li.submitted_percent) || 0);
   const pmVerifiedPercent = editedPercentages[li.line_item_id]?.pm_verified_percent ?? (Number(li.pm_verified_percent) || submittedPercent);
   
-  const this_period = submittedPercent > previous ? submittedPercent - previous : 0;
-  const material_presently_stored = Number(pli.material_presently_stored) || 0;
-  const scheduled_value = Number(pli.scheduled_value) || 0;
-  const item_no = pli.item_no || '';
-  const description_of_work = pli.description_of_work || li.line_item?.description_of_work || '';
+  // Calculate work completed this period (dollar amount)
+  const work_completed_this_period = (pmVerifiedPercent / 100) * scheduled_value;
+  const this_period = Math.max(0, work_completed_this_period - previous);
+  
+  // Total completed work (dollar amount)
   const total_completed = previous + this_period + material_presently_stored;
-  const percent = previous + this_period;
+  
+  // Percentage complete (as percentage)
+  const percent = scheduled_value > 0 ? (total_completed / scheduled_value) * 100 : 0;
+  
+  // Balance to finish
   const balance_to_finish = scheduled_value - total_completed;
   const retainage = 0; // Placeholder, as no DB field
+  
   return {
     idx: idx + 1,
     line_item_id: li.line_item_id,
@@ -274,7 +284,7 @@ const lineItemsForTable = lineItems.map((li, idx) => {
     percent,
     balance_to_finish,
     retainage,
-    current_payment: Number(pli.amount_for_this_period) || 0,
+    current_payment: this_period,
     submitted_percent: submittedPercent,
     pm_verified_percent: pmVerifiedPercent,
   };
@@ -550,7 +560,7 @@ const lineItemsForTable = lineItems.map((li, idx) => {
                 previousDate: '', // Added to fix linter error
                 lineItems: lineItemsForTable,
               });
-              const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+              const blob = new Blob([new Uint8Array(pdfBytes)], { type: 'application/pdf' });
               const url = URL.createObjectURL(blob);
               const a = (typeof window !== 'undefined' && window.document) ? window.document.createElement('a') as HTMLAnchorElement : null;
               if (a) {
@@ -850,7 +860,7 @@ const lineItemsForTable = lineItems.map((li, idx) => {
                       value={approvalNotes}
                       onChange={(e) => setApprovalNotes(e.target.value)}
                       placeholder="Add any notes for this approval..."
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 resize-none"
+                      className="w-full px-3 py-2  border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 resize-none text-gray-700"
                       rows={3}
                     />
                   </div>
