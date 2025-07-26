@@ -695,5 +695,25 @@ export async function generateG703Pdf({
   });
 
   const pdfBytes = await pdfDoc.save();
-  return { pdfBytes, filename: 'APPLICATION_FOR_PAYMENT.pdf' };
+  
+  // Generate filename: PayApp - <VENDOR> - <Project> - App <#>_<mmddyyyy>
+  const vendor = contractor.name || 'Chain-JP LLC';
+  const projectName = project.name || 'Project';
+  const appNum = applicationNumber || '1';
+  
+  // Parse date from invoiceDate (assuming format like "MM/DD/YYYY" or similar)
+  let dateFormatted = '';
+  if (invoiceDate) {
+    const date = new Date(invoiceDate);
+    if (!isNaN(date.getTime())) {
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const year = date.getFullYear();
+      dateFormatted = `${month}${day}${year}`;
+    }
+  }
+  
+  const filename = `PayApp - ${vendor} - ${projectName} - App ${appNum}_${dateFormatted}.pdf`;
+  
+  return { pdfBytes, filename };
 }

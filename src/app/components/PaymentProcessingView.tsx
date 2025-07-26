@@ -430,8 +430,9 @@ const PaymentProcessingView: React.FC<PaymentProcessingViewProps> = ({
         alert(`Reminder sent for ${app.project.name} - ${app.contractor.name}`);
         break;
       case 'prepare':
-        // TODO: Implement payment preparation
-        alert(`Preparing payment for ${app.project.name} - ${app.contractor.name}`);
+        // TODO: Implement payment preparation and approval flow
+        // When approved, invoice will be automatically generated
+        alert(`Preparing payment for ${app.project.name} - ${app.contractor.name}\n\nNote: Invoice will be automatically generated upon payment approval.`);
         break;
       default:
         console.warn('Unknown action:', action);
