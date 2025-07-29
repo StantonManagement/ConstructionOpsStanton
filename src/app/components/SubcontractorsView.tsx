@@ -606,4 +606,3 @@ const SubcontractorsView: React.FC = () => {
 };
 
 export default SubcontractorsView;
-

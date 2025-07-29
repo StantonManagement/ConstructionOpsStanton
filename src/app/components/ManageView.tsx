@@ -992,4 +992,3 @@ const ManageView: React.FC = () => {
 };
 
 export default ManageView;
-

@@ -1,20 +1,9 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import { useData, Project } from '../context/DataContext';
 import { supabase } from '@/lib/supabaseClient';
 
-type Project = {
-  id: number;
-  name: string;
-  client_name: string;
-  current_phase: string;
-  daysToInspection?: number;
-  atRisk?: boolean;
-  budget?: number;
-  spent?: number;
-  permits?: { [key: string]: string };
-};
-
 type PaymentProcessingViewProps = {
-  setSelectedProject?: (project: Project) => void;
+  setSelectedProject: (project: Project) => void;
 };
 
 type PaymentApplication = {
@@ -388,7 +377,7 @@ const ProjectCard: React.FC<{
 const PaymentProcessingView: React.FC<PaymentProcessingViewProps> = ({ 
   setSelectedProject 
 }) => {
-  const [projects, setProjects] = useState<Project[]>([]);
+  const { projects } = useData();
   const { apps, loading, error, refetch } = usePaymentApplications();
   const [search, setSearch] = useState('');
   const [projectSearch, setProjectSearch] = useState('');
@@ -396,22 +385,7 @@ const PaymentProcessingView: React.FC<PaymentProcessingViewProps> = ({
   // Fetch data on component mount
   useEffect(() => {
     refetch();
-    fetchProjects();
   }, [refetch]);
-
-  const fetchProjects = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('projects')
-        .select('*')
-        .eq('status', 'active');
-      
-      if (error) throw error;
-      setProjects(data || []);
-    } catch (error) {
-      console.error('Error fetching projects:', error);
-    }
-  };
 
   // Memoized filtered applications
   const filteredApps = useMemo(() => {
@@ -466,7 +440,7 @@ const PaymentProcessingView: React.FC<PaymentProcessingViewProps> = ({
   }, []);
 
   const handleProjectSelection = useCallback((project: Project) => {
-    setSelectedProject?.(project);
+    setSelectedProject(project);
   }, [setSelectedProject]);
 
   if (error) {

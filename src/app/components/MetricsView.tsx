@@ -28,4 +28,3 @@ const MetricsView: React.FC = () => {
 }
 
 export default MetricsView; 
-

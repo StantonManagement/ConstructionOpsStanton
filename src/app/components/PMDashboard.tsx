@@ -1062,13 +1062,13 @@ function FilterSidebar({ statusFilter, setStatusFilter, projectFilter, setProjec
   );
 }
 
-import PaymentProcessingView from './PaymentProcessingView';
-import SubcontractorsView from './SubcontractorsView';
-import OverviewView from './OverviewView';
-import MetricsView from './MetricsView';
-import ComplianceView from './ComplianceView';
-import ManageView from './ManageView';
-import OutstandingInvoicesView from './OutstandingInvoicesView';
+import { PaymentProcessingView } from './PaymentProcessingView';
+import { SubcontractorsView } from './SubcontractorsView';
+import { OverviewView } from './OverviewView';
+import { MetricsView } from './MetricsView';
+import { ComplianceView } from './ComplianceView';
+import { ManageView } from './ManageView';
+import { OutstandingInvoicesView } from './OutstandingInvoicesView';
 
 export default function PMDashboard() {
   const [session, setSession] = useState<any>(null);
