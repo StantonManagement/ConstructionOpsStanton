@@ -1,0 +1,211 @@
+-- WARNING: This schema is for context only and is not meant to be run.
+-- Table order and constraints may not be valid for execution.
+
+CREATE TABLE public.contractors (
+  id integer NOT NULL DEFAULT nextval('contractors_id_seq'::regclass),
+  name character varying NOT NULL,
+  trade character varying NOT NULL,
+  phone character varying NOT NULL,
+  email character varying,
+  status character varying DEFAULT 'active'::character varying,
+  performance_score numeric,
+  created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT contractors_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.contracts (
+  id integer NOT NULL DEFAULT nextval('contracts_id_seq'::regclass),
+  project_id integer,
+  subcontractor_id integer,
+  contract_amount numeric,
+  start_date date,
+  end_date date,
+  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()),
+  CONSTRAINT contracts_pkey PRIMARY KEY (id),
+  CONSTRAINT contracts_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id),
+  CONSTRAINT contracts_subcontractor_id_fkey FOREIGN KEY (subcontractor_id) REFERENCES public.contractors(id)
+);
+CREATE TABLE public.lien_waivers (
+  id integer NOT NULL DEFAULT nextval('lien_waivers_id_seq'::regclass),
+  payment_app_id integer,
+  waiver_type character varying DEFAULT 'conditional'::character varying,
+  waiver_amount numeric NOT NULL,
+  waiver_document_url text,
+  signature_request_id character varying,
+  status character varying DEFAULT 'pending'::character varying,
+  signed_by character varying,
+  signed_date timestamp without time zone,
+  expires_at timestamp without time zone,
+  created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT lien_waivers_pkey PRIMARY KEY (id),
+  CONSTRAINT lien_waivers_payment_app_id_fkey FOREIGN KEY (payment_app_id) REFERENCES public.payment_applications(id)
+);
+CREATE TABLE public.payment_application_reviews (
+  id integer NOT NULL DEFAULT nextval('payment_application_reviews_id_seq'::regclass),
+  payment_app_id integer,
+  reviewer_id integer,
+  review_action character varying NOT NULL,
+  original_amount numeric,
+  adjusted_amount numeric,
+  adjustment_reason text,
+  pm_notes text,
+  photos_verified boolean DEFAULT false,
+  created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT payment_application_reviews_pkey PRIMARY KEY (id),
+  CONSTRAINT payment_application_reviews_reviewer_id_fkey FOREIGN KEY (reviewer_id) REFERENCES public.users(id),
+  CONSTRAINT payment_application_reviews_payment_app_id_fkey FOREIGN KEY (payment_app_id) REFERENCES public.payment_applications(id)
+);
+CREATE TABLE public.payment_applications (
+  id integer NOT NULL DEFAULT nextval('payment_applications_id_seq'::regclass),
+  project_id integer,
+  contractor_id integer,
+  payment_period_end date,
+  status character varying DEFAULT 'initiated'::character varying,
+  total_contract_amount numeric,
+  previous_payments numeric DEFAULT 0,
+  current_payment numeric DEFAULT 0,
+  final_amount numeric,
+  sms_conversation_id integer,
+  lien_waiver_required boolean DEFAULT false,
+  photos_uploaded_count integer DEFAULT 0,
+  pm_verification_completed boolean DEFAULT false,
+  created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  approved_at timestamp without time zone,
+  approved_by integer,
+  pm_notes text,
+  rejected_at timestamp with time zone,
+  rejected_by text,
+  rejection_notes text,
+  approval_notes text,
+  CONSTRAINT payment_applications_pkey PRIMARY KEY (id),
+  CONSTRAINT payment_applications_approved_by_fkey FOREIGN KEY (approved_by) REFERENCES public.users(id),
+  CONSTRAINT payment_applications_contractor_id_fkey FOREIGN KEY (contractor_id) REFERENCES public.contractors(id),
+  CONSTRAINT payment_applications_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id)
+);
+CREATE TABLE public.payment_documents (
+  id integer NOT NULL DEFAULT nextval('payment_documents_id_seq'::regclass),
+  payment_app_id integer,
+  url text NOT NULL,
+  status character varying DEFAULT 'pending_review'::character varying,
+  docusign_envelope_id text,
+  signed_url text,
+  created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT payment_documents_pkey PRIMARY KEY (id),
+  CONSTRAINT payment_documents_payment_app_id_fkey FOREIGN KEY (payment_app_id) REFERENCES public.payment_applications(id)
+);
+CREATE TABLE public.payment_line_item_progress (
+  id integer NOT NULL DEFAULT nextval('payment_line_item_progress_id_seq'::regclass),
+  payment_app_id integer,
+  line_item_id integer,
+  submitted_percent numeric,
+  pm_verified_percent numeric,
+  previous_percent numeric,
+  this_period_percent numeric,
+  calculated_amount numeric,
+  pm_adjustment_reason text,
+  verification_photos_count integer DEFAULT 0,
+  created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT payment_line_item_progress_pkey PRIMARY KEY (id),
+  CONSTRAINT payment_line_item_progress_line_item_id_fkey FOREIGN KEY (line_item_id) REFERENCES public.project_line_items(id),
+  CONSTRAINT payment_line_item_progress_payment_app_id_fkey FOREIGN KEY (payment_app_id) REFERENCES public.payment_applications(id)
+);
+CREATE TABLE public.payment_sms_conversations (
+  id integer NOT NULL DEFAULT nextval('payment_sms_conversations_id_seq'::regclass),
+  payment_app_id integer,
+  contractor_phone character varying NOT NULL,
+  conversation_state character varying DEFAULT 'awaiting_start'::character varying,
+  current_question_index integer DEFAULT 0,
+  responses jsonb DEFAULT '[]'::jsonb,
+  total_questions integer,
+  completed_at timestamp without time zone,
+  escalated_to_dean boolean DEFAULT false,
+  escalated_at timestamp without time zone,
+  timeout_count integer DEFAULT 0,
+  created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  line_items jsonb,
+  CONSTRAINT payment_sms_conversations_pkey PRIMARY KEY (id),
+  CONSTRAINT payment_sms_conversations_payment_app_id_fkey FOREIGN KEY (payment_app_id) REFERENCES public.payment_applications(id)
+);
+CREATE TABLE public.project_contractors (
+  id integer NOT NULL DEFAULT nextval('project_contractors_id_seq'::regclass),
+  project_id integer,
+  contractor_id integer,
+  contract_amount numeric NOT NULL,
+  paid_to_date numeric DEFAULT 0,
+  last_payment_date date,
+  contract_status character varying DEFAULT 'active'::character varying,
+  change_orders_pending boolean DEFAULT false,
+  CONSTRAINT project_contractors_pkey PRIMARY KEY (id),
+  CONSTRAINT project_contractors_contractor_id_fkey FOREIGN KEY (contractor_id) REFERENCES public.contractors(id),
+  CONSTRAINT project_contractors_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id)
+);
+CREATE TABLE public.project_line_items (
+  id integer NOT NULL DEFAULT nextval('project_line_items_id_seq'::regclass),
+  project_id integer,
+  contractor_id integer,
+  original_contract_amount numeric,
+  status character varying DEFAULT 'active'::character varying,
+  display_order integer,
+  created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  contract_id integer,
+  item_no character varying,
+  description_of_work text,
+  scheduled_value numeric,
+  from_previous_application numeric,
+  this_period numeric,
+  material_presently_stored numeric,
+  percent_gc numeric,
+  percent_completed real,
+  amount_for_this_period real,
+  CONSTRAINT project_line_items_pkey PRIMARY KEY (id),
+  CONSTRAINT project_line_items_contract_id_fkey FOREIGN KEY (contract_id) REFERENCES public.contracts(id),
+  CONSTRAINT project_line_items_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id),
+  CONSTRAINT project_line_items_contractor_id_fkey FOREIGN KEY (contractor_id) REFERENCES public.contractors(id)
+);
+CREATE TABLE public.projects (
+  id integer NOT NULL DEFAULT nextval('projects_id_seq'::regclass),
+  name character varying NOT NULL,
+  client_name character varying NOT NULL,
+  project_code character varying NOT NULL DEFAULT (gen_random_uuid())::text UNIQUE,
+  current_phase character varying,
+  status character varying DEFAULT 'active'::character varying,
+  start_date date,
+  target_completion_date date,
+  at_risk boolean DEFAULT false,
+  created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  budget numeric,
+  spent real,
+  CONSTRAINT projects_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.site_verification_photos (
+  id integer NOT NULL DEFAULT nextval('site_verification_photos_id_seq'::regclass),
+  payment_app_id integer,
+  line_item_id integer,
+  photo_url text NOT NULL,
+  photo_caption text,
+  photo_sequence integer,
+  taken_by integer,
+  taken_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  file_size integer,
+  mime_type character varying,
+  created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT site_verification_photos_pkey PRIMARY KEY (id),
+  CONSTRAINT site_verification_photos_line_item_id_fkey FOREIGN KEY (line_item_id) REFERENCES public.project_line_items(id),
+  CONSTRAINT site_verification_photos_payment_app_id_fkey FOREIGN KEY (payment_app_id) REFERENCES public.payment_applications(id),
+  CONSTRAINT site_verification_photos_taken_by_fkey FOREIGN KEY (taken_by) REFERENCES public.users(id)
+);
+CREATE TABLE public.users (
+  id integer NOT NULL DEFAULT nextval('users_id_seq'::regclass),
+  name character varying,
+  email character varying NOT NULL UNIQUE,
+  role character varying NOT NULL,
+  created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  uuid uuid,
+  phone character varying,
+  avatar_url text,
+  company character varying,
+  address text,
+  CONSTRAINT users_pkey PRIMARY KEY (id)
+);
