@@ -606,15 +606,4 @@ const SubcontractorsView: React.FC = () => {
 };
 
 export default SubcontractorsView;
-import React from 'react';
 
-const SubcontractorsView: React.FC = () => {
-  return (
-    <div className="bg-white rounded-lg border shadow-sm p-6 text-gray-900">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4">Subcontractors</h3>
-      <p className="text-gray-600">Subcontractor management view coming soon...</p>
-    </div>
-  );
-};
-
-export default SubcontractorsView;
