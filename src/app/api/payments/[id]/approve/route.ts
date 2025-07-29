@@ -153,26 +153,20 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       const filePath = await savePdfFile(pdfBytes, filename);
       console.log(`Invoice generated and saved: ${filename} at ${filePath} for payment application ${paymentAppId}`);
 
-      // Save invoice record to database as outstanding
+      // Save invoice record to database
       try {
         await supabase
           .from('invoices')
           .insert({
             payment_app_id: paymentAppId,
-            project_id: updatedApp.project_id,
-            contractor_id: updatedApp.contractor_id,
-            invoice_number: `INV-${paymentAppId}-${Date.now()}`,
-            amount: updatedApp.current_payment,
             filename: filename,
             file_path: filePath,
             generated_at: new Date().toISOString(),
             generated_by: userData.id,
             file_size: pdfBytes.length,
-            status: 'outstanding',
-            due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
-            payment_status: 'pending'
+            status: 'generated'
           });
-        console.log(`Outstanding invoice created for payment application ${paymentAppId}`);
+        console.log(`Invoice record saved to database for payment application ${paymentAppId}`);
       } catch (invoiceDbError) {
         console.log('Note: Could not save invoice record to database:', invoiceDbError);
       }

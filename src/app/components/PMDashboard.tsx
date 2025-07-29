@@ -31,7 +31,7 @@ function CompactStatCard({ icon, label, value, change, color }: any) {
     purple: "border-purple-400 bg-purple-50",
     red: "border-red-400 bg-red-50",
   };
-
+  
   return (
     <div className={`p-3 sm:p-4 rounded-lg border-l-4 ${colorClasses[color]} hover:shadow-md transition-shadow`}>
       <div className="flex items-center justify-between">
@@ -582,7 +582,7 @@ function PaymentTable({ applications, onVerify, getDocumentForApp, sendForSignat
             </span>
           </div>
         </div>
-
+        
         {/* Mobile Cards */}
         <div className="divide-y divide-gray-200">
           {applications.map((app: any) => (
@@ -607,7 +607,7 @@ function PaymentTable({ applications, onVerify, getDocumentForApp, sendForSignat
           <p className="text-sm text-gray-400">All caught up!</p>
         </div>
       )}
-
+      
       <Pagination
         currentPage={currentPage}
         totalPages={totalPages}
@@ -658,7 +658,7 @@ function BulkActionsBar({ selectedCount, onDeleteSelected, onApproveSelected, on
 function ProjectCard({ project, onCreatePaymentApps }: any) {
   const [loading, setLoading] = useState(false);
   const percent = project.budget > 0 ? Math.min(100, Math.round((project.spent / project.budget) * 100)) : 0;
-
+  
   const handleCreatePaymentApps = async () => {
     setLoading(true);
     try {
@@ -686,7 +686,7 @@ function ProjectCard({ project, onCreatePaymentApps }: any) {
           )}
         </div>
       </div>
-
+      
       <div className="space-y-2 text-sm mb-4">
         <div className="flex justify-between">
           <span className="text-gray-600">Contractors</span>
@@ -713,7 +713,7 @@ function ProjectCard({ project, onCreatePaymentApps }: any) {
           </span>
         </div>
       </div>
-
+      
       <button
         onClick={handleCreatePaymentApps}
         disabled={loading}
@@ -909,7 +909,7 @@ function MobileFilterDrawer({ show, onClose, statusFilter, setStatusFilter, proj
               </svg>
             </button>
           </div>
-
+          
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
@@ -996,7 +996,7 @@ function FilterSidebar({ statusFilter, setStatusFilter, projectFilter, setProjec
         </svg>
         Filters
       </h3>
-
+      
       <div className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
@@ -1062,14 +1062,6 @@ function FilterSidebar({ statusFilter, setStatusFilter, projectFilter, setProjec
   );
 }
 
-import { PaymentProcessingView } from './PaymentProcessingView';
-import { SubcontractorsView } from './SubcontractorsView';
-import { OverviewView } from './OverviewView';
-import { MetricsView } from './MetricsView';
-import { ComplianceView } from './ComplianceView';
-import { ManageView } from './ManageView';
-import { OutstandingInvoicesView } from './OutstandingInvoicesView';
-
 export default function PMDashboard() {
   const [session, setSession] = useState<any>(null);
   const [role, setRole] = useState<string | null>(null);
@@ -1096,7 +1088,6 @@ export default function PMDashboard() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   const [showMobileFilters, setShowMobileFilters] = useState(false);
-   const [activeView, setActiveView] = useState('paymentProcessing');
 
   useEffect(() => {
     setMounted(true);
@@ -1115,14 +1106,14 @@ export default function PMDashboard() {
       .eq("uuid", user.id)
       .single();
     if (userError) return null;
-
+    
     setUserData({
       name: data.name || '',
       email: data.email || user.email || '',
       avatar_url: data.avatar_url || '',
       role: data.role || ''
     });
-
+    
     return data;
   }, []);
 
@@ -1149,7 +1140,7 @@ export default function PMDashboard() {
         `)
         .order("created_at", { ascending: false });
       if (appsError) throw new Error(appsError.message);
-
+      
       const sortedApps = (appsRaw || []).sort((a, b) => {
         if (a.status === "submitted" && b.status !== "submitted") return -1;
         if (a.status !== "submitted" && b.status === "submitted") return 1;
@@ -1158,14 +1149,14 @@ export default function PMDashboard() {
         return dateB - dateA;
       });
       setPaymentApps(sortedApps);
-
+      
       const { data: projectsRaw, error: projectsError } = await supabase
         .from("projects")
         .select("*, id, name, client_name, current_phase, at_risk, target_completion_date, budget, spent")
         .eq("status", "active");
       if (projectsError) throw new Error(projectsError.message);
       setProjects(projectsRaw || []);
-
+      
       const { data: smsConvos } = await supabase
         .from("payment_sms_conversations")
         .select("id, conversation_state");
@@ -1319,7 +1310,7 @@ export default function PMDashboard() {
           project_contractors!inner(project_id)
         `)
         .eq('project_contractors.project_id', projectId);
-
+      
       if (error) throw error;
       setContractors(data || []);
     } catch (error) {
@@ -1386,7 +1377,7 @@ export default function PMDashboard() {
 
   const handleDeleteSelected = async () => {
     if (selectedItems.length === 0) return;
-
+    
     const confirmed = confirm(`Are you sure you want to delete ${selectedItems.length} payment application(s)?`);
     if (!confirmed) return;
 
@@ -1395,9 +1386,9 @@ export default function PMDashboard() {
         .from('payment_applications')
         .delete()
         .in('id', selectedItems);
-
+      
       if (error) throw error;
-
+      
       await loadDashboardData();
       setSelectedItems([]);
       alert(`${selectedItems.length} payment application(s) deleted successfully`);
@@ -1409,7 +1400,7 @@ export default function PMDashboard() {
 
   const handleApproveSelected = async () => {
     if (selectedItems.length === 0) return;
-
+    
     const confirmed = confirm(`Are you sure you want to approve ${selectedItems.length} payment application(s)?`);
     if (!confirmed) return;
 
@@ -1418,9 +1409,9 @@ export default function PMDashboard() {
         .from('payment_applications')
         .update({ status: 'approved' })
         .in('id', selectedItems);
-
+      
       if (error) throw error;
-
+      
       await loadDashboardData();
       setSelectedItems([]);
       alert(`${selectedItems.length} payment application(s) approved successfully`);
@@ -1601,96 +1592,6 @@ export default function PMDashboard() {
           creating={creatingPaymentApps}
         />
       </main>
-           <div className="bg-gray-100 py-4">
-      <div className="container mx-auto px-4">
-        <div className="flex justify-between items-center">
-          <h2 className="text-lg font-semibold text-gray-800">
-            Dashboard Views
-          </h2>
-          <div>
-            <button
-            onClick={() => setActiveView('paymentProcessing')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              activeView === 'paymentProcessing'
-                ? 'bg-blue-600 text-white'
-                : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
-            }`}
-          >
-            Payment Processing
-          </button>
-          <button
-            onClick={() => setActiveView('subcontractors')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              activeView === 'subcontractors'
-                ? 'bg-blue-600 text-white'
-                : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
-            }`}
-          >
-            Subcontractors
-          </button>
-          <button
-            onClick={() => setActiveView('overview')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              activeView === 'overview'
-                ? 'bg-blue-600 text-white'
-                : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
-            }`}
-          >
-            Overview
-          </button>
-          <button
-            onClick={() => setActiveView('metrics')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              activeView === 'metrics'
-                ? 'bg-blue-600 text-white'
-                : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
-            }`}
-          >
-            Metrics
-          </button>
-          <button
-            onClick={() => setActiveView('compliance')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              activeView === 'compliance'
-                ? 'bg-blue-600 text-white'
-                : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
-            }`}
-          >
-            Compliance
-          </button>
-          <button
-            onClick={() => setActiveView('manage')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              activeView === 'manage'
-                ? 'bg-blue-600 text-white'
-                : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
-            }`}
-          >
-            Manage
-          </button>
-          <button
-            onClick={() => setActiveView('invoices')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              activeView === 'invoices'
-                ? 'bg-blue-600 text-white'
-                : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
-            }`}
-          >
-            Outstanding Invoices
-          </button>
-          </div>
-        </div>
-      </div>
-    </div>
-        <div className="container mx-auto px-4 py-6">
-        {activeView === 'paymentProcessing' && <PaymentProcessingView />}
-        {activeView === 'subcontractors' && <SubcontractorsView />}
-        {activeView === 'overview' && <OverviewView />}
-        {activeView === 'metrics' && <MetricsView />}
-        {activeView === 'compliance' && <ComplianceView />}
-        {activeView === 'manage' && <ManageView />}
-        {activeView === 'invoices' && <OutstandingInvoicesView />}
-      </div>
     </div>
   );
 }
