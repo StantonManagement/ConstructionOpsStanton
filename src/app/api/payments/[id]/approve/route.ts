@@ -67,11 +67,31 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         approval_notes: approvalNotes || null
       })
       .eq('id', paymentAppId)
-      .select('*, project:projects(name), contractor:contractors(name, email)')
+      .select('*, project:projects(name, budget, spent), contractor:contractors(name, email)')
       .single();
 
     if (updateError) {
       return NextResponse.json({ error: updateError.message }, { status: 500 });
+    }
+
+    // Update project budget - add current payment to spent amount
+    if (updatedApp.current_payment) {
+      const currentSpent = updatedApp.project.spent || 0;
+      const newSpentAmount = currentSpent + updatedApp.current_payment;
+      
+      const { error: budgetUpdateError } = await supabase
+        .from('projects')
+        .update({
+          spent: newSpentAmount
+        })
+        .eq('id', updatedApp.project_id);
+
+      if (budgetUpdateError) {
+        console.error('Error updating project budget:', budgetUpdateError);
+        // Don't fail the approval if budget update fails, but log it
+      } else {
+        console.log(`Updated project ${updatedApp.project_id} spent amount: ${currentSpent} + ${updatedApp.current_payment} = ${newSpentAmount}`);
+      }
     }
 
     // Log the approval action (if table exists)
