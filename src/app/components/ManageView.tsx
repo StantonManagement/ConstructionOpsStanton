@@ -774,13 +774,18 @@ const AddContractForm: React.FC<{
 
 // Enhanced main component with notification system
 const ManageView: React.FC = () => {
-  const { dispatch } = useData();
+  const { dispatch, projects, subcontractors, contracts } = useData();
   const [notifications, setNotifications] = useState<NotificationData[]>([]);
   const [openForm, setOpenForm] = useState<'project' | 'vendor' | 'contract' | null>(null);
   const [pendingForm, setPendingForm] = useState<'project' | 'vendor' | 'contract' | null>(null);
   const [formDirty, setFormDirty] = useState(false);
   const [showUnsavedWarning, setShowUnsavedWarning] = useState(false);
   const [isLoading, setIsLoading] = useState<Record<string, boolean>>({});
+  const [searchTerm, setSearchTerm] = useState('');
+  const [activeTab, setActiveTab] = useState<'projects' | 'vendors' | 'contracts'>('projects');
+  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
+  const [showBulkActions, setShowBulkActions] = useState(false);
 
   const addNotification = useCallback((
     type: NotificationType, 
@@ -896,6 +901,93 @@ const ManageView: React.FC = () => {
     setShowUnsavedWarning(false);
   };
 
+  // Search and filter functions
+  const filteredProjects = useMemo(() => {
+    return projects.filter(project => {
+      const matchesSearch = project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           project.client_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           project.current_phase?.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesFilter = filterStatus === 'all' || project.status === filterStatus;
+      return matchesSearch && matchesFilter;
+    });
+  }, [projects, searchTerm, filterStatus]);
+
+  const filteredVendors = useMemo(() => {
+    return subcontractors.filter(vendor => {
+      const matchesSearch = vendor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           vendor.trade.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           vendor.email?.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesFilter = filterStatus === 'all' || vendor.status === filterStatus;
+      return matchesSearch && matchesFilter;
+    });
+  }, [subcontractors, searchTerm, filterStatus]);
+
+  const filteredContracts = useMemo(() => {
+    return contracts.filter(contract => {
+      const matchesSearch = contract.project?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           contract.subcontractor?.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesFilter = filterStatus === 'all' || contract.status === filterStatus;
+      return matchesSearch && matchesFilter;
+    });
+  }, [contracts, searchTerm, filterStatus]);
+
+  // Bulk operations
+  const handleSelectAll = () => {
+    const currentData = activeTab === 'projects' ? filteredProjects :
+                       activeTab === 'vendors' ? filteredVendors : filteredContracts;
+    if (selectedItems.size === currentData.length) {
+      setSelectedItems(new Set());
+    } else {
+      setSelectedItems(new Set(currentData.map(item => item.id)));
+    }
+  };
+
+  const handleItemSelect = (id: number) => {
+    const newSelected = new Set(selectedItems);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedItems(newSelected);
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedItems.size === 0) return;
+    
+    const confirmed = window.confirm(`Are you sure you want to delete ${selectedItems.size} item(s)?`);
+    if (!confirmed) return;
+
+    try {
+      const tableName = activeTab === 'projects' ? 'projects' :
+                       activeTab === 'vendors' ? 'contractors' : 'contracts';
+      
+      const { error } = await supabase
+        .from(tableName)
+        .delete()
+        .in('id', Array.from(selectedItems));
+
+      if (error) throw error;
+
+      // Update local state
+      if (activeTab === 'projects') {
+        selectedItems.forEach(id => {
+          dispatch({ type: 'DELETE_PROJECT', payload: id });
+        });
+      } else if (activeTab === 'vendors') {
+        selectedItems.forEach(id => {
+          dispatch({ type: 'DELETE_SUBCONTRACTOR', payload: id });
+        });
+      }
+
+      addNotification('success', `Successfully deleted ${selectedItems.size} item(s)`);
+      setSelectedItems(new Set());
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to delete items';
+      addNotification('error', message);
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto p-6 bg-gray-100 min-h-screen">
       <NotificationManager 
@@ -903,90 +995,444 @@ const ManageView: React.FC = () => {
         onRemove={removeNotification} 
       />
       
-      <h1 className="text-3xl font-bold text-gray-800 mb-8">Construction Management</h1>
-      
-      {/* Action Buttons Bar */}
-      <div className="flex flex-wrap gap-4 mb-8 bg-white rounded-lg shadow p-4 sticky top-0 z-10">
-        <button
-          onClick={() => handleOpenForm('project')}
-          className="bg-blue-600 text-white px-6 py-2.5 rounded-lg hover:bg-blue-700 transition-colors duration-200 font-medium flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
-          aria-label="Add Project"
-        >
-          <Building className="w-5 h-5" />
-          Add Project
-        </button>
-        <button
-          onClick={() => handleOpenForm('vendor')}
-          className="bg-blue-600 text-white px-6 py-2.5 rounded-lg hover:bg-blue-700 transition-colors duration-200 font-medium flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
-          aria-label="Add Vendor"
-        >
-          <UserPlus className="w-5 h-5" />
-          Add Subcontractor
-        </button>
-        <button
-          onClick={() => handleOpenForm('contract')}
-          className="bg-blue-600 text-white px-6 py-2.5 rounded-lg hover:bg-blue-700 transition-colors duration-200 font-medium flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
-          aria-label="Add Contract"
-        >
-          <FilePlus className="w-5 h-5" />
-          Add Contract
-        </button>
+      <div className="flex items-center justify-between mb-8">
+        <h1 className="text-3xl font-bold text-gray-800">🏗️ Construction Management</h1>
+        <div className="flex items-center gap-4">
+          <div className="bg-white rounded-lg p-2 shadow-sm">
+            <span className="text-sm text-gray-600">Total Projects: </span>
+            <span className="font-bold text-blue-600">{projects.length}</span>
+            <span className="text-sm text-gray-600 ml-4">Total Vendors: </span>
+            <span className="font-bold text-green-600">{subcontractors.length}</span>
+            <span className="text-sm text-gray-600 ml-4">Total Contracts: </span>
+            <span className="font-bold text-purple-600">{contracts.length}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Tab Navigation */}
+      <div className="bg-white rounded-lg shadow-sm mb-6">
+        <div className="border-b border-gray-200">
+          <nav className="flex space-x-8 px-6" aria-label="Tabs">
+            {[
+              { key: 'projects', label: 'Projects', icon: '🏗️', count: filteredProjects.length },
+              { key: 'vendors', label: 'Vendors', icon: '👷', count: filteredVendors.length },
+              { key: 'contracts', label: 'Contracts', icon: '📋', count: filteredContracts.length }
+            ].map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => {
+                  setActiveTab(tab.key as any);
+                  setSelectedItems(new Set());
+                  setSearchTerm('');
+                  setFilterStatus('all');
+                }}
+                className={`${
+                  activeTab === tab.key
+                    ? 'border-blue-500 text-blue-600 bg-blue-50'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2`}
+              >
+                <span>{tab.icon}</span>
+                {tab.label}
+                <span className="bg-gray-100 text-gray-900 ml-2 py-0.5 px-2.5 rounded-full text-xs font-medium">
+                  {tab.count}
+                </span>
+              </button>
+            ))}
+          </nav>
+        </div>
+
+        {/* Search and Filter Bar */}
+        <div className="p-6 border-b border-gray-200">
+          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+            <div className="flex flex-col sm:flex-row gap-4 flex-1">
+              <div className="relative flex-1 max-w-md">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+                <input
+                  type="text"
+                  placeholder={`Search ${activeTab}...`}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+              
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="block px-3 py-2 border border-gray-300 rounded-md bg-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="all">All Status</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+                <option value="pending">Pending</option>
+                <option value="completed">Completed</option>
+              </select>
+            </div>
+
+            <div className="flex gap-2">
+              {selectedItems.size > 0 && (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-600">{selectedItems.size} selected</span>
+                  <button
+                    onClick={handleBulkDelete}
+                    className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors text-sm flex items-center gap-1"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    Delete
+                  </button>
+                </div>
+              )}
+              
+              <button
+                onClick={() => handleOpenForm(activeTab === 'projects' ? 'project' : activeTab === 'vendors' ? 'vendor' : 'contract')}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Add {activeTab === 'projects' ? 'Project' : activeTab === 'vendors' ? 'Vendor' : 'Contract'}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Data Table */}
+        <div className="overflow-x-auto">
+          {activeTab === 'projects' && (
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <input
+                      type="checkbox"
+                      checked={selectedItems.size === filteredProjects.length && filteredProjects.length > 0}
+                      onChange={handleSelectAll}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Project
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Client
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Phase
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Budget
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Progress
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredProjects.map((project) => (
+                  <tr key={project.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <input
+                        type="checkbox"
+                        checked={selectedItems.has(project.id)}
+                        onChange={() => handleItemSelect(project.id)}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="ml-4">
+                          <div className="text-sm font-medium text-gray-900">{project.name}</div>
+                          <div className="text-sm text-gray-500">Started: {project.start_date || 'Not set'}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{project.client_name || 'Not specified'}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{project.current_phase || 'Not set'}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      ${(project.budget || 0).toLocaleString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        project.status === 'active' ? 'bg-green-100 text-green-800' :
+                        project.status === 'completed' ? 'bg-blue-100 text-blue-800' :
+                        'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {project.status || 'Active'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div 
+                          className="bg-blue-600 h-2 rounded-full" 
+                          style={{ width: `${project.budget ? ((project.spent || 0) / project.budget) * 100 : 0}%` }}
+                        ></div>
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        ${(project.spent || 0).toLocaleString()} / ${(project.budget || 0).toLocaleString()}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {filteredProjects.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
+                      <div className="flex flex-col items-center">
+                        <Building className="w-12 h-12 text-gray-300 mb-4" />
+                        <span>No projects found</span>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          )}
+
+          {activeTab === 'vendors' && (
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <input
+                      type="checkbox"
+                      checked={selectedItems.size === filteredVendors.length && filteredVendors.length > 0}
+                      onChange={handleSelectAll}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Vendor
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Trade
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Contact
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Performance
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredVendors.map((vendor) => (
+                  <tr key={vendor.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <input
+                        type="checkbox"
+                        checked={selectedItems.has(vendor.id)}
+                        onChange={() => handleItemSelect(vendor.id)}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="ml-4">
+                          <div className="text-sm font-medium text-gray-900">{vendor.name}</div>
+                          <div className="text-sm text-gray-500">ID: #{vendor.id}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                        {vendor.trade}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <div>{vendor.phone}</div>
+                      <div className="text-gray-500">{vendor.email}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="text-sm text-gray-900">
+                          {vendor.performance_score ? `${vendor.performance_score}/5` : 'Not rated'}
+                        </div>
+                        <div className="ml-2">
+                          {Array.from({ length: 5 }, (_, i) => (
+                            <span
+                              key={i}
+                              className={`text-xs ${
+                                i < (vendor.performance_score || 0) ? 'text-yellow-400' : 'text-gray-300'
+                              }`}
+                            >
+                              ★
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        vendor.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                      }`}>
+                        {vendor.status || 'Active'}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+                {filteredVendors.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
+                      <div className="flex flex-col items-center">
+                        <UserPlus className="w-12 h-12 text-gray-300 mb-4" />
+                        <span>No vendors found</span>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          )}
+
+          {activeTab === 'contracts' && (
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <input
+                      type="checkbox"
+                      checked={selectedItems.size === filteredContracts.length && filteredContracts.length > 0}
+                      onChange={handleSelectAll}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Contract
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Vendor
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Amount
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Duration
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredContracts.map((contract) => (
+                  <tr key={contract.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <input
+                        type="checkbox"
+                        checked={selectedItems.has(contract.id)}
+                        onChange={() => handleItemSelect(contract.id)}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="ml-4">
+                          <div className="text-sm font-medium text-gray-900">
+                            {contract.project?.name || 'Unknown Project'}
+                          </div>
+                          <div className="text-sm text-gray-500">Contract #{contract.id}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {contract.subcontractor?.name || 'Unknown Vendor'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      ${(contract.contract_amount || 0).toLocaleString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <div>{contract.start_date}</div>
+                      <div className="text-gray-500">{contract.end_date || 'Ongoing'}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        contract.status === 'active' ? 'bg-green-100 text-green-800' :
+                        contract.status === 'completed' ? 'bg-blue-100 text-blue-800' :
+                        'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {contract.status || 'Active'}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+                {filteredContracts.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
+                      <div className="flex flex-col items-center">
+                        <FilePlus className="w-12 h-12 text-gray-300 mb-4" />
+                        <span>No contracts found</span>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          )}
+        </div>
       </div>
 
       {/* Inline Forms - only one visible at a time */}
-      <div className="mb-8">
-        {openForm === 'project' && (
-          <div className="bg-white rounded-lg shadow p-6 mb-4 w-full">
-            <AddForm
-              title="Add New Project"
-              icon={<Building className="w-6 h-6 text-blue-600" />}
-              fields={projectFields}
-              onSubmit={addProject}
-              onClose={() => setOpenForm(null)}
-              isLoading={isLoading.project}
-              setDirty={setFormDirty}
-            />
-          </div>
-        )}
-        {openForm === 'vendor' && (
-          <div className="bg-white rounded-lg shadow p-6 mb-4 w-full">
-            <AddForm
-              title="Add New Vendor"
-              icon={<UserPlus className="w-6 h-6 text-blue-600" />}
-              fields={vendorFields}
-              onSubmit={addSubcontractor}
-              onClose={() => setOpenForm(null)}
-              isLoading={isLoading.vendor}
-              setDirty={setFormDirty}
-            />
-          </div>
-        )}
-        {openForm === 'contract' && (
-          <div className="bg-white rounded-lg shadow p-6 mb-4 w-full">
-            <AddContractForm
-              onClose={() => setOpenForm(null)}
-              onSuccess={() => addNotification('success', 'Contract added successfully!')}
-              onError={(message) => addNotification('error', message)}
-              setDirty={setFormDirty}
-            />
-          </div>
-        )}
-        {showUnsavedWarning && (
-          <div className="bg-yellow-100 border border-yellow-400 text-yellow-800 px-4 py-3 rounded relative mb-4 w-full flex items-center justify-between">
-            <span>You have unsaved changes. Are you sure you want to switch forms?</span>
-            <div className="flex gap-2">
-              <button onClick={handleConfirmSwitch} className="px-3 py-1 bg-yellow-400 text-white rounded hover:bg-yellow-500">Switch</button>
-              <button onClick={handleCancelSwitch} className="px-3 py-1 bg-gray-200 text-gray-800 rounded hover:bg-gray-300">Cancel</button>
+      {openForm && (
+        <div className="mb-8">
+          {openForm === 'project' && (
+            <div className="bg-white rounded-lg shadow p-6 mb-4 w-full">
+              <AddForm
+                title="Add New Project"
+                icon={<Building className="w-6 h-6 text-blue-600" />}
+                fields={projectFields}
+                onSubmit={addProject}
+                onClose={() => setOpenForm(null)}
+                isLoading={isLoading.project}
+                setDirty={setFormDirty}
+              />
             </div>
-          </div>
-        )}
-        {openForm === null && (
-          <div className="flex flex-col items-center justify-center py-24 text-center text-gray-500">
-            <Image src="/file.svg" alt="Add Illustration" width={96} height={96} className="mb-4" />
-            <span className="text-xl font-semibold">Click the buttons above to add</span>
-          </div>
-        )}
-      </div>
+          )}
+          {openForm === 'vendor' && (
+            <div className="bg-white rounded-lg shadow p-6 mb-4 w-full">
+              <AddForm
+                title="Add New Vendor"
+                icon={<UserPlus className="w-6 h-6 text-blue-600" />}
+                fields={vendorFields}
+                onSubmit={addSubcontractor}
+                onClose={() => setOpenForm(null)}
+                isLoading={isLoading.vendor}
+                setDirty={setFormDirty}
+              />
+            </div>
+          )}
+          {openForm === 'contract' && (
+            <div className="bg-white rounded-lg shadow p-6 mb-4 w-full">
+              <AddContractForm
+                onClose={() => setOpenForm(null)}
+                onSuccess={() => addNotification('success', 'Contract added successfully!')}
+                onError={(message) => addNotification('error', message)}
+                setDirty={setFormDirty}
+              />
+            </div>
+          )}
+          {showUnsavedWarning && (
+            <div className="bg-yellow-100 border border-yellow-400 text-yellow-800 px-4 py-3 rounded relative mb-4 w-full flex items-center justify-between">
+              <span>You have unsaved changes. Are you sure you want to switch forms?</span>
+              <div className="flex gap-2">
+                <button onClick={handleConfirmSwitch} className="px-3 py-1 bg-yellow-400 text-white rounded hover:bg-yellow-500">Switch</button>
+                <button onClick={handleCancelSwitch} className="px-3 py-1 bg-gray-200 text-gray-800 rounded hover:bg-gray-300">Cancel</button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
