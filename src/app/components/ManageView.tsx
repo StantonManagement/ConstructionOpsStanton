@@ -991,801 +991,742 @@ const ManageView: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
-        <NotificationManager 
-          notifications={notifications} 
-          onRemove={removeNotification} 
-        />
-
-        {/* Mobile-friendly header */}
-        <div className="mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-4">🏗️ Construction Management</h1>
+    
+      
+        
           
-          {/* Stats - Mobile responsive */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-            <div className="bg-white rounded-lg p-3 sm:p-4 shadow-sm border border-gray-200">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Projects</span>
-                <span className="text-lg sm:text-xl font-bold text-blue-600">{projects.length}</span>
-              </div>
-            </div>
-            <div className="bg-white rounded-lg p-3 sm:p-4 shadow-sm border border-gray-200">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Vendors</span>
-                <span className="text-lg sm:text-xl font-bold text-green-600">{subcontractors.length}</span>
-              </div>
-            </div>
-            <div className="bg-white rounded-lg p-3 sm:p-4 shadow-sm border border-gray-200">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Contracts</span>
-                <span className="text-lg sm:text-xl font-bold text-purple-600">{contracts.length}</span>
-              </div>
-            </div>
-          </div>
-        </div>
+            
+              
+                🏗️ Construction Management
+              
+              
 
-      {/* Tab Navigation - Mobile responsive */}
-      <div className="bg-white rounded-lg shadow-sm mb-6">
-        <div className="border-b border-gray-200">
-          {/* Mobile tab selector */}
-          <div className="sm:hidden px-4 py-3">
-            <select
-              value={activeTab}
-              onChange={(e) => {
-                setActiveTab(e.target.value as any);
-                setSelectedItems(new Set());
-                setSearchTerm('');
-                setFilterStatus('all');
-              }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="projects">🏗️ Projects ({filteredProjects.length})</option>
-              <option value="vendors">👷 Vendors ({filteredVendors.length})</option>
-              <option value="contracts">📋 Contracts ({filteredContracts.length})</option>
-            </select>
-          </div>
-
-          {/* Desktop tabs */}
-          <nav className="hidden sm:flex space-x-8 px-6" aria-label="Tabs">
-            {[
-              { key: 'projects', label: 'Projects', icon: '🏗️', count: filteredProjects.length },
-              { key: 'vendors', label: 'Vendors', icon: '👷', count: filteredVendors.length },
-              { key: 'contracts', label: 'Contracts', icon: '📋', count: filteredContracts.length }
-            ].map((tab) => (
-              <button
-                key={tab.key}
-                onClick={() => {
-                  setActiveTab(tab.key as any);
-                  setSelectedItems(new Set());
-                  setSearchTerm('');
-                  setFilterStatus('all');
-                }}
-                className={`${
-                  activeTab === tab.key
-                    ? 'border-blue-500 text-blue-600 bg-blue-50'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2`}
-              >
-                <span>{tab.icon}</span>
-                {tab.label}
-                <span className="bg-gray-100 text-gray-900 ml-2 py-0.5 px-2.5 rounded-full text-xs font-medium">
-                  {tab.count}
-                </span>
-              </button>
-            ))}
-          </nav>
-        </div>
-
-        {/* Search and Filter Bar - Mobile responsive */}
-        <div className="p-4 sm:p-6 border-b border-gray-200">
-          {/* Mobile layout */}
-          <div className="sm:hidden space-y-4">
-            {/* Search bar */}
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              </div>
-              <input
-                type="text"
-                placeholder={`Search ${activeTab}...`}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base"
-              />
-            </div>
-
-            {/* Controls row */}
-            <div className="flex items-center justify-between gap-3">
-              <button
-                onClick={() => setShowMobileFilters(!showMobileFilters)}
-                className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm hover:bg-gray-50"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.207A1 1 0 013 6.5V4z" />
-                </svg>
-                Filter
-              </button>
-
-              {selectedItems.size > 0 ? (
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-600">{selectedItems.size} selected</span>
-                  <button
-                    onClick={handleBulkDelete}
-                    className="bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 transition-colors text-sm flex items-center gap-1"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                    Delete
-                  </button>
-                </div>
-              ) : (
-                <button
-                  onClick={() => handleOpenForm(activeTab === 'projects' ? 'project' : activeTab === 'vendors' ? 'vendor' : 'contract')}
-                  className="bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 text-base font-medium"
-                >
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
-                  Add
-                </button>
-              )}
-            </div>
-
-            {/* Mobile filter dropdown */}
-            {showMobileFilters && (
-              <div className="bg-gray-50 rounded-lg p-3">
-                <select
-                  value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="all">All Status</option>
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                  <option value="pending">Pending</option>
-                  <option value="completed">Completed</option>
-                </select>
-              </div>
-            )}
-          </div>
-
-          {/* Desktop layout */}
-          <div className="hidden sm:flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-            <div className="flex flex-col sm:flex-row gap-4 flex-1">
-              <div className="relative flex-1 max-w-md">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                </div>
-                <input
-                  type="text"
-                  placeholder={`Search ${activeTab}...`}
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-
-              <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                className="block px-3 py-2 border border-gray-300 rounded-md bg-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="all">All Status</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-                <option value="pending">Pending</option>
-                <option value="completed">Completed</option>
-              </select>
-            </div>
-
-            <div className="flex gap-2">
-              {selectedItems.size > 0 && (
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-600">{selectedItems.size} selected</span>
-                  <button
-                    onClick={handleBulkDelete}
-                    className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors text-sm flex items-center gap-1"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                    Delete
-                  </button>
-                </div>
-              )}
-
-              <button
-                onClick={() => handleOpenForm(activeTab === 'projects' ? 'project' : activeTab === 'vendors' ? 'vendor' : 'contract')}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm flex items-center gap-2"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                Add {activeTab === 'projects' ? 'Project' : activeTab === 'vendors' ? 'Vendor' : 'Contract'}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Data Display - Card layout for mobile, table for desktop */}
-        <div className="p-4 sm:p-0">
-          {activeTab === 'projects' && (
-            <>
-              {/* Mobile Card Layout */}
-              <div className="sm:hidden space-y-4">
-                {filteredProjects.map((project) => (
-                  <div key={project.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex items-center gap-3">
-                        <input
-                          type="checkbox"
-                          checked={selectedItems.has(project.id)}
-                          onChange={() => handleItemSelect(project.id)}
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                        />
-                        <div>
-                          <h3 className="font-medium text-gray-900">{project.name}</h3>
-                          <p className="text-sm text-gray-500">{project.client_name || 'No client'}</p>
-                        </div>
-                      </div>
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        project.status === 'active' ? 'bg-green-100 text-green-800' :
-                        project.status === 'completed' ? 'bg-blue-100 text-blue-800' :
-                        'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {project.status || 'Active'}
-                      </span>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <span className="text-gray-500">Phase:</span>
-                        <p className="font-medium">{project.current_phase || 'Not set'}</p>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Budget:</span>
-                        <p className="font-medium">${(project.budget || 0).toLocaleString()}</p>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Started:</span>
-                        <p className="font-medium">{project.start_date || 'Not set'}</p>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Spent:</span>
-                        <p className="font-medium">${(project.spent || 0).toLocaleString()}</p>
-                      </div>
-                    </div>
-                    
-                    {project.budget && (
-                      <div className="mt-3">
-                        <div className="flex justify-between text-xs text-gray-500 mb-1">
-                          <span>Progress</span>
-                          <span>{Math.round(((project.spent || 0) / project.budget) * 100)}%</span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div 
-                            className="bg-blue-600 h-2 rounded-full" 
-                            style={{ width: `${Math.min(((project.spent || 0) / project.budget) * 100, 100)}%` }}
-                          ></div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
                 
-                {filteredProjects.length === 0 && (
-                  <div className="text-center py-12">
-                    <Building className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                    <p className="text-gray-500">No projects found</p>
-                  </div>
-                )}
-              </div>
+                  
+                    Projects
+                    {projects.length}
+                  
+                
+                
+                  
+                    Vendors
+                    {subcontractors.length}
+                  
+                
+                
+                  
+                    Contracts
+                    {contracts.length}
+                  
+                
+              
+            
+          
+        
 
-              {/* Desktop Table Layout */}
-              <div className="hidden sm:block overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        <input
-                          type="checkbox"
-                          checked={selectedItems.size === filteredProjects.length && filteredProjects.length > 0}
-                          onChange={handleSelectAll}
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                        />
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Project
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Client
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Phase
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Budget
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Status
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Progress
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {filteredProjects.map((project) => (
-                      <tr key={project.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <input
-                            type="checkbox"
-                            checked={selectedItems.has(project.id)}
-                            onChange={() => handleItemSelect(project.id)}
-                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                          />
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div className="ml-4">
-                              <div className="text-sm font-medium text-gray-900">{project.name}</div>
-                              <div className="text-sm text-gray-500">Started: {project.start_date || 'Not set'}</div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{project.client_name || 'Not specified'}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{project.current_phase || 'Not set'}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          ${(project.budget || 0).toLocaleString()}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                            project.status === 'active' ? 'bg-green-100 text-green-800' :
-                            project.status === 'completed' ? 'bg-blue-100 text-blue-800' :
-                            'bg-yellow-100 text-yellow-800'
-                          }`}>
+      
+        
+          
+            
+              
+                🏗️ Projects ({filteredProjects.length})
+                👷 Vendors ({filteredVendors.length})
+                📋 Contracts ({filteredContracts.length})
+              
+            
+
+          
+            
+              
+                
+                  <span>🏗️</span>
+                  Projects
+                  
+                    {filteredProjects.length}
+                  
+                
+              
+              
+                
+                  <span>👷</span>
+                  Vendors
+                  
+                    {filteredVendors.length}
+                  
+                
+              
+              
+                
+                  <span>📋</span>
+                  Contracts
+                  
+                    {filteredContracts.length}
+                  
+                
+              
+            
+          
+        
+
+        
+          
+            
+              
+                
+                  
+                    
+                      
+                        
+                      
+                      
+                    
+                  
+                
+
+                
+                  
+                    Filter
+                  
+
+                  {selectedItems.size > 0 ? (
+                    
+                      
+                        {selectedItems.size} selected
+                      
+                      
+                        
+                          
+                        
+                        Delete
+                      
+                    
+                  ) : (
+                    
+                      
+                        
+                          
+                        
+                        Add
+                      
+                    
+                  )}
+                
+                
+
+                {showMobileFilters && (
+                  
+                    
+                      All Status
+                      Active
+                      Inactive
+                      Pending
+                      Completed
+                    
+                  
+                )}
+              
+            
+
+            
+              
+                
+                  
+                    
+                      
+                        
+                      
+                      
+                    
+                  
+                
+
+                
+                  
+                    All Status
+                    Active
+                    Inactive
+                    Pending
+                    Completed
+                  
+                
+              
+              
+                {selectedItems.size > 0 && (
+                  
+                    
+                      {selectedItems.size} selected
+                    
+                    
+                      
+                        
+                          
+                        
+                        Delete
+                      
+                    
+                  
+                )}
+
+                
+                  
+                    
+                      
+                        
+                      
+                      Add {activeTab === 'projects' ? 'Project' : activeTab === 'vendors' ? 'Vendor' : 'Contract'}
+                    
+                  
+                
+              
+            
+          
+        
+
+        
+          {activeTab === 'projects' && (
+            
+              
+                {filteredProjects.map((project) => (
+                  
+                    
+                      
+                        
+                          
+                            
+                              
+                            
+                            
+                              
+                                {project.name}
+                                {project.client_name || 'No client'}
+                              
+                            
+                          
+                          
                             {project.status || 'Active'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div 
-                              className="bg-blue-600 h-2 rounded-full" 
-                              style={{ width: `${project.budget ? ((project.spent || 0) / project.budget) * 100 : 0}%` }}
-                            ></div>
-                          </div>
-                          <div className="text-xs text-gray-500 mt-1">
+                          
+                        
+                        
+                          
+                            Phase:
+                            {project.current_phase || 'Not set'}
+                          
+                          
+                            Budget:
+                            ${(project.budget || 0).toLocaleString()}
+                          
+                          
+                            Started:
+                            {project.start_date || 'Not set'}
+                          
+                          
+                            Spent:
+                            ${(project.spent || 0).toLocaleString()}
+                          
+                        
+
+                        {project.budget && (
+                          
+                            
+                              Progress
+                              {Math.round(((project.spent || 0) / project.budget) * 100)}%
+                            
+                            
+                              
+                            
+                          
+                        )}
+                      
+                    
+                  
+                ))}
+
+                {filteredProjects.length === 0 && (
+                  
+                    
+                      
+                      No projects found
+                    
+                  
+                )}
+              
+
+              
+                
+                  
+                    
+                      
+                        
+                      
+                      
+                        Project
+                      
+                      
+                        Client
+                      
+                      
+                        Phase
+                      
+                      
+                        Budget
+                      
+                      
+                        Status
+                      
+                      
+                        Progress
+                      
+                    
+                  
+                  
+                    {filteredProjects.map((project) => (
+                      
+                        
+                          
+                            
+                              
+                                
+                                  
+                                    {project.name}
+                                    Started: {project.start_date || 'Not set'}
+                                  
+                                
+                              
+                            
+                          
+                          {project.client_name || 'Not specified'}
+                          {project.current_phase || 'Not set'}
+                          ${(project.budget || 0).toLocaleString()}
+                          
+                            {project.status || 'Active'}
+                          
+                          
+                            
+                            
+                          
+                          
                             ${(project.spent || 0).toLocaleString()} / ${(project.budget || 0).toLocaleString()}
-                          </div>
-                        </td>
-                      </tr>
+                          
+                        
+                      
                     ))}
                     {filteredProjects.length === 0 && (
-                      <tr>
-                        <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
-                          <div className="flex flex-col items-center">
-                            <Building className="w-12 h-12 text-gray-300 mb-4" />
-                            <span>No projects found</span>
-                          </div>
-                        </td>
-                      </tr>
+                      
+                        
+                          
+                            
+                              
+                              No projects found
+                            
+                          
+                        
+                      
                     )}
-                  </tbody>
-                </table>
-              </div>
-            </>
+                  
+                
+              
+            
           )}
 
           {activeTab === 'vendors' && (
-            <>
-              {/* Mobile Card Layout */}
-              <div className="sm:hidden space-y-4">
+            
+              
                 {filteredVendors.map((vendor) => (
-                  <div key={vendor.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex items-center gap-3">
-                        <input
-                          type="checkbox"
-                          checked={selectedItems.has(vendor.id)}
-                          onChange={() => handleItemSelect(vendor.id)}
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                        />
-                        <div>
-                          <h3 className="font-medium text-gray-900">{vendor.name}</h3>
-                          <p className="text-sm text-gray-500">ID: #{vendor.id}</p>
-                        </div>
-                      </div>
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        vendor.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                      }`}>
-                        {vendor.status || 'Active'}
-                      </span>
-                    </div>
+                  
                     
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2">
-                        <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
-                          {vendor.trade}
-                        </span>
-                      </div>
                       
-                      <div className="grid grid-cols-1 gap-2 text-sm">
-                        <div>
-                          <span className="text-gray-500">Phone:</span>
-                          <p className="font-medium">{vendor.phone || 'Not provided'}</p>
-                        </div>
-                        <div>
-                          <span className="text-gray-500">Email:</span>
-                          <p className="font-medium">{vendor.email || 'Not provided'}</p>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-500">Performance:</span>
-                        <div className="flex items-center gap-2">
-                          <div className="flex">
-                            {Array.from({ length: 5 }, (_, i) => (
-                              <span
-                                key={i}
-                                className={`text-sm ${
-                                  i < (vendor.performance_score || 0) ? 'text-yellow-400' : 'text-gray-300'
-                                }`}
-                              >
-                                ★
-                              </span>
-                            ))}
-                          </div>
-                          <span className="text-sm text-gray-600">
-                            {vendor.performance_score ? `${vendor.performance_score}/5` : 'Not rated'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-                
-                {filteredVendors.length === 0 && (
-                  <div className="text-center py-12">
-                    <UserPlus className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                    <p className="text-gray-500">No vendors found</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Desktop Table Layout */}
-              <div className="hidden sm:block overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        <input
-                          type="checkbox"
-                          checked={selectedItems.size === filteredVendors.length && filteredVendors.length > 0}
-                          onChange={handleSelectAll}
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                        />
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Vendor
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Trade
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Contact
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Performance
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Status
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {filteredVendors.map((vendor) => (
-                      <tr key={vendor.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <input
-                            type="checkbox"
-                            checked={selectedItems.has(vendor.id)}
-                            onChange={() => handleItemSelect(vendor.id)}
-                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                          />
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div className="ml-4">
-                              <div className="text-sm font-medium text-gray-900">{vendor.name}</div>
-                              <div className="text-sm text-gray-500">ID: #{vendor.id}</div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
-                            {vendor.trade}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          <div>{vendor.phone}</div>
-                          <div className="text-gray-500">{vendor.email}</div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div className="text-sm text-gray-900">
-                              {vendor.performance_score ? `${vendor.performance_score}/5` : 'Not rated'}
-                            </div>
-                            <div className="ml-2">
-                              {Array.from({ length: 5 }, (_, i) => (
-                                <span
-                                  key={i}
-                                  className={`text-xs ${
-                                    i < (vendor.performance_score || 0) ? 'text-yellow-400' : 'text-gray-300'
-                                  }`}
-                                >
-                                  ★
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                            vendor.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                          }`}>
+                        
+                          
+                            
+                              
+                            
+                            
+                              
+                                {vendor.name}
+                                ID: #{vendor.id}
+                              
+                            
+                          
+                          
                             {vendor.status || 'Active'}
-                          </span>
-                        </td>
-                      </tr>
+                          
+                        
+                        
+
+                          
+                            
+                              {vendor.trade}
+                            
+                          
+
+                          
+                            
+                              Phone:
+                              {vendor.phone || 'Not provided'}
+                            
+                            
+                              Email:
+                              {vendor.email || 'Not provided'}
+                            
+                          
+
+                          
+                            Performance:
+                            
+                              
+                                
+                                  
+                                  
+                                
+                              
+                              
+                                {vendor.performance_score ? `${vendor.performance_score}/5` : 'Not rated'}
+                              
+                            
+                          
+                        
+                      
+                    
+                  
+                ))}
+
+                {filteredVendors.length === 0 && (
+                  
+                    
+                      
+                      No vendors found
+                    
+                  
+                )}
+              
+
+              
+                
+                  
+                    
+                      
+                        
+                      
+                      
+                        Vendor
+                      
+                      
+                        Trade
+                      
+                      
+                        Contact
+                      
+                      
+                        Performance
+                      
+                      
+                        Status
+                      
+                    
+                  
+                  
+                    {filteredVendors.map((vendor) => (
+                      
+                        
+                          
+                            
+                              
+                                
+                                  
+                                    {vendor.name}
+                                    ID: #{vendor.id}
+                                  
+                                
+                              
+                            
+                          
+                          
+                            
+                              {vendor.trade}
+                            
+                          
+                          
+                            {vendor.phone}
+                            
+                              {vendor.email}
+                            
+                          
+                          
+                            
+                              {vendor.performance_score ? `${vendor.performance_score}/5` : 'Not rated'}
+                            
+                            
+                              
+                                
+                                  
+                                  
+                                
+                              
+                            
+                          
+                          
+                            {vendor.status || 'Active'}
+                          
+                        
+                      
                     ))}
                     {filteredVendors.length === 0 && (
-                      <tr>
-                        <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
-                          <div className="flex flex-col items-center">
-                            <UserPlus className="w-12 h-12 text-gray-300 mb-4" />
-                            <span>No vendors found</span>
-                          </div>
-                        </td>
-                      </tr>
+                      
+                        
+                          
+                            
+                              
+                              No vendors found
+                            
+                          
+                        
+                      
                     )}
-                  </tbody>
-                </table>
-              </div>
-            </>
+                  
+                
+              
+            
           )}
 
           {activeTab === 'contracts' && (
-            <>
-              {/* Mobile Card Layout */}
-              <div className="sm:hidden space-y-4">
+            
+              
                 {filteredContracts.map((contract) => (
-                  <div key={contract.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex items-center gap-3">
-                        <input
-                          type="checkbox"
-                          checked={selectedItems.has(contract.id)}
-                          onChange={() => handleItemSelect(contract.id)}
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                        />
-                        <div>
-                          <h3 className="font-medium text-gray-900">
-                            {contract.project?.name || 'Unknown Project'}
-                          </h3>
-                          <p className="text-sm text-gray-500">Contract #{contract.id}</p>
-                        </div>
-                      </div>
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        contract.status === 'active' ? 'bg-green-100 text-green-800' :
-                        contract.status === 'completed' ? 'bg-blue-100 text-blue-800' :
-                        'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {contract.status || 'Active'}
-                      </span>
-                    </div>
+                  
                     
-                    <div className="grid grid-cols-1 gap-3 text-sm">
-                      <div>
-                        <span className="text-gray-500">Vendor:</span>
-                        <p className="font-medium">{contract.subcontractor?.name || 'Unknown Vendor'}</p>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Amount:</span>
-                        <p className="font-medium text-lg">${(contract.contract_amount || 0).toLocaleString()}</p>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <span className="text-gray-500">Start Date:</span>
-                          <p className="font-medium">{contract.start_date || 'Not set'}</p>
-                        </div>
-                        <div>
-                          <span className="text-gray-500">End Date:</span>
-                          <p className="font-medium">{contract.end_date || 'Ongoing'}</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-                
-                {filteredContracts.length === 0 && (
-                  <div className="text-center py-12">
-                    <FilePlus className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                    <p className="text-gray-500">No contracts found</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Desktop Table Layout */}
-              <div className="hidden sm:block overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        <input
-                          type="checkbox"
-                          checked={selectedItems.size === filteredContracts.length && filteredContracts.length > 0}
-                          onChange={handleSelectAll}
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                        />
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Contract
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Vendor
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Amount
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Duration
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Status
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {filteredContracts.map((contract) => (
-                      <tr key={contract.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <input
-                            type="checkbox"
-                            checked={selectedItems.has(contract.id)}
-                            onChange={() => handleItemSelect(contract.id)}
-                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                          />
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div className="ml-4">
-                              <div className="text-sm font-medium text-gray-900">
+                      
+                        
+                          
+                            
+                              
+                            
+                            
+                              
                                 {contract.project?.name || 'Unknown Project'}
-                              </div>
-                              <div className="text-sm text-gray-500">Contract #{contract.id}</div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {contract.subcontractor?.name || 'Unknown Vendor'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          ${(contract.contract_amount || 0).toLocaleString()}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          <div>{contract.start_date}</div>
-                          <div className="text-gray-500">{contract.end_date || 'Ongoing'}</div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                            contract.status === 'active' ? 'bg-green-100 text-green-800' :
-                            contract.status === 'completed' ? 'bg-blue-100 text-blue-800' :
-                            'bg-yellow-100 text-yellow-800'
-                          }`}>
+                              
+                              Contract #{contract.id}
+                            
+                          
+                          
                             {contract.status || 'Active'}
-                          </span>
-                        </td>
-                      </tr>
+                          
+                        
+                        
+
+                          
+                            Vendor:
+                            {contract.subcontractor?.name || 'Unknown Vendor'}
+                          
+                          
+                            Amount:
+                            ${(contract.contract_amount || 0).toLocaleString()}
+                          
+                          
+                            
+                              Start Date:
+                              {contract.start_date || 'Not set'}
+                            
+                            
+                              End Date:
+                              {contract.end_date || 'Ongoing'}
+                            
+                          
+                        
+                      
+                    
+                  
+                ))}
+
+                {filteredContracts.length === 0 && (
+                  
+                    
+                      
+                      No contracts found
+                    
+                  
+                )}
+              
+
+              
+                
+                  
+                    
+                      
+                        
+                      
+                      
+                        Contract
+                      
+                      
+                        Vendor
+                      
+                      
+                        Amount
+                      
+                      
+                        Duration
+                      
+                      
+                        Status
+                      
+                    
+                  
+                  
+                    {filteredContracts.map((contract) => (
+                      
+                        
+                          
+                            
+                              
+                                
+                                  
+                                    {contract.project?.name || 'Unknown Project'}
+                                  
+                                  Contract #{contract.id}
+                                
+                              
+                            
+                          
+                          {contract.subcontractor?.name || 'Unknown Vendor'}
+                          ${(contract.contract_amount || 0).toLocaleString()}
+                          
+                            {contract.start_date}
+                            
+                              {contract.end_date || 'Ongoing'}
+                            
+                          
+                          
+                            {contract.status || 'Active'}
+                          
+                        
+                      
                     ))}
                     {filteredContracts.length === 0 && (
-                      <tr>
-                        <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
-                          <div className="flex flex-col items-center">
-                            <FilePlus className="w-12 h-12 text-gray-300 mb-4" />
-                            <span>No contracts found</span>
-                          </div>
-                        </td>
-                      </tr>
+                      
+                        
+                          
+                            
+                              
+                              No contracts found
+                            
+                          
+                        
+                      
                     )}
-                  </tbody>
-                </table>
-              </div>
-            </>
+                  
+                
+              
+            
           )}
-        </div>
-      </div>
+        
+      
 
-      {/* Modal Forms - Mobile responsive */}
-      {openForm === 'project' && (
-        <div className="fixed inset-0 backdrop-blur-sm bg-black/30 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto mx-4">
-            <AddForm
-              title="Add New Project"
-              icon={<Building className="w-6 h-6 text-blue-600" />}
-              fields={projectFields}
-              onSubmit={addProject}
-              onClose={() => setOpenForm(null)}
-              isLoading={isLoading.project}
-              setDirty={setFormDirty}
-            />
-          </div>
-        </div>
-      )}
+      
+        {openForm === 'project' && (
+          
+            
+              
+                
+                  
+                    
+                      
+                        
+                          
+                          Add New Project
+                          
+                            
+                          
+                        
+                        {projectFields}
+                        {addProject}
+                        {() => setOpenForm(null)}
+                        {isLoading.project}
+                        {setFormDirty}
+                      
+                    
+                  
+                
+              
+            
+          
+        )}
 
-      {openForm === 'vendor' && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto mx-4">
-            <AddForm
-              title="Add New Vendor"
-              icon={<UserPlus className="w-6 h-6 text-blue-600" />}
-              fields={vendorFields}
-              onSubmit={addSubcontractor}
-              onClose={() => setOpenForm(null)}
-              isLoading={isLoading.vendor}
-              setDirty={setFormDirty}
-            />
-          </div>
-        </div>
-      )}
+        {openForm === 'vendor' && (
+          
+            
+              
+                
+                  
+                    
+                      
+                        
+                          
+                          Add New Vendor
+                          
+                            
+                          
+                        
+                        {vendorFields}
+                        {addSubcontractor}
+                        {() => setOpenForm(null)}
+                        {isLoading.vendor}
+                        {setFormDirty}
+                      
+                    
+                  
+                
+              
+            
+          
+        )}
 
-      {openForm === 'contract' && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto mx-4">
-            <AddContractForm
-              onClose={() => setOpenForm(null)}
-              onSuccess={() => addNotification('success', 'Contract added successfully!')}
-              onError={(message) => addNotification('error', message)}
-              setDirty={setFormDirty}
-            />
-          </div>
-        </div>
-      )}
+        {openForm === 'contract' && (
+          
+            
+              
+                
+                  
+                    
+                      {() => setOpenForm(null)}
+                      {() => addNotification('success', 'Contract added successfully!')}
+                      {(message) => addNotification('error', message)}
+                      {setFormDirty}
+                    
+                  
+                
+              
+            
+          
+        )}
 
-      {/* Unsaved Warning Modal */}
-      {showUnsavedWarning && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <AlertCircle className="w-8 h-8 text-yellow-500" />
-              <h3 className="text-lg font-semibold text-gray-800">Unsaved Changes</h3>
-            </div>
-            <p className="text-gray-600 mb-6">
-              You have unsaved changes. Are you sure you want to switch forms? Your current changes will be lost.
-            </p>
-            <div className="flex justify-end gap-3">
-              <button 
-                onClick={handleCancelSwitch} 
-                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={handleConfirmSwitch} 
-                className="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors"
-              >
-                Discard Changes
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+        
+        {showUnsavedWarning && (
+          
+            
+              
+                
+                  
+                    
+                      
+                    
+                    Unsaved Changes
+                  
+                
+                
+                  You have unsaved changes. Are you sure you want to switch forms? Your current changes will be lost.
+                
+                
+                  
+                    Cancel
+                    Discard Changes
+                  
+                
+              
+            
+          
+        )}
+      
+    
   );
 };
 
