@@ -20,7 +20,7 @@ interface NotificationData {
 const validators = {
   required: (value: string) => value.trim() !== '' || 'This field is required',
   email: (value: string) => 
-    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) || 'Please enter a valid email address',
+    /^[^\s@]+@[^\s@]+\.[^\s@]+\.[^\s@]+$/.test(value) || 'Please enter a valid email address',
   phone: (value: string) => 
     /^[\+]?[\s\-\(\)]?[\d\s\-\(\)]{10,}$/.test(value) || 'Please enter a valid phone number',
   number: (value: string) => 
@@ -149,7 +149,7 @@ const AddForm: React.FC<AddFormProps> = ({
   const handleBlur = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setTouched(prev => ({ ...prev, [name]: true }));
-    
+
     const error = validateField(name, value);
     setErrors(prev => ({ ...prev, [name]: error }));
     setDirty(true);
@@ -157,11 +157,11 @@ const AddForm: React.FC<AddFormProps> = ({
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    
+
     // Validate all fields
     const newErrors: Record<string, string> = {};
     const newTouched: Record<string, boolean> = {};
-    
+
     fields.forEach(field => {
       newTouched[field.name] = true;
       const error = validateField(field.name, formData[field.name] || '');
@@ -189,7 +189,7 @@ const AddForm: React.FC<AddFormProps> = ({
       // Error handling is done by parent component
     }
   };
-  
+
   const labelize = (str: string) => 
     str.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 
@@ -239,7 +239,7 @@ const AddForm: React.FC<AddFormProps> = ({
             )}
           </div>
         ))}
-        
+
         <div className="flex justify-end gap-3 pt-4">
           <button
             type="button"
@@ -295,18 +295,18 @@ const AddContractForm: React.FC<{
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
-    
+
     if (!formData.projectId) newErrors.projectId = 'Project is required';
     if (!formData.subcontractorId) newErrors.subcontractorId = 'Vendor is required';
     if (!formData.contractAmount) newErrors.contractAmount = 'Contract amount is required';
     if (!formData.startDate) newErrors.startDate = 'Start date is required';
-    
+
     if (formData.startDate && formData.endDate) {
       if (new Date(formData.startDate) > new Date(formData.endDate)) {
         newErrors.endDate = 'End date must be after start date';
       }
     }
-    
+
     if (formData.contractAmount && (isNaN(Number(formData.contractAmount)) || Number(formData.contractAmount) <= 0)) {
       newErrors.contractAmount = 'Contract amount must be a positive number';
     }
@@ -317,11 +317,11 @@ const AddContractForm: React.FC<{
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
-    
+
     setLoading(true);
 
     try {
@@ -380,10 +380,10 @@ const AddContractForm: React.FC<{
         endDate: "",
       });
       setLineItems([]);
-      
+
       if (onSuccess) onSuccess();
       onClose();
-      
+
     } catch (error) {
       const message = error instanceof Error ? error.message : 'An unexpected error occurred';
       if (onError) onError(message);
@@ -773,6 +773,41 @@ const AddContractForm: React.FC<{
 };
 
 // Enhanced main component with notification system
+
+// Define MetricsView component
+const MetricsView: React.FC = () => {
+    const { projects, subcontractors } = useData();
+    // You can add more complex metrics calculations here based on projects and subcontractors data
+    const totalProjects = projects.length;
+    const totalSubcontractors = subcontractors.length;
+    const totalBudget = projects.reduce((sum, project) => sum + (project.budget || 0), 0);
+
+    return (
+        <div className="bg-white rounded-lg shadow p-6 mb-4">
+            <h2 className="text-lg font-semibold text-gray-800 mb-4">Key Metrics</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Total Projects Metric */}
+                <div className="bg-gray-50 rounded-lg p-4">
+                    <h3 className="text-sm font-medium text-gray-600">Total Projects</h3>
+                    <p className="text-2xl font-bold text-blue-600">{totalProjects}</p>
+                </div>
+
+                {/* Total Subcontractors Metric */}
+                <div className="bg-gray-50 rounded-lg p-4">
+                    <h3 className="text-sm font-medium text-gray-600">Total Subcontractors</h3>
+                    <p className="text-2xl font-bold text-green-600">{totalSubcontractors}</p>
+                </div>
+
+                {/* Total Budget Metric */}
+                <div className="bg-gray-50 rounded-lg p-4">
+                    <h3 className="text-sm font-medium text-gray-600">Total Budget</h3>
+                    <p className="text-2xl font-bold text-purple-600">${totalBudget.toLocaleString()}</p>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const ManageView: React.FC = () => {
   const { dispatch, projects, subcontractors, contracts } = useData();
   const [notifications, setNotifications] = useState<NotificationData[]>([]);
@@ -808,7 +843,7 @@ const ManageView: React.FC = () => {
 
   const addProject = async (formData: Record<string, string>) => {
     setIsLoading(prev => ({ ...prev, project: true }));
-    
+
     try {
       const { name, client_name, current_phase, budget, start_date, target_completion_date } = formData;
       const { data, error } = await supabase.from('projects').insert([{
@@ -819,13 +854,13 @@ const ManageView: React.FC = () => {
         start_date,
         target_completion_date,
       }]).select().single();
-      
+
       if (error) throw error;
-      
+
       dispatch({ type: 'ADD_PROJECT', payload: data });
       addNotification('success', 'Project added successfully!');
       setOpenForm(null);
-      
+
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to add project';
       addNotification('error', message);
@@ -837,7 +872,7 @@ const ManageView: React.FC = () => {
 
   const addSubcontractor = async (formData: Record<string, string>) => {
     setIsLoading(prev => ({ ...prev, vendor: true }));
-    
+
     try {
       const { name, trade, phone, email } = formData;
       const { data, error } = await supabase.from('contractors').insert([{
@@ -846,13 +881,13 @@ const ManageView: React.FC = () => {
         phone,
         email,
       }]).select().single();
-      
+
       if (error) throw error;
-      
+
       dispatch({ type: 'ADD_SUBCONTRACTOR', payload: data });
       addNotification('success', 'Vendor added successfully!');
       setOpenForm(null);
-      
+
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to add vendor';
       addNotification('error', message);
@@ -954,14 +989,14 @@ const ManageView: React.FC = () => {
 
   const handleBulkDelete = async () => {
     if (selectedItems.size === 0) return;
-    
+
     const confirmed = window.confirm(`Are you sure you want to delete ${selectedItems.size} item(s)?`);
     if (!confirmed) return;
 
     try {
       const tableName = activeTab === 'projects' ? 'projects' :
                        activeTab === 'vendors' ? 'contractors' : 'contracts';
-      
+
       const { error } = await supabase
         .from(tableName)
         .delete()
@@ -994,7 +1029,9 @@ const ManageView: React.FC = () => {
         notifications={notifications} 
         onRemove={removeNotification} 
       />
-      
+
+      <MetricsView />
+
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-bold text-gray-800">🏗️ Construction Management</h1>
         <div className="flex items-center gap-4">
@@ -1060,7 +1097,7 @@ const ManageView: React.FC = () => {
                   className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
-              
+
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
@@ -1089,7 +1126,7 @@ const ManageView: React.FC = () => {
                   </button>
                 </div>
               )}
-              
+
               <button
                 onClick={() => handleOpenForm(activeTab === 'projects' ? 'project' : activeTab === 'vendors' ? 'vendor' : 'contract')}
                 className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm flex items-center gap-2"
