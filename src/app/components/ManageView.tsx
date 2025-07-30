@@ -4,7 +4,6 @@ import { supabase } from '@/lib/supabaseClient';
 import { Building, UserPlus, FilePlus, AlertCircle, CheckCircle, X } from 'lucide-react';
 import LineItemFormModal from '@/components/LineItemFormModal';
 import LineItemEditor, { LineItem } from '@/components/LineItemEditor';
-import MetricsView from './MetricsView';
 import Image from 'next/image';
 
 // Enhanced notification system
@@ -996,8 +995,6 @@ const ManageView: React.FC = () => {
         notifications={notifications} 
         onRemove={removeNotification} 
       />
-
-      <MetricsView />
 
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-bold text-gray-800">🏗️ Construction Management</h1>
