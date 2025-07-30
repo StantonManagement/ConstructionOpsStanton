@@ -3,7 +3,7 @@ import { useData } from '../context/DataContext';
 import { TrendingUp, TrendingDown, DollarSign, Calendar, Users, Building } from 'lucide-react';
 
 const MetricsView: React.FC = () => {
-  const { projects, subcontractors, contracts } = useData();
+  const { projects, subcontractors, contracts = [] } = useData();
 
   // Calculate key metrics
   const metrics = useMemo(() => {

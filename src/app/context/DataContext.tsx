@@ -36,9 +36,22 @@ export interface PaymentApplications {
   checkReady: Array<{ id: number; contractor: string; project: string; amount: number; lienWaiverNeeded?: boolean; lienWaiverSigned?: boolean }>;
 }
 
+export interface Contract {
+  id: number;
+  project_id: number;
+  subcontractor_id: number;
+  contract_amount: number;
+  start_date: string;
+  end_date?: string;
+  status?: string;
+  project?: Project;
+  subcontractor?: Subcontractor;
+}
+
 export interface DataContextType {
   projects: Project[];
   subcontractors: Subcontractor[];
+  contracts: Contract[];
   paymentApplications: PaymentApplications;
   dispatch: Dispatch<{ type: string; payload?: unknown }>;
 }
@@ -48,6 +61,7 @@ const DataContext = createContext<DataContextType | undefined>(undefined);
 type InitialDataType = {
   projects: Project[];
   subcontractors: Subcontractor[];
+  contracts: Contract[];
   paymentApplications: PaymentApplications;
 };
 
@@ -74,7 +88,8 @@ const initialData: InitialDataType = {
   projects: [
     { id: 1, name: 'Highland Plaza Renovation', client_name: 'Metro Development', current_phase: 'Electrical Rough-in', daysToInspection: 3, atRisk: true, budget: 500000, spent: 375000, permits: { electrical: 'approved', plumbing: 'pending' } },
     { id: 2, name: 'Oak Street Apartments', client_name: 'City Housing', current_phase: 'Finish Work', daysToInspection: 7, atRisk: false, budget: 1200000, spent: 950000, permits: { electrical: 'approved', plumbing: 'approved' } },
-  ]
+  ],
+  contracts: []
 };
 
 type ContractorDB = {

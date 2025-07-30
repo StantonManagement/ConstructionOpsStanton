@@ -776,7 +776,7 @@ const AddContractForm: React.FC<{
 // Enhanced main component with notification system
 
 const ManageView: React.FC = () => {
-  const { dispatch, projects, subcontractors, contracts } = useData();
+  const { dispatch, projects, subcontractors, contracts = [] } = useData();
   const [notifications, setNotifications] = useState<NotificationData[]>([]);
   const [openForm, setOpenForm] = useState<'project' | 'vendor' | 'contract' | null>(null);
   const [pendingForm, setPendingForm] = useState<'project' | 'vendor' | 'contract' | null>(null);
