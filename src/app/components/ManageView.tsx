@@ -1384,54 +1384,78 @@ const ManageView: React.FC = () => {
         </div>
       </div>
 
-      {/* Inline Forms - only one visible at a time */}
-      {openForm && (
-        <div className="mb-8">
-          {openForm === 'project' && (
-            <div className="bg-white rounded-lg shadow p-6 mb-4 w-full">
-              <AddForm
-                title="Add New Project"
-                icon={<Building className="w-6 h-6 text-blue-600" />}
-                fields={projectFields}
-                onSubmit={addProject}
-                onClose={() => setOpenForm(null)}
-                isLoading={isLoading.project}
-                setDirty={setFormDirty}
-              />
+      {/* Modal Forms */}
+      {openForm === 'project' && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <AddForm
+              title="Add New Project"
+              icon={<Building className="w-6 h-6 text-blue-600" />}
+              fields={projectFields}
+              onSubmit={addProject}
+              onClose={() => setOpenForm(null)}
+              isLoading={isLoading.project}
+              setDirty={setFormDirty}
+            />
+          </div>
+        </div>
+      )}
+
+      {openForm === 'vendor' && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <AddForm
+              title="Add New Vendor"
+              icon={<UserPlus className="w-6 h-6 text-blue-600" />}
+              fields={vendorFields}
+              onSubmit={addSubcontractor}
+              onClose={() => setOpenForm(null)}
+              isLoading={isLoading.vendor}
+              setDirty={setFormDirty}
+            />
+          </div>
+        </div>
+      )}
+
+      {openForm === 'contract' && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <AddContractForm
+              onClose={() => setOpenForm(null)}
+              onSuccess={() => addNotification('success', 'Contract added successfully!')}
+              onError={(message) => addNotification('error', message)}
+              setDirty={setFormDirty}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Unsaved Warning Modal */}
+      {showUnsavedWarning && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <AlertCircle className="w-8 h-8 text-yellow-500" />
+              <h3 className="text-lg font-semibold text-gray-800">Unsaved Changes</h3>
             </div>
-          )}
-          {openForm === 'vendor' && (
-            <div className="bg-white rounded-lg shadow p-6 mb-4 w-full">
-              <AddForm
-                title="Add New Vendor"
-                icon={<UserPlus className="w-6 h-6 text-blue-600" />}
-                fields={vendorFields}
-                onSubmit={addSubcontractor}
-                onClose={() => setOpenForm(null)}
-                isLoading={isLoading.vendor}
-                setDirty={setFormDirty}
-              />
+            <p className="text-gray-600 mb-6">
+              You have unsaved changes. Are you sure you want to switch forms? Your current changes will be lost.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button 
+                onClick={handleCancelSwitch} 
+                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleConfirmSwitch} 
+                className="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors"
+              >
+                Discard Changes
+              </button>
             </div>
-          )}
-          {openForm === 'contract' && (
-            <div className="bg-white rounded-lg shadow p-6 mb-4 w-full">
-              <AddContractForm
-                onClose={() => setOpenForm(null)}
-                onSuccess={() => addNotification('success', 'Contract added successfully!')}
-                onError={(message) => addNotification('error', message)}
-                setDirty={setFormDirty}
-              />
-            </div>
-          )}
-          {showUnsavedWarning && (
-            <div className="bg-yellow-100 border border-yellow-400 text-yellow-800 px-4 py-3 rounded relative mb-4 w-full flex items-center justify-between">
-              <span>You have unsaved changes. Are you sure you want to switch forms?</span>
-              <div className="flex gap-2">
-                <button onClick={handleConfirmSwitch} className="px-3 py-1 bg-yellow-400 text-white rounded hover:bg-yellow-500">Switch</button>
-                <button onClick={handleCancelSwitch} className="px-3 py-1 bg-gray-200 text-gray-800 rounded hover:bg-gray-300">Cancel</button>
-              </div>
-            </div>
-          )}
+          </div>
         </div>
       )}
     </div>
