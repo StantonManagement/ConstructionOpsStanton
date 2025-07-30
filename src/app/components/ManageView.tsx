@@ -1,3 +1,4 @@
+
 import React, { useState, ChangeEvent, FormEvent, ReactNode, useCallback, useMemo } from 'react';
 import { useData } from '../context/DataContext';
 import { supabase } from '@/lib/supabaseClient';
@@ -20,7 +21,7 @@ interface NotificationData {
 const validators = {
   required: (value: string) => value.trim() !== '' || 'This field is required',
   email: (value: string) => 
-    /^[^\s@]+@[^\s@]+\.[^\s@]+\.[^\s@]+$/.test(value) || 'Please enter a valid email address',
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) || 'Please enter a valid email address',
   phone: (value: string) => 
     /^[\+]?[\s\-\(\)]?[\d\s\-\(\)]{10,}$/.test(value) || 'Please enter a valid phone number',
   number: (value: string) => 
@@ -35,7 +36,7 @@ interface FieldConfig {
   type?: string;
   validators?: ((value: string) => string | true)[];
   required?: boolean;
-  defaultValue?: string; // <-- Add this line
+  defaultValue?: string;
 }
 
 // Enhanced notification component
@@ -93,7 +94,6 @@ const AddForm: React.FC<AddFormProps> = ({
   isLoading = false,
   setDirty
 }) => {
-  // Set initial formData using defaultValue if provided
   const [formData, setFormData] = useState<Record<string, string>>(
     () => fields.reduce((acc, field) => {
       acc[field.name] = field.defaultValue || '';
@@ -107,12 +107,10 @@ const AddForm: React.FC<AddFormProps> = ({
     const field = fields.find(f => f.name === name);
     if (!field) return '';
 
-    // Check required validation
     if (field.required && !value.trim()) {
       return 'This field is required';
     }
 
-    // Run custom validators
     if (field.validators) {
       for (const validator of field.validators) {
         const result = validator(value);
@@ -127,19 +125,15 @@ const AddForm: React.FC<AddFormProps> = ({
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    // Prevent deleting '+1' for phone field
     if (name === 'phone') {
-      // Always enforce '+1' at the start
       let newValue = value;
       if (!newValue.startsWith('+1')) {
-        // Remove all non-digit characters and re-add '+1'
         newValue = '+1' + newValue.replace(/[^\d]/g, '').replace(/^1*/, '');
       }
       setFormData(prev => ({ ...prev, [name]: newValue }));
     } else {
       setFormData(prev => ({ ...prev, [name]: value }));
     }
-    // Clear error when user starts typing
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
     }
@@ -158,7 +152,6 @@ const AddForm: React.FC<AddFormProps> = ({
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    // Validate all fields
     const newErrors: Record<string, string> = {};
     const newTouched: Record<string, boolean> = {};
 
@@ -173,14 +166,12 @@ const AddForm: React.FC<AddFormProps> = ({
     setTouched(newTouched);
     setErrors(newErrors);
 
-    // Don't submit if there are errors
     if (Object.values(newErrors).some(error => error !== '')) {
       return;
     }
 
     try {
       await onSubmit(formData);
-      // Reset form on success
       setFormData({});
       setErrors({});
       setTouched({});
@@ -202,7 +193,7 @@ const AddForm: React.FC<AddFormProps> = ({
         </h3>
         <button 
           onClick={onClose} 
-          className="text-black-500 hover:text-black-700 p-1 rounded-full hover:bg-gray-100"
+          className="text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-100"
           disabled={isLoading}
         >
           <X className="w-6 h-6" />
@@ -211,7 +202,7 @@ const AddForm: React.FC<AddFormProps> = ({
       <form onSubmit={handleSubmit} className="space-y-5">
         {fields.map(field => (
           <div key={field.name}>
-            <label className="block text-sm font-medium text-black mb-1.5">
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
               {labelize(field.name)}
               {field.required && <span className="text-red-500 ml-1">*</span>}
             </label>
@@ -325,7 +316,6 @@ const AddContractForm: React.FC<{
     setLoading(true);
 
     try {
-      // 1. Insert contract with transaction-like approach
       const { data, error: contractError } = await supabase
         .from('contracts')
         .insert([{
@@ -344,7 +334,6 @@ const AddContractForm: React.FC<{
 
       const contractId = data.id;
 
-      // 2. Insert line items if any exist
       if (lineItems.length > 0) {
         const itemsToInsert = lineItems.map(item => ({
           contract_id: contractId,
@@ -365,13 +354,11 @@ const AddContractForm: React.FC<{
           .insert(itemsToInsert);
 
         if (lineItemsError) {
-          // Consider rolling back the contract if line items fail
           await supabase.from('contracts').delete().eq('id', contractId);
           throw new Error(`Failed to create line items: ${lineItemsError.message}`);
         }
       }
 
-      // Success - reset form and notify
       setFormData({
         projectId: "",
         subcontractorId: "",
@@ -397,7 +384,6 @@ const AddContractForm: React.FC<{
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     setFormData(prev => ({ ...prev, [field]: e.target.value }));
-    // Clear error when user starts typing
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
@@ -458,7 +444,7 @@ const AddContractForm: React.FC<{
       </div>
       <form onSubmit={handleSubmit} className="space-y-5">
         <div>
-          <label className="block text-sm font-medium text-black mb-1.5">
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">
             Project <span className="text-red-500">*</span>
           </label>
           <select
@@ -484,7 +470,7 @@ const AddContractForm: React.FC<{
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-black mb-1.5">
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">
             Vendor <span className="text-red-500">*</span>
           </label>
           <select
@@ -510,7 +496,7 @@ const AddContractForm: React.FC<{
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-black mb-1.5">
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">
             Contract Amount <span className="text-red-500">*</span>
           </label>
           <input
@@ -535,7 +521,7 @@ const AddContractForm: React.FC<{
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-black mb-1.5">
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">
             Start Date <span className="text-red-500">*</span>
           </label>
           <input
@@ -557,7 +543,7 @@ const AddContractForm: React.FC<{
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-black mb-1.5">End Date</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">End Date</label>
           <input
             type="date"
             value={formData.endDate}
@@ -578,13 +564,12 @@ const AddContractForm: React.FC<{
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-black mb-1.5">Line Items</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Line Items</label>
           <div className="border rounded-lg p-4 bg-gray-50 mb-4">
-            {/* Inline Line Item Sub-Form */}
             {showLineItemForm ? (
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end mb-4">
                 <div>
-                  <label className="block text-xs font-medium text-black mb-1">Item No</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Item No</label>
                   <input
                     type="text"
                     name="itemNo"
@@ -595,7 +580,7 @@ const AddContractForm: React.FC<{
                   />
                 </div>
                 <div className="md:col-span-2">
-                  <label className="block text-xs font-medium text-black mb-1">Description</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Description</label>
                   <input
                     type="text"
                     name="description"
@@ -606,7 +591,7 @@ const AddContractForm: React.FC<{
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-black mb-1">Scheduled Value</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Scheduled Value</label>
                   <input
                     type="number"
                     name="scheduledValue"
@@ -617,7 +602,7 @@ const AddContractForm: React.FC<{
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-black mb-1">From Previous</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">From Previous</label>
                   <input
                     type="number"
                     name="fromPrevious"
@@ -627,7 +612,7 @@ const AddContractForm: React.FC<{
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-black mb-1">This Period</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">This Period</label>
                   <input
                     type="number"
                     name="thisPeriod"
@@ -637,7 +622,7 @@ const AddContractForm: React.FC<{
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-black mb-1">Material Stored</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Material Stored</label>
                   <input
                     type="number"
                     name="materialStored"
@@ -647,7 +632,7 @@ const AddContractForm: React.FC<{
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-black mb-1">% G/C</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">% G/C</label>
                   <input
                     type="number"
                     name="percentGC"
@@ -687,36 +672,35 @@ const AddContractForm: React.FC<{
                 </button>
               </div>
             )}
-            {/* Line Items Table */}
             <table className="min-w-full text-sm border">
               <thead>
                 <tr>
-                  <th className="border px-2 py-1 text-black">Item No</th>
-                  <th className="border px-2 py-1 text-black">Description</th>
-                  <th className="border px-2 py-1 text-black">Scheduled Value</th>
-                  <th className="border px-2 py-1 text-black">From Previous</th>
-                  <th className="border px-2 py-1 text-black">This Period</th>
-                  <th className="border px-2 py-1 text-black">Material Stored</th>
-                  <th className="border px-2 py-1 text-black">% G/C</th>
-                  <th className="border px-2 py-1 text-black">Actions</th>
+                  <th className="border px-2 py-1 text-gray-700">Item No</th>
+                  <th className="border px-2 py-1 text-gray-700">Description</th>
+                  <th className="border px-2 py-1 text-gray-700">Scheduled Value</th>
+                  <th className="border px-2 py-1 text-gray-700">From Previous</th>
+                  <th className="border px-2 py-1 text-gray-700">This Period</th>
+                  <th className="border px-2 py-1 text-gray-700">Material Stored</th>
+                  <th className="border px-2 py-1 text-gray-700">% G/C</th>
+                  <th className="border px-2 py-1 text-gray-700">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {lineItems.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="text-center text-black py-2">No line items added.</td>
+                    <td colSpan={8} className="text-center text-gray-500 py-2">No line items added.</td>
                   </tr>
                 ) : (
                   lineItems.map((item, idx) => (
                     <tr key={idx}>
-                      <td className="border px-2 py-1 text-black">{item.itemNo}</td>
-                      <td className="border px-2 py-1 text-black">{item.description}</td>
-                      <td className="border px-2 py-1 text-black">{item.scheduledValue}</td>
-                      <td className="border px-2 py-1 text-black">{item.fromPrevious}</td>
-                      <td className="border px-2 py-1 text-black">{item.thisPeriod}</td>
-                      <td className="border px-2 py-1 text-black">{item.materialStored}</td>
-                      <td className="border px-2 py-1 text-black">{item.percentGC}</td>
-                      <td className="border px-2 py-1 text-black flex gap-2">
+                      <td className="border px-2 py-1 text-gray-700">{item.itemNo}</td>
+                      <td className="border px-2 py-1 text-gray-700">{item.description}</td>
+                      <td className="border px-2 py-1 text-gray-700">{item.scheduledValue}</td>
+                      <td className="border px-2 py-1 text-gray-700">{item.fromPrevious}</td>
+                      <td className="border px-2 py-1 text-gray-700">{item.thisPeriod}</td>
+                      <td className="border px-2 py-1 text-gray-700">{item.materialStored}</td>
+                      <td className="border px-2 py-1 text-gray-700">{item.percentGC}</td>
+                      <td className="border px-2 py-1 text-gray-700 flex gap-2">
                         <button
                           type="button"
                           className="text-blue-600 hover:underline"
@@ -737,7 +721,7 @@ const AddContractForm: React.FC<{
                 )}
               </tbody>
             </table>
-            <div className="text-right mt-2 text-sm text-black">
+            <div className="text-right mt-2 text-sm text-gray-700">
               Total Scheduled Value: <span className="font-semibold">${totalScheduledValue.toLocaleString()}</span>
             </div>
           </div>
@@ -773,7 +757,6 @@ const AddContractForm: React.FC<{
 };
 
 // Enhanced main component with notification system
-
 const ManageView: React.FC = () => {
   const { dispatch, projects, subcontractors, contracts = [] } = useData();
   const [notifications, setNotifications] = useState<NotificationData[]>([]);
@@ -831,7 +814,7 @@ const ManageView: React.FC = () => {
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to add project';
       addNotification('error', message);
-      throw error; // Re-throw to prevent form from closing
+      throw error;
     } finally {
       setIsLoading(prev => ({ ...prev, project: false }));
     }
@@ -858,7 +841,7 @@ const ManageView: React.FC = () => {
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to add vendor';
       addNotification('error', message);
-      throw error; // Re-throw to prevent form from closing
+      throw error;
     } finally {
       setIsLoading(prev => ({ ...prev, vendor: false }));
     }
@@ -877,7 +860,7 @@ const ManageView: React.FC = () => {
   const vendorFields: FieldConfig[] = [
     { name: 'name', placeholder: 'Vendor Name', required: true, validators: [validators.required] },
     { name: 'trade', placeholder: 'Trade', required: true, validators: [validators.required] },
-    { name: 'phone', placeholder: 'Phone', type: 'tel', validators: [validators.phone], defaultValue: '+1' }, // <-- Add defaultValue
+    { name: 'phone', placeholder: 'Phone', type: 'tel', validators: [validators.phone], defaultValue: '+1' },
     { name: 'email', placeholder: 'Email', type: 'email', validators: [validators.email] },
   ];
 
@@ -971,7 +954,6 @@ const ManageView: React.FC = () => {
 
       if (error) throw error;
 
-      // Update local state
       if (activeTab === 'projects') {
         selectedItems.forEach(id => {
           dispatch({ type: 'DELETE_PROJECT', payload: id });
@@ -991,742 +973,835 @@ const ManageView: React.FC = () => {
   };
 
   return (
-    
-      
-        
-          
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+        <NotificationManager 
+          notifications={notifications} 
+          onRemove={removeNotification} 
+        />
+
+        {/* Header */}
+        <div className="mb-6 sm:mb-8">
+          <div className="text-center sm:text-left">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+              Construction Management
+            </h1>
+            <div className="grid grid-cols-3 gap-2 sm:gap-4 text-center">
+              <div className="bg-white rounded-lg p-3 sm:p-4 shadow-sm border border-gray-100">
+                <div className="text-lg sm:text-xl font-bold text-blue-600">Projects</div>
+                <div className="text-xs sm:text-sm text-gray-600">{projects.length}</div>
+              </div>
+              <div className="bg-white rounded-lg p-3 sm:p-4 shadow-sm border border-gray-100">
+                <div className="text-lg sm:text-xl font-bold text-green-600">Vendors</div>
+                <div className="text-xs sm:text-sm text-gray-600">{subcontractors.length}</div>
+              </div>
+              <div className="bg-white rounded-lg p-3 sm:p-4 shadow-sm border border-gray-100">
+                <div className="text-lg sm:text-xl font-bold text-purple-600">Contracts</div>
+                <div className="text-xs sm:text-sm text-gray-600">{contracts.length}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile Tab Navigation */}
+        <div className="sm:hidden mb-4">
+          <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
+            <button
+              onClick={() => setActiveTab('projects')}
+              className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors ${
+                activeTab === 'projects'
+                  ? 'bg-white text-blue-600 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Projects ({filteredProjects.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('vendors')}
+              className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors ${
+                activeTab === 'vendors'
+                  ? 'bg-white text-green-600 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Vendors ({filteredVendors.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('contracts')}
+              className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors ${
+                activeTab === 'contracts'
+                  ? 'bg-white text-purple-600 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Contracts ({filteredContracts.length})
+            </button>
+          </div>
+        </div>
+
+        {/* Desktop Tab Navigation */}
+        <div className="hidden sm:block mb-6">
+          <div className="border-b border-gray-200">
+            <nav className="-mb-px flex space-x-8">
+              <button
+                onClick={() => setActiveTab('projects')}
+                className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'projects'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Projects
+                <span className="ml-2 bg-gray-100 text-gray-900 py-0.5 px-2.5 rounded-full text-xs">
+                  {filteredProjects.length}
+                </span>
+              </button>
+              <button
+                onClick={() => setActiveTab('vendors')}
+                className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'vendors'
+                    ? 'border-green-500 text-green-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Vendors
+                <span className="ml-2 bg-gray-100 text-gray-900 py-0.5 px-2.5 rounded-full text-xs">
+                  {filteredVendors.length}
+                </span>
+              </button>
+              <button
+                onClick={() => setActiveTab('contracts')}
+                className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'contracts'
+                    ? 'border-purple-500 text-purple-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Contracts
+                <span className="ml-2 bg-gray-100 text-gray-900 py-0.5 px-2.5 rounded-full text-xs">
+                  {filteredContracts.length}
+                </span>
+              </button>
+            </nav>
+          </div>
+        </div>
+
+        {/* Search and Controls */}
+        <div className="mb-6">
+          {/* Mobile Controls */}
+          <div className="sm:hidden space-y-3">
+            <div className="flex gap-2">
+              <div className="flex-1 relative">
+                <input
+                  type="text"
+                  placeholder="Search..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowMobileFilters(!showMobileFilters)}
+                className="px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 hover:bg-gray-50"
+              >
+                Filter
+              </button>
+              {selectedItems.size > 0 ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-600">{selectedItems.size} selected</span>
+                  <button
+                    onClick={handleBulkDelete}
+                    className="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-1"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    Delete
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => handleOpenForm(activeTab === 'projects' ? 'project' : activeTab === 'vendors' ? 'vendor' : 'contract')}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  Add
+                </button>
+              )}
+            </div>
+
+            {showMobileFilters && (
+              <div className="bg-white p-4 rounded-lg border border-gray-200">
+                <select
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="all">All Status</option>
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                  <option value="pending">Pending</option>
+                  <option value="completed">Completed</option>
+                </select>
+              </div>
+            )}
+          </div>
+
+          {/* Desktop Controls */}
+          <div className="hidden sm:flex sm:items-center sm:justify-between">
+            <div className="flex items-center space-x-4">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Search..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-80 pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+              </div>
+
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="all">All Status</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+                <option value="pending">Pending</option>
+                <option value="completed">Completed</option>
+              </select>
+            </div>
             
-              
-                🏗️ Construction Management
-              
-              
+            <div className="flex items-center space-x-4">
+              {selectedItems.size > 0 && (
+                <div className="flex items-center space-x-3">
+                  <span className="text-sm text-gray-600">{selectedItems.size} selected</span>
+                  <button
+                    onClick={handleBulkDelete}
+                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    Delete
+                  </button>
+                </div>
+              )}
 
-                
-                  
-                    Projects
-                    {projects.length}
-                  
-                
-                
-                  
-                    Vendors
-                    {subcontractors.length}
-                  
-                
-                
-                  
-                    Contracts
-                    {contracts.length}
-                  
-                
-              
-            
-          
-        
+              <button
+                onClick={() => handleOpenForm(activeTab === 'projects' ? 'project' : activeTab === 'vendors' ? 'vendor' : 'contract')}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Add {activeTab === 'projects' ? 'Project' : activeTab === 'vendors' ? 'Vendor' : 'Contract'}
+              </button>
+            </div>
+          </div>
+        </div>
 
-      
-        
-          
-            
-              
-                🏗️ Projects ({filteredProjects.length})
-                👷 Vendors ({filteredVendors.length})
-                📋 Contracts ({filteredContracts.length})
-              
-            
-
-          
-            
-              
-                
-                  <span>🏗️</span>
-                  Projects
-                  
-                    {filteredProjects.length}
-                  
-                
-              
-              
-                
-                  <span>👷</span>
-                  Vendors
-                  
-                    {filteredVendors.length}
-                  
-                
-              
-              
-                
-                  <span>📋</span>
-                  Contracts
-                  
-                    {filteredContracts.length}
-                  
-                
-              
-            
-          
-        
-
-        
-          
-            
-              
-                
-                  
-                    
-                      
-                        
-                      
-                      
-                    
-                  
-                
-
-                
-                  
-                    Filter
-                  
-
-                  {selectedItems.size > 0 ? (
-                    
-                      
-                        {selectedItems.size} selected
-                      
-                      
-                        
-                          
-                        
-                        Delete
-                      
-                    
-                  ) : (
-                    
-                      
-                        
-                          
-                        
-                        Add
-                      
-                    
-                  )}
-                
-                
-
-                {showMobileFilters && (
-                  
-                    
-                      All Status
-                      Active
-                      Inactive
-                      Pending
-                      Completed
-                    
-                  
-                )}
-              
-            
-
-            
-              
-                
-                  
-                    
-                      
-                        
-                      
-                      
-                    
-                  
-                
-
-                
-                  
-                    All Status
-                    Active
-                    Inactive
-                    Pending
-                    Completed
-                  
-                
-              
-              
-                {selectedItems.size > 0 && (
-                  
-                    
-                      {selectedItems.size} selected
-                    
-                    
-                      
-                        
-                          
-                        
-                        Delete
-                      
-                    
-                  
-                )}
-
-                
-                  
-                    
-                      
-                        
-                      
-                      Add {activeTab === 'projects' ? 'Project' : activeTab === 'vendors' ? 'Vendor' : 'Contract'}
-                    
-                  
-                
-              
-            
-          
-        
-
-        
+        {/* Content */}
+        <div className="space-y-4">
           {activeTab === 'projects' && (
-            
-              
+            <div>
+              {/* Mobile Cards */}
+              <div className="sm:hidden space-y-4">
                 {filteredProjects.map((project) => (
-                  
+                  <div key={project.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex items-start space-x-3">
+                        <input
+                          type="checkbox"
+                          checked={selectedItems.has(project.id)}
+                          onChange={() => handleItemSelect(project.id)}
+                          className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                        <div>
+                          <h3 className="font-semibold text-gray-900">{project.name}</h3>
+                          <p className="text-sm text-gray-500">{project.client_name || 'No client'}</p>
+                        </div>
+                      </div>
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        {project.status || 'Active'}
+                      </span>
+                    </div>
                     
-                      
-                        
-                          
-                            
-                              
-                            
-                            
-                              
-                                {project.name}
-                                {project.client_name || 'No client'}
-                              
-                            
-                          
-                          
-                            {project.status || 'Active'}
-                          
-                        
-                        
-                          
-                            Phase:
-                            {project.current_phase || 'Not set'}
-                          
-                          
-                            Budget:
-                            ${(project.budget || 0).toLocaleString()}
-                          
-                          
-                            Started:
-                            {project.start_date || 'Not set'}
-                          
-                          
-                            Spent:
-                            ${(project.spent || 0).toLocaleString()}
-                          
-                        
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="text-gray-500">Phase:</span>
+                        <span className="ml-1 text-gray-900">{project.current_phase || 'Not set'}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Budget:</span>
+                        <span className="ml-1 text-gray-900">${(project.budget || 0).toLocaleString()}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Started:</span>
+                        <span className="ml-1 text-gray-900">{project.start_date || 'Not set'}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Spent:</span>
+                        <span className="ml-1 text-gray-900">${(project.spent || 0).toLocaleString()}</span>
+                      </div>
+                    </div>
 
-                        {project.budget && (
-                          
-                            
-                              Progress
-                              {Math.round(((project.spent || 0) / project.budget) * 100)}%
-                            
-                            
-                              
-                            
-                          
-                        )}
-                      
-                    
-                  
+                    {project.budget && (
+                      <div className="mt-4">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-gray-500">Progress</span>
+                          <span className="font-medium">{Math.round(((project.spent || 0) / project.budget) * 100)}%</span>
+                        </div>
+                        <div className="mt-1 bg-gray-200 rounded-full h-2">
+                          <div
+                            className="bg-blue-600 h-2 rounded-full"
+                            style={{ width: `${Math.min(((project.spent || 0) / project.budget) * 100, 100)}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 ))}
 
                 {filteredProjects.length === 0 && (
-                  
-                    
-                      
-                      No projects found
-                    
-                  
+                  <div className="text-center py-12">
+                    <div className="text-gray-400 mb-4">
+                      <Building className="w-12 h-12 mx-auto" />
+                    </div>
+                    <p className="text-gray-500">No projects found</p>
+                  </div>
                 )}
-              
+              </div>
 
-              
-                
-                  
-                    
-                      
-                        
-                      
-                      
+              {/* Desktop Table */}
+              <div className="hidden sm:block bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <input
+                          type="checkbox"
+                          checked={selectedItems.size === filteredProjects.length && filteredProjects.length > 0}
+                          onChange={handleSelectAll}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Project
-                      
-                      
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Client
-                      
-                      
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Phase
-                      
-                      
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Budget
-                      
-                      
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Status
-                      
-                      
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Progress
-                      
-                    
-                  
-                  
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
                     {filteredProjects.map((project) => (
-                      
-                        
-                          
-                            
-                              
-                                
-                                  
-                                    {project.name}
-                                    Started: {project.start_date || 'Not set'}
-                                  
-                                
-                              
-                            
-                          
+                      <tr key={project.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <input
+                            type="checkbox"
+                            checked={selectedItems.has(project.id)}
+                            onChange={() => handleItemSelect(project.id)}
+                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                          />
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="flex-shrink-0 h-10 w-10">
+                              <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                                <Building className="h-5 w-5 text-blue-600" />
+                              </div>
+                            </div>
+                            <div className="ml-4">
+                              <div className="text-sm font-medium text-gray-900">{project.name}</div>
+                              <div className="text-sm text-gray-500">Started: {project.start_date || 'Not set'}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           {project.client_name || 'Not specified'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           {project.current_phase || 'Not set'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           ${(project.budget || 0).toLocaleString()}
-                          
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                             {project.status || 'Active'}
-                          
-                          
-                            
-                            
-                          
-                          
-                            ${(project.spent || 0).toLocaleString()} / ${(project.budget || 0).toLocaleString()}
-                          
-                        
-                      
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          <div className="flex items-center">
+                            <div className="flex-1">
+                              <div className="bg-gray-200 rounded-full h-2">
+                                <div
+                                  className="bg-blue-600 h-2 rounded-full"
+                                  style={{ width: `${project.budget ? Math.min(((project.spent || 0) / project.budget) * 100, 100) : 0}%` }}
+                                />
+                              </div>
+                            </div>
+                            <div className="ml-2 text-xs">
+                              ${(project.spent || 0).toLocaleString()} / ${(project.budget || 0).toLocaleString()}
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
                     ))}
                     {filteredProjects.length === 0 && (
-                      
-                        
-                          
-                            
-                              
-                              No projects found
-                            
-                          
-                        
-                      
+                      <tr>
+                        <td colSpan={7} className="px-6 py-12 text-center">
+                          <div className="text-gray-400 mb-4">
+                            <Building className="w-12 h-12 mx-auto" />
+                          </div>
+                          <p className="text-gray-500">No projects found</p>
+                        </td>
+                      </tr>
                     )}
-                  
-                
-              
-            
+                  </tbody>
+                </table>
+              </div>
+            </div>
           )}
 
           {activeTab === 'vendors' && (
-            
-              
+            <div>
+              {/* Mobile Cards */}
+              <div className="sm:hidden space-y-4">
                 {filteredVendors.map((vendor) => (
-                  
+                  <div key={vendor.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex items-start space-x-3">
+                        <input
+                          type="checkbox"
+                          checked={selectedItems.has(vendor.id)}
+                          onChange={() => handleItemSelect(vendor.id)}
+                          className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                        <div>
+                          <h3 className="font-semibold text-gray-900">{vendor.name}</h3>
+                          <p className="text-sm text-gray-500">ID: #{vendor.id}</p>
+                        </div>
+                      </div>
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        {vendor.status || 'Active'}
+                      </span>
+                    </div>
                     
-                      
-                        
-                          
-                            
-                              
-                            
-                            
-                              
-                                {vendor.name}
-                                ID: #{vendor.id}
-                              
-                            
-                          
-                          
-                            {vendor.status || 'Active'}
-                          
-                        
-                        
+                    <div className="mb-3">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        {vendor.trade}
+                      </span>
+                    </div>
 
-                          
-                            
-                              {vendor.trade}
-                            
-                          
+                    <div className="space-y-2 text-sm">
+                      <div>
+                        <span className="text-gray-500">Phone:</span>
+                        <span className="ml-1 text-gray-900">{vendor.phone || 'Not provided'}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Email:</span>
+                        <span className="ml-1 text-gray-900">{vendor.email || 'Not provided'}</span>
+                      </div>
+                    </div>
 
-                          
-                            
-                              Phone:
-                              {vendor.phone || 'Not provided'}
-                            
-                            
-                              Email:
-                              {vendor.email || 'Not provided'}
-                            
-                          
-
-                          
-                            Performance:
-                            
-                              
-                                
-                                  
-                                  
-                                
-                              
-                              
-                                {vendor.performance_score ? `${vendor.performance_score}/5` : 'Not rated'}
-                              
-                            
-                          
-                        
-                      
-                    
-                  
+                    <div className="mt-3 flex items-center justify-between">
+                      <span className="text-sm text-gray-500">Performance:</span>
+                      <div className="flex items-center space-x-2">
+                        <div className="flex">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <svg
+                              key={star}
+                              className={`w-4 h-4 ${
+                                star <= (vendor.performance_score || 0)
+                                  ? 'text-yellow-400'
+                                  : 'text-gray-300'
+                              }`}
+                              fill="currentColor"
+                              viewBox="0 0 20 20"
+                            >
+                              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                            </svg>
+                          ))}
+                        </div>
+                        <span className="text-sm text-gray-600">
+                          {vendor.performance_score ? `${vendor.performance_score}/5` : 'Not rated'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 ))}
 
                 {filteredVendors.length === 0 && (
-                  
-                    
-                      
-                      No vendors found
-                    
-                  
+                  <div className="text-center py-12">
+                    <div className="text-gray-400 mb-4">
+                      <UserPlus className="w-12 h-12 mx-auto" />
+                    </div>
+                    <p className="text-gray-500">No vendors found</p>
+                  </div>
                 )}
-              
+              </div>
 
-              
-                
-                  
-                    
-                      
-                        
-                      
-                      
+              {/* Desktop Table */}
+              <div className="hidden sm:block bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <input
+                          type="checkbox"
+                          checked={selectedItems.size === filteredVendors.length && filteredVendors.length > 0}
+                          onChange={handleSelectAll}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Vendor
-                      
-                      
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Trade
-                      
-                      
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Contact
-                      
-                      
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Performance
-                      
-                      
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Status
-                      
-                    
-                  
-                  
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
                     {filteredVendors.map((vendor) => (
-                      
-                        
-                          
-                            
-                              
-                                
-                                  
-                                    {vendor.name}
-                                    ID: #{vendor.id}
-                                  
-                                
-                              
-                            
-                          
-                          
-                            
-                              {vendor.trade}
-                            
-                          
-                          
-                            {vendor.phone}
-                            
-                              {vendor.email}
-                            
-                          
-                          
-                            
+                      <tr key={vendor.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <input
+                            type="checkbox"
+                            checked={selectedItems.has(vendor.id)}
+                            onChange={() => handleItemSelect(vendor.id)}
+                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                          />
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="flex-shrink-0 h-10 w-10">
+                              <div className="h-10 w-10 rounded-lg bg-green-100 flex items-center justify-center">
+                                <UserPlus className="h-5 w-5 text-green-600" />
+                              </div>
+                            </div>
+                            <div className="ml-4">
+                              <div className="text-sm font-medium text-gray-900">{vendor.name}</div>
+                              <div className="text-sm text-gray-500">ID: #{vendor.id}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            {vendor.trade}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          <div>{vendor.phone}</div>
+                          <div className="text-gray-500">{vendor.email}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <span className="text-sm text-gray-900 mr-2">
                               {vendor.performance_score ? `${vendor.performance_score}/5` : 'Not rated'}
-                            
-                            
-                              
-                                
-                                  
-                                  
-                                
-                              
-                            
-                          
-                          
+                            </span>
+                            <div className="flex">
+                              {[1, 2, 3, 4, 5].map((star) => (
+                                <svg
+                                  key={star}
+                                  className={`w-4 h-4 ${
+                                    star <= (vendor.performance_score || 0)
+                                      ? 'text-yellow-400'
+                                      : 'text-gray-300'
+                                  }`}
+                                  fill="currentColor"
+                                  viewBox="0 0 20 20"
+                                >
+                                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                </svg>
+                              ))}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                             {vendor.status || 'Active'}
-                          
-                        
-                      
+                          </span>
+                        </td>
+                      </tr>
                     ))}
                     {filteredVendors.length === 0 && (
-                      
-                        
-                          
-                            
-                              
-                              No vendors found
-                            
-                          
-                        
-                      
+                      <tr>
+                        <td colSpan={6} className="px-6 py-12 text-center">
+                          <div className="text-gray-400 mb-4">
+                            <UserPlus className="w-12 h-12 mx-auto" />
+                          </div>
+                          <p className="text-gray-500">No vendors found</p>
+                        </td>
+                      </tr>
                     )}
-                  
-                
-              
-            
+                  </tbody>
+                </table>
+              </div>
+            </div>
           )}
 
           {activeTab === 'contracts' && (
-            
-              
+            <div>
+              {/* Mobile Cards */}
+              <div className="sm:hidden space-y-4">
                 {filteredContracts.map((contract) => (
-                  
+                  <div key={contract.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex items-start space-x-3">
+                        <input
+                          type="checkbox"
+                          checked={selectedItems.has(contract.id)}
+                          onChange={() => handleItemSelect(contract.id)}
+                          className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                        <div>
+                          <h3 className="font-semibold text-gray-900">
+                            {contract.project?.name || 'Unknown Project'}
+                          </h3>
+                          <p className="text-sm text-gray-500">Contract #{contract.id}</p>
+                        </div>
+                      </div>
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        {contract.status || 'Active'}
+                      </span>
+                    </div>
                     
-                      
-                        
-                          
-                            
-                              
-                            
-                            
-                              
-                                {contract.project?.name || 'Unknown Project'}
-                              
-                              Contract #{contract.id}
-                            
-                          
-                          
-                            {contract.status || 'Active'}
-                          
-                        
-                        
-
-                          
-                            Vendor:
-                            {contract.subcontractor?.name || 'Unknown Vendor'}
-                          
-                          
-                            Amount:
-                            ${(contract.contract_amount || 0).toLocaleString()}
-                          
-                          
-                            
-                              Start Date:
-                              {contract.start_date || 'Not set'}
-                            
-                            
-                              End Date:
-                              {contract.end_date || 'Ongoing'}
-                            
-                          
-                        
-                      
-                    
-                  
+                    <div className="space-y-2 text-sm">
+                      <div>
+                        <span className="text-gray-500">Vendor:</span>
+                        <span className="ml-1 text-gray-900">{contract.subcontractor?.name || 'Unknown Vendor'}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Amount:</span>
+                        <span className="ml-1 text-gray-900">${(contract.contract_amount || 0).toLocaleString()}</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <span className="text-gray-500">Start Date:</span>
+                          <div className="text-gray-900">{contract.start_date || 'Not set'}</div>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">End Date:</span>
+                          <div className="text-gray-900">{contract.end_date || 'Ongoing'}</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 ))}
 
                 {filteredContracts.length === 0 && (
-                  
-                    
-                      
-                      No contracts found
-                    
-                  
+                  <div className="text-center py-12">
+                    <div className="text-gray-400 mb-4">
+                      <FilePlus className="w-12 h-12 mx-auto" />
+                    </div>
+                    <p className="text-gray-500">No contracts found</p>
+                  </div>
                 )}
-              
+              </div>
 
-              
-                
-                  
-                    
-                      
-                        
-                      
-                      
+              {/* Desktop Table */}
+              <div className="hidden sm:block bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <input
+                          type="checkbox"
+                          checked={selectedItems.size === filteredContracts.length && filteredContracts.length > 0}
+                          onChange={handleSelectAll}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Contract
-                      
-                      
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Vendor
-                      
-                      
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Amount
-                      
-                      
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Duration
-                      
-                      
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Status
-                      
-                    
-                  
-                  
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
                     {filteredContracts.map((contract) => (
-                      
-                        
-                          
-                            
-                              
-                                
-                                  
-                                    {contract.project?.name || 'Unknown Project'}
-                                  
-                                  Contract #{contract.id}
-                                
-                              
-                            
-                          
+                      <tr key={contract.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <input
+                            type="checkbox"
+                            checked={selectedItems.has(contract.id)}
+                            onChange={() => handleItemSelect(contract.id)}
+                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                          />
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="flex-shrink-0 h-10 w-10">
+                              <div className="h-10 w-10 rounded-lg bg-purple-100 flex items-center justify-center">
+                                <FilePlus className="h-5 w-5 text-purple-600" />
+                              </div>
+                            </div>
+                            <div className="ml-4">
+                              <div className="text-sm font-medium text-gray-900">
+                                {contract.project?.name || 'Unknown Project'}
+                              </div>
+                              <div className="text-sm text-gray-500">Contract #{contract.id}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           {contract.subcontractor?.name || 'Unknown Vendor'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           ${(contract.contract_amount || 0).toLocaleString()}
-                          
-                            {contract.start_date}
-                            
-                              {contract.end_date || 'Ongoing'}
-                            
-                          
-                          
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          <div>{contract.start_date}</div>
+                          <div className="text-gray-500">{contract.end_date || 'Ongoing'}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                             {contract.status || 'Active'}
-                          
-                        
-                      
+                          </span>
+                        </td>
+                      </tr>
                     ))}
                     {filteredContracts.length === 0 && (
-                      
-                        
-                          
-                            
-                              
-                              No contracts found
-                            
-                          
-                        
-                      
+                      <tr>
+                        <td colSpan={6} className="px-6 py-12 text-center">
+                          <div className="text-gray-400 mb-4">
+                            <FilePlus className="w-12 h-12 mx-auto" />
+                          </div>
+                          <p className="text-gray-500">No contracts found</p>
+                        </td>
+                      </tr>
                     )}
-                  
-                
-              
-            
+                  </tbody>
+                </table>
+              </div>
+            </div>
           )}
-        
-      
+        </div>
+      </div>
 
-      
-        {openForm === 'project' && (
-          
-            
-              
-                
-                  
-                    
-                      
-                        
-                          
-                          Add New Project
-                          
-                            
-                          
-                        
-                        {projectFields}
-                        {addProject}
-                        {() => setOpenForm(null)}
-                        {isLoading.project}
-                        {setFormDirty}
-                      
-                    
-                  
-                
-              
-            
-          
-        )}
+      {/* Modal Forms */}
+      {openForm === 'project' && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <AddForm
+              title="Add New Project"
+              icon={<Building className="w-6 h-6 text-blue-600" />}
+              fields={projectFields}
+              onSubmit={addProject}
+              onClose={() => setOpenForm(null)}
+              isLoading={isLoading.project}
+              setDirty={setFormDirty}
+            />
+          </div>
+        </div>
+      )}
 
-        {openForm === 'vendor' && (
-          
-            
-              
-                
-                  
-                    
-                      
-                        
-                          
-                          Add New Vendor
-                          
-                            
-                          
-                        
-                        {vendorFields}
-                        {addSubcontractor}
-                        {() => setOpenForm(null)}
-                        {isLoading.vendor}
-                        {setFormDirty}
-                      
-                    
-                  
-                
-              
-            
-          
-        )}
+      {openForm === 'vendor' && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <AddForm
+              title="Add New Vendor"
+              icon={<UserPlus className="w-6 h-6 text-blue-600" />}
+              fields={vendorFields}
+              onSubmit={addSubcontractor}
+              onClose={() => setOpenForm(null)}
+              isLoading={isLoading.vendor}
+              setDirty={setFormDirty}
+            />
+          </div>
+        </div>
+      )}
 
-        {openForm === 'contract' && (
-          
-            
-              
-                
-                  
-                    
-                      {() => setOpenForm(null)}
-                      {() => addNotification('success', 'Contract added successfully!')}
-                      {(message) => addNotification('error', message)}
-                      {setFormDirty}
-                    
-                  
-                
-              
-            
-          
-        )}
+      {openForm === 'contract' && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <AddContractForm
+              onClose={() => setOpenForm(null)}
+              onSuccess={() => addNotification('success', 'Contract added successfully!')}
+              onError={(message) => addNotification('error', message)}
+              setDirty={setFormDirty}
+            />
+          </div>
+        </div>
+      )}
 
-        
-        {showUnsavedWarning && (
-          
-            
-              
-                
-                  
-                    
-                      
-                    
-                    Unsaved Changes
-                  
-                
-                
-                  You have unsaved changes. Are you sure you want to switch forms? Your current changes will be lost.
-                
-                
-                  
-                    Cancel
-                    Discard Changes
-                  
-                
-              
-            
-          
-        )}
-      
-    
+      {/* Unsaved Warning Modal */}
+      {showUnsavedWarning && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <AlertCircle className="w-8 h-8 text-yellow-500" />
+              <h3 className="text-lg font-semibold text-gray-800">Unsaved Changes</h3>
+            </div>
+            <p className="text-gray-600 mb-6">
+              You have unsaved changes. Are you sure you want to switch forms? Your current changes will be lost.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button 
+                onClick={handleCancelSwitch} 
+                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleConfirmSwitch} 
+                className="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors"
+              >
+                Discard Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 
