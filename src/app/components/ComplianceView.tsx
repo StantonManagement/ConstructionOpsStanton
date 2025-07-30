@@ -1,5 +1,4 @@
-
-import React, { useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useData } from '../context/DataContext';
 
 const ComplianceView: React.FC = () => {
@@ -11,7 +10,7 @@ const ComplianceView: React.FC = () => {
         let validItems = 0;
         let expiredItems = 0;
         let pendingItems = 0;
-        
+
         const permitTypes = new Set<string>();
         const projectCompliance: Array<{
             id: number;
@@ -24,11 +23,11 @@ const ComplianceView: React.FC = () => {
         projects.forEach(project => {
             const permits = project.permits || {};
             const permitEntries = Object.entries(permits);
-            
+
             permitEntries.forEach(([type, status]) => {
                 permitTypes.add(type);
                 totalItems++;
-                
+
                 switch (status) {
                     case 'approved':
                     case 'valid':
@@ -45,7 +44,7 @@ const ComplianceView: React.FC = () => {
 
             const projectValidItems = permitEntries.filter(([, status]) => status === 'approved' || status === 'valid').length;
             const complianceScore = permitEntries.length > 0 ? (projectValidItems / permitEntries.length) * 100 : 0;
-            
+
             let status: 'excellent' | 'good' | 'warning' | 'critical';
             if (complianceScore >= 90) status = 'excellent';
             else if (complianceScore >= 75) status = 'good';
@@ -114,7 +113,7 @@ const ComplianceView: React.FC = () => {
             md: 'h-3',
             lg: 'h-4'
         };
-        
+
         const colorClasses = {
             blue: 'bg-blue-500',
             green: 'bg-green-500',
@@ -329,7 +328,7 @@ const ComplianceView: React.FC = () => {
                                         <h4 className="font-semibold text-gray-900 flex-1">{project.name}</h4>
                                         <span className="text-lg ml-2">{getProjectStatusIcon()}</span>
                                     </div>
-                                    
+
                                     <div className="mb-4">
                                         <div className="flex justify-between text-xs text-gray-600 mb-1">
                                             <span>Compliance Score</span>
@@ -341,7 +340,7 @@ const ComplianceView: React.FC = () => {
                                             height="lg"
                                         />
                                     </div>
-                                    
+
                                     <div className="space-y-2">
                                         <h5 className="text-sm font-medium text-gray-700">Permit Status:</h5>
                                         {Object.entries(project.permits).length === 0 ? (
