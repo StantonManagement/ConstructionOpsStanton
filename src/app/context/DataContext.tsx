@@ -191,6 +191,12 @@ function dataReducer(state: InitialDataType, action: { type: string; payload?: u
         subcontractors: action.payload as Subcontractor[],
       };
     }
+    case 'SET_CONTRACTS': {
+      return {
+        ...state,
+        contracts: action.payload as Contract[],
+      };
+    }
     default:
       return state;
   }
@@ -232,6 +238,33 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       }
     };
     fetchSubcontractors();
+  }, []);
+
+  useEffect(() => {
+    const fetchContracts = async () => {
+      const { data } = await supabase
+        .from('contracts')
+        .select(`
+          *,
+          projects (id, name, client_name),
+          contractors (id, name, trade)
+        `);
+      if (data) {
+        const mapped = data.map((c: any) => ({
+          id: c.id,
+          project_id: c.project_id,
+          subcontractor_id: c.subcontractor_id,
+          contract_amount: c.contract_amount,
+          start_date: c.start_date,
+          end_date: c.end_date,
+          status: c.status ?? 'active',
+          project: c.projects,
+          subcontractor: c.contractors,
+        }));
+        dispatch({ type: 'SET_CONTRACTS', payload: mapped });
+      }
+    };
+    fetchContracts();
   }, []);
 
   const value: DataContextType = {
