@@ -5,7 +5,6 @@ import { supabase } from '@/lib/supabaseClient';
 import { Building, UserPlus, FilePlus, AlertCircle, CheckCircle, X } from 'lucide-react';
 import LineItemFormModal from '@/components/LineItemFormModal';
 import LineItemEditor, { LineItem } from '@/components/LineItemEditor';
-import Image from 'next/image';
 
 // Enhanced notification system
 type NotificationType = 'success' | 'error' | 'warning' | 'info';
