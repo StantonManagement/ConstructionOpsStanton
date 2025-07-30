@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { Building, UserPlus, FilePlus, AlertCircle, CheckCircle, X } from 'lucide-react';
 import LineItemFormModal from '@/components/LineItemFormModal';
 import LineItemEditor, { LineItem } from '@/components/LineItemEditor';
+import MetricsView from './MetricsView';
 import Image from 'next/image';
 
 // Enhanced notification system
@@ -773,40 +774,6 @@ const AddContractForm: React.FC<{
 };
 
 // Enhanced main component with notification system
-
-// Define MetricsView component
-const MetricsView: React.FC = () => {
-    const { projects, subcontractors } = useData();
-    // You can add more complex metrics calculations here based on projects and subcontractors data
-    const totalProjects = projects.length;
-    const totalSubcontractors = subcontractors.length;
-    const totalBudget = projects.reduce((sum, project) => sum + (project.budget || 0), 0);
-
-    return (
-        <div className="bg-white rounded-lg shadow p-6 mb-4">
-            <h2 className="text-lg font-semibold text-gray-800 mb-4">Key Metrics</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {/* Total Projects Metric */}
-                <div className="bg-gray-50 rounded-lg p-4">
-                    <h3 className="text-sm font-medium text-gray-600">Total Projects</h3>
-                    <p className="text-2xl font-bold text-blue-600">{totalProjects}</p>
-                </div>
-
-                {/* Total Subcontractors Metric */}
-                <div className="bg-gray-50 rounded-lg p-4">
-                    <h3 className="text-sm font-medium text-gray-600">Total Subcontractors</h3>
-                    <p className="text-2xl font-bold text-green-600">{totalSubcontractors}</p>
-                </div>
-
-                {/* Total Budget Metric */}
-                <div className="bg-gray-50 rounded-lg p-4">
-                    <h3 className="text-sm font-medium text-gray-600">Total Budget</h3>
-                    <p className="text-2xl font-bold text-purple-600">${totalBudget.toLocaleString()}</p>
-                </div>
-            </div>
-        </div>
-    );
-};
 
 const ManageView: React.FC = () => {
   const { dispatch, projects, subcontractors, contracts } = useData();
