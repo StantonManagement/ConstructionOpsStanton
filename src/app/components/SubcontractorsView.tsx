@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Search, Filter, Phone, Mail, MapPin, Calendar, CheckCircle, XCircle, AlertCircle, UserPlus } from 'lucide-react';
-import { useData } from '../context/DataContext';
+import { useData, Subcontractor } from '../context/DataContext';
 import { supabase } from '@/lib/supabaseClient';
 import { sendSMS } from '@/lib/sms';
 
@@ -128,25 +128,12 @@ const vendorFields: AddFormField[] = [
   { name: 'email', placeholder: 'Email', type: 'email', validators: [validators.email] },
 ];
 
-// Extend Subcontractor type to include missing properties
-interface Subcontractor {
-  id: number;
-  name: string;
-  trade: string;
-  status: string;
-  compliance: Record<string, string>;
-  phone?: string;
-  rating?: number;
-  company?: string;
-  email?: string;
-}
-
 const SubcontractorsView: React.FC = () => {
-    const { subcontractors, dispatch } = useData() as { subcontractors: Subcontractor[], dispatch: any };
+    const { subcontractors, dispatch } = useData();
     const [searchTerm, setSearchTerm] = useState('');
     const [filterTrade, setFilterTrade] = useState('');
     const [filterStatus, setFilterStatus] = useState('');
-    const [sortBy, setSortBy] = useState<'name' | 'trade' | 'rating'>('name');
+    const [sortBy, setSortBy] = useState<'name' | 'trade' | 'performance_score'>('name');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
     const [modal, setModal] = useState<'add' | 'edit' | 'view' | null>(null);
     const [selectedSub, setSelectedSub] = useState<Subcontractor | null>(null);
@@ -170,15 +157,16 @@ const SubcontractorsView: React.FC = () => {
                 (filterStatus === '' || sub.status === filterStatus)
             )
             .sort((a, b) => {
-                let aVal: string | number = a[sortBy] ?? (sortBy === 'rating' ? 0 : '');
-                let bVal: string | number = b[sortBy] ?? (sortBy === 'rating' ? 0 : '');
+                let aVal: string | number;
+                let bVal: string | number;
                 
-                if (sortBy === 'rating') {
-                    aVal = a.rating || 0;
-                    bVal = b.rating || 0;
+                if (sortBy === 'performance_score') {
+                    // Use performance_score as rating if available, otherwise 0
+                    aVal = (a as any).performance_score || 0;
+                    bVal = (b as any).performance_score || 0;
                 } else {
-                    aVal = String(aVal).toLowerCase();
-                    bVal = String(bVal).toLowerCase();
+                    aVal = String(a[sortBy] || '').toLowerCase();
+                    bVal = String(b[sortBy] || '').toLowerCase();
                 }
                 
                 if (sortOrder === 'asc') {
@@ -340,7 +328,7 @@ const SubcontractorsView: React.FC = () => {
                         value={`${sortBy}-${sortOrder}`}
                         onChange={(e) => {
                             const [field, order] = e.target.value.split('-');
-                            setSortBy(field as 'name' | 'trade' | 'rating');
+                            setSortBy(field as 'name' | 'trade' | 'performance_score');
                             setSortOrder(order as 'asc' | 'desc');
                         }}
                     >
@@ -348,8 +336,8 @@ const SubcontractorsView: React.FC = () => {
                         <option value="name-desc" className="text-neutral-700">Name Z-A</option>
                         <option value="trade-asc" className="text-neutral-700">Trade A-Z</option>
                         <option value="trade-desc" className="text-neutral-700">Trade Z-A</option>
-                        <option value="rating-desc" className="text-neutral-700">Highest Rated</option>
-                        <option value="rating-asc" className="text-neutral-700">Lowest Rated</option>
+                        <option value="performance_score-desc" className="text-neutral-700">Highest Rated</option>
+                        <option value="performance_score-asc" className="text-neutral-700">Lowest Rated</option>
                     </select>
                 </div>
             </div>
@@ -384,7 +372,19 @@ const SubcontractorsView: React.FC = () => {
                             const complianceScore = getComplianceScore(sub.compliance);
                             
                             return (
-                                <tr key={sub.id} className="hover:bg-gray-50 transition-colors">
+                                <tr 
+                                    key={sub.id} 
+                                    className="hover:bg-blue-50 hover:shadow-sm hover:border-l-4 hover:border-l-blue-500 transition-all duration-200 cursor-pointer group border-l-4 border-l-transparent"
+                                    onClick={() => handleView(sub)}
+                                    role="button"
+                                    tabIndex={0}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' || e.key === ' ') {
+                                            e.preventDefault();
+                                            handleView(sub);
+                                        }
+                                    }}
+                                >
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="flex items-center">
                                             <div className="flex-shrink-0 h-10 w-10">
@@ -395,9 +395,14 @@ const SubcontractorsView: React.FC = () => {
                                                 </div>
                                             </div>
                                             <div className="ml-4">
-                                                <div className="text-sm font-medium text-neutral-800">{sub.name}</div>
+                                                <div className="text-sm font-medium text-neutral-800 group-hover:text-blue-700 transition-colors">
+                                                    {sub.name}
+                                                    <span className="ml-2 text-xs text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        Click to view →
+                                                    </span>
+                                                </div>
                                                 <div className="text-sm text-neutral-700">
-                                                    {sub.company || 'Individual Contractor'}
+                                                    {sub.trade}
                                                 </div>
                                             </div>
                                         </div>
@@ -405,7 +410,7 @@ const SubcontractorsView: React.FC = () => {
                                     
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="text-sm font-medium text-neutral-800">{sub.trade}</div>
-                                        {sub.rating && renderStarRating(sub.rating)}
+                                        {(sub as any).performance_score && renderStarRating((sub as any).performance_score)}
                                     </td>
                                     
                                     <td className="px-6 py-4 whitespace-nowrap">
@@ -469,13 +474,32 @@ const SubcontractorsView: React.FC = () => {
                                     
                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                         <div className="flex space-x-2">
-                                            <button className="text-blue-600 hover:text-blue-900 text-sm" onClick={() => handleView(sub)}>
+                                            <button 
+                                                className="text-blue-600 hover:text-blue-900 text-sm" 
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleView(sub);
+                                                }}
+                                            >
                                                 View
                                             </button>
-                                            <button className="text-green-600 hover:text-green-900 text-sm" onClick={() => handleContact(sub)}>
+                                            <button 
+                                                className="text-green-600 hover:text-green-900 text-sm" 
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleContact(sub);
+                                                }}
+                                            >
                                                 Contact
                                             </button>
-                                            <button className="text-gray-600 hover:text-gray-900 text-sm" onClick={() => { setSelectedSub(sub); setModal('edit'); }}>
+                                            <button 
+                                                className="text-gray-600 hover:text-gray-900 text-sm" 
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setSelectedSub(sub);
+                                                    setModal('edit');
+                                                }}
+                                            >
                                                 Edit
                                             </button>
                                         </div>
@@ -536,15 +560,18 @@ const SubcontractorsView: React.FC = () => {
                   <div className="space-y-3 text-base text-gray-800">
                     <div><span className="font-semibold">Name:</span> {selectedSub.name}</div>
                     <div><span className="font-semibold">Trade:</span> {selectedSub.trade}</div>
-                    <div><span className="font-semibold">Status:</span> <span className="capitalize px-2 py-1 rounded-full text-xs font-semibold ml-1
-                      ${selectedSub.status === 'active' ? 'bg-green-100 text-green-800' : selectedSub.status === 'inactive' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'}">
+                    <div><span className="font-semibold">Status:</span> <span className={`capitalize px-2 py-1 rounded-full text-xs font-semibold ml-1 ${
+                      selectedSub.status === 'active' ? 'bg-green-100 text-green-800' : 
+                      selectedSub.status === 'inactive' ? 'bg-red-100 text-red-800' : 
+                      'bg-yellow-100 text-yellow-800'
+                    }`}>
                       {selectedSub.status}
                     </span></div>
                     <div><span className="font-semibold">Phone:</span> {selectedSub.phone || <span className="text-gray-400">N/A</span>}</div>
                     <div><span className="font-semibold">Email:</span> {selectedSub.email || <span className="text-gray-400">N/A</span>}</div>
-                    <div><span className="font-semibold">Company:</span> {selectedSub.company || <span className="text-gray-400">N/A</span>}</div>
+                    <div><span className="font-semibold">Trade:</span> {selectedSub.trade}</div>
                   </div>
-                  <div className="my-4 border-t border-gray-https://construction-ops-stanton.vercel.app/200" />
+                  <div className="my-4 border-t border-gray-200" />
                   <div>
                     <div className="font-semibold text-gray-700 mb-2">Compliance</div>
                     <div className="flex gap-4">

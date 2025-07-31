@@ -49,3 +49,12 @@ CREATE INDEX IF NOT EXISTS idx_payment_approval_logs_performed_by ON payment_app
 -- Allow authenticated users to insert logs
 -- CREATE POLICY "Allow authenticated users to insert approval logs" ON payment_approval_logs
 --   FOR INSERT TO authenticated WITH CHECK (true);
+
+-- Add request_time column to daily_log_requests table
+ALTER TABLE daily_log_requests 
+ADD COLUMN request_time TIME DEFAULT '18:00:00';
+
+-- Update existing records to have the default time
+UPDATE daily_log_requests 
+SET request_time = '18:00:00' 
+WHERE request_time IS NULL;

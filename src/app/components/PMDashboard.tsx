@@ -241,6 +241,17 @@ function DailyLogRequests({ projects }: { projects: any[] }) {
   const [showAddRequest, setShowAddRequest] = useState(false);
   const [selectedProject, setSelectedProject] = useState<any>(null);
   const [pmPhoneNumber, setPmPhoneNumber] = useState('');
+  const [requestTime, setRequestTime] = useState('18:00'); // Default to 6 PM EST
+
+  // Phone number validation
+  const validatePhoneNumber = (phone: string) => {
+    // Remove all non-digit characters
+    const cleaned = phone.replace(/\D/g, '');
+    // Check if it's a valid US phone number (10 or 11 digits)
+    return cleaned.length === 10 || cleaned.length === 11;
+  };
+
+  const [phoneError, setPhoneError] = useState('');
 
   useEffect(() => {
     fetchRequests();
@@ -267,6 +278,13 @@ function DailyLogRequests({ projects }: { projects: any[] }) {
   const handleAddRequest = async () => {
     if (!selectedProject || !pmPhoneNumber.trim()) return;
 
+    // Validate phone number
+    if (!validatePhoneNumber(pmPhoneNumber)) {
+      setPhoneError('Please enter a valid phone number (10 or 11 digits)');
+      return;
+    }
+    setPhoneError('');
+
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -275,16 +293,18 @@ function DailyLogRequests({ projects }: { projects: any[] }) {
           project_id: selectedProject.id,
           request_date: new Date().toISOString().split('T')[0],
           pm_phone_number: pmPhoneNumber.trim(),
-          request_status: 'pending'
+          request_status: 'pending',
+          request_time: requestTime // Add the custom time
         })
         .select();
 
       if (!error && data) {
         setSelectedProject(null);
         setPmPhoneNumber('');
+        setRequestTime('18:00'); // Reset to default
         setShowAddRequest(false);
         await fetchRequests();
-        alert('Daily log request added successfully! The system will automatically request notes from the PM daily at 6 PM EST.');
+        alert(`Daily log request added successfully! The system will automatically request notes from the PM daily at ${requestTime} EST.`);
       } else {
         alert('Failed to add request: ' + (error?.message || 'Unknown error'));
       }
@@ -373,15 +393,36 @@ function DailyLogRequests({ projects }: { projects: any[] }) {
                   <input
                     type="tel"
                     value={pmPhoneNumber}
-                    onChange={(e) => setPmPhoneNumber(e.target.value)}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
+                    onChange={(e) => {
+                      setPmPhoneNumber(e.target.value);
+                      if (phoneError) setPhoneError('');
+                    }}
+                    className={`w-full border rounded-md px-3 py-2 focus:ring-blue-500 focus:border-blue-500 ${
+                      phoneError ? 'border-red-300' : 'border-gray-300'
+                    }`}
                     placeholder="+1234567890"
                   />
+                  {phoneError && (
+                    <p className="text-sm text-red-600 mt-1">{phoneError}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Request Time (EST)</label>
+                  <input
+                    type="time"
+                    value={requestTime}
+                    onChange={(e) => setRequestTime(e.target.value)}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Select the time when the system should send daily SMS requests (EST timezone)
+                  </p>
                 </div>
 
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                   <p className="text-sm text-blue-800">
-                    <strong>How it works:</strong> The system will automatically send SMS requests to the PM daily at 6 PM EST, 
+                    <strong>How it works:</strong> The system will automatically send SMS requests to the PM daily at {requestTime} EST, 
                     asking for notes about each active project. It will retry every 30 minutes until notes are received.
                   </p>
                 </div>
@@ -409,59 +450,74 @@ function DailyLogRequests({ projects }: { projects: any[] }) {
 
       {/* Requests List */}
       <div className="space-y-4">
-        {requests.map((request) => (
-          <div key={request.id} className="bg-white border border-gray-200 rounded-lg p-4">
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-sm font-medium text-gray-900">
-                    {request.project?.name} - {request.project?.client_name}
-                  </span>
-                  {getStatusBadge(request.request_status)}
-                </div>
-                
-                <div className="text-sm text-gray-600 mb-2">
-                  <div>PM Phone: {request.pm_phone_number}</div>
-                  <div>Request Date: {request.request_date}</div>
-                  {request.retry_count > 0 && (
-                    <div>Retry Count: {request.retry_count}</div>
-                  )}
-                  {request.received_notes && (
-                    <div className="mt-2 p-2 bg-gray-50 rounded border">
-                      <strong>Received Notes:</strong> {request.received_notes}
+        {loading ? (
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-white border border-gray-200 rounded-lg p-4 animate-pulse">
+                <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                <div className="h-3 bg-gray-200 rounded w-1/2 mb-2"></div>
+                <div className="h-3 bg-gray-200 rounded w-1/4"></div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <>
+            {requests.map((request) => (
+              <div key={request.id} className="bg-white border border-gray-200 rounded-lg p-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-sm font-medium text-gray-900">
+                        {request.project?.name} - {request.project?.client_name}
+                      </span>
+                      {getStatusBadge(request.request_status)}
                     </div>
-                  )}
-                </div>
-                
-                <div className="text-xs text-gray-500">
-                  Created: {request.created_at ? formatDate(request.created_at) : 'Unknown'}
-                  {request.last_request_sent_at && (
-                    <span> • Last Sent: {formatDate(request.last_request_sent_at)}</span>
-                  )}
-                  {request.received_at && (
-                    <span> • Received: {formatDate(request.received_at)}</span>
-                  )}
+                    
+                    <div className="text-sm text-gray-600 mb-2">
+                      <div>PM Phone: {request.pm_phone_number}</div>
+                      <div>Request Date: {request.request_date}</div>
+                      <div>Request Time: {request.request_time || '18:00'} EST</div>
+                      {request.retry_count > 0 && (
+                        <div>Retry Count: {request.retry_count}</div>
+                      )}
+                      {request.received_notes && (
+                        <div className="mt-2 p-2 bg-gray-50 rounded border">
+                          <strong>Received Notes:</strong> {request.received_notes}
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="text-xs text-gray-500">
+                      Created: {request.created_at ? formatDate(request.created_at) : 'Unknown'}
+                      {request.last_request_sent_at && (
+                        <span> • Last Sent: {formatDate(request.last_request_sent_at)}</span>
+                      )}
+                      {request.received_at && (
+                        <span> • Received: {formatDate(request.received_at)}</span>
+                      )}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleDeleteRequest(request.id)}
+                    className="text-red-600 hover:text-red-800 p-1"
+                    title="Delete request"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
                 </div>
               </div>
-              <button
-                onClick={() => handleDeleteRequest(request.id)}
-                className="text-red-600 hover:text-red-800 p-1"
-                title="Delete request"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-              </button>
-            </div>
-          </div>
-        ))}
+            ))}
 
-        {requests.length === 0 && (
-          <div className="text-center py-12 bg-white border-2 border-dashed border-gray-300 rounded-lg">
-            <div className="text-4xl mb-4">📝</div>
-            <p className="text-gray-500 font-medium">No daily log requests yet</p>
-            <p className="text-sm text-gray-400">Add requests to automatically ask PM managers for daily notes</p>
-          </div>
+            {requests.length === 0 && (
+              <div className="text-center py-12 bg-white border-2 border-dashed border-gray-300 rounded-lg">
+                <div className="text-4xl mb-4">📝</div>
+                <p className="text-gray-500 font-medium">No daily log requests yet</p>
+                <p className="text-sm text-gray-400">Add requests to automatically ask PM managers for daily notes</p>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
@@ -1535,6 +1591,7 @@ export default function PMDashboard() {
   const itemsPerPage = 10;
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [activeTab, setActiveTab] = useState('payments'); // Default to 'payments'
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -1568,6 +1625,7 @@ export default function PMDashboard() {
   const loadDashboardData = useCallback(async () => {
     setLoading(true);
     setError(null);
+    setIsRefreshing(true);
     try {
       const userData = await fetchUser();
       setUser(userData);
@@ -1629,9 +1687,11 @@ export default function PMDashboard() {
       });
       setLastRefresh(new Date());
     } catch (err: any) {
-      setError(err.message || "Failed to load dashboard");
+      console.error('Dashboard data loading error:', err);
+      setError(err.message || "Failed to load dashboard data. Please try refreshing the page.");
     } finally {
       setLoading(false);
+      setIsRefreshing(false);
     }
   }, [fetchUser]);
 
@@ -1916,7 +1976,7 @@ export default function PMDashboard() {
         {/* Mobile-Optimized Header */}
         <div className="flex flex-col gap-4 mb-6 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0 flex-1">
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 truncate">Payment Manager</h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 truncate">Project Management Dashboard</h1>
             <p className="text-xs sm:text-sm text-gray-600 mt-1">
               <span className="inline-block">{filteredApps.length} applications</span>
               <span className="hidden sm:inline"> • </span>
@@ -1924,6 +1984,23 @@ export default function PMDashboard() {
                 Updated {mounted ? lastRefresh.toLocaleTimeString() : ""}
               </span>
             </p>
+            {error && (
+              <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <span className="text-red-600">⚠️</span>
+                  <span className="text-sm text-red-800">{error}</span>
+                  <button
+                    onClick={() => {
+                      setError(null);
+                      loadDashboardData();
+                    }}
+                    className="ml-auto text-xs bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700"
+                  >
+                    Retry
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
           <div className="flex items-center justify-between sm:justify-end gap-3">
             <button
@@ -1935,12 +2012,25 @@ export default function PMDashboard() {
               </svg>
               Filters
             </button>
-            {loading && (
-              <div className="flex items-center gap-2 text-blue-600">
-                <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                <span className="text-xs sm:text-sm">Syncing...</span>
-              </div>
-            )}
+            <button
+              onClick={loadDashboardData}
+              disabled={isRefreshing}
+              className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isRefreshing ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span className="hidden sm:inline">Syncing...</span>
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  <span className="hidden sm:inline">Refresh</span>
+                </>
+              )}
+            </button>
           </div>
         </div>
 

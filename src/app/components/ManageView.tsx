@@ -1,4 +1,3 @@
-
 import React, { useState, ChangeEvent, FormEvent, ReactNode, useCallback, useMemo } from 'react';
 import { useData } from '../context/DataContext';
 import { supabase } from '@/lib/supabaseClient';
@@ -82,6 +81,7 @@ type AddFormProps = {
   onClose: () => void;
   isLoading?: boolean;
   setDirty: (dirty: boolean) => void;
+  initialData?: Record<string, string>;
 };
 
 const AddForm: React.FC<AddFormProps> = ({ 
@@ -91,13 +91,19 @@ const AddForm: React.FC<AddFormProps> = ({
   onSubmit, 
   onClose,
   isLoading = false,
-  setDirty
+  setDirty,
+  initialData
 }) => {
   const [formData, setFormData] = useState<Record<string, string>>(
-    () => fields.reduce((acc, field) => {
-      acc[field.name] = field.defaultValue || '';
-      return acc;
-    }, {} as Record<string, string>)
+    () => {
+      const defaultData = fields.reduce((acc, field) => {
+        acc[field.name] = field.defaultValue || '';
+        return acc;
+      }, {} as Record<string, string>);
+      
+      // Merge with initialData if provided
+      return initialData ? { ...defaultData, ...initialData } : defaultData;
+    }
   );
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
@@ -770,6 +776,10 @@ const ManageView: React.FC = () => {
   const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
   const [showBulkActions, setShowBulkActions] = useState(false);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  const [viewModal, setViewModal] = useState<'project' | 'vendor' | 'contract' | null>(null);
+  const [editModal, setEditModal] = useState<'project' | 'vendor' | 'contract' | null>(null);
+  const [selectedItem, setSelectedItem] = useState<any>(null);
 
   const addNotification = useCallback((
     type: NotificationType, 
@@ -969,6 +979,26 @@ const ManageView: React.FC = () => {
       const message = error instanceof Error ? error.message : 'Failed to delete items';
       addNotification('error', message);
     }
+  };
+
+  const handleViewItem = (item: any, type: 'project' | 'vendor' | 'contract') => {
+    setSelectedItem(item);
+    setViewModal(type);
+  };
+
+  const handleEditItem = (item: any, type: 'project' | 'vendor' | 'contract') => {
+    setSelectedItem(item);
+    setEditModal(type);
+  };
+
+  const handleCloseViewModal = () => {
+    setViewModal(null);
+    setSelectedItem(null);
+  };
+
+  const handleCloseEditModal = () => {
+    setEditModal(null);
+    setSelectedItem(null);
   };
 
   return (
@@ -1316,12 +1346,19 @@ const ManageView: React.FC = () => {
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Progress
                       </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {filteredProjects.map((project) => (
-                      <tr key={project.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap">
+                      <tr 
+                        key={project.id} 
+                        className="hover:bg-gray-50 cursor-pointer transition-colors duration-150"
+                        onClick={() => handleViewItem(project, 'project')}
+                      >
+                        <td className="px-6 py-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                           <input
                             type="checkbox"
                             checked={selectedItems.has(project.id)}
@@ -1371,11 +1408,23 @@ const ManageView: React.FC = () => {
                             </div>
                           </div>
                         </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex space-x-2">
+                            <button
+                              onClick={() => handleEditItem(project, 'project')}
+                              className="text-blue-600 hover:text-blue-900 text-sm font-medium"
+                            >
+                              Edit
+                            </button>
+                            <span className="text-gray-300">|</span>
+                            <span className="text-xs text-gray-500">Click row to view</span>
+                          </div>
+                        </td>
                       </tr>
                     ))}
                     {filteredProjects.length === 0 && (
                       <tr>
-                        <td colSpan={7} className="px-6 py-12 text-center">
+                        <td colSpan={8} className="px-6 py-12 text-center">
                           <div className="text-gray-400 mb-4">
                             <Building className="w-12 h-12 mx-auto" />
                           </div>
@@ -1495,12 +1544,19 @@ const ManageView: React.FC = () => {
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Status
                       </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {filteredVendors.map((vendor) => (
-                      <tr key={vendor.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap">
+                      <tr 
+                        key={vendor.id} 
+                        className="hover:bg-gray-50 cursor-pointer transition-colors duration-150"
+                        onClick={() => handleViewItem(vendor, 'vendor')}
+                      >
+                        <td className="px-6 py-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                           <input
                             type="checkbox"
                             checked={selectedItems.has(vendor.id)}
@@ -1558,11 +1614,23 @@ const ManageView: React.FC = () => {
                             {vendor.status || 'Active'}
                           </span>
                         </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex space-x-2">
+                            <button
+                              onClick={() => handleEditItem(vendor, 'vendor')}
+                              className="text-blue-600 hover:text-blue-900 text-sm font-medium"
+                            >
+                              Edit
+                            </button>
+                            <span className="text-gray-300">|</span>
+                            <span className="text-xs text-gray-500">Click row to view</span>
+                          </div>
+                        </td>
                       </tr>
                     ))}
                     {filteredVendors.length === 0 && (
                       <tr>
-                        <td colSpan={6} className="px-6 py-12 text-center">
+                        <td colSpan={7} className="px-6 py-12 text-center">
                           <div className="text-gray-400 mb-4">
                             <UserPlus className="w-12 h-12 mx-auto" />
                           </div>
@@ -1767,6 +1835,112 @@ const ManageView: React.FC = () => {
               onSuccess={() => addNotification('success', 'Contract added successfully!')}
               onError={(message) => addNotification('error', message)}
               setDirty={setFormDirty}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* View Modals */}
+      {viewModal === 'project' && selectedItem && (
+        <div className="fixed inset-0  bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-semibold text-gray-800">Project Details</h3>
+              <button onClick={handleCloseViewModal} className="text-gray-400 hover:text-gray-700">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div><span className="font-semibold">Name:</span> {selectedItem.name}</div>
+              <div><span className="font-semibold">Client:</span> {selectedItem.client_name || 'Not specified'}</div>
+              <div><span className="font-semibold">Phase:</span> {selectedItem.current_phase || 'Not set'}</div>
+              <div><span className="font-semibold">Budget:</span> ${(selectedItem.budget || 0).toLocaleString()}</div>
+              <div><span className="font-semibold">Spent:</span> ${(selectedItem.spent || 0).toLocaleString()}</div>
+              <div><span className="font-semibold">Status:</span> {(selectedItem as any).status || 'Active'}</div>
+              <div><span className="font-semibold">Start Date:</span> {(selectedItem as any).start_date || 'Not set'}</div>
+            </div>
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={() => handleEditItem(selectedItem, 'project')}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Edit Project
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {viewModal === 'vendor' && selectedItem && (
+        <div className="fixed inset-0  bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-semibold text-gray-800">Vendor Details</h3>
+              <button onClick={handleCloseViewModal} className="text-gray-400 hover:text-gray-700">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div><span className="font-semibold">Name:</span> {selectedItem.name}</div>
+              <div><span className="font-semibold">Trade:</span> {selectedItem.trade}</div>
+              <div><span className="font-semibold">Phone:</span> {selectedItem.phone || 'Not provided'}</div>
+              <div><span className="font-semibold">Email:</span> {(selectedItem as any).email || 'Not provided'}</div>
+              <div><span className="font-semibold">Status:</span> {selectedItem.status || 'Active'}</div>
+              <div><span className="font-semibold">Performance Score:</span> {(selectedItem as any).performance_score || 'Not rated'}/5</div>
+            </div>
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={() => handleEditItem(selectedItem, 'vendor')}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Edit Vendor
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Modals */}
+      {editModal === 'project' && selectedItem && (
+        <div className="fixed inset-0  bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <AddForm
+              title="Edit Project"
+              icon={<Building className="w-6 h-6 text-blue-600" />}
+              fields={projectFields}
+              onSubmit={addProject}
+              onClose={handleCloseEditModal}
+              isLoading={isLoading.project}
+              setDirty={setFormDirty}
+              initialData={{
+                name: selectedItem.name || '',
+                client_name: selectedItem.client_name || '',
+                current_phase: selectedItem.current_phase || '',
+                budget: selectedItem.budget?.toString() || '',
+                spent: selectedItem.spent?.toString() || '',
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      {editModal === 'vendor' && selectedItem && (
+        <div className="fixed inset-0  bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <AddForm
+              title="Edit Vendor"
+              icon={<UserPlus className="w-6 h-6 text-blue-600" />}
+              fields={vendorFields}
+              onSubmit={addSubcontractor}
+              onClose={handleCloseEditModal}
+              isLoading={isLoading.vendor}
+              setDirty={setFormDirty}
+              initialData={{
+                name: selectedItem.name || '',
+                trade: selectedItem.trade || '',
+                phone: selectedItem.phone || '',
+                email: (selectedItem as any).email || '',
+              }}
             />
           </div>
         </div>

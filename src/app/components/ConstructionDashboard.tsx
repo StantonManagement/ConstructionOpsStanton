@@ -56,6 +56,18 @@ const ConstructionDashboard: React.FC = () => {
     fetchUserData();
   }, []);
 
+  // Handle project selection and redirect to payments tab
+  const handleProjectSelect = (project: Project) => {
+    setSelectedProject(project);
+    setActiveTab('payment');
+  };
+
+  // Handle switching to payments tab without selecting a specific project
+  const handleSwitchToPayments = () => {
+    setSelectedProject(null);
+    setActiveTab('payment');
+  };
+
   const handleProfileUpdate = (profileData: any) => {
     // Update local user data when profile is updated
     setUserData({
@@ -76,7 +88,7 @@ const ConstructionDashboard: React.FC = () => {
       <Header onShowProfile={() => setShowProfile(true)} onLogout={handleLogout} userData={userData} />
       <Navigation activeTab={activeTab} setActiveTab={setActiveTab} setSelectedProject={setSelectedProject} />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {activeTab === 'overview' && <OverviewView />}
+        {activeTab === 'overview' && <OverviewView onProjectSelect={handleProjectSelect} onSwitchToPayments={handleSwitchToPayments} />}
         {activeTab === 'payment' && (selectedProject ? <SubcontractorSelectionView selectedProject={selectedProject} setSelectedProject={setSelectedProject} /> : <PaymentProcessingView setSelectedProject={setSelectedProject} />)}
         {activeTab === 'subcontractors' && <SubcontractorsView />}
         {activeTab === 'compliance' && <ComplianceView />}

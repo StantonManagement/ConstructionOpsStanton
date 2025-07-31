@@ -3,12 +3,27 @@ import { Project } from '../app/context/DataContext';
 
 type Props = {
   project: Project;
+  onSelect?: (project: Project) => void;
 };
 
-const ProjectCard: React.FC<Props> = ({ project }) => {
+const ProjectCard: React.FC<Props> = ({ project, onSelect }) => {
   const percent = project.budget > 0 ? Math.min(100, Math.round((project.spent / project.budget) * 100)) : 0;
+  
+  const handleClick = () => {
+    if (onSelect) {
+      onSelect(project);
+    }
+  };
+
   return (
-    <div className="border rounded-lg p-4 bg-white shadow hover:shadow-md transition">
+    <div 
+      className={`border rounded-lg p-4 bg-white shadow hover:shadow-md transition cursor-pointer ${
+        onSelect ? 'hover:shadow-lg hover:border-blue-300' : ''
+      }`}
+      onClick={handleClick}
+      role={onSelect ? 'button' : undefined}
+      tabIndex={onSelect ? 0 : undefined}
+    >
       <h4 className="font-semibold text-gray-900 text-lg mb-1">{project.name}</h4>
       <p className="text-sm text-black mb-1">{project.client_name}</p>
       <p className="text-xs text-blue-700 mb-2">Phase: {project.current_phase}</p>
@@ -30,6 +45,11 @@ const ProjectCard: React.FC<Props> = ({ project }) => {
           </span>
         </div>
       </div>
+      {onSelect && (
+        <div className="mt-2 text-xs text-blue-600 font-medium">
+          Click to view payments →
+        </div>
+      )}
     </div>
   );
 };

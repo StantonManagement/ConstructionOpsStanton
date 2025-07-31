@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useData } from '../context/DataContext';
 import ProjectCard from '../../components/ProjectCard';
 import { supabase } from '@/lib/supabaseClient';
+import { Project } from '../context/DataContext';
 
 // Types for better type safety
 interface PaymentApplication {
@@ -13,17 +14,15 @@ interface PaymentApplication {
   contractor: { name: string } | null;
 }
 
-interface Project {
-  id: string;
-  budget: number;
-  spent: number;
-  [key: string]: any;
-}
-
 interface StatusConfig {
   color: string;
   label: string;
   icon: string;
+}
+
+interface OverviewViewProps {
+  onProjectSelect?: (project: Project) => void;
+  onSwitchToPayments?: () => void;
 }
 
 // Loading skeleton component
@@ -46,9 +45,16 @@ const QueueCard: React.FC<{
   onReview: (id: string) => void 
 }> = ({ app, status, onReview }) => (
   <div
-    className="flex flex-col border rounded-lg p-4 bg-white shadow hover:shadow-lg transition-all duration-200 group focus-within:ring-2 focus-within:ring-blue-400"
+    className="flex flex-col border rounded-lg p-4 bg-white shadow hover:shadow-lg transition-all duration-200 group focus-within:ring-2 focus-within:ring-blue-400 cursor-pointer"
     tabIndex={0}
     aria-label={`Review application for ${app.project?.name}`}
+    onClick={() => onReview(app.id)}
+    onKeyDown={(e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        onReview(app.id);
+      }
+    }}
   >
     <div className="flex items-center gap-2 mb-2">
       <span className={`px-2 py-1 rounded text-xs font-semibold ${status.color}`}>{status.icon} {status.label}</span>
@@ -74,7 +80,10 @@ const QueueCard: React.FC<{
       </span>
     </div>
     <button
-      onClick={() => onReview(app.id)}
+      onClick={(e) => {
+        e.stopPropagation(); // Prevent card click
+        onReview(app.id);
+      }}
       className="bg-blue-600 hover:bg-blue-700 text-white rounded px-4 py-2 font-medium transition-colors w-max self-end focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
       aria-label={`Go to review for ${app.project?.name}`}
     >
@@ -87,6 +96,18 @@ const DecisionQueueCards: React.FC<{ role: string | null, setError: (msg: string
   const [queue, setQueue] = useState<PaymentApplication[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setLocalError] = useState<string | null>(null); // Only for local fetch errors
+
+  const navigateToPaymentApp = (paymentAppId: string) => {
+    window.location.href = `/payments/${paymentAppId}/verify`;
+  };
+
+  const navigateToPMDashboard = () => {
+    if (role === "admin") {
+      window.location.href = "/pm-dashboard";
+    } else if (role !== null) {
+      setError("You are not authenticated for the page");
+    }
+  };
 
   const fetchQueue = useCallback(async () => {
     try {
@@ -182,12 +203,21 @@ const DecisionQueueCards: React.FC<{ role: string | null, setError: (msg: string
             return (
               <div
                 key={proj.projectName}
-                className={`flex items-center justify-between border rounded-lg p-4 shadow hover:shadow-md transition-all ${
-                  proj.highestPriority === 'urgent' ? 'border-red-300 bg-red-50' :
-                  proj.highestPriority === 'high' ? 'border-orange-300 bg-orange-50' :
-                  proj.highestPriority === 'medium' ? 'border-yellow-300 bg-yellow-50' :
-                  'border-gray-200 bg-gray-50'
+                className={`flex items-center justify-between border rounded-lg p-4 shadow hover:shadow-md transition-all cursor-pointer ${
+                  proj.highestPriority === 'urgent' ? 'border-red-300 bg-red-50 hover:bg-red-100' :
+                  proj.highestPriority === 'high' ? 'border-orange-300 bg-orange-50 hover:bg-orange-100' :
+                  proj.highestPriority === 'medium' ? 'border-yellow-300 bg-yellow-50 hover:bg-yellow-100' :
+                  'border-gray-200 bg-gray-50 hover:bg-gray-100'
                 }`}
+                onClick={navigateToPMDashboard}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    navigateToPMDashboard();
+                  }
+                }}
               >
                 <div>
                   <div className="flex items-center gap-2 font-bold text-lg text-blue-900">
@@ -201,16 +231,14 @@ const DecisionQueueCards: React.FC<{ role: string | null, setError: (msg: string
                   </div>
                   <div className="text-sm text-gray-700">{proj.count} payment{proj.count > 1 ? 's' : ''} need review</div>
                   <div className="text-xs text-green-700 mt-1">Total: ${proj.total.toLocaleString()}</div>
+                  <div className="text-xs text-blue-600 mt-1 font-medium">Click to view details →</div>
                 </div>
                 <button
                   className="bg-blue-600 hover:bg-blue-700 text-white rounded px-4 py-2 font-medium transition-colors"
                   disabled={role === null}
-                  onClick={() => {
-                    if (role === "admin") {
-                      window.location.href = "/pm-dashboard";
-                    } else if (role !== null) {
-                      setError("You are not authenticated for the page");
-                    }
+                  onClick={(e) => {
+                    e.stopPropagation(); // Prevent card click
+                    navigateToPMDashboard();
                   }}
                 >
                   {role === null ? "Checking role..." : "View All"}
@@ -218,13 +246,69 @@ const DecisionQueueCards: React.FC<{ role: string | null, setError: (msg: string
               </div>
             );
           })}
+          
+          {/* Individual Payment Applications */}
+          {queue.length > 0 && (
+            <div className="mt-6">
+              <h4 className="text-sm font-semibold text-gray-700 mb-3">Individual Applications</h4>
+              <div className="space-y-3">
+                {queue.slice(0, 3).map((app) => {
+                  const statusConfig = {
+                    submitted: { color: 'bg-red-100 text-red-800', label: 'Submitted', icon: '🚨' },
+                    needs_review: { color: 'bg-yellow-100 text-yellow-800', label: 'Needs Review', icon: '⚠️' }
+                  };
+                  const status = statusConfig[app.status] || statusConfig.needs_review;
+                  
+                  return (
+                    <div
+                      key={app.id}
+                      className="flex items-center justify-between border rounded-lg p-3 bg-white shadow hover:shadow-md transition-all cursor-pointer"
+                      onClick={() => navigateToPaymentApp(app.id)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          navigateToPaymentApp(app.id);
+                        }
+                      }}
+                    >
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className={`px-2 py-1 rounded text-xs font-semibold ${status.color}`}>
+                            {status.icon} {status.label}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            {app.created_at ? new Date(app.created_at).toLocaleDateString() : '-'}
+                          </span>
+                        </div>
+                        <div className="text-sm font-medium text-gray-900">{app.project?.name || 'Unknown Project'}</div>
+                        <div className="text-xs text-gray-600">Contractor: {app.contractor?.name || 'Unknown'}</div>
+                        <div className="text-xs text-green-700 font-medium">
+                          ${app.current_payment?.toLocaleString() || '0'}
+                        </div>
+                      </div>
+                      <div className="text-blue-600 text-xs font-medium">Click to review →</div>
+                    </div>
+                  );
+                })}
+                {queue.length > 3 && (
+                  <div className="text-center py-2">
+                    <span className="text-xs text-gray-500">
+                      +{queue.length - 3} more applications
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
   );
 };
 
-const OverviewView: React.FC = () => {
+const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchToPayments }) => {
   const { projects } = useData();
   const [role, setRole] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -271,8 +355,16 @@ const OverviewView: React.FC = () => {
     subtitle?: string;
     colorClass: string;
     icon?: string;
-  }> = ({ title, value, subtitle, colorClass, icon }) => (
-    <div className={`${colorClass} rounded-lg p-4 text-center transition-transform hover:scale-105`}>
+    onClick?: () => void;
+  }> = ({ title, value, subtitle, colorClass, icon, onClick }) => (
+    <div 
+      className={`${colorClass} rounded-lg p-4 text-center transition-transform hover:scale-105 ${
+        onClick ? 'cursor-pointer hover:shadow-md' : ''
+      }`}
+      onClick={onClick}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+    >
       <div className="flex items-center justify-center gap-2 mb-1">
         {icon && <span className="text-lg">{icon}</span>}
         <div className={`text-2xl font-bold ${colorClass.includes('blue') ? 'text-blue-700' : 
@@ -291,6 +383,11 @@ const OverviewView: React.FC = () => {
       {subtitle && (
         <div className="text-xs opacity-75 mt-1">{subtitle}</div>
       )}
+      {onClick && (
+        <div className="text-xs text-blue-600 font-medium mt-1">
+          Click to view payments →
+        </div>
+      )}
     </div>
   );
 
@@ -303,6 +400,10 @@ const OverviewView: React.FC = () => {
           value={stats.totalProjects}
           colorClass="bg-blue-50"
           icon="🏗️"
+          onClick={onSwitchToPayments ? () => {
+            // Switch to payments tab
+            onSwitchToPayments();
+          } : undefined}
         />
         <StatCard
           title="Total Budget"
@@ -329,8 +430,23 @@ const OverviewView: React.FC = () => {
         {/* Enhanced Projects List */}
         <div className="bg-white rounded-lg border shadow-sm p-4">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">
+            <h3 
+              className={`text-lg font-semibold text-gray-900 ${
+                onSwitchToPayments ? 'cursor-pointer hover:text-blue-600 transition-colors' : ''
+              }`}
+              onClick={onSwitchToPayments ? () => {
+                // Switch to payments tab
+                onSwitchToPayments();
+              } : undefined}
+              role={onSwitchToPayments ? 'button' : undefined}
+              tabIndex={onSwitchToPayments ? 0 : undefined}
+            >
               🏗️ Active Projects ({projects.length})
+              {onSwitchToPayments && (
+                <span className="text-xs text-blue-600 font-medium ml-2">
+                  → Click to view payments
+                </span>
+              )}
             </h3>
             {projects.length > 5 && (
               <button className="text-blue-600 hover:text-blue-800 text-sm font-medium" onClick={() => {
@@ -353,7 +469,11 @@ const OverviewView: React.FC = () => {
               </div>
             ) : (
               projects.map((project) => (
-                <ProjectCard key={project.id} project={project} />
+                <ProjectCard 
+                  key={project.id} 
+                  project={project} 
+                  onSelect={onProjectSelect} 
+                />
               ))
             )}
           </div>

@@ -26,6 +26,7 @@ export interface Subcontractor {
   changeOrdersPending: boolean;
   lineItemCount: number;
   phone: string;
+  email?: string;
   hasOpenPaymentApp: boolean;
   compliance: { insurance: string; license: string };
 }
@@ -103,6 +104,7 @@ type ContractorDB = {
   change_orders_pending?: boolean;
   line_item_count?: number;
   phone?: string;
+  email?: string;
   has_open_payment_app?: boolean;
   insurance_status?: string;
   license_status?: string;
@@ -231,6 +233,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
           changeOrdersPending: c.change_orders_pending ?? false,
           lineItemCount: c.line_item_count ?? 0,
           phone: c.phone ?? '',
+          email: c.email ?? '',
           hasOpenPaymentApp: c.has_open_payment_app ?? false,
           compliance: { insurance: c.insurance_status ?? 'valid', license: c.license_status ?? 'valid' },
         }));
