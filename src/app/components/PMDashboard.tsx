@@ -242,6 +242,12 @@ function DailyLogRequests({ projects }: { projects: any[] }) {
   const [selectedProject, setSelectedProject] = useState<any>(null);
   const [pmPhoneNumber, setPmPhoneNumber] = useState('');
   const [requestTime, setRequestTime] = useState('18:00'); // Default to 6 PM EST
+  
+  // New state for view modal
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState<any>(null);
+  const [pmNotes, setPmNotes] = useState<any[]>([]);
+  const [loadingNotes, setLoadingNotes] = useState(false);
 
   // Phone number validation
   const validatePhoneNumber = (phone: string) => {
@@ -347,6 +353,42 @@ function DailyLogRequests({ projects }: { projects: any[] }) {
     
     const config = statusConfig[status] || { color: 'bg-gray-100 text-gray-800', text: status };
     return <span className={`text-xs px-2 py-1 rounded-full ${config.color}`}>{config.text}</span>;
+  };
+
+  // Function to handle viewing PM notes for a request
+  const handleViewRequest = async (request: any) => {
+    setSelectedRequest(request);
+    setShowViewModal(true);
+    setLoadingNotes(true);
+    
+    try {
+      // Fetch PM notes from payment applications for this project
+      const { data: notes, error } = await supabase
+        .from('payment_applications')
+        .select('id, pm_notes, created_at, status')
+        .eq('project_id', request.project_id)
+        .not('pm_notes', 'is', null)
+        .order('created_at', { ascending: false });
+      
+      if (!error && notes) {
+        setPmNotes(notes);
+      } else {
+        console.error('Error fetching PM notes:', error);
+        setPmNotes([]);
+      }
+    } catch (error) {
+      console.error('Error fetching PM notes:', error);
+      setPmNotes([]);
+    } finally {
+      setLoadingNotes(false);
+    }
+  };
+
+  // Function to close view modal
+  const handleCloseViewModal = () => {
+    setShowViewModal(false);
+    setSelectedRequest(null);
+    setPmNotes([]);
   };
 
   return (
@@ -463,7 +505,11 @@ function DailyLogRequests({ projects }: { projects: any[] }) {
         ) : (
           <>
             {requests.map((request) => (
-              <div key={request.id} className="bg-white border border-gray-200 rounded-lg p-4">
+              <div 
+                key={request.id} 
+                className="bg-white border border-gray-200 rounded-lg p-4 cursor-pointer hover:shadow-md transition-all duration-200"
+                onClick={() => handleViewRequest(request)}
+              >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
@@ -496,9 +542,16 @@ function DailyLogRequests({ projects }: { projects: any[] }) {
                         <span> • Received: {formatDate(request.received_at)}</span>
                       )}
                     </div>
+                    
+                    <div className="mt-2 text-xs text-blue-600 font-medium">
+                      💬 Click to view PM notes and replies
+                    </div>
                   </div>
                   <button
-                    onClick={() => handleDeleteRequest(request.id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteRequest(request.id);
+                    }}
                     className="text-red-600 hover:text-red-800 p-1"
                     title="Delete request"
                   >
@@ -520,6 +573,105 @@ function DailyLogRequests({ projects }: { projects: any[] }) {
           </>
         )}
       </div>
+
+      {/* View PM Notes Modal */}
+      {showViewModal && selectedRequest && (
+        <div className="fixed inset-0  bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  PM Notes & Replies - {selectedRequest.project?.name}
+                </h3>
+                <button
+                  onClick={handleCloseViewModal}
+                  className="text-gray-400 hover:text-gray-600 p-1"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              
+              <div className="mt-2 text-sm text-gray-600">
+                <div>Project: {selectedRequest.project?.name} - {selectedRequest.project?.client_name}</div>
+                <div>PM Phone: {selectedRequest.pm_phone_number}</div>
+                <div>Request Status: {selectedRequest.request_status}</div>
+                <div>Request Time: {selectedRequest.request_time || '18:00'} EST</div>
+              </div>
+            </div>
+
+            <div className="p-6 overflow-y-auto max-h-[60vh]">
+              {loadingNotes ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  <span className="ml-2 text-gray-600">Loading PM notes...</span>
+                </div>
+              ) : pmNotes.length > 0 ? (
+                <div className="space-y-4">
+                  <h4 className="text-md font-semibold text-gray-900 mb-4">
+                    PM Notes from Payment Applications ({pmNotes.length})
+                  </h4>
+                  {pmNotes.map((note, index) => (
+                    <div key={note.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-gray-900">
+                          Payment App #{note.id}
+                        </span>
+                        <span className={`text-xs px-2 py-1 rounded-full ${
+                          note.status === 'approved' ? 'bg-green-100 text-green-800' :
+                          note.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                          note.status === 'submitted' ? 'bg-blue-100 text-blue-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {note.status}
+                        </span>
+                      </div>
+                      
+                      <div className="text-sm text-gray-600 mb-2">
+                        <div>Created: {formatDate(note.created_at)}</div>
+                      </div>
+                      
+                      <div className="bg-white rounded p-3 border border-gray-200">
+                        <div className="text-sm text-gray-900 font-medium mb-1">PM Notes:</div>
+                        <div className="text-sm text-gray-700 whitespace-pre-wrap">
+                          {note.pm_notes}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <div className="text-4xl mb-4">📝</div>
+                  <p className="text-gray-500 font-medium">No PM notes found</p>
+                  <p className="text-sm text-gray-400">
+                    No PM notes have been submitted for this project yet.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="p-6 border-t border-gray-200 bg-gray-50">
+              <div className="flex justify-between items-center">
+                <div className="text-sm text-gray-600">
+                  {pmNotes.length > 0 ? (
+                    <span>Found {pmNotes.length} PM note{pmNotes.length !== 1 ? 's' : ''} from payment applications</span>
+                  ) : (
+                    <span>No PM notes available</span>
+                  )}
+                </div>
+                <button
+                  onClick={handleCloseViewModal}
+                  className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
