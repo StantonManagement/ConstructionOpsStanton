@@ -544,7 +544,7 @@ function DailyLogRequests({ projects }: { projects: any[] }) {
                     </div>
                     
                     <div className="mt-2 text-xs text-blue-600 font-medium">
-                      💬 Click to view PM notes and replies
+                      💬 Click to view Daily Logs and replies
                     </div>
                   </div>
                   <button
@@ -581,7 +581,7 @@ function DailyLogRequests({ projects }: { projects: any[] }) {
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-gray-900">
-                  PM Notes & Replies - {selectedRequest.project?.name}
+                  Daily Logs - {selectedRequest.project?.name}
                 </h3>
                 <button
                   onClick={handleCloseViewModal}
@@ -644,9 +644,9 @@ function DailyLogRequests({ projects }: { projects: any[] }) {
               ) : (
                 <div className="text-center py-8">
                   <div className="text-4xl mb-4">📝</div>
-                  <p className="text-gray-500 font-medium">No PM notes found</p>
+                  <p className="text-gray-500 font-medium">No Daily Logs found</p>
                   <p className="text-sm text-gray-400">
-                    No PM notes have been submitted for this project yet.
+                    No Daily Logs have been submitted for this project yet.
                   </p>
                 </div>
               )}
@@ -658,7 +658,7 @@ function DailyLogRequests({ projects }: { projects: any[] }) {
                   {pmNotes.length > 0 ? (
                     <span>Found {pmNotes.length} PM note{pmNotes.length !== 1 ? 's' : ''} from payment applications</span>
                   ) : (
-                    <span>No PM notes available</span>
+                    <span>No Daily Logs available</span>
                   )}
                 </div>
                 <button
