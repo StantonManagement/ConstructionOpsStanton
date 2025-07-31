@@ -1,10 +1,14 @@
-# Daily Log Requests Setup Guide
+# Daily Log Requests Setup
 
-This feature automatically requests daily notes from Project Managers (PMs) for each active project via SMS. The system sends initial requests at 6 PM EST daily and retries every 30 minutes until notes are received.
+This document explains how to set up the Daily Log Requests SMS feature that sends daily reminders to Project Managers at 6 PM EST.
 
-## Database Schema
+## Overview
 
-The system uses a new `daily_log_requests` table with the following structure:
+The Daily Log Requests feature sends SMS reminders to Project Managers at 6 PM EST every day, asking for notes about their active projects. This system is designed to work with Vercel's hobby account limitations (one cron job per day).
+
+## Database Setup
+
+### Create the daily_log_requests table
 
 ```sql
 CREATE TABLE daily_log_requests (
@@ -15,219 +19,198 @@ CREATE TABLE daily_log_requests (
     request_status VARCHAR(50) DEFAULT 'pending' CHECK (request_status IN ('pending', 'sent', 'received', 'failed')),
     first_request_sent_at TIMESTAMP,
     last_request_sent_at TIMESTAMP,
-    next_retry_at TIMESTAMP,
     retry_count INTEGER DEFAULT 0,
-    max_retries INTEGER DEFAULT 48, -- 24 hours worth of 30-minute retries
     received_notes TEXT,
     received_at TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
-    -- Ensure only one request per project per day
     UNIQUE(project_id, request_date)
 );
 ```
 
 ## API Endpoints
 
-### 1. Daily Log Requests Cron Job
-**Path:** `/api/cron/daily-log-requests`  
-**Method:** GET  
-**Purpose:** Automatically triggered by cron job to send SMS requests to PMs
+### 1. Cron Job Endpoint: `/api/cron/daily-log-requests`
 
-**Features:**
-- Runs at 6 PM EST daily for initial requests
-- Retries every 30 minutes until 11:30 PM EST
-- Creates requests for all active projects
-- Sends SMS messages to PM phone numbers
-- Tracks retry counts and status
+**Purpose**: Triggered by Vercel cron job to send daily log requests at 6 PM EST.
 
-### 2. SMS Response Webhook
-**Path:** `/api/sms/daily-log-response`  
-**Method:** POST  
-**Purpose:** Receives SMS responses from PMs and updates the database
+**Method**: GET
 
-**Features:**
+**Authentication**: Requires Bearer token (configure in Vercel environment variables)
+
+**Functionality**:
+- Runs only at 6 PM EST (due to hobby account limitations)
+- Creates daily log requests for all active projects
+- Sends SMS reminders to Project Managers
+- Updates request status in database
+
+### 2. SMS Response Webhook: `/api/sms/daily-log-response`
+
+**Purpose**: Receives SMS responses from Project Managers.
+
+**Method**: POST
+
+**Functionality**:
 - Processes inbound SMS messages
-- Updates request status to 'received'
-- Stores received notes
-- Records timestamp of receipt
+- Identifies the corresponding pending request
+- Updates the request with received notes
+- Marks request as 'received'
 
-## Cron Job Configuration
+## Configuration
 
-The system uses Vercel cron jobs with the following schedule:
+### Vercel Cron Job Setup
+
+Due to Vercel hobby account limitations (one cron job per day), the system is configured to run only once per day at 6 PM EST:
 
 ```json
 {
   "crons": [
     {
       "path": "/api/cron/daily-log-requests",
-      "schedule": "0,30 18-23 * * *"
+      "schedule": "0 18 * * *"
     }
   ]
 }
 ```
 
-This schedule runs:
-- At 6:00 PM, 6:30 PM, 7:00 PM, 7:30 PM, etc. until 11:30 PM EST
-- Allows for initial requests at 6 PM and retries every 30 minutes
+**Note**: Hobby accounts are limited to one cron job per day. If you need more frequent retries, consider upgrading to a Pro plan or using an external cron service.
 
-## SMS Provider Configuration
+### Environment Variables
 
-### Required Environment Variables
+Add these to your Vercel environment variables:
 
-```env
-# SMS Provider Configuration (e.g., Twilio)
-TWILIO_ACCOUNT_SID=your_account_sid
-TWILIO_AUTH_TOKEN=your_auth_token
-TWILIO_PHONE_NUMBER=your_twilio_phone_number
+```bash
+# SMS Service Configuration
+SMS_SERVICE_API_KEY=your_sms_service_api_key
+SMS_SERVICE_URL=https://your-sms-service.com/api
 
-# Webhook URL for SMS responses
-SMS_WEBHOOK_URL=https://your-domain.com/api/sms/daily-log-response
+# Authentication for cron job
+CRON_SECRET=your_secret_token_for_cron_authentication
+
+# Supabase Configuration
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 ```
 
-### SMS Provider Setup
+## Usage Flow
 
-1. **Twilio Setup:**
-   - Create a Twilio account
-   - Get Account SID and Auth Token
-   - Purchase a phone number
-   - Configure webhook URL for inbound messages
+### 1. Daily Request Process
 
-2. **Webhook Configuration:**
-   - Set the webhook URL in your SMS provider dashboard
-   - Ensure the endpoint can handle POST requests with SMS data
+1. **6 PM EST**: Cron job triggers `/api/cron/daily-log-requests`
+2. **Active Projects**: System identifies all active projects
+3. **PM Phone Numbers**: Retrieves Project Manager phone numbers
+4. **SMS Sending**: Sends personalized messages to each PM
+5. **Status Update**: Updates request status to 'sent'
 
-## Frontend Integration
+### 2. Response Processing
 
-### PMDashboard Component
-
-The system includes a new `DailyLogRequests` component in the PMDashboard that provides:
-
-- **Add Request Modal:** Configure PM phone numbers for projects
-- **Request Status Tracking:** View pending, sent, received, and failed requests
-- **Received Notes Display:** Show notes received from PMs
-- **Retry Information:** Display retry counts and timing
-
-### Usage Flow
-
-1. **Admin Setup:**
-   - Navigate to PMDashboard → Daily Log Requests tab
-   - Click "Add Request" for each active project
-   - Enter PM phone number for the project
-   - System automatically handles the rest
-
-2. **Daily Operation:**
-   - System sends initial SMS at 6 PM EST
-   - PM receives message asking for daily notes
-   - PM replies with notes via SMS
-   - System records notes and stops retrying
-   - If no response, system retries every 30 minutes
-
-3. **Monitoring:**
-   - View request status in the dashboard
-   - Track retry counts and timing
-   - Read received notes from PMs
-   - Monitor failed requests
+1. **PM Response**: Project Manager replies to SMS
+2. **Webhook Receives**: `/api/sms/daily-log-response` processes the message
+3. **Request Matching**: System identifies the corresponding request
+4. **Notes Storage**: Stores the received notes in the database
+5. **Status Update**: Marks request as 'received'
 
 ## Message Templates
 
-### Initial Request (6 PM)
+### Initial Request Message
 ```
 Hi! This is your daily log reminder for project: [Project Name] ([Client Name]). Please reply with your notes about today's progress, any issues, or updates.
 ```
 
-### Retry Request (30-minute intervals)
-```
-Reminder: We're still waiting for your daily log for project: [Project Name] ([Client Name]). Please reply with your notes.
+### Response Processing
+The system automatically processes responses and stores them in the `received_notes` field.
+
+## Hobby Account Limitations
+
+### Current Limitations
+- **One cron job per day**: Vercel hobby accounts only allow one cron job execution per day
+- **No automatic retries**: The system cannot automatically retry failed requests every 30 minutes
+- **Manual intervention**: Failed requests require manual intervention
+
+### Workarounds for Hobby Accounts
+
+1. **Manual Retry Endpoint**: Create a manual endpoint to retry failed requests
+2. **External Cron Service**: Use services like cron-job.org for more frequent executions
+3. **Upgrade to Pro**: Consider upgrading to Vercel Pro for unlimited cron jobs
+
+### Alternative Solutions
+
+#### Option 1: External Cron Service
+Use an external service like cron-job.org to trigger retries:
+
+```bash
+# Set up external cron job to call retry endpoint
+0,30 18-23 * * * curl -X POST https://your-app.vercel.app/api/retry-failed-requests
 ```
 
-### Confirmation Message (Optional)
-```
-Thank you! Your daily log for project "[Project Name]" has been received and recorded.
+#### Option 2: Manual Retry Endpoint
+Create a manual endpoint for retrying failed requests:
+
+```typescript
+// /api/manual-retry-requests
+export async function POST(request: NextRequest) {
+  // Logic to retry failed requests
+  // Can be called manually or by external cron service
+}
 ```
 
 ## Error Handling
 
-### SMS Failure
-- Requests marked as 'failed' if SMS sending fails
-- System logs error details for debugging
-- Failed requests can be manually retried
+### Common Issues
 
-### No Response
-- System continues retrying every 30 minutes
-- Maximum 48 retries (24 hours)
-- Requests automatically stop after max retries
+1. **SMS Service Failures**: Logged and marked as 'failed'
+2. **Invalid Phone Numbers**: Skipped with appropriate logging
+3. **Database Errors**: Retried with exponential backoff
+4. **Authentication Failures**: Return 401 status
 
-### Invalid Phone Numbers
-- System validates phone number format
-- Invalid numbers are rejected during creation
-- Error messages displayed to user
+### Monitoring
+
+Monitor the following:
+- Cron job execution logs in Vercel
+- SMS delivery success rates
+- Response processing success rates
+- Database error rates
 
 ## Security Considerations
 
-### Authentication
-- Cron job requires Bearer token authentication
-- Webhook endpoints should be secured
-- Implement proper validation for SMS data
-
-### Data Privacy
-- PM phone numbers stored securely
-- Notes data encrypted in transit
-- Implement proper access controls
-
-## Monitoring and Logging
-
-### Log Levels
-- **Info:** Request creation, SMS sending, note receipt
-- **Warning:** Retry attempts, approaching max retries
-- **Error:** SMS failures, database errors, webhook issues
-
-### Metrics to Track
-- Number of requests created daily
-- Success rate of SMS delivery
-- Average time to receive notes
-- Retry frequency and patterns
-
-## Troubleshooting
-
-### Common Issues
-
-1. **SMS Not Sending:**
-   - Check SMS provider credentials
-   - Verify phone number format
-   - Review SMS provider logs
-
-2. **Webhook Not Receiving Responses:**
-   - Verify webhook URL configuration
-   - Check endpoint accessibility
-   - Review SMS provider webhook settings
-
-3. **Cron Job Not Running:**
-   - Verify Vercel cron configuration
-   - Check deployment status
-   - Review function logs
-
-### Debug Steps
-
-1. Check application logs for errors
-2. Verify database connectivity
-3. Test SMS provider API directly
-4. Validate webhook endpoint manually
-5. Review cron job execution logs
+1. **Authentication**: All cron endpoints require Bearer token authentication
+2. **Rate Limiting**: Implement rate limiting on webhook endpoints
+3. **Input Validation**: Validate all SMS responses before processing
+4. **Phone Number Verification**: Verify phone numbers before sending SMS
 
 ## Future Enhancements
 
-### Potential Improvements
-- Email notifications for failed requests
-- Dashboard analytics for response rates
-- Integration with project management tools
-- Custom message templates per project
-- Multi-language support
-- Advanced retry strategies
+1. **Pro Plan Upgrade**: Enable unlimited cron jobs for automatic retries
+2. **Advanced Analytics**: Track response rates and engagement
+3. **Customizable Messages**: Allow PMs to customize reminder messages
+4. **Integration**: Connect with project management tools
+5. **Mobile App**: Create mobile app for easier response management
 
-### Scalability Considerations
-- Database indexing for large datasets
-- Rate limiting for SMS sending
-- Caching for frequently accessed data
-- Horizontal scaling for high volume 
+## Troubleshooting
+
+### Cron Job Not Running
+1. Check Vercel deployment status
+2. Verify cron job configuration in vercel.json
+3. Check environment variables
+4. Review Vercel function logs
+
+### SMS Not Sending
+1. Verify SMS service credentials
+2. Check phone number format
+3. Review SMS service logs
+4. Test with manual endpoint
+
+### Responses Not Processing
+1. Check webhook endpoint configuration
+2. Verify SMS service webhook settings
+3. Review webhook logs
+4. Test webhook manually
+
+## Support
+
+For issues related to:
+- **Vercel Cron Jobs**: Check Vercel documentation
+- **SMS Service**: Contact your SMS provider
+- **Database**: Check Supabase logs
+- **Application Logic**: Review function logs in Vercel dashboard 

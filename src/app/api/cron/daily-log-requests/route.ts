@@ -21,132 +21,112 @@ export async function GET(request: NextRequest) {
     // Check if it's 6 PM EST (18:00:00) - initial daily request
     const isInitialRequest = currentTime === '18:00:00';
     
-    // Check if it's time for retries (every 30 minutes after 6 PM)
-    const isRetryTime = currentTime.endsWith(':00:00') || currentTime.endsWith(':30:00');
-    const isAfter6PM = parseInt(currentTime.split(':')[0]) >= 18;
-
-    if (!isInitialRequest && (!isRetryTime || !isAfter6PM)) {
-      console.log('Not time for daily log requests or retries');
-      return NextResponse.json({ message: 'Not time for daily log requests' });
+    if (!isInitialRequest) {
+      console.log('Not 6 PM EST - skipping daily log requests');
+      return NextResponse.json({ message: 'Not time for daily log requests (only runs at 6 PM EST)' });
     }
 
-    let query = supabase
+    // Get active projects that don't have a request today
+    const { data: activeProjects, error: projectsError } = await supabase
+      .from('projects')
+      .select('id, name, client_name')
+      .eq('status', 'active');
+
+    if (projectsError) {
+      console.error('Error fetching active projects:', projectsError);
+      return NextResponse.json({ error: 'Failed to fetch active projects' }, { status: 500 });
+    }
+
+    // Check which projects already have requests today
+    const { data: existingRequests, error: existingError } = await supabase
       .from('daily_log_requests')
-      .select(`
-        *,
-        project:projects(name, client_name)
-      `)
+      .select('project_id')
       .eq('request_date', currentDate);
 
-    if (isInitialRequest) {
-      // For initial 6 PM request, get active projects that don't have a request today
-      const { data: activeProjects, error: projectsError } = await supabase
-        .from('projects')
-        .select('id, name, client_name')
-        .eq('status', 'active');
+    if (existingError) {
+      console.error('Error checking existing requests:', existingError);
+      return NextResponse.json({ error: 'Failed to check existing requests' }, { status: 500 });
+    }
 
-      if (projectsError) {
-        console.error('Error fetching active projects:', projectsError);
-        return NextResponse.json({ error: 'Failed to fetch active projects' }, { status: 500 });
-      }
+    const existingProjectIds = new Set(existingRequests?.map(r => r.project_id) || []);
+    const projectsNeedingRequests = activeProjects?.filter(p => !existingProjectIds.has(p.id)) || [];
 
-      // Create initial requests for active projects
-      const initialRequests = [];
-      for (const project of activeProjects) {
+    if (projectsNeedingRequests.length === 0) {
+      console.log('No new projects need daily log requests today');
+      return NextResponse.json({ message: 'No new projects need daily log requests today' });
+    }
+
+    console.log(`Creating daily log requests for ${projectsNeedingRequests.length} projects`);
+
+    const results = [];
+
+    for (const project of projectsNeedingRequests) {
+      try {
         // Get PM phone number (you'll need to implement this based on your user structure)
         // For now, we'll use a placeholder - you should fetch the actual PM phone number
         const pmPhoneNumber = '+1234567890'; // Replace with actual PM phone number logic
 
-        if (pmPhoneNumber) {
-          initialRequests.push({
+        if (!pmPhoneNumber) {
+          console.log(`No PM phone number found for project ${project.name}`);
+          results.push({
+            project_id: project.id,
+            project_name: project.name,
+            status: 'skipped',
+            message: 'No PM phone number found'
+          });
+          continue;
+        }
+
+        // Create the request record
+        const { data: createdRequest, error: createError } = await supabase
+          .from('daily_log_requests')
+          .insert({
             project_id: project.id,
             request_date: currentDate,
             pm_phone_number: pmPhoneNumber,
             request_status: 'pending',
-            next_retry_at: new Date(now.getTime() + 30 * 60 * 1000).toISOString() // 30 minutes from now
-          });
-        }
-      }
-
-      if (initialRequests.length > 0) {
-        const { data: createdRequests, error: createError } = await supabase
-          .from('daily_log_requests')
-          .insert(initialRequests)
-          .select();
+            first_request_sent_at: new Date().toISOString(),
+            retry_count: 0
+          })
+          .select()
+          .single();
 
         if (createError) {
-          console.error('Error creating initial requests:', createError);
-          return NextResponse.json({ error: 'Failed to create initial requests' }, { status: 500 });
+          console.error(`Error creating request for project ${project.name}:`, createError);
+          results.push({
+            project_id: project.id,
+            project_name: project.name,
+            status: 'failed',
+            message: 'Failed to create request record'
+          });
+          continue;
         }
 
-        console.log(`Created ${createdRequests.length} initial daily log requests`);
-      }
+        // Send the SMS
+        const message = `Hi! This is your daily log reminder for project: ${project.name} (${project.client_name}). Please reply with your notes about today's progress, any issues, or updates.`;
 
-      // Now get the requests to process
-      query = query.eq('request_status', 'pending');
-    } else {
-      // For retries, get requests that are pending and due for retry
-      query = query
-        .eq('request_status', 'pending')
-        .lte('next_retry_at', now.toISOString())
-        .lt('retry_count', 'max_retries');
-    }
+        console.log(`Sending SMS to ${pmPhoneNumber} for project ${project.name}`);
 
-    const { data: requests, error } = await query;
-
-    if (error) {
-      console.error('Error fetching daily log requests:', error);
-      return NextResponse.json({ error: 'Failed to fetch daily log requests' }, { status: 500 });
-    }
-
-    if (!requests || requests.length === 0) {
-      console.log('No daily log requests to process');
-      return NextResponse.json({ message: 'No daily log requests to process' });
-    }
-
-    console.log(`Processing ${requests.length} daily log requests`);
-
-    const results = [];
-
-    for (const request of requests) {
-      try {
-        const message = isInitialRequest 
-          ? `Hi! This is your daily log reminder for project: ${request.project.name} (${request.project.client_name}). Please reply with your notes about today's progress, any issues, or updates.`
-          : `Reminder: We're still waiting for your daily log for project: ${request.project.name} (${request.project.client_name}). Please reply with your notes.`;
-
-        console.log(`Sending SMS to ${request.pm_phone_number} for project ${request.project.name}`);
-
-        // Send SMS
-        const smsResult = await sendSMS(request.pm_phone_number, message);
+        const smsResult = await sendSMS(pmPhoneNumber, message);
 
         if (smsResult.success) {
-          // Update request status
-          const updateData: any = {
-            request_status: 'sent',
-            last_request_sent_at: new Date().toISOString(),
-            retry_count: request.retry_count + 1
-          };
-
-          if (isInitialRequest) {
-            updateData.first_request_sent_at = new Date().toISOString();
-          }
-
-          // Set next retry time (30 minutes from now)
-          updateData.next_retry_at = new Date(now.getTime() + 30 * 60 * 1000).toISOString();
-
+          // Update request status to sent
           await supabase
             .from('daily_log_requests')
-            .update(updateData)
-            .eq('id', request.id);
+            .update({
+              request_status: 'sent',
+              last_request_sent_at: new Date().toISOString()
+            })
+            .eq('id', createdRequest.id);
 
           results.push({
-            id: request.id,
-            project_name: request.project.name,
+            project_id: project.id,
+            project_name: project.name,
             status: 'sent',
             message: 'SMS sent successfully'
           });
 
-          console.log(`Successfully sent SMS for request ${request.id}`);
+          console.log(`Successfully sent SMS for project ${project.name}`);
         } else {
           // Update request status to failed
           await supabase
@@ -155,22 +135,22 @@ export async function GET(request: NextRequest) {
               request_status: 'failed',
               last_request_sent_at: new Date().toISOString()
             })
-            .eq('id', request.id);
+            .eq('id', createdRequest.id);
 
           results.push({
-            id: request.id,
-            project_name: request.project.name,
+            project_id: project.id,
+            project_name: project.name,
             status: 'failed',
             message: smsResult.error || 'Failed to send SMS'
           });
 
-          console.error(`Failed to send SMS for request ${request.id}:`, smsResult.error);
+          console.error(`Failed to send SMS for project ${project.name}:`, smsResult.error);
         }
       } catch (error) {
-        console.error(`Error processing request ${request.id}:`, error);
+        console.error(`Error processing project ${project.name}:`, error);
         results.push({
-          id: request.id,
-          project_name: request.project.name,
+          project_id: project.id,
+          project_name: project.name,
           status: 'failed',
           message: 'Internal error'
         });
@@ -179,15 +159,17 @@ export async function GET(request: NextRequest) {
 
     const successCount = results.filter(r => r.status === 'sent').length;
     const failureCount = results.filter(r => r.status === 'failed').length;
+    const skippedCount = results.filter(r => r.status === 'skipped').length;
 
-    console.log(`Daily log requests cron job completed: ${successCount} sent, ${failureCount} failed`);
+    console.log(`Daily log requests cron job completed: ${successCount} sent, ${failureCount} failed, ${skippedCount} skipped`);
 
     return NextResponse.json({
-      message: `Processed ${requests.length} daily log requests`,
+      message: `Processed ${projectsNeedingRequests.length} projects for daily log requests`,
       summary: {
-        total: requests.length,
+        total: projectsNeedingRequests.length,
         sent: successCount,
-        failed: failureCount
+        failed: failureCount,
+        skipped: skippedCount
       },
       results
     });
