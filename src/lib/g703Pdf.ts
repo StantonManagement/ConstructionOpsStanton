@@ -12,6 +12,13 @@ export interface G703LineItem {
   retainage?: number;
 }
 
+export interface ChangeOrder {
+  id: string;
+  description: string;
+  amount: number;
+  percentage: number;
+}
+
 export interface GenerateG703PdfParams {
   project: { name?: string; address?: string };
   contractor: { name?: string };
@@ -21,6 +28,8 @@ export interface GenerateG703PdfParams {
   dateSubmitted: string;
   previousDate: string;
   lineItems: G703LineItem[];
+  changeOrders?: ChangeOrder[];
+  includeChangeOrderPage?: boolean;
 }
 
 export async function generateG703Pdf({
@@ -32,6 +41,8 @@ export async function generateG703Pdf({
   dateSubmitted,
   previousDate,
   lineItems,
+  changeOrders = [],
+  includeChangeOrderPage = true,
 }: GenerateG703PdfParams): Promise<{ pdfBytes: Uint8Array; filename: string }> {
   const pdfDoc = await PDFDocument.create();
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
@@ -56,11 +67,15 @@ export async function generateG703Pdf({
   const balanceTotal = lineItems.reduce((sum, li) => sum + (li.balance_to_finish || 0), 0);
   const retainageTotal = lineItems.reduce((sum, li) => sum + (li.retainage || 0), 0);
 
+  // Calculate change order totals (for potential third page)
+  const changeOrderTotal = changeOrders.reduce((sum, co) => sum + co.amount, 0);
+  const changeOrderPercentage = changeOrders.reduce((sum, co) => sum + co.percentage, 0);
+
   const originalContract = contractTotal;
-  const netChange = 0;
+  const netChange = 0; // Revert to 0 for page 2
   const presentContract = originalContract + netChange;
   const originalWorkCompleted = totalCompleted;
-  const netChangeWorkCompleted = 0;
+  const netChangeWorkCompleted = 0; // Revert to 0 for page 2
   const totalCompletedStored = originalWorkCompleted + netChangeWorkCompleted;
   const retainageCompleted = retainageTotal;
   const retainageStored = 0;
@@ -428,6 +443,8 @@ export async function generateG703Pdf({
     return lines;
   }
 
+
+
   // Dynamic row heights
   let totalRowsHeight = 0;
   const rowHeights: number[] = [];
@@ -612,6 +629,7 @@ export async function generateG703Pdf({
     color: colors.black 
   });
   
+  // Always show "n/a" for change order total on page 2
   const naCenterX = colXs[7] + colWidths[7] / 2;
   const naTextWidth = font.widthOfTextAtSize('n/a', 8);
   page.drawText('n/a', { 
@@ -693,6 +711,444 @@ export async function generateG703Pdf({
     font: fontBold,
     color: colors.black 
   });
+
+  // Add change order page if requested
+  if (includeChangeOrderPage && changeOrders.length > 0) {
+    // Function to add a change order page with the same format as the continuation sheet
+    function addChangeOrderPage(
+      pdfDoc: PDFDocument, 
+      font: any, 
+      fontBold: any, 
+      colors: any, 
+      project: { name?: string; address?: string }, 
+      contractor: { name?: string }, 
+      changeOrders: ChangeOrder[]
+    ) {
+      // Add a new page (same size as continuation sheet)
+      const page = pdfDoc.addPage([842, 595]); // Landscape A4
+      const width = 842;
+      const height = 595;
+      const margin = 50;
+
+      // Header section - match the sample format exactly
+      let y = height - 30;
+      
+      // Main title
+      page.drawText('CONTINUATION SHEET - CHANGE ORDERS', { 
+        x: 40, 
+        y, 
+        size: 14, 
+        font: fontBold,
+        color: colors.black 
+      });
+      
+      // AIA Document reference
+      const aiaText = 'AIA DOCUMENT G 703';
+      const aiaTextWidth = font.widthOfTextAtSize(aiaText, 10);
+      page.drawText(aiaText, { 
+        x: width - aiaTextWidth - 40, 
+        y, 
+        size: 10, 
+        font,
+        color: colors.black 
+      });
+      
+      y -= 18;
+      
+      // Subtitle
+      page.drawText('APPLICATION AND CERTIFICATE FOR PAYMENT', { 
+        x: 40, 
+        y, 
+        size: 10, 
+        font: fontBold,
+        color: colors.black 
+      });
+      
+      // Contractor info on the right
+      const contractorName = contractor.name || 'Chain-JP LLC';
+      const contractorTextWidth = fontBold.widthOfTextAtSize(contractorName, 10);
+      page.drawText(contractorName, { 
+        x: width - contractorTextWidth - 40, 
+        y, 
+        size: 10, 
+        font: fontBold,
+        color: colors.black 
+      });
+      
+      y -= 13;
+      
+      // Certification text
+      page.drawText('containing Contractor\'s signed Certification is attached.', { 
+        x: 40, 
+        y, 
+        size: 8, 
+        font,
+        color: colors.black 
+      });
+      
+      // Trade info on the right
+      const tradeText = 'Exterior Stairs/Decking/ Window Capping';
+      const tradeTextWidth = font.widthOfTextAtSize(tradeText, 8);
+      page.drawText(tradeText, { 
+        x: width - tradeTextWidth - 40, 
+        y, 
+        size: 8, 
+        font,
+        color: colors.black 
+      });
+      
+      y -= 13;
+      
+      // Application details on the right
+      const appNumberText = `APPLICATION NUMBER: ${applicationNumber || ''}`;
+      const appNumberTextWidth = font.widthOfTextAtSize(appNumberText, 8);
+      page.drawText(appNumberText, { 
+        x: width - appNumberTextWidth - 40, 
+        y, 
+        size: 8, 
+        font,
+        color: colors.black 
+      });
+      
+      y -= 13;
+      
+      // Additional info
+      page.drawText('In tabulations below, amounts are stated to the nearest dollar.', { 
+        x: 40, 
+        y, 
+        size: 8, 
+        font,
+        color: colors.black 
+      });
+      
+      const invoiceDateText = `APPLICATION INVOICE DATE: ${invoiceDate || ''}`;
+      const invoiceDateTextWidth = font.widthOfTextAtSize(invoiceDateText, 8);
+      page.drawText(invoiceDateText, { 
+        x: width - invoiceDateTextWidth - 40, 
+        y, 
+        size: 8, 
+        font,
+        color: colors.black 
+      });
+      
+      y -= 13;
+      
+      // Use Column 1 text
+      page.drawText('Use Column 1 on Contracts where variavle retainage for line items may apply.', { 
+        x: 40, 
+        y, 
+        size: 8, 
+        font,
+        color: colors.black 
+      });
+      
+      const periodText = `PERIOD: ${period || ''}`;
+      const periodTextWidth = font.widthOfTextAtSize(periodText, 8);
+      page.drawText(periodText, { 
+        x: width - periodTextWidth - 40, 
+        y, 
+        size: 8, 
+        font,
+        color: colors.black 
+      });
+      
+      y -= 13;
+      
+      // Date submitted
+      const dateSubmittedText = dateSubmitted || '';
+      const dateSubmittedTextWidth = font.widthOfTextAtSize(dateSubmittedText, 8);
+      page.drawText(dateSubmittedText, { 
+        x: width - dateSubmittedTextWidth - 40, 
+        y, 
+        size: 8, 
+        font,
+        color: colors.black 
+      });
+      
+      y -= 20;
+      
+      // Table headers - match the sample format exactly
+      const tableStartY = y;
+      const headerHeight = 45;
+      const rowHeight = 20;
+      
+      // Column definitions based on the sample
+      const colXs = [40, 75, 260, 330, 400, 470, 540, 610, 680, 750];
+      const colWidths = [35, 185, 70, 70, 70, 70, 70, 70, 70, 70];
+      
+      // Headers matching the sample format
+      const headers = [
+        { line1: 'A', line2: 'ITEM', line3: 'NO.' },
+        { line1: 'B', line2: 'DESCRIPTION', line3: 'OF WORK' },
+        { line1: 'C', line2: 'SCHEDULED', line3: 'VALUE' },
+        { line1: 'D', line2: 'WORK COMPLETED', line3: 'FROM PREVIOUS', line4: 'APPLICATION' },
+        { line1: 'E', line2: 'THIS PERIOD' },
+        { line1: 'F', line2: 'MATERIAL', line3: 'PRESENTLY', line4: 'STORED' },
+        { line1: 'G', line2: 'TOTAL', line3: 'COMPLETED', line4: 'AND STORED', line5: 'TO DATE', line6: '(D+E+F)' },
+        { line1: 'H', line2: '%', line3: '(G/C)' },
+        { line1: 'I', line2: 'BALANCE', line3: 'TO FINISH', line4: '(C-G)' },
+        { line1: 'J', line2: 'RETAINAGE', line3: '(NOT IN', line4: 'D OR E)' }
+      ];
+      
+      // Table header background
+      page.drawRectangle({
+        x: colXs[0],
+        y: tableStartY - headerHeight,
+        width: colXs[colXs.length - 1] - colXs[0] + colWidths[colWidths.length - 1],
+        height: headerHeight,
+        borderWidth: 1,
+        color: colors.headerGray,
+        borderColor: colors.black,
+      });
+      
+      // Header text
+      headers.forEach((header, i) => {
+        const fontSize = 7;
+        const lineSpacing = 8;
+        const headerLines = [header.line1, header.line2, header.line3, header.line4, header.line5, header.line6].filter((line): line is string => !!line && line.trim() !== '');
+        const textBlockHeight = headerLines.length * lineSpacing;
+        const startY = tableStartY - headerHeight + (headerHeight - textBlockHeight) / 2 + lineSpacing;
+        
+        headerLines.forEach((line, lineIndex) => {
+          const textWidth = fontBold.widthOfTextAtSize(line, fontSize);
+          const centerX = colXs[i] + colWidths[i] / 2;
+          page.drawText(line, {
+            x: centerX - textWidth / 2,
+            y: startY + (lineIndex * lineSpacing) - 4,
+            size: fontSize,
+            font: fontBold,
+            color: colors.black,
+          });
+        });
+      });
+      
+      // Add "CHANGE ORDERS" text below headers
+      y = tableStartY - headerHeight - 15;
+      page.drawText('CHANGE ORDERS', { 
+        x: colXs[1], 
+        y, 
+        size: 8, 
+        font: fontBold,
+        color: colors.black 
+      });
+      
+      // Data rows for change orders
+      let currentY = y - 20;
+      
+      // Add 11 blank rows as shown in the sample
+      for (let i = 1; i <= 11; i++) {
+        const rowH = rowHeight;
+        currentY -= rowH;
+        
+        page.drawLine({
+          start: { x: colXs[0], y: currentY + rowH },
+          end: { x: colXs[colXs.length - 1] + colWidths[colWidths.length - 1], y: currentY + rowH },
+          thickness: 1,
+          color: colors.black,
+        });
+        
+        // Item number
+        const itemText = i.toString();
+        const itemTextWidth = font.widthOfTextAtSize(itemText, 8);
+        const centerX = colXs[0] + colWidths[0] / 2;
+        page.drawText(itemText, { 
+          x: centerX - itemTextWidth / 2, 
+          y: currentY + rowH - 14, 
+          size: 8, 
+          font,
+          color: colors.black 
+        });
+        
+        // Add actual change order data if available
+        const changeOrder = changeOrders[i - 1];
+        if (changeOrder) {
+          // Description
+          const descLines = wrapText(changeOrder.description || '', colWidths[1] - 8, 8);
+          const descCenterX = colXs[1] + colWidths[1] / 2;
+          const descStartY = currentY + rowH - 14 - ((descLines.length - 1) * 11) / 2;
+          
+          descLines.forEach((line, lineIdx) => {
+            const textWidth = font.widthOfTextAtSize(line, 8);
+            page.drawText(line, { 
+              x: descCenterX - textWidth / 2, 
+              y: descStartY + (lineIdx * 11), 
+              size: 8, 
+              font,
+              color: colors.black 
+            });
+          });
+          
+          // Scheduled Value
+          if (changeOrder.amount) {
+            const valueText = `$${changeOrder.amount.toLocaleString()}`;
+            const textWidth = font.widthOfTextAtSize(valueText, 8);
+            page.drawText(valueText, { 
+              x: colXs[2] + colWidths[2] - textWidth - 4, 
+              y: currentY + rowH - 14, 
+              size: 8, 
+              font,
+              color: colors.black 
+            });
+          }
+          
+          // This Period
+          if (changeOrder.percentage) {
+            const percentText = `${changeOrder.percentage.toFixed(1)}%`;
+            const textWidth = font.widthOfTextAtSize(percentText, 8);
+            page.drawText(percentText, { 
+              x: colXs[4] + colWidths[4] - textWidth - 4, 
+              y: currentY + rowH - 14, 
+              size: 8, 
+              font,
+              color: colors.black 
+            });
+          }
+          
+          // Total Completed
+          if (changeOrder.amount && changeOrder.percentage) {
+            const completedAmount = changeOrder.amount * (changeOrder.percentage / 100);
+            const completedText = `$${completedAmount.toLocaleString()}`;
+            const textWidth = font.widthOfTextAtSize(completedText, 8);
+            page.drawText(completedText, { 
+              x: colXs[6] + colWidths[6] - textWidth - 4, 
+              y: currentY + rowH - 14, 
+              size: 8, 
+              font,
+              color: colors.black 
+            });
+          }
+          
+          // % Complete
+          if (changeOrder.percentage) {
+            const percentText = `${changeOrder.percentage.toFixed(1)}%`;
+            const textWidth = font.widthOfTextAtSize(percentText, 8);
+            page.drawText(percentText, { 
+              x: colXs[7] + colWidths[7] - textWidth - 4, 
+              y: currentY + rowH - 14, 
+              size: 8, 
+              font,
+              color: colors.black 
+            });
+          }
+          
+          // Balance to Finish
+          if (changeOrder.amount && changeOrder.percentage) {
+            const balanceAmount = changeOrder.amount * (1 - changeOrder.percentage / 100);
+            const balanceText = `$${balanceAmount.toLocaleString()}`;
+            const textWidth = font.widthOfTextAtSize(balanceText, 8);
+            page.drawText(balanceText, { 
+              x: colXs[8] + colWidths[8] - textWidth - 4, 
+              y: currentY + rowH - 14, 
+              size: 8, 
+              font,
+              color: colors.black 
+            });
+          }
+        }
+      }
+      
+      // Change Order Sub-Total row
+      currentY -= rowHeight;
+      page.drawLine({
+        start: { x: colXs[0], y: currentY + rowHeight },
+        end: { x: colXs[colXs.length - 1] + colWidths[colWidths.length - 1], y: currentY + rowHeight },
+        thickness: 2,
+        color: colors.black,
+      });
+      
+      page.drawRectangle({
+        x: colXs[0],
+        y: currentY,
+        width: colXs[colXs.length - 1] - colXs[0] + colWidths[colWidths.length - 1],
+        height: rowHeight,
+        color: colors.lightGray,
+      });
+      
+      // Calculate totals for change orders
+      const changeOrderTotal = changeOrders.reduce((sum, co) => sum + co.amount, 0);
+      const changeOrderCompleted = changeOrders.reduce((sum, co) => sum + (co.amount * (co.percentage / 100)), 0);
+      const changeOrderBalance = changeOrders.reduce((sum, co) => sum + (co.amount * (1 - co.percentage / 100)), 0);
+      
+      const changeOrderTotalValues = [
+        '', 'CHANGE ORDER SUB-TOTAL THIS PAGE', `$${changeOrderTotal.toLocaleString()}`, '', 
+        '', '', 
+        `$${changeOrderCompleted.toLocaleString()}`,
+        changeOrderTotal > 0 ? `${((changeOrderCompleted / changeOrderTotal) * 100).toFixed(1)}%` : '',
+        `$${changeOrderBalance.toLocaleString()}`, ''
+      ];
+      
+      changeOrderTotalValues.forEach((value, i) => {
+        if (value) {
+          if (i === 1) {
+            const textWidth = fontBold.widthOfTextAtSize(value, 8);
+            const centerX = colXs[i] + colWidths[i] / 2;
+            page.drawText(value, { 
+              x: centerX - textWidth / 2, 
+              y: currentY + rowHeight - 14, 
+              size: 8, 
+              font: fontBold,
+              color: colors.black 
+            });
+          } else {
+            const textWidth = fontBold.widthOfTextAtSize(value, 8);
+            page.drawText(value, { 
+              x: colXs[i] + colWidths[i] - textWidth - 4, 
+              y: currentY + rowHeight - 14, 
+              size: 8, 
+              font: fontBold,
+              color: colors.black 
+            });
+          }
+        }
+      });
+      
+      // Outer table border
+      const tableEndY = currentY - rowHeight;
+      page.drawRectangle({
+        x: colXs[0],
+        y: tableEndY,
+        width: colXs[colXs.length - 1] - colXs[0] + colWidths[colWidths.length - 1],
+        height: tableStartY - tableEndY,
+        borderWidth: 2,
+        borderColor: colors.black,
+      });
+      
+      // Vertical lines
+      for (let i = 0; i <= colXs.length; i++) {
+        const x = i < colXs.length ? colXs[i] : colXs[colXs.length - 1] + colWidths[colWidths.length - 1];
+        page.drawLine({
+          start: { x, y: tableStartY },
+          end: { x, y: tableEndY },
+          thickness: 1,
+          color: colors.black,
+        });
+      }
+      
+      // Exhibit "J" on change order page (as shown in sample)
+      const exhibitText = 'EXHIBIT J';
+      const exhibitTextWidth = fontBold.widthOfTextAtSize(exhibitText, 12);
+      page.drawText(exhibitText, { 
+        x: (width - exhibitTextWidth) / 2, 
+        y: height - 25, 
+        size: 12, 
+        font: fontBold,
+        color: colors.black 
+      });
+      
+      // "CONTINUATION SHEET" text at bottom
+      const continuationText = 'CONTINUATION SHEET';
+      const continuationTextWidth = fontBold.widthOfTextAtSize(continuationText, 10);
+      page.drawText(continuationText, { 
+        x: (width - continuationTextWidth) / 2, 
+        y: height - 40, 
+        size: 10, 
+        font: fontBold,
+        color: colors.black 
+      });
+    }
+
+    addChangeOrderPage(pdfDoc, font, fontBold, colors, project, contractor, changeOrders);
+  }
 
   const pdfBytes = await pdfDoc.save();
   

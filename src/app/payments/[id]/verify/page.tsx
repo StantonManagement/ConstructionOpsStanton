@@ -70,6 +70,21 @@ export default function PaymentVerificationPage() {
   }>>({});
   const [savingChanges, setSavingChanges] = useState(false);
 
+  // State for change orders
+  const [changeOrders, setChangeOrders] = useState<Array<{
+    id: string;
+    description: string;
+    amount: number;
+    percentage: number;
+  }>>([]);
+  const [showChangeOrderModal, setShowChangeOrderModal] = useState(false);
+  const [newChangeOrder, setNewChangeOrder] = useState({
+    description: '',
+    amount: 0,
+    percentage: 0
+  });
+  const [includeChangeOrderPageInPdf, setIncludeChangeOrderPageInPdf] = useState(false);
+
   // Functions for editing percentages
   const startEditingLineItem = (lineItemId: number, currentSubmitted: number, currentVerified: number) => {
     setEditingLineItem(lineItemId);
@@ -145,6 +160,40 @@ export default function PaymentVerificationPage() {
     } finally {
       setSavingChanges(false);
     }
+  };
+
+  // Functions for change orders
+  const addChangeOrder = () => {
+    if (!newChangeOrder.description.trim() || newChangeOrder.amount <= 0) {
+      setError('Please enter a description and amount for the change order.');
+      return;
+    }
+    
+    const changeOrder = {
+      id: Date.now().toString(),
+      description: newChangeOrder.description.trim(),
+      amount: newChangeOrder.amount,
+      percentage: newChangeOrder.percentage
+    };
+    
+    setChangeOrders(prev => [...prev, changeOrder]);
+    setNewChangeOrder({ description: '', amount: 0, percentage: 0 });
+    setShowChangeOrderModal(false);
+    setError(null);
+  };
+
+  const deleteChangeOrder = (id: string) => {
+    setChangeOrders(prev => prev.filter(co => co.id !== id));
+  };
+
+  const getChangeOrderTotal = () => {
+    return changeOrders.reduce((sum, co) => sum + co.amount, 0);
+  };
+
+  const getChangeOrderPercentage = () => {
+    const totalContractValue = lineItemsForTable.reduce((sum, li) => sum + li.scheduled_value, 0);
+    if (totalContractValue === 0) return 0;
+    return (getChangeOrderTotal() / totalContractValue) * 100;
   };
 
   // Function to send notification to vendor
@@ -559,6 +608,8 @@ const lineItemsForTable = lineItems.map((li, idx) => {
                 dateSubmitted: paymentApp.created_at ? new Date(paymentApp.created_at).toLocaleDateString() : '',
                 previousDate: '', // Added to fix linter error
                 lineItems: lineItemsForTable,
+                changeOrders: changeOrders, // Add change orders to PDF generation
+                includeChangeOrderPage: includeChangeOrderPageInPdf, // Pass the new state variable
               });
               const blob = new Blob([new Uint8Array(pdfBytes)], { type: 'application/pdf' });
               const url = URL.createObjectURL(blob);
@@ -586,6 +637,94 @@ const lineItemsForTable = lineItems.map((li, idx) => {
             </svg>
             Download PDF
           </button>
+        </div>
+
+        {/* Change Orders Section */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-8">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">Change Orders</h2>
+                <p className="text-gray-600 mt-1">Add change orders to be included in the PDF</p>
+              </div>
+              <button
+                onClick={() => setShowChangeOrderModal(true)}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Add Change Order
+              </button>
+            </div>
+          </div>
+          <div className="px-6 py-4">
+            {changeOrders.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <svg className="w-12 h-12 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <p>No change orders added yet.</p>
+                <p className="text-sm">Click "Add Change Order" to get started.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {changeOrders.map((changeOrder) => (
+                  <div key={changeOrder.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div className="flex-1">
+                      <h3 className="font-medium text-gray-900">{changeOrder.description}</h3>
+                      <div className="flex items-center gap-4 mt-1 text-sm text-gray-600">
+                        <span>Amount: {changeOrder.amount.toLocaleString(undefined, { style: 'currency', currency: 'USD' })}</span>
+                        <span>Percentage: {changeOrder.percentage.toFixed(1)}%</span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => deleteChangeOrder(changeOrder.id)}
+                      className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                      title="Delete change order"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+                <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-blue-900">Total Change Orders:</span>
+                    <span className="font-bold text-blue-900">
+                      {getChangeOrderTotal().toLocaleString(undefined, { style: 'currency', currency: 'USD' })}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between mt-1">
+                    <span className="text-sm text-blue-700">Percentage of Contract:</span>
+                    <span className="text-sm font-medium text-blue-700">
+                      {getChangeOrderPercentage().toFixed(1)}%
+                    </span>
+                  </div>
+                </div>
+                
+                {/* Include Change Order Page Checkbox */}
+                <div className="mt-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      id="includeChangeOrderPage"
+                      checked={includeChangeOrderPageInPdf}
+                      onChange={(e) => setIncludeChangeOrderPageInPdf(e.target.checked)}
+                      className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                    />
+                    <label htmlFor="includeChangeOrderPage" className="text-sm font-medium text-yellow-800">
+                      Include Change Order Page in PDF
+                    </label>
+                  </div>
+                  <p className="text-xs text-yellow-700 mt-1 ml-7">
+                    When checked, a separate third page will be added to the PDF with change order details in the same format as the continuation sheet.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Line Items Table */}
@@ -917,6 +1056,106 @@ const lineItemsForTable = lineItems.map((li, idx) => {
                     `${showConfirmDialog === 'approve' ? 'Approve' : 'Reject'} Payment`
                   )}
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Change Order Modal */}
+      {showChangeOrderModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
+            <div className="p-6">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                  <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Add Change Order</h3>
+                  <p className="text-gray-600">Enter change order details to be included in the PDF</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Description *
+                  </label>
+                  <textarea
+                    value={newChangeOrder.description}
+                    onChange={(e) => setNewChangeOrder(prev => ({ ...prev, description: e.target.value }))}
+                    placeholder="Describe the change order..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 resize-none text-gray-700"
+                    rows={3}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Amount ($) *
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={newChangeOrder.amount || ''}
+                      onChange={(e) => setNewChangeOrder(prev => ({ 
+                        ...prev, 
+                        amount: parseFloat(e.target.value) || 0 
+                      }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-700"
+                      placeholder="0.00"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Percentage (%)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.1"
+                      value={newChangeOrder.percentage || ''}
+                      onChange={(e) => setNewChangeOrder(prev => ({ 
+                        ...prev, 
+                        percentage: parseFloat(e.target.value) || 0 
+                      }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-700"
+                      placeholder="0.0"
+                    />
+                  </div>
+                </div>
+
+                {error && (
+                  <div className="p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+                    {error}
+                  </div>
+                )}
+
+                <div className="flex gap-3 pt-4">
+                  <button
+                    onClick={() => {
+                      setShowChangeOrderModal(false);
+                      setNewChangeOrder({ description: '', amount: 0, percentage: 0 });
+                      setError(null);
+                    }}
+                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={addChangeOrder}
+                    className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                  >
+                    Add Change Order
+                  </button>
+                </div>
               </div>
             </div>
           </div>

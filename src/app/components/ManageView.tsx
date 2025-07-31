@@ -190,11 +190,11 @@ const AddForm: React.FC<AddFormProps> = ({
           {icon}
           {title}
         </h3>
-        <button 
-          onClick={onClose} 
-          className="text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-100"
-          disabled={isLoading}
-        >
+                              <button 
+                        onClick={onClose} 
+                        className="text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-100"
+                        disabled={isLoading}
+                      >
           <X className="w-6 h-6" />
         </button>
       </div>
@@ -433,11 +433,11 @@ const AddContractForm: React.FC<{
           <FilePlus className="w-6 h-6 text-blue-600" />
           Add Contract
         </h3>
-        <button 
-          onClick={onClose} 
-          className="text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-100"
-          disabled={loading}
-        >
+                              <button 
+                        onClick={onClose} 
+                        className="text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-100"
+                        disabled={loading}
+                      >
           <X className="w-6 h-6" />
         </button>
       </div>
@@ -891,7 +891,7 @@ const ManageView: React.FC = () => {
       const matchesSearch = project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            project.client_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            project.current_phase?.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesFilter = filterStatus === 'all' || project.status === filterStatus;
+      const matchesFilter = filterStatus === 'all' || (project as any).status === filterStatus;
       return matchesSearch && matchesFilter;
     });
   }, [projects, searchTerm, filterStatus]);
@@ -900,7 +900,7 @@ const ManageView: React.FC = () => {
     return subcontractors.filter(vendor => {
       const matchesSearch = vendor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            vendor.trade.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           vendor.email?.toLowerCase().includes(searchTerm.toLowerCase());
+                           (vendor as any).email?.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesFilter = filterStatus === 'all' || vendor.status === filterStatus;
       return matchesSearch && matchesFilter;
     });
@@ -1137,11 +1137,11 @@ const ManageView: React.FC = () => {
             </div>
 
             {showMobileFilters && (
-              <div className="bg-white p-4 rounded-lg border border-gray-200">
+              <div className="bg-white text-gray-700 p-4 rounded-lg border border-gray-200">
                 <select
                   value={filterStatus}
                   onChange={(e) => setFilterStatus(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2  text-gray-700 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
                   <option value="all">All Status</option>
                   <option value="active">Active</option>
@@ -1235,7 +1235,7 @@ const ManageView: React.FC = () => {
                         </div>
                       </div>
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        {project.status || 'Active'}
+                        {(project as any).status || 'Active'}
                       </span>
                     </div>
                     
@@ -1250,7 +1250,7 @@ const ManageView: React.FC = () => {
                       </div>
                       <div>
                         <span className="text-gray-500">Started:</span>
-                        <span className="ml-1 text-gray-900">{project.start_date || 'Not set'}</span>
+                        <span className="ml-1 text-gray-900">{(project as any).start_date || 'Not set'}</span>
                       </div>
                       <div>
                         <span className="text-gray-500">Spent:</span>
@@ -1338,7 +1338,7 @@ const ManageView: React.FC = () => {
                             </div>
                             <div className="ml-4">
                               <div className="text-sm font-medium text-gray-900">{project.name}</div>
-                              <div className="text-sm text-gray-500">Started: {project.start_date || 'Not set'}</div>
+                              <div className="text-sm text-gray-500">Started: {(project as any).start_date || 'Not set'}</div>
                             </div>
                           </div>
                         </td>
@@ -1352,9 +1352,9 @@ const ManageView: React.FC = () => {
                           ${(project.budget || 0).toLocaleString()}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            {project.status || 'Active'}
-                          </span>
+                                                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          {(project as any).status || 'Active'}
+                        </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           <div className="flex items-center">
@@ -1426,7 +1426,7 @@ const ManageView: React.FC = () => {
                       </div>
                       <div>
                         <span className="text-gray-500">Email:</span>
-                        <span className="ml-1 text-gray-900">{vendor.email || 'Not provided'}</span>
+                        <span className="ml-1 text-gray-900">{(vendor as any).email || 'Not provided'}</span>
                       </div>
                     </div>
 
@@ -1438,7 +1438,7 @@ const ManageView: React.FC = () => {
                             <svg
                               key={star}
                               className={`w-4 h-4 ${
-                                star <= (vendor.performance_score || 0)
+                                star <= ((vendor as any).performance_score || 0)
                                   ? 'text-yellow-400'
                                   : 'text-gray-300'
                               }`}
@@ -1450,7 +1450,7 @@ const ManageView: React.FC = () => {
                           ))}
                         </div>
                         <span className="text-sm text-gray-600">
-                          {vendor.performance_score ? `${vendor.performance_score}/5` : 'Not rated'}
+                          {(vendor as any).performance_score ? `${(vendor as any).performance_score}/5` : 'Not rated'}
                         </span>
                       </div>
                     </div>
@@ -1528,19 +1528,19 @@ const ManageView: React.FC = () => {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           <div>{vendor.phone}</div>
-                          <div className="text-gray-500">{vendor.email}</div>
+                          <div className="text-gray-500">{(vendor as any).email}</div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
                             <span className="text-sm text-gray-900 mr-2">
-                              {vendor.performance_score ? `${vendor.performance_score}/5` : 'Not rated'}
+                              {(vendor as any).performance_score ? `${(vendor as any).performance_score}/5` : 'Not rated'}
                             </span>
                             <div className="flex">
                               {[1, 2, 3, 4, 5].map((star) => (
                                 <svg
                                   key={star}
                                   className={`w-4 h-4 ${
-                                    star <= (vendor.performance_score || 0)
+                                    star <= ((vendor as any).performance_score || 0)
                                       ? 'text-yellow-400'
                                       : 'text-gray-300'
                                   }`}
@@ -1728,7 +1728,7 @@ const ManageView: React.FC = () => {
 
       {/* Modal Forms */}
       {openForm === 'project' && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0  bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <AddForm
               title="Add New Project"
@@ -1744,7 +1744,7 @@ const ManageView: React.FC = () => {
       )}
 
       {openForm === 'vendor' && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0  bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <AddForm
               title="Add New Vendor"
@@ -1760,7 +1760,7 @@ const ManageView: React.FC = () => {
       )}
 
       {openForm === 'contract' && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <AddContractForm
               onClose={() => setOpenForm(null)}
@@ -1774,7 +1774,7 @@ const ManageView: React.FC = () => {
 
       {/* Unsaved Warning Modal */}
       {showUnsavedWarning && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
             <div className="flex items-center gap-3 mb-4">
               <AlertCircle className="w-8 h-8 text-yellow-500" />

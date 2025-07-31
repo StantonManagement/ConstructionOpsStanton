@@ -22,6 +22,452 @@ const formatCurrency = (amount: number) => {
   }).format(amount);
 };
 
+// Tab Navigation Component
+function TabNavigation({ activeTab, onTabChange }: { activeTab: string; onTabChange: (tab: string) => void }) {
+  const tabs = [
+    { id: 'payments', label: 'Payment Applications', icon: '💰' },
+    { id: 'projects', label: 'Projects', icon: '🏗️' },
+    { id: 'notes', label: 'Daily Log Requests', icon: '📝' }
+  ];
+
+  return (
+    <div className="border-b border-gray-200 mb-6">
+      <nav className="-mb-px flex space-x-8">
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => onTabChange(tab.id)}
+            className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors ${
+              activeTab === tab.id
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            <span>{tab.icon}</span>
+            <span className="hidden sm:inline">{tab.label}</span>
+            <span className="sm:hidden">{tab.label.split(' ')[0]}</span>
+          </button>
+        ))}
+      </nav>
+    </div>
+  );
+}
+
+// Project Overview Component
+function ProjectOverview({ project, onCreatePaymentApps }: { project: any; onCreatePaymentApps: (projectId: number) => void }) {
+  const [loading, setLoading] = useState(false);
+  const [projectStats, setProjectStats] = useState<any>({
+    totalContractors: 0,
+    activePaymentApps: 0,
+    completedPaymentApps: 0,
+    totalBudget: 0,
+    totalSpent: 0,
+    completionPercentage: 0
+  });
+
+  useEffect(() => {
+    const fetchProjectStats = async () => {
+      setLoading(true);
+      try {
+        // Fetch contractors for this project
+        const { data: contractors, error: contractorsError } = await supabase
+          .from('project_contractors')
+          .select('*')
+          .eq('project_id', project.id)
+          .eq('contract_status', 'active');
+
+        // Fetch payment applications for this project
+        const { data: paymentApps, error: paymentAppsError } = await supabase
+          .from('payment_applications')
+          .select('*')
+          .eq('project_id', project.id);
+
+        if (!contractorsError && !paymentAppsError) {
+          const activeApps = paymentApps?.filter((app: any) => 
+            ['submitted', 'needs_review', 'sms_complete'].includes(app.status)
+          ) || [];
+          const completedApps = paymentApps?.filter((app: any) => 
+            ['approved', 'check_ready'].includes(app.status)
+          ) || [];
+
+          const totalBudget = contractors?.reduce((sum: number, c: any) => 
+            sum + (Number(c.contract_amount) || 0), 0
+          ) || 0;
+          const totalSpent = contractors?.reduce((sum: number, c: any) => 
+            sum + (Number(c.paid_to_date) || 0), 0
+          ) || 0;
+
+          setProjectStats({
+            totalContractors: contractors?.length || 0,
+            activePaymentApps: activeApps.length,
+            completedPaymentApps: completedApps.length,
+            totalBudget,
+            totalSpent,
+            completionPercentage: totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching project stats:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (project) {
+      fetchProjectStats();
+    }
+  }, [project]);
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <div className="animate-pulse">
+          <div className="h-4 bg-gray-200 rounded w-1/4 mb-4"></div>
+          <div className="space-y-3">
+            <div className="h-3 bg-gray-200 rounded"></div>
+            <div className="h-3 bg-gray-200 rounded w-5/6"></div>
+            <div className="h-3 bg-gray-200 rounded w-4/6"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 p-6">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-semibold text-gray-900">{project.name}</h3>
+        <div className="flex items-center gap-2">
+          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+            project.at_risk 
+              ? 'bg-red-100 text-red-800' 
+              : 'bg-green-100 text-green-800'
+          }`}>
+            {project.at_risk ? '⚠️ At Risk' : '✅ On Track'}
+          </span>
+          <button
+            onClick={() => onCreatePaymentApps(project.id)}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+          >
+            📋 Create Payment App
+          </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+        <div className="bg-blue-50 p-4 rounded-lg">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-blue-600">👥</span>
+            <h4 className="font-medium text-gray-900">Contractors</h4>
+          </div>
+          <p className="text-2xl font-bold text-blue-600">{projectStats.totalContractors}</p>
+          <p className="text-sm text-gray-600">Active on project</p>
+        </div>
+
+        <div className="bg-yellow-50 p-4 rounded-lg">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-yellow-600">📋</span>
+            <h4 className="font-medium text-gray-900">Payment Apps</h4>
+          </div>
+          <p className="text-2xl font-bold text-yellow-600">{projectStats.activePaymentApps}</p>
+          <p className="text-sm text-gray-600">Pending review</p>
+        </div>
+
+        <div className="bg-green-50 p-4 rounded-lg">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-green-600">✅</span>
+            <h4 className="font-medium text-gray-900">Completed</h4>
+          </div>
+          <p className="text-2xl font-bold text-green-600">{projectStats.completedPaymentApps}</p>
+          <p className="text-sm text-gray-600">Approved payments</p>
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        <div>
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-sm font-medium text-gray-700">Budget Progress</span>
+            <span className="text-sm text-gray-600">
+              {formatCurrency(projectStats.totalSpent)} / {formatCurrency(projectStats.totalBudget)}
+            </span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-2">
+            <div
+              className={`h-2 rounded-full transition-all duration-500 ${
+                projectStats.completionPercentage > 90 ? 'bg-red-500' : 'bg-green-500'
+              }`}
+              style={{ width: `${Math.min(projectStats.completionPercentage, 100)}%` }}
+            ></div>
+          </div>
+          <div className="flex justify-between text-xs mt-1">
+            <span className="text-gray-600">{projectStats.completionPercentage}% used</span>
+            <span className={projectStats.completionPercentage > 90 ? "text-red-600 font-medium" : "text-green-600 font-medium"}>
+              {projectStats.completionPercentage > 90 ? "⚠️ Near limit" : "On track"}
+            </span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4 text-sm">
+          <div>
+            <span className="text-gray-600">Phase:</span>
+            <span className="ml-2 font-medium">{project.current_phase || 'Not set'}</span>
+          </div>
+          <div>
+            <span className="text-gray-600">Client:</span>
+            <span className="ml-2 font-medium">{project.client_name}</span>
+          </div>
+          <div>
+            <span className="text-gray-600">Start Date:</span>
+            <span className="ml-2 font-medium">
+              {project.start_date ? formatDate(project.start_date) : 'Not set'}
+            </span>
+          </div>
+          <div>
+            <span className="text-gray-600">Target Completion:</span>
+            <span className="ml-2 font-medium">
+              {project.target_completion_date ? formatDate(project.target_completion_date) : 'Not set'}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// PM Notes Component
+function DailyLogRequests({ projects }: { projects: any[] }) {
+  const [loading, setLoading] = useState(false);
+  const [requests, setRequests] = useState<any[]>([]);
+  const [showAddRequest, setShowAddRequest] = useState(false);
+  const [selectedProject, setSelectedProject] = useState<any>(null);
+  const [pmPhoneNumber, setPmPhoneNumber] = useState('');
+
+  useEffect(() => {
+    fetchRequests();
+  }, []);
+
+  const fetchRequests = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('daily_log_requests')
+        .select(`
+          *,
+          project:projects(name, client_name)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (!error && data) {
+        setRequests(data);
+      }
+    } catch (error) {
+      console.error('Error fetching daily log requests:', error);
+    }
+  };
+
+  const handleAddRequest = async () => {
+    if (!selectedProject || !pmPhoneNumber.trim()) return;
+
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('daily_log_requests')
+        .insert({
+          project_id: selectedProject.id,
+          request_date: new Date().toISOString().split('T')[0],
+          pm_phone_number: pmPhoneNumber.trim(),
+          request_status: 'pending'
+        })
+        .select();
+
+      if (!error && data) {
+        setSelectedProject(null);
+        setPmPhoneNumber('');
+        setShowAddRequest(false);
+        await fetchRequests();
+        alert('Daily log request added successfully! The system will automatically request notes from the PM daily at 6 PM EST.');
+      } else {
+        alert('Failed to add request: ' + (error?.message || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error adding request:', error);
+      alert('Failed to add request');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteRequest = async (requestId: number) => {
+    if (!confirm('Are you sure you want to delete this daily log request?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('daily_log_requests')
+        .delete()
+        .eq('id', requestId);
+
+      if (!error) {
+        await fetchRequests();
+        alert('Request deleted successfully');
+      } else {
+        alert('Failed to delete request: ' + error.message);
+      }
+    } catch (error) {
+      console.error('Error deleting request:', error);
+      alert('Failed to delete request');
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    const statusConfig: Record<string, { color: string; text: string }> = {
+      pending: { color: 'bg-yellow-100 text-yellow-800', text: 'Pending' },
+      sent: { color: 'bg-blue-100 text-blue-800', text: 'Sent' },
+      received: { color: 'bg-green-100 text-green-800', text: 'Received' },
+      failed: { color: 'bg-red-100 text-red-800', text: 'Failed' }
+    };
+    
+    const config = statusConfig[status] || { color: 'bg-gray-100 text-gray-800', text: status };
+    return <span className={`text-xs px-2 py-1 rounded-full ${config.color}`}>{config.text}</span>;
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold text-gray-900">Daily Log Requests</h2>
+        <button
+          onClick={() => setShowAddRequest(true)}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          📝 Add Request
+        </button>
+      </div>
+
+      {/* Add Request Modal */}
+      {showAddRequest && (
+        <div className="fixed inset-0  bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+            <div className="p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Add Daily Log Request</h3>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Project</label>
+                  <select
+                    value={selectedProject?.id || ''}
+                    onChange={(e) => {
+                      const project = projects.find(p => p.id === Number(e.target.value));
+                      setSelectedProject(project);
+                    }}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="">Select a project</option>
+                    {projects.map((project) => (
+                      <option key={project.id} value={project.id}>
+                        {project.name} - {project.client_name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">PM Phone Number</label>
+                  <input
+                    type="tel"
+                    value={pmPhoneNumber}
+                    onChange={(e) => setPmPhoneNumber(e.target.value)}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="+1234567890"
+                  />
+                </div>
+
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p className="text-sm text-blue-800">
+                    <strong>How it works:</strong> The system will automatically send SMS requests to the PM daily at 6 PM EST, 
+                    asking for notes about each active project. It will retry every 30 minutes until notes are received.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={() => setShowAddRequest(false)}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleAddRequest}
+                  disabled={loading || !selectedProject || !pmPhoneNumber.trim()}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loading ? 'Adding...' : 'Add Request'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Requests List */}
+      <div className="space-y-4">
+        {requests.map((request) => (
+          <div key={request.id} className="bg-white border border-gray-200 rounded-lg p-4">
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-sm font-medium text-gray-900">
+                    {request.project?.name} - {request.project?.client_name}
+                  </span>
+                  {getStatusBadge(request.request_status)}
+                </div>
+                
+                <div className="text-sm text-gray-600 mb-2">
+                  <div>PM Phone: {request.pm_phone_number}</div>
+                  <div>Request Date: {request.request_date}</div>
+                  {request.retry_count > 0 && (
+                    <div>Retry Count: {request.retry_count}</div>
+                  )}
+                  {request.received_notes && (
+                    <div className="mt-2 p-2 bg-gray-50 rounded border">
+                      <strong>Received Notes:</strong> {request.received_notes}
+                    </div>
+                  )}
+                </div>
+                
+                <div className="text-xs text-gray-500">
+                  Created: {request.created_at ? formatDate(request.created_at) : 'Unknown'}
+                  {request.last_request_sent_at && (
+                    <span> • Last Sent: {formatDate(request.last_request_sent_at)}</span>
+                  )}
+                  {request.received_at && (
+                    <span> • Received: {formatDate(request.received_at)}</span>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={() => handleDeleteRequest(request.id)}
+                className="text-red-600 hover:text-red-800 p-1"
+                title="Delete request"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        ))}
+
+        {requests.length === 0 && (
+          <div className="text-center py-12 bg-white border-2 border-dashed border-gray-300 rounded-lg">
+            <div className="text-4xl mb-4">📝</div>
+            <p className="text-gray-500 font-medium">No daily log requests yet</p>
+            <p className="text-sm text-gray-400">Add requests to automatically ask PM managers for daily notes</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // Mobile-Optimized Stat Card Component
 function CompactStatCard({ icon, label, value, change, color }: any) {
   const colorClasses: Record<string, string> = {
@@ -1088,6 +1534,7 @@ export default function PMDashboard() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   const [showMobileFilters, setShowMobileFilters] = useState(false);
+  const [activeTab, setActiveTab] = useState('payments'); // Default to 'payments'
 
   useEffect(() => {
     setMounted(true);
@@ -1497,86 +1944,85 @@ export default function PMDashboard() {
           </div>
         </div>
 
-        {/* Stats */}
-        <CompactStats
-          pendingSMS={stats.pending_sms}
-          reviewQueue={stats.review_queue}
-          readyChecks={stats.ready_checks}
-          weeklyTotal={stats.weekly_total}
-        />
+        {/* Tab Navigation */}
+        <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
 
-        {/* Main Content */}
-        <div className="flex gap-6 mb-8">
-          {/* Sidebar */}
-          <FilterSidebar
-            statusFilter={statusFilter}
-            setStatusFilter={setStatusFilter}
-            projectFilter={projectFilter}
-            setProjectFilter={setProjectFilter}
-            projects={projects}
-            sortBy={sortBy}
-            setSortBy={setSortBy}
-            sortDir={sortDir}
-            setSortDir={setSortDir}
-            onFilterChange={handleFilterChange}
-          />
-
-          {/* Main Table */}
-          <div className="flex-1">
-            <PaymentTable
-              applications={paginatedApps}
-              onVerify={handleVerifyPayment}
-              getDocumentForApp={getDocumentForApp}
-              sendForSignature={sendForSignature}
-              selectedItems={selectedItems}
-              onSelectItem={handleSelectItem}
-              onSelectAll={handleSelectAll}
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={handlePageChange}
-              totalItems={filteredApps.length}
-              itemsPerPage={itemsPerPage}
+        {/* Content based on active tab */}
+        {activeTab === 'payments' && (
+          <>
+            {/* Stats */}
+            <CompactStats
+              pendingSMS={stats.pending_sms}
+              reviewQueue={stats.review_queue}
+              readyChecks={stats.ready_checks}
+              weeklyTotal={stats.weekly_total}
             />
-          </div>
-        </div>
 
-        {/* Active Projects Section */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold text-gray-900 flex items-center gap-3">
-              🏗️ Active Projects
-              <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
-                {projects.length} active
-              </span>
-            </h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {projects.map((project: any) => (
-              <ProjectCard
-                key={project.id}
-                project={project}
-                onCreatePaymentApps={handleCreatePaymentApps}
+            {/* Main Content */}
+            <div className="flex gap-6 mb-8">
+              {/* Sidebar */}
+              <FilterSidebar
+                statusFilter={statusFilter}
+                setStatusFilter={setStatusFilter}
+                projectFilter={projectFilter}
+                setProjectFilter={setProjectFilter}
+                projects={projects}
+                sortBy={sortBy}
+                setSortBy={setSortBy}
+                sortDir={sortDir}
+                setSortDir={setSortDir}
+                onFilterChange={handleFilterChange}
               />
+
+              {/* Main Table */}
+              <div className="flex-1">
+                <PaymentTable
+                  applications={paginatedApps}
+                  onVerify={handleVerifyPayment}
+                  getDocumentForApp={getDocumentForApp}
+                  sendForSignature={sendForSignature}
+                  selectedItems={selectedItems}
+                  onSelectItem={handleSelectItem}
+                  onSelectAll={handleSelectAll}
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={handlePageChange}
+                  totalItems={filteredApps.length}
+                  itemsPerPage={itemsPerPage}
+                />
+              </div>
+            </div>
+
+            {/* Bulk Actions */}
+            <BulkActionsBar
+              selectedCount={selectedItems.length}
+              onDeleteSelected={handleDeleteSelected}
+              onApproveSelected={handleApproveSelected}
+              onClearSelection={() => setSelectedItems([])}
+            />
+          </>
+        )}
+
+        {activeTab === 'projects' && (
+          <div className="space-y-6">
+            {projects.map((project) => (
+              <ProjectOverview key={project.id} project={project} onCreatePaymentApps={handleCreatePaymentApps} />
             ))}
             {projects.length === 0 && (
-              <div className="col-span-full text-center py-12 bg-white border-2 border-dashed border-gray-300 rounded-lg">
+              <div className="text-center py-12 bg-white border-2 border-dashed border-gray-300 rounded-lg">
                 <div className="text-4xl mb-4">🏗️</div>
                 <p className="text-gray-500 font-medium">No active projects</p>
                 <p className="text-sm text-gray-400">Create a new project to get started</p>
               </div>
             )}
           </div>
-        </div>
+        )}
 
-        {/* Bulk Actions */}
-        <BulkActionsBar
-          selectedCount={selectedItems.length}
-          onDeleteSelected={handleDeleteSelected}
-          onApproveSelected={handleApproveSelected}
-          onClearSelection={() => setSelectedItems([])}
-        />
+        {activeTab === 'notes' && (
+          <DailyLogRequests projects={projects} />
+        )}
 
-        {/* Contractor Selection Modal */}
+        {/* Contractor Selection Modal - Available across all tabs */}
         <ContractorSelectionModal
           show={showContractorModal}
           onClose={() => {

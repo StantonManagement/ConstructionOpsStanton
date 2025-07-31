@@ -578,7 +578,7 @@ const PaymentProcessingView: React.FC<PaymentProcessingViewProps> = ({
               <span className="text-red-600">⚠️</span>
             </div>
             <div>
-              <h4 className="text-xl font-semibold text-gray-900">Outstanding Invoices</h4>
+              <h4 className="text-xl font-semibold text-gray-900">Outstanding Pay Apps</h4>
               <p className="text-gray-600 text-sm">Payments that require immediate attention</p>
             </div>
           </div>
