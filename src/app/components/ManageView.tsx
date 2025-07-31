@@ -1250,9 +1250,13 @@ const ManageView: React.FC = () => {
               {/* Mobile Cards */}
               <div className="sm:hidden space-y-4">
                 {filteredProjects.map((project) => (
-                  <div key={project.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                  <div 
+                    key={project.id} 
+                    className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 cursor-pointer hover:shadow-md transition-all duration-200"
+                    onClick={() => handleViewItem(project, 'project')}
+                  >
                     <div className="flex justify-between items-start mb-3">
-                      <div className="flex items-start space-x-3">
+                      <div className="flex items-start space-x-3" onClick={(e) => e.stopPropagation()}>
                         <input
                           type="checkbox"
                           checked={selectedItems.has(project.id)}
@@ -1302,6 +1306,15 @@ const ManageView: React.FC = () => {
                         </div>
                       </div>
                     )}
+                    
+                    <div className="mt-4 flex justify-end" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        onClick={() => handleEditItem(project, 'project')}
+                        className="px-3 py-1 text-blue-600 hover:text-blue-900 text-sm font-medium border border-blue-600 rounded hover:bg-blue-50 transition-colors"
+                      >
+                        Edit
+                      </button>
+                    </div>
                   </div>
                 ))}
 
@@ -1443,9 +1456,13 @@ const ManageView: React.FC = () => {
               {/* Mobile Cards */}
               <div className="sm:hidden space-y-4">
                 {filteredVendors.map((vendor) => (
-                  <div key={vendor.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                  <div 
+                    key={vendor.id} 
+                    className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 cursor-pointer hover:shadow-md transition-all duration-200"
+                    onClick={() => handleViewItem(vendor, 'vendor')}
+                  >
                     <div className="flex justify-between items-start mb-3">
-                      <div className="flex items-start space-x-3">
+                      <div className="flex items-start space-x-3" onClick={(e) => e.stopPropagation()}>
                         <input
                           type="checkbox"
                           checked={selectedItems.has(vendor.id)}
@@ -1502,6 +1519,15 @@ const ManageView: React.FC = () => {
                           {(vendor as any).performance_score ? `${(vendor as any).performance_score}/5` : 'Not rated'}
                         </span>
                       </div>
+                    </div>
+                    
+                    <div className="mt-4 flex justify-end" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        onClick={() => handleEditItem(vendor, 'vendor')}
+                        className="px-3 py-1 text-blue-600 hover:text-blue-900 text-sm font-medium border border-blue-600 rounded hover:bg-blue-50 transition-colors"
+                      >
+                        Edit
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -1649,9 +1675,13 @@ const ManageView: React.FC = () => {
               {/* Mobile Cards */}
               <div className="sm:hidden space-y-4">
                 {filteredContracts.map((contract) => (
-                  <div key={contract.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                  <div 
+                    key={contract.id} 
+                    className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 cursor-pointer hover:shadow-md transition-all duration-200"
+                    onClick={() => handleViewItem(contract, 'contract')}
+                  >
                     <div className="flex justify-between items-start mb-3">
-                      <div className="flex items-start space-x-3">
+                      <div className="flex items-start space-x-3" onClick={(e) => e.stopPropagation()}>
                         <input
                           type="checkbox"
                           checked={selectedItems.has(contract.id)}
@@ -1689,6 +1719,15 @@ const ManageView: React.FC = () => {
                           <div className="text-gray-900">{contract.end_date || 'Ongoing'}</div>
                         </div>
                       </div>
+                    </div>
+                    
+                    <div className="mt-4 flex justify-end" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        onClick={() => handleEditItem(contract, 'contract')}
+                        className="px-3 py-1 text-blue-600 hover:text-blue-900 text-sm font-medium border border-blue-600 rounded hover:bg-blue-50 transition-colors"
+                      >
+                        Edit
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -1900,6 +1939,35 @@ const ManageView: React.FC = () => {
         </div>
       )}
 
+      {viewModal === 'contract' && selectedItem && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-semibold text-gray-800">Contract Details</h3>
+              <button onClick={handleCloseViewModal} className="text-gray-400 hover:text-gray-700">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div><span className="font-semibold">Project:</span> {selectedItem.project?.name || 'Unknown Project'}</div>
+              <div><span className="font-semibold">Vendor:</span> {selectedItem.subcontractor?.name || 'Unknown Vendor'}</div>
+              <div><span className="font-semibold">Contract Amount:</span> ${(selectedItem.contract_amount || 0).toLocaleString()}</div>
+              <div><span className="font-semibold">Start Date:</span> {selectedItem.start_date || 'Not set'}</div>
+              <div><span className="font-semibold">End Date:</span> {selectedItem.end_date || 'Ongoing'}</div>
+              <div><span className="font-semibold">Status:</span> {selectedItem.status || 'Active'}</div>
+            </div>
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={() => handleEditItem(selectedItem, 'contract')}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Edit Contract
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Edit Modals */}
       {editModal === 'project' && selectedItem && (
         <div className="fixed inset-0  bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -1941,6 +2009,19 @@ const ManageView: React.FC = () => {
                 phone: selectedItem.phone || '',
                 email: (selectedItem as any).email || '',
               }}
+            />
+          </div>
+        </div>
+      )}
+
+      {editModal === 'contract' && selectedItem && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <AddContractForm
+              onClose={handleCloseEditModal}
+              onSuccess={() => addNotification('success', 'Contract updated successfully!')}
+              onError={(message) => addNotification('error', message)}
+              setDirty={setFormDirty}
             />
           </div>
         </div>

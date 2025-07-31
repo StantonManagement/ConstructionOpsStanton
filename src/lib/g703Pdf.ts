@@ -104,7 +104,7 @@ export async function generateG703Pdf({
   const smallSize = 10;
 
   // Company name
-  coverPage.drawText('Chain-JP LLC', { x: margin, y, size: 14, font: fontBold, color: colors.black });
+  coverPage.drawText(contractor.name || 'Chain-JP LLC', { x: margin, y, size: 14, font: fontBold, color: colors.black });
 
   // Application title
   const appTitle = 'Contractor/Vendor Application for Payment';
@@ -309,49 +309,67 @@ export async function generateG703Pdf({
     ...fonts.small
   });
 
-  // Project info
-  const projectInfoX = 320;
-  page.drawText('Chain-JP LLC', { 
-    x: projectInfoX, 
+  // Contractor info on the right (matching 3rd page format)
+  const contractorName = contractor.name || 'Chain-JP LLC';
+  const contractorTextWidth = fontBold.widthOfTextAtSize(contractorName, 10);
+  page.drawText(contractorName, { 
+    x: width - contractorTextWidth - 40, 
     y: headerY, 
-    font: fontBold, 
-    size: 12,
-    color: colors.black
+    size: 10, 
+    font: fontBold,
+    color: colors.black 
   });
   
-  page.drawText('Exterior Stain/Decking/ Window Capping', { 
-    x: projectInfoX, 
-    y: headerY - 18, 
-    ...fonts.subheader
-  });
-  
-  page.drawText(project?.name || '', { 
-    x: projectInfoX, 
-    y: headerY - 31, 
-    ...fonts.subheader
-  });
-  
-  page.drawText(project?.address || '', { 
-    x: projectInfoX, 
-    y: headerY - 44, 
-    ...fonts.subheader
+  // Trade info on the right (matching 3rd page format)
+  const tradeText = 'Exterior Stairs/Decking/ Window Capping';
+  const tradeTextWidth = font.widthOfTextAtSize(tradeText, 8);
+  page.drawText(tradeText, { 
+    x: width - tradeTextWidth - 40, 
+    y: headerY - 13, 
+    size: 8, 
+    font,
+    color: colors.black 
   });
 
-  // Application details
-  const rightInfoX = 580;
-  const appDetails = [
-    `APPLICATION NUMBER: ${applicationNumber || ''}`,
-    `APPLICATION INVOICE DATE: ${invoiceDate || ''}`,
-    `PERIOD: ${period || ''}`,
-    `Date Submitted: ${dateSubmitted || ''}`
-  ];
-
-  appDetails.forEach((detail, index) => {
-    page.drawText(detail, { 
-      x: rightInfoX, 
-      y: headerY - (index * 13), 
-      ...fonts.subheader
-    });
+  // Application details on the right (matching 3rd page format)
+  const appNumberText = `APPLICATION NUMBER: ${applicationNumber || ''}`;
+  const appNumberTextWidth = font.widthOfTextAtSize(appNumberText, 8);
+  page.drawText(appNumberText, { 
+    x: width - appNumberTextWidth - 40, 
+    y: headerY - 26, 
+    size: 8, 
+    font,
+    color: colors.black 
+  });
+  
+  const invoiceDateText = `APPLICATION INVOICE DATE: ${invoiceDate || ''}`;
+  const invoiceDateTextWidth = font.widthOfTextAtSize(invoiceDateText, 8);
+  page.drawText(invoiceDateText, { 
+    x: width - invoiceDateTextWidth - 40, 
+    y: headerY - 39, 
+    size: 8, 
+    font,
+    color: colors.black 
+  });
+  
+  const periodText = `PERIOD: ${period || ''}`;
+  const periodTextWidth = font.widthOfTextAtSize(periodText, 8);
+  page.drawText(periodText, { 
+    x: width - periodTextWidth - 40, 
+    y: headerY - 52, 
+    size: 8, 
+    font,
+    color: colors.black 
+  });
+  
+  const dateSubmittedText = dateSubmitted || '';
+  const dateSubmittedTextWidth = font.widthOfTextAtSize(dateSubmittedText, 8);
+  page.drawText(dateSubmittedText, { 
+    x: width - dateSubmittedTextWidth - 40, 
+    y: headerY - 65, 
+    size: 8, 
+    font,
+    color: colors.black 
   });
 
   // Table setup
