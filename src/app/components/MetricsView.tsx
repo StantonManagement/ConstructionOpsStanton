@@ -8,8 +8,8 @@ const MetricsView: React.FC = () => {
   // Calculate key metrics
   const metrics = useMemo(() => {
     const totalProjects = projects.length;
-    const activeProjects = projects.filter(p => p.status === 'active' || !p.status).length;
-    const completedProjects = projects.filter(p => p.status === 'completed').length;
+    const activeProjects = projects.filter(p => (p as any).status === 'active' || !(p as any).status).length;
+    const completedProjects = projects.filter(p => (p as any).status === 'completed').length;
 
     const totalBudget = projects.reduce((sum, p) => sum + (Number(p.budget) || 0), 0);
     const totalSpent = projects.reduce((sum, p) => sum + (Number(p.spent) || 0), 0);
@@ -20,7 +20,7 @@ const MetricsView: React.FC = () => {
     const contractValue = contracts.reduce((sum, c) => sum + (Number(c.contract_amount) || 0), 0);
 
     const totalVendors = subcontractors.length;
-    const activeVendors = subcontractors.filter(s => s.status === 'active' || !s.status).length;
+    const activeVendors = subcontractors.filter(s => (s as any).status === 'active' || !(s as any).status).length;
 
     // Performance metrics
     const avgProjectBudget = totalProjects > 0 ? totalBudget / totalProjects : 0;

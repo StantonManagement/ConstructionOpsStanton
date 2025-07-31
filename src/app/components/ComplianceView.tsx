@@ -256,7 +256,7 @@ const ComplianceView: React.FC = () => {
                         🎯 Project Compliance Status
                     </h3>
                     <div className="space-y-4">
-                        {['excellent', 'good', 'warning', 'critical'].map(status => {
+                        {['excellent', 'good', 'warning', 'critical'].map((status) => {
                             const count = complianceMetrics.projectCompliance.filter(p => p.status === status).length;
                             const percentage = projects.length > 0 ? (count / projects.length) * 100 : 0;
                             const colors = {
@@ -270,17 +270,17 @@ const ComplianceView: React.FC = () => {
                                 good: 'Good (75-89%)',
                                 warning: 'Warning (50-74%)',
                                 critical: 'Critical (<50%)'
-                            };
+                            } as const;
 
                             return (
                                 <div key={status} className="space-y-2">
                                     <div className="flex items-center justify-between">
-                                        <span className="text-sm font-medium text-gray-700">{labels[status]}</span>
+                                        <span className="text-sm font-medium text-gray-700">{labels[status as keyof typeof labels]}</span>
                                         <span className="text-lg font-bold">{count}</span>
                                     </div>
                                     <ProgressBar 
                                         percentage={percentage} 
-                                        color={colors[status]} 
+                                        color={colors[status as keyof typeof colors]} 
                                     />
                                 </div>
                             );
