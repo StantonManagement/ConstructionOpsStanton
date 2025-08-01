@@ -3,10 +3,10 @@ import { supabase } from '@/lib/supabaseClient';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const paymentAppId = params.id;
+    const { id: paymentAppId } = await params;
     const body = await request.json();
     const { recallNotes } = body;
 
