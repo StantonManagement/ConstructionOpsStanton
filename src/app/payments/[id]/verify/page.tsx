@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { generateG703Pdf } from '@/lib/g703Pdf';
 
@@ -46,6 +46,7 @@ interface Document {
 export default function PaymentVerificationPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const paymentAppId = params?.id;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -55,7 +56,7 @@ export default function PaymentVerificationPage() {
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
   const [document, setDocument] = useState<Document | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
-  const [showConfirmDialog, setShowConfirmDialog] = useState<'approve' | 'reject' | null>(null);
+  const [showConfirmDialog, setShowConfirmDialog] = useState<'approve' | 'reject' | 'recall' | null>(null);
   const [rejectionNotes, setRejectionNotes] = useState('');
   const [approvalNotes, setApprovalNotes] = useState('');
 
@@ -84,6 +85,24 @@ export default function PaymentVerificationPage() {
     percentage: 0
   });
   const [includeChangeOrderPageInPdf, setIncludeChangeOrderPageInPdf] = useState(false);
+
+  // Smart back navigation function
+  const handleBackNavigation = () => {
+    // Check if we have a returnTo parameter
+    const returnTo = searchParams.get('returnTo');
+    const projectId = searchParams.get('projectId');
+    
+    if (returnTo) {
+      // Navigate to the specific return path
+      router.push(returnTo);
+    } else if (projectId) {
+      // If we have a project ID, go back to the project's payment applications
+      router.push(`/pm-dashboard?tab=projects&projectId=${projectId}`);
+    } else {
+      // Default fallback to dashboard
+      router.push('/pm-dashboard');
+    }
+  };
 
   // Functions for editing percentages
   const startEditingLineItem = (lineItemId: number, currentSubmitted: number, currentVerified: number) => {
@@ -436,6 +455,47 @@ const lineItemsForTable = lineItems.map((li, idx) => {
     }
   };
 
+  const handleRecall = async () => {
+    setActionLoading(true);
+    setError(null);
+    try {
+      // Get current session for authorization
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('Authentication required');
+      }
+
+      const response = await fetch(`/api/payments/${paymentAppId}/recall`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          recallNotes: rejectionNotes.trim() || null
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to recall payment application');
+      }
+
+      const result = await response.json();
+      console.log('Payment recalled:', result);
+      
+      // Show success message and redirect
+      alert('Payment application recalled successfully!');
+      router.push("/pm-dashboard");
+    } catch (err) {
+      setError((err instanceof Error ? err.message : "Failed to recall"));
+    } finally {
+      setActionLoading(false);
+      setShowConfirmDialog(null);
+      setRejectionNotes('');
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
       case 'approved':
@@ -472,7 +532,7 @@ const lineItemsForTable = lineItems.map((li, idx) => {
           <h2 className="text-xl font-semibold text-gray-900 mb-2">Error Loading Data</h2>
           <p className="text-red-600 mb-4">{error}</p>
           <button
-            onClick={() => router.back()}
+            onClick={handleBackNavigation}
             className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
           >
             Go Back
@@ -490,7 +550,7 @@ const lineItemsForTable = lineItems.map((li, idx) => {
           <div className="flex items-center justify-between py-4">
             <button
               type="button"
-              onClick={() => router.back()}
+              onClick={handleBackNavigation}
               className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -924,26 +984,56 @@ const lineItemsForTable = lineItems.map((li, idx) => {
         {/* Action Buttons */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <div className="flex flex-col sm:flex-row gap-4 justify-end">
-            <button
-              onClick={() => setShowConfirmDialog('reject')}
-              disabled={actionLoading}
-              className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-              Reject Application
-            </button>
-            <button
-              onClick={() => setShowConfirmDialog('approve')}
-              disabled={actionLoading}
-              className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-              Approve Application
-            </button>
+            {/* Show different buttons based on status */}
+            {paymentApp?.status === 'approved' ? (
+              // For approved applications, show recall button
+              <button
+                onClick={() => setShowConfirmDialog('recall')}
+                disabled={actionLoading}
+                className="px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                </svg>
+                Recall Application
+              </button>
+            ) : paymentApp?.status === 'rejected' ? (
+              // For rejected applications, show only approve button (to re-approve)
+              <button
+                onClick={() => setShowConfirmDialog('approve')}
+                disabled={actionLoading}
+                className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                Re-approve Application
+              </button>
+            ) : (
+              // For other statuses, show both approve and reject buttons
+              <>
+                <button
+                  onClick={() => setShowConfirmDialog('reject')}
+                  disabled={actionLoading}
+                  className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  Reject Application
+                </button>
+                <button
+                  onClick={() => setShowConfirmDialog('approve')}
+                  disabled={actionLoading}
+                  className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  Approve Application
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -955,11 +1045,16 @@ const lineItemsForTable = lineItems.map((li, idx) => {
             <div className="p-6">
               <div className="flex items-center gap-4 mb-4">
                 <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                  showConfirmDialog === 'approve' ? 'bg-green-100' : 'bg-red-100'
+                  showConfirmDialog === 'approve' ? 'bg-green-100' : 
+                  showConfirmDialog === 'recall' ? 'bg-orange-100' : 'bg-red-100'
                 }`}>
                   {showConfirmDialog === 'approve' ? (
                     <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  ) : showConfirmDialog === 'recall' ? (
+                    <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
                     </svg>
                   ) : (
                     <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -969,12 +1064,15 @@ const lineItemsForTable = lineItems.map((li, idx) => {
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">
-                    {showConfirmDialog === 'approve' ? 'Approve Payment' : 'Reject Payment'}
+                    {showConfirmDialog === 'approve' ? 'Approve Payment' : 
+                     showConfirmDialog === 'recall' ? 'Recall Payment' : 'Reject Payment'}
                   </h3>
                   <p className="text-gray-600">
                     {showConfirmDialog === 'approve' 
                       ? 'Add optional notes and approve this payment application' 
-                      : 'Please provide a reason for rejection'}
+                      : showConfirmDialog === 'recall'
+                        ? 'Provide a reason for recalling this approved payment application'
+                        : 'Please provide a reason for rejection'}
                   </p>
                 </div>
               </div>
@@ -1006,12 +1104,14 @@ const lineItemsForTable = lineItems.map((li, idx) => {
                 ) : (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Rejection Notes (Optional)
+                      {showConfirmDialog === 'recall' ? 'Recall Notes (Optional)' : 'Rejection Notes (Optional)'}
                     </label>
                     <textarea
                       value={rejectionNotes}
                       onChange={(e) => setRejectionNotes(e.target.value)}
-                      placeholder="Provide details about the rejection..."
+                      placeholder={showConfirmDialog === 'recall' 
+                        ? "Provide details about the recall..." 
+                        : "Provide details about the rejection..."}
                       className="w-full px-3 py-2 border text-gray-700 border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 resize-none"
                       rows={4}
                     />
@@ -1039,12 +1139,14 @@ const lineItemsForTable = lineItems.map((li, idx) => {
                   Cancel
                 </button>
                 <button
-                  onClick={showConfirmDialog === 'approve' ? handleApprove : handleReject}
+                  onClick={showConfirmDialog === 'approve' ? handleApprove : showConfirmDialog === 'recall' ? handleRecall : handleReject}
                   disabled={actionLoading}
                   className={`flex-1 px-4 py-2 text-white rounded-lg disabled:opacity-50 transition-colors ${
                     showConfirmDialog === 'approve' 
                       ? 'bg-green-600 hover:bg-green-700' 
-                      : 'bg-red-600 hover:bg-red-700'
+                      : showConfirmDialog === 'recall'
+                        ? 'bg-orange-600 hover:bg-orange-700'
+                        : 'bg-red-600 hover:bg-red-700'
                   }`}
                 >
                   {actionLoading ? (
@@ -1053,7 +1155,7 @@ const lineItemsForTable = lineItems.map((li, idx) => {
                       Processing...
                     </div>
                   ) : (
-                    `${showConfirmDialog === 'approve' ? 'Approve' : 'Reject'} Payment`
+                    `${showConfirmDialog === 'approve' ? 'Approve' : showConfirmDialog === 'recall' ? 'Recall' : 'Reject'} Payment`
                   )}
                 </button>
               </div>

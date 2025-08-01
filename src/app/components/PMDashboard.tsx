@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import { useRouter } from "next/navigation";
 import Header from "./Header";
 
 // Utility functions
@@ -54,7 +55,7 @@ function TabNavigation({ activeTab, onTabChange }: { activeTab: string; onTabCha
 }
 
 // Project Overview Component
-function ProjectOverview({ project, onCreatePaymentApps }: { project: any; onCreatePaymentApps: (projectId: number) => void }) {
+function ProjectOverview({ project, onCreatePaymentApps, onStatsPaymentAppClick }: { project: any; onCreatePaymentApps: (projectId: number) => void; onStatsPaymentAppClick: (appId: number) => void }) {
   const [loading, setLoading] = useState(false);
   const [projectStats, setProjectStats] = useState<any>({
     totalContractors: 0,
@@ -64,6 +65,212 @@ function ProjectOverview({ project, onCreatePaymentApps }: { project: any; onCre
     totalSpent: 0,
     completionPercentage: 0
   });
+
+  // New state for data modal
+  const [showDataModal, setShowDataModal] = useState(false);
+  const [modalData, setModalData] = useState<any[]>([]);
+  const [modalTitle, setModalTitle] = useState('');
+  const [modalType, setModalType] = useState('');
+  const [loadingModalData, setLoadingModalData] = useState(false);
+  const [needsRefresh, setNeedsRefresh] = useState(false);
+
+  const router = useRouter();
+
+  // Project modal state
+  const [showProjectModal, setShowProjectModal] = useState(false);
+  const [projectModalData, setProjectModalData] = useState<any>({});
+  const [loadingProjectModal, setLoadingProjectModal] = useState(false);
+
+  if (!project) return null;
+
+  // Function to handle stat card clicks
+  const handleStatCardClick = async (type: string) => {
+    setModalType(type);
+    setLoadingModalData(true);
+    setShowDataModal(true);
+
+    try {
+      let data: any[] = [];
+      let title = '';
+
+      switch (type) {
+        case 'contractors':
+          const { data: contractors, error: contractorsError } = await supabase
+            .from('project_contractors')
+            .select(`
+              *,
+              contractors:contractor_id (
+                id,
+                name,
+                email,
+                phone,
+                trade
+              )
+            `)
+            .eq('project_id', project.id)
+            .eq('contract_status', 'active');
+
+          if (!contractorsError && contractors) {
+            data = contractors.map((pc: any) => ({
+              id: pc.id,
+              name: pc.contractors?.name || 'Unknown',
+              email: pc.contractors?.email || '',
+              phone: pc.contractors?.phone || '',
+              trade: pc.contractors?.trade || '',
+              contract_amount: pc.contract_amount,
+              paid_to_date: pc.paid_to_date,
+              contract_status: pc.contract_status
+            }));
+            title = `Contractors for ${project.name}`;
+          }
+          break;
+
+        case 'payment_apps':
+          const { data: paymentApps, error: paymentAppsError } = await supabase
+            .from('payment_applications')
+            .select(`
+              *,
+              contractors:contractor_id (
+                id,
+                name,
+                trade
+              )
+            `)
+            .eq('project_id', project.id)
+            .in('status', ['submitted', 'needs_review', 'sms_complete']);
+
+          if (!paymentAppsError && paymentApps) {
+            data = paymentApps.map((app: any) => ({
+              id: app.id,
+              contractor_name: app.contractors?.name || 'Unknown',
+              trade: app.contractors?.trade || '',
+              status: app.status,
+              created_at: app.created_at,
+              grand_total: app.grand_total
+            }));
+            title = `Active Payment Applications for ${project.name}`;
+          }
+          break;
+
+        case 'completed':
+          const { data: completedApps, error: completedAppsError } = await supabase
+            .from('payment_applications')
+            .select(`
+              *,
+              contractors:contractor_id (
+                id,
+                name,
+                trade
+              )
+            `)
+            .eq('project_id', project.id)
+            .in('status', ['approved', 'check_ready']);
+
+          if (!completedAppsError && completedApps) {
+            data = completedApps.map((app: any) => ({
+              id: app.id,
+              contractor_name: app.contractors?.name || 'Unknown',
+              trade: app.contractors?.trade || '',
+              status: app.status,
+              created_at: app.created_at,
+              grand_total: app.grand_total
+            }));
+            title = `Completed Payment Applications for ${project.name}`;
+          }
+          break;
+      }
+
+      setModalData(data);
+      setModalTitle(title);
+    } catch (error) {
+      console.error('Error fetching modal data:', error);
+      setModalData([]);
+    } finally {
+      setLoadingModalData(false);
+    }
+  };
+
+  // Function to close data modal
+  const handleCloseDataModal = () => {
+    setShowDataModal(false);
+    setModalData([]);
+    setModalTitle('');
+    setModalType('');
+  };
+
+  // Function to handle payment application click
+  const handlePaymentAppClick = (appId: number) => {
+    // Pass the current context as URL parameters for proper back navigation
+    const returnTo = `/pm-dashboard?tab=projects&projectId=${project.id}`;
+    router.push(`/payments/${appId}/verify?returnTo=${encodeURIComponent(returnTo)}&projectId=${project.id}`);
+  };
+
+  // Function to refresh project stats
+  const handleRefreshStats = async () => {
+    setLoading(true);
+    try {
+      // Fetch contractors for this project
+      const { data: contractors, error: contractorsError } = await supabase
+        .from('project_contractors')
+        .select('*')
+        .eq('project_id', project.id)
+        .eq('contract_status', 'active');
+
+      // Fetch payment applications for this project
+      const { data: paymentApps, error: paymentAppsError } = await supabase
+        .from('payment_applications')
+        .select('*')
+        .eq('project_id', project.id);
+
+      if (!contractorsError && !paymentAppsError) {
+        const activeApps = paymentApps?.filter((app: any) => 
+          ['submitted', 'needs_review', 'sms_complete'].includes(app.status)
+        ) || [];
+        const completedApps = paymentApps?.filter((app: any) => 
+          ['approved', 'check_ready'].includes(app.status)
+        ) || [];
+
+        const totalBudget = contractors?.reduce((sum: number, c: any) => 
+          sum + (Number(c.contract_amount) || 0), 0
+        ) || 0;
+        const totalSpent = contractors?.reduce((sum: number, c: any) => 
+          sum + (Number(c.paid_to_date) || 0), 0
+        ) || 0;
+
+        setProjectStats({
+          totalContractors: contractors?.length || 0,
+          activePaymentApps: activeApps.length,
+          completedPaymentApps: completedApps.length,
+          totalBudget,
+          totalSpent,
+          completionPercentage: totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0
+        });
+      }
+    } catch (error) {
+      console.error('Error refreshing project stats:', error);
+    } finally {
+      setLoading(false);
+      setNeedsRefresh(false);
+    }
+  };
+
+  // Function to get status badge color
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'approved':
+        return 'bg-green-100 text-green-800';
+      case 'check_ready':
+        return 'bg-blue-100 text-blue-800';
+      case 'submitted':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'needs_review':
+        return 'bg-orange-100 text-orange-800';
+      case 'sms_complete':
+        return 'bg-purple-100 text-purple-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
 
   useEffect(() => {
     const fetchProjectStats = async () => {
@@ -133,104 +340,734 @@ function ProjectOverview({ project, onCreatePaymentApps }: { project: any; onCre
     );
   }
 
+  // Function to handle project card click
+  const handleProjectCardClick = async () => {
+    setShowProjectModal(true);
+    setLoadingProjectModal(true);
+
+    try {
+      // Fetch comprehensive project data
+      const [
+        projectDetails,
+        contractorsResult,
+        paymentAppsResult,
+        dailyLogsResult,
+        pmNotesResult,
+        lineItemsResult,
+        contractsResult
+      ] = await Promise.all([
+        // Project details
+        supabase
+          .from('projects')
+          .select('*')
+          .eq('id', project.id)
+          .single(),
+        
+        // Contractors
+        supabase
+          .from('project_contractors')
+          .select(`
+            *,
+            contractors:contractor_id (
+              id, name, trade, phone, email, performance_score
+            )
+          `)
+          .eq('project_id', project.id),
+        
+        // Payment applications
+        supabase
+          .from('payment_applications')
+          .select(`
+            *,
+            contractors:contractor_id (
+              id, name, trade
+            )
+          `)
+          .eq('project_id', project.id)
+          .order('created_at', { ascending: false }),
+        
+        // Daily log requests
+        supabase
+          .from('daily_log_requests')
+          .select('*')
+          .eq('project_id', project.id)
+          .order('request_date', { ascending: false }),
+        
+        // PM notes
+        supabase
+          .from('pm_notes')
+          .select('*')
+          .eq('project_id', project.id)
+          .order('created_at', { ascending: false }),
+        
+        // Line items
+        supabase
+          .from('project_line_items')
+          .select(`
+            *,
+            contractors:contractor_id (
+              id, name, trade
+            )
+          `)
+          .eq('project_id', project.id)
+          .order('display_order', { ascending: true }),
+        
+        // Contracts
+        supabase
+          .from('contracts')
+          .select(`
+            *,
+            contractors:subcontractor_id (
+              id, name, trade
+            )
+          `)
+          .eq('project_id', project.id)
+      ]);
+
+      setProjectModalData({
+        project: projectDetails.data,
+        contractors: contractorsResult.data || [],
+        paymentApps: paymentAppsResult.data || [],
+        dailyLogs: dailyLogsResult.data || [],
+        pmNotes: pmNotesResult.data || [],
+        lineItems: lineItemsResult.data || [],
+        contracts: contractsResult.data || []
+      });
+    } catch (error) {
+      console.error('Error fetching project data:', error);
+    } finally {
+      setLoadingProjectModal(false);
+    }
+  };
+
+  const handleCloseProjectModal = () => {
+    setShowProjectModal(false);
+    setProjectModalData({});
+  };
+
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-6">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-900">{project.name}</h3>
-        <div className="flex items-center gap-2">
-          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-            project.at_risk 
-              ? 'bg-red-100 text-red-800' 
-              : 'bg-green-100 text-green-800'
-          }`}>
-            {project.at_risk ? '⚠️ At Risk' : '✅ On Track'}
-          </span>
-          <button
-            onClick={() => onCreatePaymentApps(project.id)}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+    <>
+      <div 
+        className="bg-white rounded-lg border border-gray-200 p-6 cursor-pointer hover:shadow-md transition-all duration-200"
+        onClick={handleProjectCardClick}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-gray-900">{project.name}</h3>
+          <div className="flex items-center gap-2">
+            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+              project.at_risk 
+                ? 'bg-red-100 text-red-800' 
+                : 'bg-green-100 text-green-800'
+            }`}>
+              {project.at_risk ? '⚠️ At Risk' : '✅ On Track'}
+            </span>
+            <button
+              onClick={(e) => {
+                e.stopPropagation(); // Prevent triggering the card click
+                onCreatePaymentApps(project.id);
+              }}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+            >
+              📋 Create Payment App
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+          <div 
+            className="bg-blue-50 p-4 rounded-lg cursor-pointer hover:shadow-md transition-all duration-200"
+            onClick={(e) => {
+              e.stopPropagation(); // Prevent triggering the project card click
+              handleStatCardClick('contractors');
+            }}
           >
-            📋 Create Payment App
-          </button>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-blue-600">👥</span>
+              <h4 className="font-medium text-gray-900">Contractors</h4>
+            </div>
+            <p className="text-2xl font-bold text-blue-600">{projectStats.totalContractors}</p>
+            <p className="text-sm text-gray-600">Active on project</p>
+            <div className="mt-2 text-xs text-blue-600 font-medium">
+              💬 Click to view details
+            </div>
+          </div>
+
+          <div 
+            className="bg-yellow-50 p-4 rounded-lg cursor-pointer hover:shadow-md transition-all duration-200"
+            onClick={(e) => {
+              e.stopPropagation(); // Prevent triggering the project card click
+              handleStatCardClick('payment_apps');
+            }}
+          >
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-yellow-600">📋</span>
+              <h4 className="font-medium text-gray-900">Payment Apps</h4>
+            </div>
+            <p className="text-2xl font-bold text-yellow-600">{projectStats.activePaymentApps}</p>
+            <p className="text-sm text-gray-600">Pending review</p>
+            <div className="mt-2 text-xs text-yellow-600 font-medium">
+              💬 Click to view details
+            </div>
+          </div>
+
+          <div 
+            className="bg-green-50 p-4 rounded-lg cursor-pointer hover:shadow-md transition-all duration-200"
+            onClick={(e) => {
+              e.stopPropagation(); // Prevent triggering the project card click
+              handleStatCardClick('completed');
+            }}
+          >
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-green-600">✅</span>
+              <h4 className="font-medium text-gray-900">Completed</h4>
+            </div>
+            <p className="text-2xl font-bold text-green-600">{projectStats.completedPaymentApps}</p>
+            <p className="text-sm text-gray-600">Approved payments</p>
+            <div className="mt-2 text-xs text-green-600 font-medium">
+              💬 Click to view details
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-sm font-medium text-gray-700">Budget Progress</span>
+              <span className="text-sm text-gray-600">
+                {formatCurrency(projectStats.totalSpent)} / {formatCurrency(projectStats.totalBudget)}
+              </span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div
+                className={`h-2 rounded-full transition-all duration-500 ${
+                  projectStats.completionPercentage > 90 ? 'bg-red-500' : 'bg-green-500'
+                }`}
+                style={{ width: `${Math.min(projectStats.completionPercentage, 100)}%` }}
+              ></div>
+            </div>
+            <div className="flex justify-between items-center mt-1">
+              <span className="text-xs text-gray-500">
+                {projectStats.completionPercentage}% Complete
+              </span>
+              <span className="text-xs text-gray-500">
+                {projectStats.completionPercentage > 90 ? '⚠️ Over Budget' : '✅ On Track'}
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-        <div className="bg-blue-50 p-4 rounded-lg">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-blue-600">👥</span>
-            <h4 className="font-medium text-gray-900">Contractors</h4>
-          </div>
-          <p className="text-2xl font-bold text-blue-600">{projectStats.totalContractors}</p>
-          <p className="text-sm text-gray-600">Active on project</p>
-        </div>
+              {/* Data Modal */}
+        {showDataModal && (
+          <div className="fixed inset-0  bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+              <div className="p-6 border-b border-gray-200">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    {modalTitle}
+                  </h3>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleRefreshStats}
+                      className="text-blue-600 hover:text-blue-700 p-1"
+                      title="Refresh data"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={handleCloseDataModal}
+                      className="text-gray-400 hover:text-gray-600 p-1"
+                    >
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
 
-        <div className="bg-yellow-50 p-4 rounded-lg">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-yellow-600">📋</span>
-            <h4 className="font-medium text-gray-900">Payment Apps</h4>
-          </div>
-          <p className="text-2xl font-bold text-yellow-600">{projectStats.activePaymentApps}</p>
-          <p className="text-sm text-gray-600">Pending review</p>
-        </div>
+        {/* Project Modal */}
+        {showProjectModal && (
+          <div className="fixed inset-0  bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl max-h-[95vh] overflow-hidden">
+              <div className="p-6 border-b border-gray-200">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xl font-semibold text-gray-900">
+                    {loadingProjectModal ? 'Loading Project Details...' : `${projectModalData.project?.name || 'Project Details'}`}
+                  </h3>
+                  <button
+                    onClick={handleCloseProjectModal}
+                    className="text-gray-400 hover:text-gray-600 p-1"
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
 
-        <div className="bg-green-50 p-4 rounded-lg">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-green-600">✅</span>
-            <h4 className="font-medium text-gray-900">Completed</h4>
-          </div>
-          <p className="text-2xl font-bold text-green-600">{projectStats.completedPaymentApps}</p>
-          <p className="text-sm text-gray-600">Approved payments</p>
-        </div>
-      </div>
+              <div className="p-6 overflow-y-auto max-h-[calc(95vh-120px)]">
+                {loadingProjectModal ? (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                    <span className="ml-3 text-gray-600">Loading project data...</span>
+                  </div>
+                ) : (
+                  <div className="space-y-8">
+                    {/* Project Overview */}
+                    <div className="bg-gray-50 rounded-lg p-6">
+                      <h4 className="text-lg font-semibold text-gray-900 mb-4">Project Overview</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div>
+                          <label className="text-sm font-medium text-gray-600">Project Name</label>
+                          <p className="text-lg font-semibold text-gray-900">{projectModalData.project?.name}</p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-600">Client</label>
+                          <p className="text-lg font-semibold text-gray-900">{projectModalData.project?.client_name}</p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-600">Status</label>
+                          <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
+                            projectModalData.project?.at_risk 
+                              ? 'bg-red-100 text-red-800' 
+                              : 'bg-green-100 text-green-800'
+                          }`}>
+                            {projectModalData.project?.at_risk ? '⚠️ At Risk' : '✅ On Track'}
+                          </span>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-600">Phase</label>
+                          <p className="text-lg font-semibold text-gray-900">{projectModalData.project?.current_phase || 'N/A'}</p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-600">Budget</label>
+                          <p className="text-lg font-semibold text-gray-900">{formatCurrency(projectModalData.project?.budget || 0)}</p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-600">Spent</label>
+                          <p className="text-lg font-semibold text-gray-900">{formatCurrency(projectModalData.project?.spent || 0)}</p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-600">Start Date</label>
+                          <p className="text-lg font-semibold text-gray-900">
+                            {projectModalData.project?.start_date ? formatDate(projectModalData.project.start_date) : 'N/A'}
+                          </p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-600">Target Completion</label>
+                          <p className="text-lg font-semibold text-gray-900">
+                            {projectModalData.project?.target_completion_date ? formatDate(projectModalData.project.target_completion_date) : 'N/A'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
 
-      <div className="space-y-4">
-        <div>
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-sm font-medium text-gray-700">Budget Progress</span>
-            <span className="text-sm text-gray-600">
-              {formatCurrency(projectStats.totalSpent)} / {formatCurrency(projectStats.totalBudget)}
-            </span>
-          </div>
-          <div className="w-full bg-gray-200 rounded-full h-2">
-            <div
-              className={`h-2 rounded-full transition-all duration-500 ${
-                projectStats.completionPercentage > 90 ? 'bg-red-500' : 'bg-green-500'
-              }`}
-              style={{ width: `${Math.min(projectStats.completionPercentage, 100)}%` }}
-            ></div>
-          </div>
-          <div className="flex justify-between text-xs mt-1">
-            <span className="text-gray-600">{projectStats.completionPercentage}% used</span>
-            <span className={projectStats.completionPercentage > 90 ? "text-red-600 font-medium" : "text-green-600 font-medium"}>
-              {projectStats.completionPercentage > 90 ? "⚠️ Near limit" : "On track"}
-            </span>
-          </div>
-        </div>
+                    {/* Contractors */}
+                    <div>
+                      <h4 className="text-lg font-semibold text-gray-900 mb-4">Contractors ({projectModalData.contractors?.length || 0})</h4>
+                      {projectModalData.contractors?.length > 0 ? (
+                        <div className="overflow-x-auto">
+                          <table className="min-w-full divide-y divide-gray-200">
+                            <thead className="bg-gray-50">
+                              <tr>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Trade</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Contact</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Contract Amount</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Paid to Date</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                              </tr>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-gray-200">
+                              {projectModalData.contractors.map((contractor: any) => (
+                                <tr key={contractor.id} className="hover:bg-gray-50">
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                    {contractor.contractors?.name}
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    {contractor.contractors?.trade}
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    <div>{contractor.contractors?.phone}</div>
+                                    <div>{contractor.contractors?.email}</div>
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    {formatCurrency(contractor.contract_amount || 0)}
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    {formatCurrency(contractor.paid_to_date || 0)}
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap">
+                                    <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
+                                      contractor.contract_status === 'active' 
+                                        ? 'bg-green-100 text-green-800' 
+                                        : 'bg-gray-100 text-gray-800'
+                                    }`}>
+                                      {contractor.contract_status}
+                                    </span>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      ) : (
+                        <p className="text-gray-500 text-center py-4">No contractors assigned to this project</p>
+                      )}
+                    </div>
 
-        <div className="grid grid-cols-2 gap-4 text-sm">
-          <div>
-            <span className="text-gray-600">Phase:</span>
-            <span className="ml-2 font-medium">{project.current_phase || 'Not set'}</span>
+                    {/* Payment Applications */}
+                    <div>
+                      <h4 className="text-lg font-semibold text-gray-900 mb-4">Payment Applications ({projectModalData.paymentApps?.length || 0})</h4>
+                      {projectModalData.paymentApps?.length > 0 ? (
+                        <div className="space-y-3">
+                          {projectModalData.paymentApps.map((app: any) => (
+                            <div key={app.id} className="bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition-colors cursor-pointer"
+                                 onClick={() => onStatsPaymentAppClick(app.id)}>
+                              <div className="flex items-center justify-between">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <span className="text-sm font-medium text-gray-900">
+                                      {app.contractors?.name || 'Unknown Contractor'}
+                                    </span>
+                                    <span className="text-xs text-gray-500">
+                                      {app.contractors?.trade || ''}
+                                    </span>
+                                  </div>
+                                  <div className="text-sm text-gray-600">
+                                    Amount: {formatCurrency(app.current_payment || 0)} • Created: {formatDate(app.created_at)}
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <div className={`text-sm font-medium ${
+                                    app.status === 'approved' ? 'text-green-600' :
+                                    app.status === 'submitted' ? 'text-red-600' :
+                                    app.status === 'needs_review' ? 'text-yellow-600' :
+                                    app.status === 'check_ready' ? 'text-purple-600' :
+                                    'text-gray-600'
+                                  }`}>
+                                    {app.status.replace('_', ' ').toUpperCase()}
+                                  </div>
+                                  <div className="text-xs text-gray-500">
+                                    ID: {app.id}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-gray-500 text-center py-4">No payment applications for this project</p>
+                      )}
+                    </div>
+
+                    {/* Daily Log Requests */}
+                    <div>
+                      <h4 className="text-lg font-semibold text-gray-900 mb-4">Daily Log Requests ({projectModalData.dailyLogs?.length || 0})</h4>
+                      {projectModalData.dailyLogs?.length > 0 ? (
+                        <div className="space-y-3">
+                          {projectModalData.dailyLogs.map((log: any) => (
+                            <div key={log.id} className="bg-gray-50 rounded-lg p-4">
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm font-medium text-gray-900">
+                                    {formatDate(log.request_date)}
+                                  </span>
+                                  <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
+                                    log.request_status === 'received' ? 'bg-green-100 text-green-800' :
+                                    log.request_status === 'sent' ? 'bg-blue-100 text-blue-800' :
+                                    log.request_status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                    'bg-red-100 text-red-800'
+                                  }`}>
+                                    {log.request_status.toUpperCase()}
+                                  </span>
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  Retries: {log.retry_count}/{log.max_retries}
+                                </div>
+                              </div>
+                              <div className="text-sm text-gray-600">
+                                <div>PM Phone: {log.pm_phone_number}</div>
+                                <div>Request Time: {log.request_time}</div>
+                                {log.received_notes && (
+                                  <div className="mt-2 p-2 bg-white rounded border">
+                                    <strong>Notes:</strong> {log.received_notes}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-gray-500 text-center py-4">No daily log requests for this project</p>
+                      )}
+                    </div>
+
+                    {/* PM Notes */}
+                    <div>
+                      <h4 className="text-lg font-semibold text-gray-900 mb-4">PM Notes ({projectModalData.pmNotes?.length || 0})</h4>
+                      {projectModalData.pmNotes?.length > 0 ? (
+                        <div className="space-y-3">
+                          {projectModalData.pmNotes.map((note: any) => (
+                            <div key={note.id} className="bg-gray-50 rounded-lg p-4">
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm font-medium text-gray-900">
+                                    {formatDate(note.created_at)}
+                                  </span>
+                                  <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
+                                    note.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                                  }`}>
+                                    {note.is_active ? 'ACTIVE' : 'INACTIVE'}
+                                  </span>
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  {note.scheduled_time}
+                                </div>
+                              </div>
+                              <div className="text-sm text-gray-600">
+                                {note.note}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-gray-500 text-center py-4">No PM notes for this project</p>
+                      )}
+                    </div>
+
+                    {/* Line Items */}
+                    <div>
+                      <h4 className="text-lg font-semibold text-gray-900 mb-4">Line Items ({projectModalData.lineItems?.length || 0})</h4>
+                      {projectModalData.lineItems?.length > 0 ? (
+                        <div className="overflow-x-auto">
+                          <table className="min-w-full divide-y divide-gray-200">
+                            <thead className="bg-gray-50">
+                              <tr>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Item No</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Contractor</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Scheduled Value</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">% Complete</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                              </tr>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-gray-200">
+                              {projectModalData.lineItems.map((item: any) => (
+                                <tr key={item.id} className="hover:bg-gray-50">
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                    {item.item_no}
+                                  </td>
+                                  <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
+                                    {item.description_of_work}
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    {item.contractors?.name}
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    {formatCurrency(item.scheduled_value || 0)}
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    {item.percent_completed ? `${Math.round(item.percent_completed * 100)}%` : 'N/A'}
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap">
+                                    <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
+                                      item.status === 'active' 
+                                        ? 'bg-green-100 text-green-800' 
+                                        : 'bg-gray-100 text-gray-800'
+                                    }`}>
+                                      {item.status}
+                                    </span>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      ) : (
+                        <p className="text-gray-500 text-center py-4">No line items for this project</p>
+                      )}
+                    </div>
+
+                    {/* Contracts */}
+                    <div>
+                      <h4 className="text-lg font-semibold text-gray-900 mb-4">Contracts ({projectModalData.contracts?.length || 0})</h4>
+                      {projectModalData.contracts?.length > 0 ? (
+                        <div className="space-y-3">
+                          {projectModalData.contracts.map((contract: any) => (
+                            <div key={contract.id} className="bg-gray-50 rounded-lg p-4">
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm font-medium text-gray-900">
+                                    {contract.contractors?.name || 'Unknown Contractor'}
+                                  </span>
+                                  <span className="text-xs text-gray-500">
+                                    {contract.contractors?.trade || ''}
+                                  </span>
+                                </div>
+                                <div className="text-sm font-medium text-gray-900">
+                                  {formatCurrency(contract.contract_amount || 0)}
+                                </div>
+                              </div>
+                              <div className="text-sm text-gray-600">
+                                <div>Start: {contract.start_date ? formatDate(contract.start_date) : 'N/A'}</div>
+                                <div>End: {contract.end_date ? formatDate(contract.end_date) : 'N/A'}</div>
+                                <div>Created: {formatDate(contract.created_at)}</div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-gray-500 text-center py-4">No contracts for this project</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
-          <div>
-            <span className="text-gray-600">Client:</span>
-            <span className="ml-2 font-medium">{project.client_name}</span>
-          </div>
-          <div>
-            <span className="text-gray-600">Start Date:</span>
-            <span className="ml-2 font-medium">
-              {project.start_date ? formatDate(project.start_date) : 'Not set'}
-            </span>
-          </div>
-          <div>
-            <span className="text-gray-600">Target Completion:</span>
-            <span className="ml-2 font-medium">
-              {project.target_completion_date ? formatDate(project.target_completion_date) : 'Not set'}
-            </span>
+        )}
+
+            <div className="p-6 overflow-y-auto max-h-[60vh]">
+              {loadingModalData ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  <span className="ml-2 text-gray-600">Loading data...</span>
+                </div>
+              ) : modalData.length > 0 ? (
+                <div className="space-y-4">
+                  {modalType === 'contractors' ? (
+                    // Contractors table
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Trade</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contract Amount</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Paid to Date</th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {modalData.map((contractor: any) => (
+                            <tr key={contractor.id} className="hover:bg-gray-50">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                {contractor.name}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {contractor.trade}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                <div>{contractor.email}</div>
+                                <div>{contractor.phone}</div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {formatCurrency(contractor.contract_amount || 0)}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {formatCurrency(contractor.paid_to_date || 0)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    // Payment applications table
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contractor</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Trade</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {modalData.map((app: any) => (
+                            <tr 
+                              key={app.id} 
+                              className="hover:bg-gray-50 cursor-pointer"
+                              onClick={() => handlePaymentAppClick(app.id)}
+                            >
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                #{app.id}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {app.contractor_name}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {app.trade}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadge(app.status)}`}>
+                                  {app.status.replace('_', ' ')}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {formatCurrency(app.grand_total || 0)}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {formatDate(app.created_at)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <div className="text-4xl mb-4">
+                    {modalType === 'contractors' ? '👥' : '📋'}
+                  </div>
+                  <p className="text-gray-500 font-medium">No data found</p>
+                  <p className="text-sm text-gray-400">
+                    {modalType === 'contractors' 
+                      ? 'No active contractors found for this project.'
+                      : modalType === 'payment_apps'
+                      ? 'No active payment applications found for this project.'
+                      : 'No completed payment applications found for this project.'
+                    }
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="p-6 border-t border-gray-200 bg-gray-50">
+              <div className="flex justify-between items-center">
+                <div className="text-sm text-gray-600">
+                  {modalData.length > 0 ? (
+                    <span>
+                      Found {modalData.length} {modalType === 'contractors' ? 'contractor' : 'payment application'}{modalData.length !== 1 ? 's' : ''}
+                      {modalType !== 'contractors' && (
+                        <span className="ml-2 text-blue-600">💡 Click on any row to view details</span>
+                      )}
+                    </span>
+                  ) : (
+                    <span>No data available</span>
+                  )}
+                </div>
+                <button
+                  onClick={handleCloseDataModal}
+                  className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-    </div>
+      )}
+    </>
   );
 }
 
@@ -258,6 +1095,8 @@ function DailyLogRequests({ projects }: { projects: any[] }) {
   };
 
   const [phoneError, setPhoneError] = useState('');
+
+  if (!projects || !Array.isArray(projects)) return null;
 
   useEffect(() => {
     fetchRequests();
@@ -677,7 +1516,8 @@ function DailyLogRequests({ projects }: { projects: any[] }) {
 }
 
 // Mobile-Optimized Stat Card Component
-function CompactStatCard({ icon, label, value, change, color }: any) {
+function CompactStatCard({ icon, label, value, change, color, onClick }: any) {
+  if (icon === undefined || label === undefined || value === undefined) return null;
   const colorClasses: Record<string, string> = {
     orange: "border-orange-400 bg-orange-50",
     blue: "border-blue-400 bg-blue-50",
@@ -687,7 +1527,10 @@ function CompactStatCard({ icon, label, value, change, color }: any) {
   };
   
   return (
-    <div className={`p-3 sm:p-4 rounded-lg border-l-4 ${colorClasses[color]} hover:shadow-md transition-shadow`}>
+    <div 
+      className={`p-3 sm:p-4 rounded-lg border-l-4 ${colorClasses[color]} hover:shadow-md transition-shadow cursor-pointer`}
+      onClick={onClick}
+    >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 min-w-0 flex-1">
           <span className="text-base sm:text-lg flex-shrink-0">{icon}</span>
@@ -708,7 +1551,7 @@ function CompactStatCard({ icon, label, value, change, color }: any) {
 }
 
 // Compact Stats Overview
-function CompactStats({ pendingSMS, reviewQueue, readyChecks, weeklyTotal }: any) {
+function CompactStats({ pendingSMS, reviewQueue, readyChecks, weeklyTotal, onStatClick }: any) {
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
       <CompactStatCard
@@ -717,6 +1560,7 @@ function CompactStats({ pendingSMS, reviewQueue, readyChecks, weeklyTotal }: any
         value={pendingSMS}
         change={-5}
         color="orange"
+        onClick={() => onStatClick('sms_pending')}
       />
       <CompactStatCard
         icon="⚠️"
@@ -724,6 +1568,7 @@ function CompactStats({ pendingSMS, reviewQueue, readyChecks, weeklyTotal }: any
         value={reviewQueue}
         change={12}
         color="red"
+        onClick={() => onStatClick('review_queue')}
       />
       <CompactStatCard
         icon="✅"
@@ -731,6 +1576,7 @@ function CompactStats({ pendingSMS, reviewQueue, readyChecks, weeklyTotal }: any
         value={readyChecks}
         change={8}
         color="green"
+        onClick={() => onStatClick('ready')}
       />
       <CompactStatCard
         icon="💰"
@@ -738,6 +1584,7 @@ function CompactStats({ pendingSMS, reviewQueue, readyChecks, weeklyTotal }: any
         value={formatCurrency(weeklyTotal)}
         change={15}
         color="purple"
+        onClick={() => onStatClick('weekly')}
       />
     </div>
   );
@@ -747,6 +1594,8 @@ function CompactStats({ pendingSMS, reviewQueue, readyChecks, weeklyTotal }: any
 function PaymentCard({ application, isSelected, onSelect, onVerify, getDocumentForApp, sendForSignature }: any) {
   const [grandTotal, setGrandTotal] = useState(0);
   const [showDetails, setShowDetails] = useState(false);
+
+  if (!application) return null;
 
   useEffect(() => {
     async function fetchGrandTotal() {
@@ -907,6 +1756,8 @@ function PaymentCard({ application, isSelected, onSelect, onVerify, getDocumentF
 function PaymentRow({ application, isSelected, onSelect, onVerify, getDocumentForApp, sendForSignature }: any) {
   const [grandTotal, setGrandTotal] = useState(0);
   const [showDetails, setShowDetails] = useState(false);
+
+  if (!application) return null;
 
   useEffect(() => {
     async function fetchGrandTotal() {
@@ -1196,7 +2047,7 @@ function PaymentTable({ applications, onVerify, getDocumentForApp, sendForSignat
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {applications.map((app: any) => (
+              {(applications || []).filter(Boolean).map((app: any) => (
                 <PaymentRow
                   key={app.id}
                   application={app}
@@ -1239,7 +2090,7 @@ function PaymentTable({ applications, onVerify, getDocumentForApp, sendForSignat
         
         {/* Mobile Cards */}
         <div className="divide-y divide-gray-200">
-          {applications.map((app: any) => (
+          {(applications || []).filter(Boolean).map((app: any) => (
             <div key={app.id} className="p-4">
               <PaymentCard
                 application={app}
@@ -1542,9 +2393,9 @@ function ContractorSelectionModal({
 function MobileFilterDrawer({ show, onClose, statusFilter, setStatusFilter, projectFilter, setProjectFilter, projects, sortBy, setSortBy, sortDir, setSortDir, onFilterChange }: any) {
   if (!show) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 sm:hidden">
-      <div className="fixed inset-0 bg-black bg-opacity-25" onClick={onClose}></div>
+      return (
+      <div className="fixed inset-0 z-50 sm:hidden">
+        <div className="fixed inset-0  bg-opacity-25" onClick={onClose}></div>
       <div className="fixed bottom-0 left-0 right-0 bg-white rounded-t-xl shadow-xl max-h-[80vh] overflow-y-auto">
         <div className="p-4">
           <div className="flex items-center justify-between mb-4">
@@ -1717,6 +2568,7 @@ function FilterSidebar({ statusFilter, setStatusFilter, projectFilter, setProjec
 }
 
 export default function PMDashboard() {
+  const router = useRouter();
   const [session, setSession] = useState<any>(null);
   const [role, setRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -1744,6 +2596,13 @@ export default function PMDashboard() {
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [activeTab, setActiveTab] = useState('payments'); // Default to 'payments'
   const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  // Stats modal state
+  const [showStatsModal, setShowStatsModal] = useState(false);
+  const [statsModalData, setStatsModalData] = useState<any[]>([]);
+  const [statsModalTitle, setStatsModalTitle] = useState('');
+  const [statsModalType, setStatsModalType] = useState('');
+  const [loadingStatsModal, setLoadingStatsModal] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -1751,26 +2610,38 @@ export default function PMDashboard() {
 
   // Fetch user profile
   const fetchUser = useCallback(async () => {
-    const {
-      data: { user },
-      error,
-    } = await supabase.auth.getUser();
-    if (error || !user) return null;
-    const { data, error: userError } = await supabase
-      .from("users")
-      .select("id, name, role, email, uuid, avatar_url")
-      .eq("uuid", user.id)
-      .single();
-    if (userError) return null;
-    
-    setUserData({
-      name: data.name || '',
-      email: data.email || user.email || '',
-      avatar_url: data.avatar_url || '',
-      role: data.role || ''
-    });
-    
-    return data;
+    try {
+      const {
+        data: { user },
+        error,
+      } = await supabase.auth.getUser();
+      if (error || !user) {
+        setUserData(null);
+        return null;
+      }
+      const { data, error: userError } = await supabase
+        .from("users")
+        .select("id, name, role, email, uuid, avatar_url")
+        .eq("uuid", user.id)
+        .single();
+      if (userError) {
+        setUserData(null);
+        return null;
+      }
+      
+      const userDataObj = {
+        name: data.name || '',
+        email: data.email || user.email || '',
+        avatar_url: data.avatar_url || '',
+        role: data.role || ''
+      };
+      
+      setUserData(userDataObj);
+      return data;
+    } catch (error) {
+      setUserData(null);
+      return null;
+    }
   }, []);
 
   // Fetch dashboard data
@@ -1820,11 +2691,11 @@ export default function PMDashboard() {
       const pendingSMS = (smsConvos || []).filter(
         (c: any) => c.conversation_state !== "completed"
       ).length;
-      const reviewQueue = (appsRaw || []).filter((a: any) =>
-        ["needs_review", "submitted"].includes(a.status)
+      const reviewQueue = (appsRaw || []).filter((app: any) =>
+        ["needs_review", "submitted"].includes(app.status)
       ).length;
-      const readyChecks = (appsRaw || []).filter((a: any) =>
-        ["check_ready", "approved"].includes(a.status)
+      const readyChecks = (appsRaw || []).filter((app: any) =>
+        ["check_ready", "approved"].includes(app.status)
       ).length;
       const now = new Date();
       const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -1920,7 +2791,9 @@ export default function PMDashboard() {
   }
 
   const handleVerifyPayment = (paymentAppId: number) => {
-    window.location.href = `/payments/${paymentAppId}/verify`;
+    // Pass the current context as URL parameters for proper back navigation
+    const returnTo = `/pm-dashboard?tab=payments`;
+    router.push(`/payments/${paymentAppId}/verify?returnTo=${encodeURIComponent(returnTo)}`);
   };
 
   const handleLogout = async () => {
@@ -2080,6 +2953,123 @@ export default function PMDashboard() {
     }
   };
 
+  // Stats modal handlers
+  const handleStatClick = async (type: string) => {
+    setStatsModalType(type);
+    setLoadingStatsModal(true);
+    setShowStatsModal(true);
+
+    try {
+      let data: any[] = [];
+      let title = '';
+
+      switch (type) {
+        case 'sms_pending':
+          const { data: smsConvos, error: smsError } = await supabase
+            .from('payment_sms_conversations')
+            .select(`
+              *,
+              payment_applications!inner(
+                id,
+                status,
+                current_payment,
+                created_at,
+                project:projects(id, name, client_name),
+                contractor:contractors(id, name, trade)
+              )
+            `)
+            .neq('conversation_state', 'completed');
+          
+          if (smsError) throw smsError;
+          data = smsConvos || [];
+          title = 'SMS Pending Conversations';
+          break;
+
+        case 'review_queue':
+          const { data: reviewApps, error: reviewError } = await supabase
+            .from('payment_applications')
+            .select(`
+              id,
+              status,
+              current_payment,
+              created_at,
+              project:projects(id, name, client_name),
+              contractor:contractors(id, name, trade)
+            `)
+            .in('status', ['needs_review', 'submitted']);
+          
+          if (reviewError) throw reviewError;
+          data = reviewApps || [];
+          title = 'Review Queue Applications';
+          break;
+
+        case 'ready':
+          const { data: readyApps, error: readyError } = await supabase
+            .from('payment_applications')
+            .select(`
+              id,
+              status,
+              current_payment,
+              created_at,
+              project:projects(id, name, client_name),
+              contractor:contractors(id, name, trade)
+            `)
+            .in('status', ['check_ready', 'approved']);
+          
+          if (readyError) throw readyError;
+          data = readyApps || [];
+          title = 'Ready Applications';
+          break;
+
+        case 'weekly':
+          const now = new Date();
+          const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          const { data: weeklyApps, error: weeklyError } = await supabase
+            .from('payment_applications')
+            .select(`
+              id,
+              status,
+              current_payment,
+              created_at,
+              project:projects(id, name, client_name),
+              contractor:contractors(id, name, trade)
+            `)
+            .gte('created_at', weekAgo.toISOString());
+          
+          if (weeklyError) throw weeklyError;
+          data = weeklyApps || [];
+          title = 'Weekly Applications';
+          break;
+
+        default:
+          data = [];
+          title = 'Data';
+      }
+
+      setStatsModalData(data);
+      setStatsModalTitle(title);
+    } catch (error) {
+      console.error('Error fetching stats data:', error);
+      setStatsModalData([]);
+      setStatsModalTitle('Error loading data');
+    } finally {
+      setLoadingStatsModal(false);
+    }
+  };
+
+  const handleCloseStatsModal = () => {
+    setShowStatsModal(false);
+    setStatsModalData([]);
+    setStatsModalTitle('');
+    setStatsModalType('');
+  };
+
+  const handleStatsPaymentAppClick = (appId: number) => {
+    // Pass the current context as URL parameters for proper back navigation
+    const returnTo = `/pm-dashboard?tab=payments`;
+    router.push(`/payments/${appId}/verify?returnTo=${encodeURIComponent(returnTo)}`);
+  };
+
   const filteredApps = useMemo(() => {
     let apps = [...paymentApps];
     if (statusFilter !== "all") {
@@ -2198,6 +3188,7 @@ export default function PMDashboard() {
               reviewQueue={stats.review_queue}
               readyChecks={stats.ready_checks}
               weeklyTotal={stats.weekly_total}
+              onStatClick={handleStatClick}
             />
 
             {/* Main Content */}
@@ -2247,8 +3238,8 @@ export default function PMDashboard() {
 
         {activeTab === 'projects' && (
           <div className="space-y-6">
-            {projects.map((project) => (
-              <ProjectOverview key={project.id} project={project} onCreatePaymentApps={handleCreatePaymentApps} />
+            {(projects || []).filter(Boolean).map((project) => (
+              <ProjectOverview key={project.id} project={project} onCreatePaymentApps={handleCreatePaymentApps} onStatsPaymentAppClick={handleStatsPaymentAppClick} />
             ))}
             {projects.length === 0 && (
               <div className="text-center py-12 bg-white border-2 border-dashed border-gray-300 rounded-lg">
@@ -2279,6 +3270,141 @@ export default function PMDashboard() {
           onCreatePaymentApps={handleCreatePaymentApplications}
           creating={creatingPaymentApps}
         />
+
+        {/* Mobile Filter Drawer */}
+        <MobileFilterDrawer
+          show={showMobileFilters}
+          onClose={() => setShowMobileFilters(false)}
+          statusFilter={statusFilter}
+          setStatusFilter={setStatusFilter}
+          projectFilter={projectFilter}
+          setProjectFilter={setProjectFilter}
+          projects={projects}
+          sortBy={sortBy}
+          setSortBy={setSortBy}
+          sortDir={sortDir}
+          setSortDir={setSortDir}
+          onFilterChange={handleFilterChange}
+        />
+
+        {/* Stats Modal */}
+        {showStatsModal && (
+          <div className="fixed inset-0  bg-opacity-50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+              <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                <h2 className="text-xl font-semibold text-gray-900">{statsModalTitle}</h2>
+                <button
+                  onClick={handleCloseStatsModal}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              
+              <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+                {loadingStatsModal ? (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                    <span className="ml-3 text-gray-600">Loading data...</span>
+                  </div>
+                ) : statsModalData.length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="text-4xl mb-4">📊</div>
+                    <p className="text-gray-500 font-medium">No data available</p>
+                    <p className="text-sm text-gray-400">There are no items in this category</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {statsModalData.map((item: any, index: number) => {
+                      // Handle different data types based on modal type
+                      if (statsModalType === 'sms_pending') {
+                        const app = item.payment_applications;
+                        return (
+                          <div
+                            key={item.id}
+                            className="bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition-colors cursor-pointer"
+                            onClick={() => handleStatsPaymentAppClick(app.id)}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <span className="text-sm font-medium text-gray-900">
+                                    {app.project?.name || 'Unknown Project'}
+                                  </span>
+                                  <span className="text-xs text-gray-500">
+                                    {app.contractor?.name || 'Unknown Contractor'}
+                                  </span>
+                                </div>
+                                <div className="text-sm text-gray-600">
+                                  Status: {app.status} • Amount: {formatCurrency(app.current_payment || 0)}
+                                </div>
+                                <div className="text-xs text-gray-500 mt-1">
+                                  Created: {formatDate(app.created_at)}
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <div className="text-sm font-medium text-orange-600">
+                                  SMS Pending
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  {item.conversation_state}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      } else {
+                        // Handle payment applications (review_queue, ready, weekly)
+                        return (
+                          <div
+                            key={item.id}
+                            className="bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition-colors cursor-pointer"
+                            onClick={() => handleStatsPaymentAppClick(item.id)}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <span className="text-sm font-medium text-gray-900">
+                                    {item.project?.name || 'Unknown Project'}
+                                  </span>
+                                  <span className="text-xs text-gray-500">
+                                    {item.contractor?.name || 'Unknown Contractor'}
+                                  </span>
+                                </div>
+                                <div className="text-sm text-gray-600">
+                                  Status: {item.status} • Amount: {formatCurrency(item.current_payment || 0)}
+                                </div>
+                                <div className="text-xs text-gray-500 mt-1">
+                                  Created: {formatDate(item.created_at)}
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <div className={`text-sm font-medium ${
+                                  item.status === 'approved' ? 'text-green-600' :
+                                  item.status === 'submitted' ? 'text-red-600' :
+                                  item.status === 'needs_review' ? 'text-yellow-600' :
+                                  item.status === 'check_ready' ? 'text-purple-600' :
+                                  'text-gray-600'
+                                }`}>
+                                  {item.status.replace('_', ' ').toUpperCase()}
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  ID: {item.id}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      }
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );
