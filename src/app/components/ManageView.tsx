@@ -1,9 +1,11 @@
-import React, { useState, ChangeEvent, FormEvent, ReactNode, useCallback, useMemo } from 'react';
+import React, { useState, ChangeEvent, FormEvent, ReactNode, useCallback, useMemo, useEffect } from 'react';
 import { useData } from '../context/DataContext';
 import { supabase } from '@/lib/supabaseClient';
 import { Building, UserPlus, FilePlus, AlertCircle, CheckCircle, X } from 'lucide-react';
 import LineItemFormModal from '@/components/LineItemFormModal';
 import LineItemEditor, { LineItem } from '@/components/LineItemEditor';
+import { useRouter, useSearchParams } from 'next/navigation';
+
 
 // Enhanced notification system
 type NotificationType = 'success' | 'error' | 'warning' | 'info';
@@ -271,15 +273,17 @@ const AddContractForm: React.FC<{
   onSuccess?: () => void;
   onError?: (message: string) => void;
   setDirty: (dirty: boolean) => void;
-}> = ({ onClose, onSuccess, onError, setDirty }) => {
+  initialData?: any;
+  isEdit?: boolean;
+}> = ({ onClose, onSuccess, onError, setDirty, initialData, isEdit = false }) => {
   const { projects, subcontractors } = useData();
   const [formData, setFormData] = useState({
-    projectId: "",
-    subcontractorId: "",
-    contractAmount: "",
-    contractNickname: "",
-    startDate: "",
-    endDate: "",
+    projectId: initialData?.project_id?.toString() || "",
+    subcontractorId: initialData?.subcontractor_id?.toString() || "",
+    contractAmount: initialData?.contract_amount?.toString() || "",
+    contractNickname: initialData?.contract_nickname || "",
+    startDate: initialData?.start_date || "",
+    endDate: initialData?.end_date || "",
   });
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -289,6 +293,43 @@ const AddContractForm: React.FC<{
   const [showLineItemForm, setShowLineItemForm] = useState(false);
 
   const totalScheduledValue = lineItems.reduce((sum, item) => sum + (typeof item.scheduledValue === 'number' ? item.scheduledValue : Number(item.scheduledValue) || 0), 0);
+
+  // Load existing line items when editing
+  useEffect(() => {
+    if (isEdit && initialData?.id) {
+      const loadLineItems = async () => {
+        try {
+          const { data: lineItemsData, error } = await supabase
+            .from('project_line_items')
+            .select('*')
+            .eq('contract_id', initialData.id)
+            .order('display_order', { ascending: true });
+
+          if (error) {
+            console.error('Error loading line items:', error);
+            return;
+          }
+
+          if (lineItemsData) {
+            const formattedLineItems = lineItemsData.map(item => ({
+              itemNo: item.item_no || '',
+              description: item.description_of_work || '',
+              scheduledValue: item.scheduled_value?.toString() || '',
+              fromPrevious: item.from_previous_application?.toString() || '',
+              thisPeriod: item.this_period?.toString() || '',
+              materialStored: item.material_presently_stored?.toString() || '',
+              percentGC: item.percent_gc?.toString() || '',
+            }));
+            setLineItems(formattedLineItems);
+          }
+        } catch (error) {
+          console.error('Error loading line items:', error);
+        }
+      };
+
+      loadLineItems();
+    }
+  }, [isEdit, initialData?.id]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -322,24 +363,50 @@ const AddContractForm: React.FC<{
     setLoading(true);
 
     try {
-      const { data, error: contractError } = await supabase
-        .from('contracts')
-        .insert([{
-          project_id: Number(formData.projectId),
-          subcontractor_id: Number(formData.subcontractorId),
-          contract_amount: Number(formData.contractAmount),
-          contract_nickname: formData.contractNickname || null,
-          start_date: formData.startDate,
-          end_date: formData.endDate || null,
-        }])
-        .select()
-        .single();
+      let contractId: number;
 
-      if (contractError) {
-        throw new Error(`Failed to create contract: ${contractError.message}`);
+      if (isEdit && initialData?.id) {
+        // Update existing contract
+        const { data, error: contractError } = await supabase
+          .from('contracts')
+          .update({
+            project_id: Number(formData.projectId),
+            subcontractor_id: Number(formData.subcontractorId),
+            contract_amount: Number(formData.contractAmount),
+            contract_nickname: formData.contractNickname || null,
+            start_date: formData.startDate,
+            end_date: formData.endDate || null,
+          })
+          .eq('id', initialData.id)
+          .select()
+          .single();
+
+        if (contractError) {
+          throw new Error(`Failed to update contract: ${contractError.message}`);
+        }
+
+        contractId = data.id;
+      } else {
+        // Create new contract
+        const { data, error: contractError } = await supabase
+          .from('contracts')
+          .insert([{
+            project_id: Number(formData.projectId),
+            subcontractor_id: Number(formData.subcontractorId),
+            contract_amount: Number(formData.contractAmount),
+            contract_nickname: formData.contractNickname || null,
+            start_date: formData.startDate,
+            end_date: formData.endDate || null,
+          }])
+          .select()
+          .single();
+
+        if (contractError) {
+          throw new Error(`Failed to create contract: ${contractError.message}`);
+        }
+
+        contractId = data.id;
       }
-
-      const contractId = data.id;
 
       if (lineItems.length > 0) {
         const itemsToInsert = lineItems.map(item => ({
@@ -356,25 +423,42 @@ const AddContractForm: React.FC<{
           status: 'active',
         }));
 
-        const { error: lineItemsError } = await supabase
-          .from('project_line_items')
-          .insert(itemsToInsert);
+        if (isEdit && initialData?.id) {
+          // For edit mode, we might want to update existing line items or add new ones
+          // For now, we'll just insert new ones
+          const { error: lineItemsError } = await supabase
+            .from('project_line_items')
+            .insert(itemsToInsert);
 
-        if (lineItemsError) {
-          await supabase.from('contracts').delete().eq('id', contractId);
-          throw new Error(`Failed to create line items: ${lineItemsError.message}`);
+          if (lineItemsError) {
+            throw new Error(`Failed to update line items: ${lineItemsError.message}`);
+          }
+        } else {
+          // Create mode
+          const { error: lineItemsError } = await supabase
+            .from('project_line_items')
+            .insert(itemsToInsert);
+
+          if (lineItemsError) {
+            if (!isEdit) {
+              await supabase.from('contracts').delete().eq('id', contractId);
+            }
+            throw new Error(`Failed to create line items: ${lineItemsError.message}`);
+          }
         }
       }
 
-      setFormData({
-        projectId: "",
-        subcontractorId: "",
-        contractAmount: "",
-        contractNickname: "",
-        startDate: "",
-        endDate: "",
-      });
-      setLineItems([]);
+      if (!isEdit) {
+        setFormData({
+          projectId: "",
+          subcontractorId: "",
+          contractAmount: "",
+          contractNickname: "",
+          startDate: "",
+          endDate: "",
+        });
+        setLineItems([]);
+      }
 
       if (onSuccess) onSuccess();
       onClose();
@@ -440,7 +524,7 @@ const AddContractForm: React.FC<{
       <div className="flex justify-between items-center mb-6">
         <h3 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
           <FilePlus className="w-6 h-6 text-blue-600" />
-          Add Contract
+          {isEdit ? 'Edit Contract' : 'Add Contract'}
         </h3>
                               <button 
                         onClick={onClose} 
@@ -788,8 +872,14 @@ const AddContractForm: React.FC<{
 };
 
 // Enhanced main component with notification system
-const ManageView: React.FC = () => {
+interface ManageViewProps {
+  searchQuery?: string;
+}
+
+const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
   const { dispatch, projects, subcontractors, contracts = [] } = useData();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [notifications, setNotifications] = useState<NotificationData[]>([]);
   const [openForm, setOpenForm] = useState<'project' | 'vendor' | 'contract' | null>(null);
   const [pendingForm, setPendingForm] = useState<'project' | 'vendor' | 'contract' | null>(null);
@@ -797,8 +887,37 @@ const ManageView: React.FC = () => {
   const [showUnsavedWarning, setShowUnsavedWarning] = useState(false);
   const [isLoading, setIsLoading] = useState<Record<string, boolean>>({});
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Sync global search query with local search term
+  useEffect(() => {
+    if (searchQuery !== searchTerm) {
+      setSearchTerm(searchQuery);
+    }
+  }, [searchQuery]);
   const [activeTab, setActiveTab] = useState<'projects' | 'vendors' | 'contracts'>('projects');
+
+  // URL-based subtab management
+  useEffect(() => {
+    const subtab = searchParams.get('subtab') as 'projects' | 'vendors' | 'contracts' | null;
+    if (subtab && ['projects', 'vendors', 'contracts'].includes(subtab)) {
+      setActiveTab(subtab);
+    }
+  }, [searchParams]);
+
+  const handleSubtabChange = (subtab: 'projects' | 'vendors' | 'contracts') => {
+    setActiveTab(subtab);
+    // Update URL without page reload
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('subtab', subtab);
+    // Ensure we're on the manage tab
+    params.set('tab', 'manage');
+    router.replace(`/?${params.toString()}`, { scroll: false });
+  };
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [filterTrade, setFilterTrade] = useState<string>('all');
+  const [filterPerformance, setFilterPerformance] = useState<string>('all');
+  const [filterContractValue, setFilterContractValue] = useState<string>('all');
+  const [filterExpiry, setFilterExpiry] = useState<string>('all');
   const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
   const [showBulkActions, setShowBulkActions] = useState(false);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
@@ -825,6 +944,37 @@ const ManageView: React.FC = () => {
   const removeNotification = useCallback((id: string) => {
     setNotifications(prev => prev.filter(n => n.id !== id));
   }, []);
+
+  // Function to refresh contracts data
+  const refreshContracts = useCallback(async () => {
+    try {
+      const { data } = await supabase
+        .from('contracts')
+        .select(`
+          *,
+          projects (id, name, client_name),
+          contractors (id, name, trade)
+        `);
+      if (data) {
+        const mapped = data.map((c: any) => ({
+          id: c.id,
+          project_id: c.project_id,
+          subcontractor_id: c.subcontractor_id,
+          contract_amount: c.contract_amount,
+          contract_nickname: c.contract_nickname,
+          start_date: c.start_date,
+          end_date: c.end_date,
+          status: c.status ?? 'active',
+          project: c.projects,
+          subcontractor: c.contractors,
+        }));
+        dispatch({ type: 'SET_CONTRACTS', payload: mapped });
+      }
+    } catch (error) {
+      console.error('Error refreshing contracts:', error);
+      addNotification('error', 'Failed to refresh contracts data');
+    }
+  }, [dispatch, addNotification]);
 
   const addProject = async (formData: Record<string, string>) => {
     setIsLoading(prev => ({ ...prev, project: true }));
@@ -945,11 +1095,36 @@ const ManageView: React.FC = () => {
   const filteredContracts = useMemo(() => {
     return contracts.filter(contract => {
       const matchesSearch = contract.project?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           contract.subcontractor?.name.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesFilter = filterStatus === 'all' || contract.status === filterStatus;
-      return matchesSearch && matchesFilter;
+                           contract.subcontractor?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           (contract.contract_nickname || '').toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesStatus = filterStatus === 'all' || contract.status === filterStatus;
+      const matchesValue = filterContractValue === 'all' ||
+        (filterContractValue === 'high' && (contract.contract_amount || 0) >= 100000) ||
+        (filterContractValue === 'medium' && (contract.contract_amount || 0) >= 50000 && (contract.contract_amount || 0) < 100000) ||
+        (filterContractValue === 'low' && (contract.contract_amount || 0) < 50000);
+      const matchesExpiry = filterExpiry === 'all' ||
+        (filterExpiry === 'expiring' && (() => {
+          if (!contract.end_date || contract.status === 'completed') return false;
+          const endDate = new Date(contract.end_date);
+          const now = new Date();
+          const daysUntilExpiry = (endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
+          return daysUntilExpiry <= 30 && daysUntilExpiry > 0;
+        })()) ||
+        (filterExpiry === 'expired' && (() => {
+          if (!contract.end_date) return false;
+          const endDate = new Date(contract.end_date);
+          const now = new Date();
+          return endDate < now;
+        })()) ||
+        (filterExpiry === 'ongoing' && (() => {
+          if (!contract.end_date) return true;
+          const endDate = new Date(contract.end_date);
+          const now = new Date();
+          return endDate >= now;
+        })());
+      return matchesSearch && matchesStatus && matchesValue && matchesExpiry;
     });
-  }, [contracts, searchTerm, filterStatus]);
+  }, [contracts, searchTerm, filterStatus, filterContractValue, filterExpiry]);
 
   // Bulk operations
   const handleSelectAll = () => {
@@ -1027,6 +1202,351 @@ const ManageView: React.FC = () => {
     setSelectedItem(null);
   };
 
+  // Contract Analytics Component
+  const ContractAnalytics: React.FC<{ contracts: any[] }> = ({ contracts }) => {
+    const analytics = useMemo(() => {
+      const total = contracts.length;
+      const active = contracts.filter(c => c.status === 'active').length;
+      const completed = contracts.filter(c => c.status === 'completed').length;
+      const totalValue = contracts.reduce((sum, c) => sum + (c.contract_amount || 0), 0);
+      const avgContractValue = total > 0 ? totalValue / total : 0;
+      const upcomingExpiry = contracts.filter(c => {
+        if (!c.end_date || c.status === 'completed') return false;
+        const endDate = new Date(c.end_date);
+        const now = new Date();
+        const daysUntilExpiry = (endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
+        return daysUntilExpiry <= 30 && daysUntilExpiry > 0;
+      }).length;
+      
+      return { total, active, completed, totalValue, avgContractValue, upcomingExpiry };
+    }, [contracts]);
+
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+          <div className="flex items-center">
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <FilePlus className="h-6 w-6 text-blue-600" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Total Contracts</p>
+              <p className="text-2xl font-bold text-gray-900">{analytics.total}</p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+          <div className="flex items-center">
+            <div className="p-2 bg-green-100 rounded-lg">
+              <CheckCircle className="h-6 w-6 text-green-600" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Active Contracts</p>
+              <p className="text-2xl font-bold text-gray-900">{analytics.active}</p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+          <div className="flex items-center">
+            <div className="p-2 bg-purple-100 rounded-lg">
+              <Building className="h-6 w-6 text-purple-600" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Total Value</p>
+              <p className="text-2xl font-bold text-gray-900">${analytics.totalValue.toLocaleString()}</p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+          <div className="flex items-center">
+            <div className="p-2 bg-yellow-100 rounded-lg">
+              <AlertCircle className="h-6 w-6 text-yellow-600" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Avg Contract Value</p>
+              <p className="text-2xl font-bold text-gray-900">${analytics.avgContractValue.toLocaleString()}</p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+          <div className="flex items-center">
+            <div className="p-2 bg-orange-100 rounded-lg">
+              <AlertCircle className="h-6 w-6 text-orange-600" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Expiring Soon</p>
+              <p className="text-2xl font-bold text-gray-900">{analytics.upcomingExpiry}</p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+          <div className="flex items-center">
+            <div className="p-2 bg-gray-100 rounded-lg">
+              <CheckCircle className="h-6 w-6 text-gray-600" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Completed</p>
+              <p className="text-2xl font-bold text-gray-900">{analytics.completed}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Contract Card Component (Mobile)
+  const ContractCard: React.FC<{
+    contract: any;
+    onSelect: (id: number) => void;
+    onView: (item: any, type: 'project' | 'vendor' | 'contract') => void;
+    onEdit: (item: any, type: 'project' | 'vendor' | 'contract') => void;
+    selected: boolean;
+  }> = ({ contract, onSelect, onView, onEdit, selected }) => {
+    const getStatusColor = (status: string) => {
+      switch (status?.toLowerCase()) {
+        case 'active': return 'bg-green-100 text-green-800';
+        case 'completed': return 'bg-blue-100 text-blue-800';
+        case 'pending': return 'bg-yellow-100 text-yellow-800';
+        case 'cancelled': return 'bg-red-100 text-red-800';
+        default: return 'bg-gray-100 text-gray-800';
+      }
+    };
+
+    const getDaysUntilExpiry = () => {
+      if (!contract.end_date || contract.status === 'completed') return null;
+      const endDate = new Date(contract.end_date);
+      const now = new Date();
+      const daysUntilExpiry = Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+      return daysUntilExpiry;
+    };
+
+    const daysUntilExpiry = getDaysUntilExpiry();
+
+    return (
+      <div 
+        className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 cursor-pointer hover:shadow-md transition-all duration-200"
+        onClick={() => onView(contract, 'contract')}
+      >
+        <div className="flex justify-between items-start mb-3">
+          <div className="flex items-start space-x-3" onClick={(e) => e.stopPropagation()}>
+            <input
+              type="checkbox"
+              checked={selected}
+              onChange={() => onSelect(contract.id)}
+              className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            />
+            <div>
+              <h3 className="font-semibold text-gray-900">
+                {contract.contract_nickname || contract.project?.name || 'Unknown Project'}
+              </h3>
+              <p className="text-sm text-gray-500">
+                {contract.contract_nickname ? `${contract.project?.name || 'Unknown Project'} • ` : ''}Contract #{contract.id}
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-col items-end space-y-1">
+            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(contract.status)}`}>
+              {contract.status || 'Active'}
+            </span>
+            {daysUntilExpiry !== null && daysUntilExpiry <= 30 && (
+              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                daysUntilExpiry <= 7 ? 'bg-red-100 text-red-800' : 'bg-orange-100 text-orange-800'
+              }`}>
+                {daysUntilExpiry} days left
+              </span>
+            )}
+          </div>
+        </div>
+        
+        <div className="space-y-2 text-sm">
+          <div>
+            <span className="text-gray-500">Vendor:</span>
+            <span className="ml-1 text-gray-900">{contract.subcontractor?.name || 'Unknown Vendor'}</span>
+          </div>
+          <div>
+            <span className="text-gray-500">Amount:</span>
+            <span className="ml-1 text-gray-900 font-medium">${(contract.contract_amount || 0).toLocaleString()}</span>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <span className="text-gray-500">Start:</span>
+              <div className="text-gray-900">{contract.start_date || 'Not set'}</div>
+            </div>
+            <div>
+              <span className="text-gray-500">End:</span>
+              <div className="text-gray-900">{contract.end_date || 'Ongoing'}</div>
+            </div>
+          </div>
+        </div>
+        
+        <div className="mt-4 flex justify-end" onClick={(e) => e.stopPropagation()}>
+          <button
+            onClick={() => onEdit(contract, 'contract')}
+            className="px-3 py-1 text-blue-600 hover:text-blue-900 text-sm font-medium border border-blue-600 rounded hover:bg-blue-50 transition-colors"
+          >
+            Edit
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  // Contract Table Component (Desktop)
+  const ContractTable: React.FC<{
+    contracts: any[];
+    onSelect: (id: number) => void;
+    onView: (item: any, type: 'project' | 'vendor' | 'contract') => void;
+    onEdit: (item: any, type: 'project' | 'vendor' | 'contract') => void;
+    selectedItems: Set<number>;
+  }> = ({ contracts, onSelect, onView, onEdit, selectedItems }) => {
+    const getStatusColor = (status: string) => {
+      switch (status?.toLowerCase()) {
+        case 'active': return 'bg-green-100 text-green-800';
+        case 'completed': return 'bg-blue-100 text-blue-800';
+        case 'pending': return 'bg-yellow-100 text-yellow-800';
+        case 'cancelled': return 'bg-red-100 text-red-800';
+        default: return 'bg-gray-100 text-gray-800';
+      }
+    };
+
+    const getDaysUntilExpiry = (contract: any) => {
+      if (!contract.end_date || contract.status === 'completed') return null;
+      const endDate = new Date(contract.end_date);
+      const now = new Date();
+      const daysUntilExpiry = Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+      return daysUntilExpiry;
+    };
+
+    return (
+      <div className="hidden sm:block bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <input
+                  type="checkbox"
+                  checked={selectedItems.size === contracts.length && contracts.length > 0}
+                  onChange={() => {
+                    if (selectedItems.size === contracts.length) {
+                      contracts.forEach(c => onSelect(c.id));
+                    } else {
+                      contracts.forEach(c => onSelect(c.id));
+                    }
+                  }}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Contract
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Vendor
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Amount
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Duration
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Status
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Actions
+              </th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {contracts.map((contract) => {
+              const daysUntilExpiry = getDaysUntilExpiry(contract);
+              return (
+                <tr 
+                  key={contract.id} 
+                  className="hover:bg-gray-50 cursor-pointer transition-colors duration-150"
+                  onClick={() => onView(contract, 'contract')}
+                >
+                  <td className="px-6 py-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      checked={selectedItems.has(contract.id)}
+                      onChange={() => onSelect(contract.id)}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0 h-10 w-10">
+                        <div className="h-10 w-10 rounded-lg bg-purple-100 flex items-center justify-center">
+                          <FilePlus className="h-5 w-5 text-purple-600" />
+                        </div>
+                      </div>
+                      <div className="ml-4">
+                        <div className="text-sm font-medium text-gray-900">
+                          {contract.contract_nickname || contract.project?.name || 'Unknown Project'}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {contract.contract_nickname ? `${contract.project?.name || 'Unknown Project'} • ` : ''}Contract #{contract.id}
+                        </div>
+                        {daysUntilExpiry !== null && daysUntilExpiry <= 30 && (
+                          <div className={`text-xs mt-1 ${
+                            daysUntilExpiry <= 7 ? 'text-red-600' : 'text-orange-600'
+                          }`}>
+                            {daysUntilExpiry} days until expiry
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {contract.subcontractor?.name || 'Unknown Vendor'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
+                    ${(contract.contract_amount || 0).toLocaleString()}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <div>{contract.start_date || 'Not set'}</div>
+                    <div className="text-gray-500">{contract.end_date || 'Ongoing'}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(contract.status)}`}>
+                      {contract.status || 'Active'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => onEdit(contract, 'contract')}
+                        className="text-blue-600 hover:text-blue-900 text-sm font-medium"
+                      >
+                        Edit
+                      </button>
+                      <span className="text-gray-300">|</span>
+                      <span className="text-xs text-gray-500">Click row to view</span>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+            {contracts.length === 0 && (
+              <tr>
+                <td colSpan={7} className="px-6 py-12 text-center">
+                  <div className="text-gray-400 mb-4">
+                    <FilePlus className="w-12 h-12 mx-auto" />
+                  </div>
+                  <p className="text-gray-500">No contracts found</p>
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
@@ -1062,7 +1582,7 @@ const ManageView: React.FC = () => {
         <div className="sm:hidden mb-4">
           <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
             <button
-              onClick={() => setActiveTab('projects')}
+              onClick={() => handleSubtabChange('projects')}
               className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors ${
                 activeTab === 'projects'
                   ? 'bg-white text-blue-600 shadow-sm'
@@ -1072,7 +1592,7 @@ const ManageView: React.FC = () => {
               Projects ({filteredProjects.length})
             </button>
             <button
-              onClick={() => setActiveTab('vendors')}
+              onClick={() => handleSubtabChange('vendors')}
               className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors ${
                 activeTab === 'vendors'
                   ? 'bg-white text-green-600 shadow-sm'
@@ -1082,7 +1602,7 @@ const ManageView: React.FC = () => {
               Vendors ({filteredVendors.length})
             </button>
             <button
-              onClick={() => setActiveTab('contracts')}
+              onClick={() => handleSubtabChange('contracts')}
               className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors ${
                 activeTab === 'contracts'
                   ? 'bg-white text-purple-600 shadow-sm'
@@ -1099,7 +1619,7 @@ const ManageView: React.FC = () => {
           <div className="border-b border-gray-200">
             <nav className="-mb-px flex space-x-8">
               <button
-                onClick={() => setActiveTab('projects')}
+                onClick={() => handleSubtabChange('projects')}
                 className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${
                   activeTab === 'projects'
                     ? 'border-blue-500 text-blue-600'
@@ -1112,7 +1632,7 @@ const ManageView: React.FC = () => {
                 </span>
               </button>
               <button
-                onClick={() => setActiveTab('vendors')}
+                onClick={() => handleSubtabChange('vendors')}
                 className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${
                   activeTab === 'vendors'
                     ? 'border-green-500 text-green-600'
@@ -1125,7 +1645,7 @@ const ManageView: React.FC = () => {
                 </span>
               </button>
               <button
-                onClick={() => setActiveTab('contracts')}
+                onClick={() => handleSubtabChange('contracts')}
                 className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${
                   activeTab === 'contracts'
                     ? 'border-purple-500 text-purple-600'
@@ -1193,7 +1713,7 @@ const ManageView: React.FC = () => {
             </div>
 
             {showMobileFilters && (
-              <div className="bg-white text-gray-700 p-4 rounded-lg border border-gray-200">
+              <div className="bg-white text-gray-700 p-4 rounded-lg border border-gray-200 space-y-3">
                 <select
                   value={filterStatus}
                   onChange={(e) => setFilterStatus(e.target.value)}
@@ -1205,6 +1725,64 @@ const ManageView: React.FC = () => {
                   <option value="pending">Pending</option>
                   <option value="completed">Completed</option>
                 </select>
+                
+                {activeTab === 'vendors' && (
+                  <>
+                    <select
+                      value={filterTrade}
+                      onChange={(e) => setFilterTrade(e.target.value)}
+                      className="w-full px-3 py-2  text-gray-700 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="all">All Trades</option>
+                      <option value="electrical">Electrical</option>
+                      <option value="plumbing">Plumbing</option>
+                      <option value="hvac">HVAC</option>
+                      <option value="roofing">Roofing</option>
+                      <option value="drywall">Drywall</option>
+                      <option value="painting">Painting</option>
+                      <option value="flooring">Flooring</option>
+                      <option value="landscaping">Landscaping</option>
+                      <option value="general">General</option>
+                    </select>
+                    
+                    <select
+                      value={filterPerformance}
+                      onChange={(e) => setFilterPerformance(e.target.value)}
+                      className="w-full px-3 py-2  text-gray-700 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="all">All Performance</option>
+                      <option value="high">High (4-5 stars)</option>
+                      <option value="medium">Medium (3-4 stars)</option>
+                      <option value="low">Low (1-3 stars)</option>
+                    </select>
+                  </>
+                )}
+                
+                {activeTab === 'contracts' && (
+                  <>
+                    <select
+                      value={filterContractValue}
+                      onChange={(e) => setFilterContractValue(e.target.value)}
+                      className="w-full px-3 py-2  text-gray-700 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="all">All Values</option>
+                      <option value="high">High ($100k+)</option>
+                      <option value="medium">Medium ($50k-$100k)</option>
+                      <option value="low">Low (&lt;$50k)</option>
+                    </select>
+                    
+                    <select
+                      value={filterExpiry}
+                      onChange={(e) => setFilterExpiry(e.target.value)}
+                      className="w-full px-3 py-2  text-gray-700 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="all">All Expiry</option>
+                      <option value="expiring">Expiring Soon (≤30 days)</option>
+                      <option value="expired">Expired</option>
+                      <option value="ongoing">Ongoing</option>
+                    </select>
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -1238,6 +1816,64 @@ const ManageView: React.FC = () => {
                 <option value="pending">Pending</option>
                 <option value="completed">Completed</option>
               </select>
+              
+              {activeTab === 'vendors' && (
+                <>
+                  <select
+                    value={filterTrade}
+                    onChange={(e) => setFilterTrade(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="all">All Trades</option>
+                    <option value="electrical">Electrical</option>
+                    <option value="plumbing">Plumbing</option>
+                    <option value="hvac">HVAC</option>
+                    <option value="roofing">Roofing</option>
+                    <option value="drywall">Drywall</option>
+                    <option value="painting">Painting</option>
+                    <option value="flooring">Flooring</option>
+                    <option value="landscaping">Landscaping</option>
+                    <option value="general">General</option>
+                  </select>
+                  
+                  <select
+                    value={filterPerformance}
+                    onChange={(e) => setFilterPerformance(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="all">All Performance</option>
+                    <option value="high">High (4-5 stars)</option>
+                    <option value="medium">Medium (3-4 stars)</option>
+                    <option value="low">Low (1-3 stars)</option>
+                  </select>
+                </>
+              )}
+              
+              {activeTab === 'contracts' && (
+                <>
+                  <select
+                    value={filterContractValue}
+                    onChange={(e) => setFilterContractValue(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="all">All Values</option>
+                    <option value="high">High ($100k+)</option>
+                    <option value="medium">Medium ($50k-$100k)</option>
+                    <option value="low">Low (&lt;$50k)</option>
+                  </select>
+                  
+                  <select
+                    value={filterExpiry}
+                    onChange={(e) => setFilterExpiry(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="all">All Expiry</option>
+                    <option value="expiring">Expiring Soon (≤30 days)</option>
+                    <option value="expired">Expired</option>
+                    <option value="ongoing">Ongoing</option>
+                  </select>
+                </>
+              )}
             </div>
             
             <div className="flex items-center space-x-4">
@@ -1698,66 +2334,20 @@ const ManageView: React.FC = () => {
 
           {activeTab === 'contracts' && (
             <div>
+              {/* Analytics */}
+              <ContractAnalytics contracts={filteredContracts} />
+              
               {/* Mobile Cards */}
               <div className="sm:hidden space-y-4">
                 {filteredContracts.map((contract) => (
-                  <div 
-                    key={contract.id} 
-                    className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 cursor-pointer hover:shadow-md transition-all duration-200"
-                    onClick={() => handleViewItem(contract, 'contract')}
-                  >
-                    <div className="flex justify-between items-start mb-3">
-                      <div className="flex items-start space-x-3" onClick={(e) => e.stopPropagation()}>
-                        <input
-                          type="checkbox"
-                          checked={selectedItems.has(contract.id)}
-                          onChange={() => handleItemSelect(contract.id)}
-                          className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                        />
-                        <div>
-                          <h3 className="font-semibold text-gray-900">
-                            {contract.contract_nickname || contract.project?.name || 'Unknown Project'}
-                          </h3>
-                          <p className="text-sm text-gray-500">
-                            {contract.contract_nickname ? `${contract.project?.name || 'Unknown Project'} • ` : ''}Contract #{contract.id}
-                          </p>
-                        </div>
-                      </div>
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        {contract.status || 'Active'}
-                      </span>
-                    </div>
-                    
-                    <div className="space-y-2 text-sm">
-                      <div>
-                        <span className="text-gray-500">Vendor:</span>
-                        <span className="ml-1 text-gray-900">{contract.subcontractor?.name || 'Unknown Vendor'}</span>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Amount:</span>
-                        <span className="ml-1 text-gray-900">${(contract.contract_amount || 0).toLocaleString()}</span>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <span className="text-gray-500">Start Date:</span>
-                          <div className="text-gray-900">{contract.start_date || 'Not set'}</div>
-                        </div>
-                        <div>
-                          <span className="text-gray-500">End Date:</span>
-                          <div className="text-gray-900">{contract.end_date || 'Ongoing'}</div>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="mt-4 flex justify-end" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        onClick={() => handleEditItem(contract, 'contract')}
-                        className="px-3 py-1 text-blue-600 hover:text-blue-900 text-sm font-medium border border-blue-600 rounded hover:bg-blue-50 transition-colors"
-                      >
-                        Edit
-                      </button>
-                    </div>
-                  </div>
+                  <ContractCard
+                    key={contract.id}
+                    contract={contract}
+                    onSelect={handleItemSelect}
+                    onView={handleViewItem}
+                    onEdit={handleEditItem}
+                    selected={selectedItems.has(contract.id)}
+                  />
                 ))}
 
                 {filteredContracts.length === 0 && (
@@ -1771,101 +2361,13 @@ const ManageView: React.FC = () => {
               </div>
 
               {/* Desktop Table */}
-              <div className="hidden sm:block bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        <input
-                          type="checkbox"
-                          checked={selectedItems.size === filteredContracts.length && filteredContracts.length > 0}
-                          onChange={handleSelectAll}
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                        />
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Contract
-                      </th>
-                      {/*<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Nickname
-                      </th>*/}
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Vendor
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Amount
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Duration
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Status
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {filteredContracts.map((contract) => (
-                      <tr key={contract.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <input
-                            type="checkbox"
-                            checked={selectedItems.has(contract.id)}
-                            onChange={() => handleItemSelect(contract.id)}
-                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                          />
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div className="flex-shrink-0 h-10 w-10">
-                              <div className="h-10 w-10 rounded-lg bg-purple-100 flex items-center justify-center">
-                                <FilePlus className="h-5 w-5 text-purple-600" />
-                              </div>
-                            </div>
-                            <div className="ml-4">
-                              <div className="text-sm font-medium text-gray-900">
-                                {contract.contract_nickname || contract.project?.name || 'Unknown Project'}
-                              </div>
-                              <div className="text-sm text-gray-500">
-                                {contract.contract_nickname ? `${contract.project?.name || 'Unknown Project'} • ` : ''}Contract #{contract.id}
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                        {/*<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {contract.contract_nickname || (
-                            <span className="text-gray-400 italic">No nickname</span>
-                          )}
-                        </td>*/}
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {contract.subcontractor?.name || 'Unknown Vendor'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          ${(contract.contract_amount || 0).toLocaleString()}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          <div>{contract.start_date}</div>
-                          <div className="text-gray-500">{contract.end_date || 'Ongoing'}</div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            {contract.status || 'Active'}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                    {filteredContracts.length === 0 && (
-                      <tr>
-                        <td colSpan={7} className="px-6 py-12 text-center">
-                          <div className="text-gray-400 mb-4">
-                            <FilePlus className="w-12 h-12 mx-auto" />
-                          </div>
-                          <p className="text-gray-500">No contracts found</p>
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
+              <ContractTable
+                contracts={filteredContracts}
+                onSelect={handleItemSelect}
+                onView={handleViewItem}
+                onEdit={handleEditItem}
+                selectedItems={selectedItems}
+              />
             </div>
           )}
         </div>
@@ -1978,7 +2480,7 @@ const ManageView: React.FC = () => {
       )}
 
       {viewModal === 'contract' && selectedItem && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full p-6">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-xl font-semibold text-gray-800">Contract Details</h3>
@@ -2056,13 +2558,18 @@ const ManageView: React.FC = () => {
       )}
 
       {editModal === 'contract' && selectedItem && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0  bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <AddContractForm
               onClose={handleCloseEditModal}
-              onSuccess={() => addNotification('success', 'Contract updated successfully!')}
+              onSuccess={async () => {
+                addNotification('success', 'Contract updated successfully!');
+                await refreshContracts();
+              }}
               onError={(message) => addNotification('error', message)}
               setDirty={setFormDirty}
+              initialData={selectedItem}
+              isEdit={true}
             />
           </div>
         </div>
@@ -2070,7 +2577,7 @@ const ManageView: React.FC = () => {
 
       {/* Unsaved Warning Modal */}
       {showUnsavedWarning && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0  bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
             <div className="flex items-center gap-3 mb-4">
               <AlertCircle className="w-8 h-8 text-yellow-500" />

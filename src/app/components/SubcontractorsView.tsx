@@ -128,9 +128,20 @@ const vendorFields: AddFormField[] = [
   { name: 'email', placeholder: 'Email', type: 'email', validators: [validators.email] },
 ];
 
-const SubcontractorsView: React.FC = () => {
+interface SubcontractorsViewProps {
+    searchQuery?: string;
+}
+
+const SubcontractorsView: React.FC<SubcontractorsViewProps> = ({ searchQuery = '' }) => {
     const { subcontractors, dispatch } = useData();
     const [searchTerm, setSearchTerm] = useState('');
+
+    // Sync global search query with local search term
+    React.useEffect(() => {
+        if (searchQuery !== searchTerm) {
+            setSearchTerm(searchQuery);
+        }
+    }, [searchQuery]);
     const [filterTrade, setFilterTrade] = useState('');
     const [filterStatus, setFilterStatus] = useState('');
     const [sortBy, setSortBy] = useState<'name' | 'trade' | 'performance_score'>('name');

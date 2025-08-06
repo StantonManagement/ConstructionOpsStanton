@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabaseClient';
 
 type PaymentProcessingViewProps = {
   setSelectedProject: (project: Project) => void;
+  searchQuery?: string;
 };
 
 type PaymentApplication = {
@@ -375,12 +376,20 @@ const ProjectCard: React.FC<{
 );
 
 const PaymentProcessingView: React.FC<PaymentProcessingViewProps> = ({ 
-  setSelectedProject 
+  setSelectedProject,
+  searchQuery = ''
 }) => {
   const { projects } = useData();
   const { apps, loading, error, refetch } = usePaymentApplications();
   const [search, setSearch] = useState('');
   const [projectSearch, setProjectSearch] = useState('');
+
+  // Sync global search query with local search term
+  useEffect(() => {
+    if (searchQuery !== search) {
+      setSearch(searchQuery);
+    }
+  }, [searchQuery]);
 
   // Fetch data on component mount
   useEffect(() => {

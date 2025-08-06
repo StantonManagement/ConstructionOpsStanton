@@ -23,6 +23,7 @@ interface StatusConfig {
 interface OverviewViewProps {
   onProjectSelect?: (project: Project) => void;
   onSwitchToPayments?: () => void;
+  searchQuery?: string;
 }
 
 // Loading skeleton component
@@ -308,10 +309,21 @@ const DecisionQueueCards: React.FC<{ role: string | null, setError: (msg: string
   );
 };
 
-const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchToPayments }) => {
+const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchToPayments, searchQuery = '' }) => {
   const { projects } = useData();
   const [role, setRole] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Filter projects based on search query
+  const filteredProjects = useMemo(() => {
+    if (!searchQuery.trim()) return projects;
+    const searchLower = searchQuery.toLowerCase();
+    return projects.filter(project => 
+      project.name.toLowerCase().includes(searchLower) ||
+      project.client_name?.toLowerCase().includes(searchLower) ||
+      project.current_phase?.toLowerCase().includes(searchLower)
+    );
+  }, [projects, searchQuery]);
   
   useEffect(() => {
     const getRole = async () => {
@@ -334,9 +346,9 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
 
   // Memoize calculations to prevent unnecessary recalculations
   const stats = useMemo(() => {
-    const totalProjects = projects.length;
-    const totalBudget = projects.reduce((sum, p) => sum + (Number(p.budget) || 0), 0);
-    const totalSpent = projects.reduce((sum, p) => sum + (Number(p.spent) || 0), 0);
+    const totalProjects = filteredProjects.length;
+    const totalBudget = filteredProjects.reduce((sum, p) => sum + (Number(p.budget) || 0), 0);
+    const totalSpent = filteredProjects.reduce((sum, p) => sum + (Number(p.spent) || 0), 0);
     const remainingBudget = totalBudget - totalSpent;
     const utilizationRate = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0;
     
@@ -347,7 +359,7 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
       remainingBudget,
       utilizationRate
     };
-  }, [projects]);
+  }, [filteredProjects]);
 
   const StatCard: React.FC<{
     title: string;
@@ -462,13 +474,13 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
           </div>
           {error && <div className="text-red-600 mt-2">{error}</div>}
           <div className="space-y-3 max-h-96 overflow-y-auto">
-            {projects.length === 0 ? (
+            {filteredProjects.length === 0 ? (
               <div className="text-gray-500 text-center py-8 flex flex-col items-center gap-2">
                 <span className="text-2xl">📋</span>
-                <span>No active projects</span>
+                <span>{searchQuery ? 'No projects match your search' : 'No active projects'}</span>
               </div>
             ) : (
-              projects.map((project) => (
+              filteredProjects.map((project) => (
                 <ProjectCard 
                   key={project.id} 
                   project={project} 

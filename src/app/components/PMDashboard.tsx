@@ -4,6 +4,7 @@ import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
 import Header from "./Header";
+import UserProfile from "./UserProfile";
 
 // Utility functions
 const formatDate = (dateString: string) => {
@@ -2595,6 +2596,8 @@ export default function PMDashboard() {
   const [statsModalTitle, setStatsModalTitle] = useState('');
   const [statsModalType, setStatsModalType] = useState('');
   const [loadingStatsModal, setLoadingStatsModal] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
+  const [searchQuery, setSearchQuery] = useState<string>('');
 
   useEffect(() => {
     setMounted(true);
@@ -2802,6 +2805,22 @@ export default function PMDashboard() {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     window.location.href = "/";
+  };
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    // You can implement search logic here or pass it to child components
+    console.log('Search query:', query);
+  };
+
+  const handleProfileUpdate = (profileData: any) => {
+    // Update local user data when profile is updated
+    setUserData({
+      name: profileData.name,
+      email: profileData.email,
+      avatar_url: profileData.avatar_url,
+      role: profileData.role
+    });
   };
 
   const handleSelectItem = (id: number, selected: boolean) => {
@@ -3123,7 +3142,13 @@ export default function PMDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header onShowProfile={() => {}} onLogout={handleLogout} userData={userData} />
+      <Header 
+        onShowProfile={() => setShowProfile(true)} 
+        onLogout={handleLogout} 
+        userData={userData}
+        onSearch={handleSearch}
+        searchQuery={searchQuery}
+      />
       <main className="container mx-auto px-4 py-6 max-w-7xl">
         {/* Mobile-Optimized Header */}
         <div className="flex flex-col gap-4 mb-6 sm:flex-row sm:items-center sm:justify-between">
@@ -3416,6 +3441,26 @@ export default function PMDashboard() {
           </div>
         )}
       </main>
+      
+      {/* User Profile Modal */}
+      <UserProfile 
+        isOpen={showProfile} 
+        onClose={() => setShowProfile(false)}
+        onProfileUpdate={handleProfileUpdate}
+      />
+      
+      {/* Navigation Back to Main Dashboard */}
+      <div className="fixed bottom-4 right-4 z-50">
+        <button
+          onClick={() => window.location.href = '/'}
+          className="bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-full shadow-lg transition-colors"
+          title="Back to Main Dashboard"
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+          </svg>
+        </button>
+      </div>
     </div>
   );
 }
