@@ -73,7 +73,7 @@ const MetricsView: React.FC = () => {
         <h2 className="text-2xl font-bold text-gray-900">📊 Metrics & Analytics</h2>
         <div className="flex items-center gap-2 text-sm text-gray-600">
           <Calendar className="w-4 h-4" />
-          Last updated: {new Date().toLocaleDateString()}
+          Last updated  {new Date().toLocaleDateString()}
         </div>
       </div>
 

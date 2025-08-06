@@ -32,6 +32,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Error fetching contractors' }, { status: 500 });
     }
 
+    // Fetch contracts for these contractors and project to get nicknames
+    const { data: contracts, error: contractsError } = await supabase
+      .from('contracts')
+      .select('subcontractor_id, contract_nickname')
+      .eq('project_id', projectId)
+      .in('subcontractor_id', contractorIds);
+    if (contractsError) {
+      return NextResponse.json({ error: 'Error fetching contracts' }, { status: 500 });
+    }
+
     const results = [];
     for (const contractor of contractors) {
       // Create payment application
@@ -99,7 +109,18 @@ export async function POST(req: NextRequest) {
 
       // Send SMS via Twilio
       if (contractor.phone && TWILIO_PHONE_NUMBER) {
-        const message = `${contractor.name} payment app for ${project.name}. Ready for some quick questions? Reply YES to start.`;
+        // Find contract for this contractor to get nickname
+        const contract = contracts?.find(c => c.subcontractor_id === contractor.id);
+        const contractNickname = contract?.contract_nickname;
+        
+        // Format: "project name - contract nickname - contractor name"
+        let messageTitle = `${project.name}`;
+        if (contractNickname) {
+          messageTitle += ` - ${contractNickname}`;
+        }
+        messageTitle += ` - ${contractor.name}`;
+        
+        const message = `Payment app for ${messageTitle}. Ready for some quick questions? Reply YES to start.`;
         try {
           await twilioClient.messages.create({
             body: message,

@@ -277,6 +277,7 @@ const AddContractForm: React.FC<{
     projectId: "",
     subcontractorId: "",
     contractAmount: "",
+    contractNickname: "",
     startDate: "",
     endDate: "",
   });
@@ -327,6 +328,7 @@ const AddContractForm: React.FC<{
           project_id: Number(formData.projectId),
           subcontractor_id: Number(formData.subcontractorId),
           contract_amount: Number(formData.contractAmount),
+          contract_nickname: formData.contractNickname || null,
           start_date: formData.startDate,
           end_date: formData.endDate || null,
         }])
@@ -368,6 +370,7 @@ const AddContractForm: React.FC<{
         projectId: "",
         subcontractorId: "",
         contractAmount: "",
+        contractNickname: "",
         startDate: "",
         endDate: "",
       });
@@ -521,6 +524,29 @@ const AddContractForm: React.FC<{
             <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
               <AlertCircle className="w-4 h-4" />
               {errors.contractAmount}
+            </p>
+          )}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">
+            Contract Nickname
+          </label>
+          <input
+            type="text"
+            value={formData.contractNickname}
+            onChange={handleInputChange('contractNickname')}
+            className={`
+              w-full px-5 py-3 text-base border rounded-lg focus:ring-2 focus:ring-blue-500 bg-gray-50 text-black
+              ${errors.contractNickname ? 'border-red-300' : 'border-gray-200'}
+            `}
+            placeholder="e.g., Plumbing Phase 1, Electrical Rough-In"
+            disabled={loading}
+          />
+          {errors.contractNickname && (
+            <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+              <AlertCircle className="w-4 h-4" />
+              {errors.contractNickname}
             </p>
           )}
         </div>
@@ -1690,9 +1716,11 @@ const ManageView: React.FC = () => {
                         />
                         <div>
                           <h3 className="font-semibold text-gray-900">
-                            {contract.project?.name || 'Unknown Project'}
+                            {contract.contract_nickname || contract.project?.name || 'Unknown Project'}
                           </h3>
-                          <p className="text-sm text-gray-500">Contract #{contract.id}</p>
+                          <p className="text-sm text-gray-500">
+                            {contract.contract_nickname ? `${contract.project?.name || 'Unknown Project'} • ` : ''}Contract #{contract.id}
+                          </p>
                         </div>
                       </div>
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
@@ -1758,6 +1786,9 @@ const ManageView: React.FC = () => {
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Contract
                       </th>
+                      {/*<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Nickname
+                      </th>*/}
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Vendor
                       </th>
@@ -1792,12 +1823,19 @@ const ManageView: React.FC = () => {
                             </div>
                             <div className="ml-4">
                               <div className="text-sm font-medium text-gray-900">
-                                {contract.project?.name || 'Unknown Project'}
+                                {contract.contract_nickname || contract.project?.name || 'Unknown Project'}
                               </div>
-                              <div className="text-sm text-gray-500">Contract #{contract.id}</div>
+                              <div className="text-sm text-gray-500">
+                                {contract.contract_nickname ? `${contract.project?.name || 'Unknown Project'} • ` : ''}Contract #{contract.id}
+                              </div>
                             </div>
                           </div>
                         </td>
+                        {/*<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {contract.contract_nickname || (
+                            <span className="text-gray-400 italic">No nickname</span>
+                          )}
+                        </td>*/}
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           {contract.subcontractor?.name || 'Unknown Vendor'}
                         </td>
@@ -1817,7 +1855,7 @@ const ManageView: React.FC = () => {
                     ))}
                     {filteredContracts.length === 0 && (
                       <tr>
-                        <td colSpan={6} className="px-6 py-12 text-center">
+                        <td colSpan={7} className="px-6 py-12 text-center">
                           <div className="text-gray-400 mb-4">
                             <FilePlus className="w-12 h-12 mx-auto" />
                           </div>
@@ -1951,6 +1989,9 @@ const ManageView: React.FC = () => {
             <div className="space-y-4">
               <div><span className="font-semibold">Project:</span> {selectedItem.project?.name || 'Unknown Project'}</div>
               <div><span className="font-semibold">Vendor:</span> {selectedItem.subcontractor?.name || 'Unknown Vendor'}</div>
+              {selectedItem.contract_nickname && (
+                <div><span className="font-semibold">Contract Nickname:</span> {selectedItem.contract_nickname}</div>
+              )}
               <div><span className="font-semibold">Contract Amount:</span> ${(selectedItem.contract_amount || 0).toLocaleString()}</div>
               <div><span className="font-semibold">Start Date:</span> {selectedItem.start_date || 'Not set'}</div>
               <div><span className="font-semibold">End Date:</span> {selectedItem.end_date || 'Ongoing'}</div>

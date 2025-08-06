@@ -42,6 +42,7 @@ export interface Contract {
   project_id: number;
   subcontractor_id: number;
   contract_amount: number;
+  contract_nickname?: string;
   start_date: string;
   end_date?: string;
   status?: string;
@@ -258,6 +259,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
           project_id: c.project_id,
           subcontractor_id: c.subcontractor_id,
           contract_amount: c.contract_amount,
+          contract_nickname: c.contract_nickname,
           start_date: c.start_date,
           end_date: c.end_date,
           status: c.status ?? 'active',

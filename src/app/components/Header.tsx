@@ -46,8 +46,8 @@ const Header: React.FC<HeaderProps> = ({ onShowProfile, onLogout, userData }) =>
           <div className="hidden md:flex items-center gap-4">
             <div className="text-sm text-gray-600 flex items-center">
               <Clock className="w-4 h-4 mr-1" />
-              <span className="hidden lg:inline">Last updated: </span>
-              {time}
+              <span className="hidden lg:inline">Last updated: {time}</span>
+              <span className="lg:hidden">{time}</span>
             </div>
             <div className="flex items-center gap-2">
               {userData?.name && (
@@ -99,7 +99,7 @@ const Header: React.FC<HeaderProps> = ({ onShowProfile, onLogout, userData }) =>
             <div className="py-3 space-y-3">
               <div className="flex items-center justify-center text-sm text-gray-600">
                 <Clock className="w-4 h-4 mr-1" />
-                Last updated: {time}
+                Last updated  {time}
               </div>
               <div className="flex flex-col space-y-2 px-4">
                 <button
