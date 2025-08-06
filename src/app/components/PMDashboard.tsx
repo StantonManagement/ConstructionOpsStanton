@@ -137,7 +137,7 @@ function ProjectOverview({ project, onCreatePaymentApps, onStatsPaymentAppClick 
               )
             `)
             .eq('project_id', project.id)
-            .in('status', ['submitted', 'needs_review', 'sms_complete']);
+            .in('status', ['submitted', 'sms_sent']);
 
           if (!paymentAppsError && paymentApps) {
             data = paymentApps.map((app: any) => ({
@@ -164,7 +164,7 @@ function ProjectOverview({ project, onCreatePaymentApps, onStatsPaymentAppClick 
               )
             `)
             .eq('project_id', project.id)
-            .in('status', ['approved', 'check_ready']);
+            .eq('status', 'approved');
 
           if (!completedAppsError && completedApps) {
             data = completedApps.map((app: any) => ({
@@ -224,10 +224,10 @@ function ProjectOverview({ project, onCreatePaymentApps, onStatsPaymentAppClick 
 
       if (!contractorsError && !paymentAppsError) {
         const activeApps = paymentApps?.filter((app: any) => 
-          ['submitted', 'needs_review', 'sms_complete'].includes(app.status)
+          ['submitted', 'sms_sent'].includes(app.status)
         ) || [];
         const completedApps = paymentApps?.filter((app: any) => 
-          ['approved', 'check_ready'].includes(app.status)
+          app.status === 'approved'
         ) || [];
 
         const totalBudget = contractors?.reduce((sum: number, c: any) => 
@@ -259,14 +259,10 @@ function ProjectOverview({ project, onCreatePaymentApps, onStatsPaymentAppClick 
     switch (status) {
       case 'approved':
         return 'bg-green-100 text-green-800';
-      case 'check_ready':
-        return 'bg-blue-100 text-blue-800';
       case 'submitted':
         return 'bg-yellow-100 text-yellow-800';
-      case 'needs_review':
-        return 'bg-orange-100 text-orange-800';
-      case 'sms_complete':
-        return 'bg-purple-100 text-purple-800';
+      case 'sms_sent':
+        return 'bg-blue-100 text-blue-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -291,10 +287,10 @@ function ProjectOverview({ project, onCreatePaymentApps, onStatsPaymentAppClick 
 
         if (!contractorsError && !paymentAppsError) {
           const activeApps = paymentApps?.filter((app: any) => 
-            ['submitted', 'needs_review', 'sms_complete'].includes(app.status)
+            ['submitted', 'sms_sent'].includes(app.status)
           ) || [];
           const completedApps = paymentApps?.filter((app: any) => 
-            ['approved', 'check_ready'].includes(app.status)
+            app.status === 'approved'
           ) || [];
 
           const totalBudget = contractors?.reduce((sum: number, c: any) => 
@@ -1571,11 +1567,11 @@ function CompactStats({ pendingSMS, reviewQueue, readyChecks, weeklyTotal, onSta
         onClick={() => onStatClick('review_queue')}
       />
       <CompactStatCard
-        icon="✅"
-        label="Ready"
+        icon="📤"
+        label="SMS Sent"
         value={readyChecks}
         change={8}
-        color="green"
+        color="blue"
         onClick={() => onStatClick('ready')}
       />
       <CompactStatCard
@@ -2427,11 +2423,9 @@ function MobileFilterDrawer({ show, onClose, statusFilter, setStatusFilter, proj
                 className="w-full text-gray-700 border border-gray-300 rounded-md px-3 py-3 text-base focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="all">All Statuses</option>
-                <option value="submitted">🚨 Submitted</option>
-                <option value="needs_review">⚠️ Needs Review</option>
-                <option value="sms_complete">📱 SMS Complete</option>
+                <option value="submitted">📄 Submitted</option>
+                <option value="sms_sent">📤 SMS Sent</option>
                 <option value="approved">✅ Approved</option>
-                <option value="check_ready">💰 Check Ready</option>
               </select>
             </div>
 
@@ -2514,11 +2508,9 @@ function FilterSidebar({ statusFilter, setStatusFilter, projectFilter, setProjec
             className="w-full text-gray-700 border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500"
           >
             <option value="all">All Statuses</option>
-            <option value="submitted">🚨 Submitted</option>
-            <option value="needs_review">⚠️ Needs Review</option>
-            <option value="sms_complete">📱 SMS Complete</option>
+            <option value="submitted">📄 Submitted</option>
+            <option value="sms_sent">📤 SMS Sent</option>
             <option value="approved">✅ Approved</option>
-            <option value="check_ready">💰 Check Ready</option>
           </select>
         </div>
 
@@ -2587,7 +2579,7 @@ export default function PMDashboard() {
   const [paymentDocuments, setPaymentDocuments] = useState<any[]>([]);
   const [sortBy, setSortBy] = useState<"status" | "date" | "amount">("status");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("submitted");
   const [projectFilter, setProjectFilter] = useState<string>("all");
   const [selectedItems, setSelectedItems] = useState<number[]>([]);
   const [mounted, setMounted] = useState(false);
@@ -2692,15 +2684,15 @@ export default function PMDashboard() {
         (c: any) => c.conversation_state !== "completed"
       ).length;
       const reviewQueue = (appsRaw || []).filter((app: any) =>
-        ["needs_review", "submitted"].includes(app.status)
+        app.status === "submitted"
       ).length;
       const readyChecks = (appsRaw || []).filter((app: any) =>
-        ["check_ready", "approved"].includes(app.status)
+        app.status === "sms_sent"
       ).length;
       const now = new Date();
       const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
       const weeklyTotal = (appsRaw || [])
-        .filter((a: any) => a.created_at && new Date(a.created_at) >= weekAgo)
+        .filter((a: any) => a.created_at && new Date(a.created_at) >= weekAgo && a.status !== 'approved')
         .reduce((sum: number, a: any) => sum + (a.current_payment || 0), 0);
       setStats({
         pending_sms: pendingSMS,
@@ -2779,15 +2771,26 @@ export default function PMDashboard() {
   }
 
   async function sendForSignature(paymentAppId: number) {
-    const res = await fetch(`/api/payments/send-docusign?id=${paymentAppId}`, {
-      method: "POST",
-    });
-    if (!res.ok) {
-      const data = await res.json();
-      alert("Failed to send for signature: " + (data.error || res.statusText));
-      return;
+    try {
+      const res = await fetch(`/api/payments/send-docusign?id=${paymentAppId}`, {
+        method: "POST",
+      });
+      if (!res.ok) {
+        let errorMessage = res.statusText;
+        try {
+          const data = await res.json();
+          errorMessage = data.error || errorMessage;
+        } catch (e) {
+          // Response is not JSON, use status text
+        }
+        alert("Failed to send for signature: " + errorMessage);
+        return;
+      }
+      alert("Payment request sent successfully");
+    } catch (error) {
+      console.error('Error sending for signature:', error);
+      alert("Failed to send for signature: Network error");
     }
-    alert("Payment request sent successfully");
   }
 
   const handleVerifyPayment = (paymentAppId: number) => {
@@ -2876,8 +2879,15 @@ export default function PMDashboard() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create payment applications');
+        let errorMessage = 'Failed to create payment applications';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch (e) {
+          // Response is not JSON, use default message
+          errorMessage = `${errorMessage} (${response.status}: ${response.statusText})`;
+        }
+        throw new Error(errorMessage);
       }
 
       const result = await response.json();
@@ -2996,7 +3006,7 @@ export default function PMDashboard() {
               project:projects(id, name, client_name),
               contractor:contractors(id, name, trade)
             `)
-            .in('status', ['needs_review', 'submitted']);
+            .eq('status', 'submitted');
           
           if (reviewError) throw reviewError;
           data = reviewApps || [];
@@ -3014,11 +3024,11 @@ export default function PMDashboard() {
               project:projects(id, name, client_name),
               contractor:contractors(id, name, trade)
             `)
-            .in('status', ['check_ready', 'approved']);
+            .eq('status', 'sms_sent');
           
           if (readyError) throw readyError;
           data = readyApps || [];
-          title = 'Ready Applications';
+          title = 'SMS Sent Applications';
           break;
 
         case 'weekly':

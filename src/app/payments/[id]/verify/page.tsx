@@ -152,8 +152,15 @@ export default function PaymentVerificationPage() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to update percentage');
+        let errorMessage = 'Failed to update percentage';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch (e) {
+          // Response is not JSON, use default message
+          errorMessage = `${errorMessage} (${response.status}: ${response.statusText})`;
+        }
+        throw new Error(errorMessage);
       }
 
       // Update local state
@@ -249,8 +256,15 @@ export default function PaymentVerificationPage() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to send notification');
+        let errorMessage = 'Failed to send notification';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch (e) {
+          // Response is not JSON, use default message
+          errorMessage = `${errorMessage} (${response.status}: ${response.statusText})`;
+        }
+        throw new Error(errorMessage);
       }
 
       return await response.json();
@@ -381,8 +395,15 @@ const lineItemsForTable = lineItems.map((li, idx) => {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to approve payment application');
+        let errorMessage = 'Failed to approve payment application';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch (e) {
+          // Response is not JSON, use default message
+          errorMessage = `${errorMessage} (${response.status}: ${response.statusText})`;
+        }
+        throw new Error(errorMessage);
       }
 
       const result = await response.json();
@@ -436,8 +457,15 @@ const lineItemsForTable = lineItems.map((li, idx) => {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to reject payment application');
+        let errorMessage = 'Failed to reject payment application';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch (e) {
+          // Response is not JSON, use default message
+          errorMessage = `${errorMessage} (${response.status}: ${response.statusText})`;
+        }
+        throw new Error(errorMessage);
       }
 
       const result = await response.json();
@@ -477,8 +505,15 @@ const lineItemsForTable = lineItems.map((li, idx) => {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to recall payment application');
+        let errorMessage = 'Failed to recall payment application';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch (e) {
+          // Response is not JSON, use default message
+          errorMessage = `${errorMessage} (${response.status}: ${response.statusText})`;
+        }
+        throw new Error(errorMessage);
       }
 
       const result = await response.json();

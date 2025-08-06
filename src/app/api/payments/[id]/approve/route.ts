@@ -67,7 +67,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         approval_notes: approvalNotes || null
       })
       .eq('id', paymentAppId)
-      .select('*, project:projects(name, budget, spent), contractor:contractors(name, email)')
+      .select('*, project:projects(name, budget, spent), contractor:contractors(id, name, email, phone)')
       .single();
 
     if (updateError) {
