@@ -12,6 +12,7 @@ interface PaymentApplication {
   created_at: string;
   project: { name: string } | null;
   contractor: { name: string } | null;
+  grand_total?: number; // Added for consistency
 }
 
 interface StatusConfig {
@@ -40,10 +41,10 @@ const LoadingSkeleton: React.FC = () => (
 );
 
 // Extracted queue card component for better reusability
-const QueueCard: React.FC<{ 
-  app: PaymentApplication; 
-  status: StatusConfig; 
-  onReview: (id: string) => void 
+const QueueCard: React.FC<{
+  app: PaymentApplication;
+  status: StatusConfig;
+  onReview: (id: string) => void
 }> = ({ app, status, onReview }) => (
   <div
     className="flex flex-col border rounded-lg p-4 sm:p-6 bg-white shadow hover:shadow-lg transition-all duration-200 group focus-within:ring-2 focus-within:ring-blue-400 cursor-pointer min-h-[120px] sm:min-h-[140px]"
@@ -75,9 +76,9 @@ const QueueCard: React.FC<{
       <span
         className="font-semibold text-green-700 bg-green-50 px-2 py-1 rounded cursor-help relative group-hover:bg-green-100"
         tabIndex={0}
-        aria-label={`Amount for this application: $${app.current_payment?.toLocaleString() || '0'}`}
+        aria-label={`Amount for this application: $${(app.current_payment || app.grand_total || 0).toLocaleString()}`}
       >
-        ${app.current_payment?.toLocaleString() || '0'}
+        ${(app.current_payment || app.grand_total || 0).toLocaleString()}
       </span>
     </div>
     <button
@@ -114,16 +115,17 @@ const DecisionQueueCards: React.FC<{ role: string | null, setError: (msg: string
     try {
       setLocalError(null);
       setLoading(true);
-      
+
       // More robust query with better error handling
       const { data, error } = await supabase
         .from('payment_applications')
         .select(`
-          id, 
-          status, 
-          current_payment, 
-          created_at, 
-          project_id, 
+          id,
+          status,
+          current_payment,
+          grand_total,
+          created_at,
+          project_id,
           contractor_id,
           project:projects!inner(id, name),
           contractor:contractors!inner(id, name)
@@ -141,6 +143,7 @@ const DecisionQueueCards: React.FC<{ role: string | null, setError: (msg: string
         id: item.id,
         status: item.status,
         current_payment: Number(item.current_payment) || 0,
+        grand_total: Number(item.grand_total) || 0,
         created_at: item.created_at,
         project: item.project || { id: null, name: 'Unknown Project' },
         contractor: item.contractor || { id: null, name: 'Unknown Contractor' },
@@ -173,7 +176,7 @@ const DecisionQueueCards: React.FC<{ role: string | null, setError: (msg: string
         map[projectName] = { projectName, count: 0, total: 0, highestPriority: priority };
       }
       map[projectName].count += 1;
-      map[projectName].total += app.current_payment || 0;
+      map[projectName].total += app.current_payment || app.grand_total || 0;
       // Update highest priority if this app is higher
       if (priorityOrder.indexOf(priority) < priorityOrder.indexOf(map[projectName].highestPriority)) {
         map[projectName].highestPriority = priority;
@@ -199,14 +202,14 @@ const DecisionQueueCards: React.FC<{ role: string | null, setError: (msg: string
             <span className="text-2xl">⚠️</span>
             <div className="text-sm font-medium">{error}</div>
             <div className="flex gap-2">
-              <button 
+              <button
                 onClick={fetchQueue}
                 disabled={loading}
                 className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 text-sm font-medium"
               >
                 {loading ? 'Retrying...' : 'Retry'}
               </button>
-              <button 
+              <button
                 onClick={() => setLocalError(null)}
                 className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-sm font-medium"
               >
@@ -279,7 +282,7 @@ const DecisionQueueCards: React.FC<{ role: string | null, setError: (msg: string
               </div>
             );
           })}
-          
+
           {/* Individual Payment Applications */}
           {queue.length > 0 && (
             <div className="mt-6">
@@ -291,7 +294,7 @@ const DecisionQueueCards: React.FC<{ role: string | null, setError: (msg: string
                     needs_review: { color: 'bg-yellow-100 text-yellow-800', label: 'Needs Review', icon: '⚠️' }
                   };
                   const status = statusConfig[app.status] || statusConfig.needs_review;
-                  
+
                   return (
                     <div
                       key={app.id}
@@ -318,7 +321,7 @@ const DecisionQueueCards: React.FC<{ role: string | null, setError: (msg: string
                         <div className="text-sm font-medium text-gray-900">{app.project?.name || 'Unknown Project'}</div>
                         <div className="text-xs text-gray-600">Contractor: {app.contractor?.name || 'Unknown'}</div>
                         <div className="text-xs text-green-700 font-medium">
-                          ${app.current_payment?.toLocaleString() || '0'}
+                          ${(app.current_payment || app.grand_total || 0).toLocaleString()}
                         </div>
                       </div>
                       <div className="text-blue-600 text-xs font-medium">Click to review →</div>
@@ -350,19 +353,19 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
   const filteredProjects = useMemo(() => {
     if (!searchQuery.trim()) return projects;
     const searchLower = searchQuery.toLowerCase();
-    return projects.filter(project => 
+    return projects.filter(project =>
       project.name.toLowerCase().includes(searchLower) ||
       project.client_name?.toLowerCase().includes(searchLower) ||
       project.current_phase?.toLowerCase().includes(searchLower)
     );
   }, [projects, searchQuery]);
-  
+
   useEffect(() => {
     const getRole = async () => {
       try {
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         console.log("Session:", session, "Error:", sessionError);
-        
+
         if (sessionError) {
           console.error("Session error:", sessionError);
           setRole("unknown");
@@ -375,9 +378,9 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
             .select("role")
             .eq("uuid", session.user.id)
             .single();
-          
+
           console.log("User role fetch:", data, error);
-          
+
           if (error) {
             console.error("Role fetch error:", error);
             // If user doesn't exist in users table, assume they need to be set up
@@ -393,7 +396,7 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
         setRole("unknown");
       }
     };
-    
+
     getRole();
 
     // Listen for auth changes
@@ -411,28 +414,28 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
   // Memoize calculations to prevent unnecessary recalculations
   const stats = useMemo(() => {
     const totalProjects = filteredProjects.length;
-    const activeProjects = filteredProjects.filter(p => 
-      !p.current_phase?.toLowerCase().includes('complete') && 
+    const activeProjects = filteredProjects.filter(p =>
+      !p.current_phase?.toLowerCase().includes('complete') &&
       !p.current_phase?.toLowerCase().includes('closed')
     ).length;
-    
+
     // Ensure proper number conversion and validation
     const totalBudget = filteredProjects.reduce((sum, p) => {
       const budget = Number(p.budget);
       return sum + (isNaN(budget) ? 0 : budget);
     }, 0);
-    
+
     const totalSpent = filteredProjects.reduce((sum, p) => {
       const spent = Number(p.spent);
       return sum + (isNaN(spent) ? 0 : spent);
     }, 0);
-    
+
     const remainingBudget = totalBudget - totalSpent;
     const utilizationRate = totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100 * 10) / 10 : 0;
-    
+
     // Calculate average project budget
     const avgProjectBudget = totalProjects > 0 ? Math.round(totalBudget / totalProjects) : 0;
-    
+
     return {
       totalProjects,
       activeProjects,
@@ -452,7 +455,7 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
     icon?: string;
     onClick?: () => void;
   }> = ({ title, value, subtitle, colorClass, icon, onClick }) => (
-    <div 
+    <div
       className={`${colorClass} rounded-lg p-4 text-center transition-transform hover:scale-105 ${
         onClick ? 'cursor-pointer hover:shadow-md' : ''
       }`}
@@ -462,16 +465,16 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
     >
       <div className="flex items-center justify-center gap-2 mb-1">
         {icon && <span className="text-lg">{icon}</span>}
-        <div className={`text-2xl font-bold ${colorClass.includes('blue') ? 'text-blue-700' : 
-                                           colorClass.includes('green') ? 'text-green-700' : 
-                                           colorClass.includes('yellow') ? 'text-yellow-700' : 
+        <div className={`text-2xl font-bold ${colorClass.includes('blue') ? 'text-blue-700' :
+                                           colorClass.includes('green') ? 'text-green-700' :
+                                           colorClass.includes('yellow') ? 'text-yellow-700' :
                                            'text-red-700'}`}>
           {value}
         </div>
       </div>
-      <div className={`text-sm font-medium ${colorClass.includes('blue') ? 'text-blue-900' : 
-                                            colorClass.includes('green') ? 'text-green-900' : 
-                                            colorClass.includes('yellow') ? 'text-yellow-900' : 
+      <div className={`text-sm font-medium ${colorClass.includes('blue') ? 'text-blue-900' :
+                                            colorClass.includes('green') ? 'text-green-900' :
+                                            colorClass.includes('yellow') ? 'text-yellow-900' :
                                             'text-red-900'}`}>
         {title}
       </div>
@@ -527,7 +530,7 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
         {/* Enhanced Projects List */}
         <div className="bg-white rounded-lg border shadow-sm p-4">
           <div className="flex items-center justify-between mb-4">
-            <h3 
+            <h3
               className={`text-lg font-semibold text-gray-900 ${
                 onSwitchToPayments ? 'cursor-pointer hover:text-blue-600 transition-colors' : ''
               }`}
@@ -566,10 +569,10 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
               </div>
             ) : (
               filteredProjects.map((project) => (
-                <ProjectCard 
-                  key={project.id} 
-                  project={project} 
-                  onSelect={onProjectSelect} 
+                <ProjectCard
+                  key={project.id}
+                  project={project}
+                  onSelect={onProjectSelect}
                 />
               ))
             )}
