@@ -418,20 +418,58 @@ const ItemCard: React.FC<{
             </div>
             <div>
               <span className="text-gray-500">Budget:</span>
-              <span className="ml-1 text-gray-900 font-medium">${(item.budget || 0).toLocaleString()}</span>
+              <span className="ml-1 text-gray-900 font-medium">
+                ${(item.calculatedBudget || item.budget || 0).toLocaleString()}
+              </span>
             </div>
           </div>
-          {item.budget && (
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div>
+              <span className="text-gray-500">Spent:</span>
+              <span className="ml-1 text-gray-900 font-medium">
+                ${(item.calculatedSpent || item.spent || 0).toLocaleString()}
+              </span>
+            </div>
+            <div>
+              <span className="text-gray-500">Remaining:</span>
+              <span className="ml-1 text-gray-900 font-medium">
+                ${Math.max(0, (item.calculatedBudget || item.budget || 0) - (item.calculatedSpent || item.spent || 0)).toLocaleString()}
+              </span>
+            </div>
+          </div>
+          {((item.calculatedBudget || item.budget) > 0) && (
             <div>
               <div className="flex items-center justify-between text-sm mb-2">
                 <span className="text-gray-500">Progress</span>
-                <span className="font-medium">{Math.round(((item.spent || 0) / item.budget) * 100)}%</span>
+                <span className="font-medium">
+                  {Math.round(((item.calculatedSpent || item.spent || 0) / (item.calculatedBudget || item.budget)) * 100)}%
+                </span>
               </div>
               <div className="bg-gray-200 rounded-full h-2">
                 <div
-                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${Math.min(((item.spent || 0) / item.budget) * 100, 100)}%` }}
+                  className={`h-2 rounded-full transition-all duration-300 ${
+                    Math.round(((item.calculatedSpent || item.spent || 0) / (item.calculatedBudget || item.budget)) * 100) > 90 
+                      ? 'bg-red-500' 
+                      : 'bg-blue-600'
+                  }`}
+                  style={{ 
+                    width: `${Math.min(((item.calculatedSpent || item.spent || 0) / (item.calculatedBudget || item.budget)) * 100, 100)}%` 
+                  }}
                 />
+              </div>
+              <div className="flex justify-between items-center text-xs mt-1">
+                <span className="text-gray-500">
+                  {Math.round(((item.calculatedSpent || item.spent || 0) / (item.calculatedBudget || item.budget)) * 100)}% utilized
+                </span>
+                <span className={`font-medium ${
+                  Math.round(((item.calculatedSpent || item.spent || 0) / (item.calculatedBudget || item.budget)) * 100) > 90 
+                    ? 'text-red-600' 
+                    : 'text-green-600'
+                }`}>
+                  {Math.round(((item.calculatedSpent || item.spent || 0) / (item.calculatedBudget || item.budget)) * 100) > 90 
+                    ? '⚠️ High Usage' 
+                    : '✅ On Track'}
+                </span>
               </div>
             </div>
           )}
@@ -1505,6 +1543,50 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
     }
   }, [dispatch, addNotification]);
 
+  // Enhanced project data with calculated spent amounts
+  const [enhancedProjects, setEnhancedProjects] = useState<any[]>([]);
+
+  // Fetch enhanced project data with spent calculations
+  const fetchEnhancedProjects = useCallback(async () => {
+    try {
+      const enrichedProjects = await Promise.all(projects.map(async (project: any) => {
+        // Get contract data for this project
+        const { data: contractorData } = await supabase
+          .from('project_contractors')
+          .select('contract_amount, paid_to_date')
+          .eq('project_id', project.id)
+          .eq('contract_status', 'active');
+
+        const calculatedBudget = contractorData?.reduce((sum: number, contract: any) => 
+          sum + (Number(contract.contract_amount) || 0), 0) || 0;
+        
+        const calculatedSpent = contractorData?.reduce((sum: number, contract: any) => 
+          sum + (Number(contract.paid_to_date) || 0), 0) || 0;
+
+        return {
+          ...project,
+          calculatedBudget,
+          calculatedSpent,
+          spent: calculatedSpent // Add spent property for compatibility
+        };
+      }));
+
+      setEnhancedProjects(enrichedProjects);
+    } catch (error) {
+      console.error('Error fetching enhanced project data:', error);
+      setEnhancedProjects(projects); // Fallback to original projects
+    }
+  }, [projects]);
+
+  // Update enhanced projects when projects change
+  useEffect(() => {
+    if (projects.length > 0) {
+      fetchEnhancedProjects();
+    } else {
+      setEnhancedProjects([]);
+    }
+  }, [projects, fetchEnhancedProjects]);
+
   const addProject = async (formData: Record<string, string>) => {
     setIsLoading(prev => ({ ...prev, project: true }));
 
@@ -1615,14 +1697,14 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
 
   // Search and filter functions
   const filteredProjects = useMemo(() => {
-    return projects.filter(project => {
+    return enhancedProjects.filter(project => {
       const matchesSearch = project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            project.client_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            project.current_phase?.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesFilter = filters.status === 'all' || (project as any).status === filters.status;
       return matchesSearch && matchesFilter;
     });
-  }, [projects, searchTerm, filters.status]);
+  }, [enhancedProjects, searchTerm, filters.status]);
 
   const filteredVendors = useMemo(() => {
     return subcontractors.filter(vendor => {
@@ -1923,8 +2005,10 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
                   <div><span className="font-semibold">Name:</span> {selectedItem.name}</div>
                   <div><span className="font-semibold">Client:</span> {selectedItem.client_name || 'Not specified'}</div>
                   <div><span className="font-semibold">Phase:</span> {selectedItem.current_phase || 'Not set'}</div>
-                  <div><span className="font-semibold">Budget:</span> ${(selectedItem.budget || 0).toLocaleString()}</div>
-                  <div><span className="font-semibold">Spent:</span> ${(selectedItem.spent || 0).toLocaleString()}</div>
+                  <div><span className="font-semibold">Budget:</span> ${(selectedItem.calculatedBudget || selectedItem.budget || 0).toLocaleString()}</div>
+                  <div><span className="font-semibold">Spent:</span> ${(selectedItem.calculatedSpent || selectedItem.spent || 0).toLocaleString()}</div>
+                  <div><span className="font-semibold">Remaining:</span> ${Math.max(0, (selectedItem.calculatedBudget || selectedItem.budget || 0) - (selectedItem.calculatedSpent || selectedItem.spent || 0)).toLocaleString()}</div>
+                  <div><span className="font-semibold">Utilization:</span> {((selectedItem.calculatedBudget || selectedItem.budget) > 0) ? Math.round(((selectedItem.calculatedSpent || selectedItem.spent || 0) / (selectedItem.calculatedBudget || selectedItem.budget)) * 100) : 0}%</div>
                   <div><span className="font-semibold">Status:</span> {(selectedItem as any).status || 'Active'}</div>
                   <div><span className="font-semibold">Start Date:</span> {(selectedItem as any).start_date || 'Not set'}</div>
                 </>
