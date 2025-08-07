@@ -96,7 +96,7 @@ const QueueCard: React.FC<{
 const DecisionQueueCards: React.FC<{ role: string | null, setError: (msg: string) => void }> = ({ role, setError }) => {
   const [queue, setQueue] = useState<PaymentApplication[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setLocalError] = useState<string | null>(null); // Only for local fetch errors
+  const [error, setLocalError] = useState<string | null>(null);
 
   const navigateToPaymentApp = (paymentAppId: string) => {
     window.location.href = `/payments/${paymentAppId}/verify`;
@@ -113,22 +113,43 @@ const DecisionQueueCards: React.FC<{ role: string | null, setError: (msg: string
   const fetchQueue = useCallback(async () => {
     try {
       setLocalError(null);
+      setLoading(true);
+      
+      // More robust query with better error handling
       const { data, error } = await supabase
         .from('payment_applications')
-        .select('id, status, current_payment, created_at, project_id, project:projects(id, name), contractor:contractors(name)')
+        .select(`
+          id, 
+          status, 
+          current_payment, 
+          created_at, 
+          project_id, 
+          contractor_id,
+          project:projects!inner(id, name),
+          contractor:contractors!inner(id, name)
+        `)
         .in('status', ['needs_review', 'submitted'])
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      setQueue(
-        (data || []).map((item: any) => ({
-          ...item,
-          project: item.project || { name: '' },
-          contractor: item.contractor || { name: '' },
-        }))
-      );
-    } catch (err) {
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      if (error) {
+        console.error('Supabase error:', error);
+        throw new Error(`Database error: ${error.message}`);
+      }
+
+      const processedQueue = (data || []).map((item: any) => ({
+        id: item.id,
+        status: item.status,
+        current_payment: Number(item.current_payment) || 0,
+        created_at: item.created_at,
+        project: item.project || { id: null, name: 'Unknown Project' },
+        contractor: item.contractor || { id: null, name: 'Unknown Contractor' },
+      }));
+
+      setQueue(processedQueue);
+    } catch (err: any) {
       console.error('Error fetching queue:', err);
-      setLocalError('Failed to load decision queue');
+      setLocalError(err.message || 'Failed to load decision queue');
     } finally {
       setLoading(false);
     }
@@ -173,15 +194,26 @@ const DecisionQueueCards: React.FC<{ role: string | null, setError: (msg: string
     return (
       <div className="bg-white rounded-lg border shadow-sm p-4">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">📋 Decisions Queue</h3>
-        <div className="text-red-500 text-center py-8 flex items-center justify-center gap-2">
-          <span>⚠️</span>
-          <span>{error}</span>
-          <button 
-            onClick={fetchQueue}
-            className="ml-2 text-blue-600 hover:text-blue-800 underline"
-          >
-            Retry
-          </button>
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="text-red-700 text-center py-4 flex flex-col items-center gap-3">
+            <span className="text-2xl">⚠️</span>
+            <div className="text-sm font-medium">{error}</div>
+            <div className="flex gap-2">
+              <button 
+                onClick={fetchQueue}
+                disabled={loading}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 text-sm font-medium"
+              >
+                {loading ? 'Retrying...' : 'Retry'}
+              </button>
+              <button 
+                onClick={() => setLocalError(null)}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-sm font-medium"
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -327,37 +359,88 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
   
   useEffect(() => {
     const getRole = async () => {
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      console.log("Session:", session, "Error:", sessionError);
-      if (session?.user) {
-        const { data, error } = await supabase
-          .from("users")
-          .select("role")
-          .eq("uuid", session.user.id)
-          .single();
-        console.log("User role fetch:", data, error);
-        setRole(data?.role || "unknown");
-      } else {
+      try {
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        console.log("Session:", session, "Error:", sessionError);
+        
+        if (sessionError) {
+          console.error("Session error:", sessionError);
+          setRole("unknown");
+          return;
+        }
+
+        if (session?.user) {
+          const { data, error } = await supabase
+            .from("users")
+            .select("role")
+            .eq("uuid", session.user.id)
+            .single();
+          
+          console.log("User role fetch:", data, error);
+          
+          if (error) {
+            console.error("Role fetch error:", error);
+            // If user doesn't exist in users table, assume they need to be set up
+            setRole("pending");
+          } else {
+            setRole(data?.role || "user");
+          }
+        } else {
+          setRole("unauthenticated");
+        }
+      } catch (err) {
+        console.error("Error fetching user role:", err);
         setRole("unknown");
       }
     };
+    
     getRole();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        getRole();
+      } else if (event === 'SIGNED_OUT') {
+        setRole("unauthenticated");
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   // Memoize calculations to prevent unnecessary recalculations
   const stats = useMemo(() => {
     const totalProjects = filteredProjects.length;
-    const totalBudget = filteredProjects.reduce((sum, p) => sum + (Number(p.budget) || 0), 0);
-    const totalSpent = filteredProjects.reduce((sum, p) => sum + (Number(p.spent) || 0), 0);
+    const activeProjects = filteredProjects.filter(p => 
+      !p.current_phase?.toLowerCase().includes('complete') && 
+      !p.current_phase?.toLowerCase().includes('closed')
+    ).length;
+    
+    // Ensure proper number conversion and validation
+    const totalBudget = filteredProjects.reduce((sum, p) => {
+      const budget = Number(p.budget);
+      return sum + (isNaN(budget) ? 0 : budget);
+    }, 0);
+    
+    const totalSpent = filteredProjects.reduce((sum, p) => {
+      const spent = Number(p.spent);
+      return sum + (isNaN(spent) ? 0 : spent);
+    }, 0);
+    
     const remainingBudget = totalBudget - totalSpent;
-    const utilizationRate = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0;
+    const utilizationRate = totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100 * 10) / 10 : 0;
+    
+    // Calculate average project budget
+    const avgProjectBudget = totalProjects > 0 ? Math.round(totalBudget / totalProjects) : 0;
     
     return {
       totalProjects,
+      activeProjects,
       totalBudget,
       totalSpent,
       remainingBudget,
-      utilizationRate
+      utilizationRate,
+      avgProjectBudget
     };
   }, [filteredProjects]);
 
@@ -408,31 +491,33 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
       {/* Enhanced Stats Bar */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
         <StatCard
-          title="Active Projects"
+          title="Total Projects"
           value={stats.totalProjects}
+          subtitle={`${stats.activeProjects} active`}
           colorClass="bg-blue-50"
           icon="🏗️"
           onClick={onSwitchToPayments ? () => {
-            // Switch to payments tab
             onSwitchToPayments();
           } : undefined}
         />
         <StatCard
           title="Total Budget"
           value={`$${stats.totalBudget.toLocaleString()}`}
+          subtitle={`Avg: $${stats.avgProjectBudget.toLocaleString()}`}
           colorClass="bg-green-50"
           icon="💰"
         />
         <StatCard
           title="Total Spent"
           value={`$${stats.totalSpent.toLocaleString()}`}
-          subtitle={`${stats.utilizationRate.toFixed(1)}% utilized`}
-          colorClass="bg-yellow-50"
+          subtitle={`${stats.utilizationRate}% utilized`}
+          colorClass={stats.utilizationRate > 90 ? "bg-red-50" : stats.utilizationRate > 75 ? "bg-yellow-50" : "bg-green-50"}
           icon="💸"
         />
         <StatCard
           title="Remaining Budget"
           value={`$${stats.remainingBudget.toLocaleString()}`}
+          subtitle={stats.remainingBudget < 0 ? "Over budget!" : "Available"}
           colorClass={stats.remainingBudget >= 0 ? "bg-green-50" : "bg-red-50"}
           icon={stats.remainingBudget >= 0 ? "✅" : "⚠️"}
         />
