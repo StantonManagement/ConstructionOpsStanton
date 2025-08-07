@@ -1592,23 +1592,53 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
 
     try {
       const { name, client_name, current_phase, budget, start_date, target_completion_date } = formData;
-      const { data, error } = await supabase.from('projects').insert([{
-        name,
-        client_name,
-        current_phase,
-        budget: budget ? Number(budget) : null,
-        start_date,
-        target_completion_date,
-      }]).select().single();
+      
+      if (editModal === 'project' && selectedItem) {
+        // Update existing project
+        const { data, error } = await supabase
+          .from('projects')
+          .update({
+            name,
+            client_name,
+            current_phase,
+            budget: budget ? Number(budget) : null,
+            start_date,
+            target_completion_date,
+          })
+          .eq('id', selectedItem.id)
+          .select()
+          .single();
 
-      if (error) throw error;
+        if (error) throw error;
 
-      dispatch({ type: 'ADD_PROJECT', payload: data });
-      addNotification('success', 'Project added successfully!');
-      setOpenForm(null);
+        dispatch({ type: 'UPDATE_PROJECT', payload: data });
+        addNotification('success', 'Project updated successfully!');
+        setEditModal(null);
+        setSelectedItem(null);
+        // Refresh enhanced projects data
+        fetchEnhancedProjects();
+      } else {
+        // Add new project
+        const { data, error } = await supabase.from('projects').insert([{
+          name,
+          client_name,
+          current_phase,
+          budget: budget ? Number(budget) : null,
+          start_date,
+          target_completion_date,
+        }]).select().single();
+
+        if (error) throw error;
+
+        dispatch({ type: 'ADD_PROJECT', payload: data });
+        addNotification('success', 'Project added successfully!');
+        setOpenForm(null);
+        // Refresh enhanced projects data
+        fetchEnhancedProjects();
+      }
 
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to add project';
+      const message = error instanceof Error ? error.message : 'Failed to save project';
       addNotification('error', message);
       throw error;
     } finally {
@@ -2065,8 +2095,9 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
                 name: selectedItem.name || '',
                 client_name: selectedItem.client_name || '',
                 current_phase: selectedItem.current_phase || '',
-                budget: selectedItem.budget?.toString() || '',
-                spent: selectedItem.spent?.toString() || '',
+                budget: (selectedItem.calculatedBudget || selectedItem.budget || '').toString(),
+                start_date: selectedItem.start_date || '',
+                target_completion_date: selectedItem.target_completion_date || '',
               }}
             />
           </div>

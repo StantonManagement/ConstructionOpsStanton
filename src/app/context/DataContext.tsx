@@ -142,6 +142,18 @@ function dataReducer(state: InitialDataType, action: { type: string; payload?: u
         ],
       };
     }
+    case 'UPDATE_PROJECT':
+      return {
+        ...state,
+        projects: state.projects.map(p => 
+          p.id === action.payload.id ? action.payload : p
+        )
+      };
+    case 'DELETE_PROJECT':
+      return {
+        ...state,
+        projects: state.projects.filter(p => p.id !== action.payload)
+      };
     case 'SET_PROJECTS': {
       return {
         ...state,
@@ -290,4 +302,4 @@ export const useData = (): DataContextType => {
     throw new Error('useData must be used within a DataProvider');
   }
   return context;
-}; 
+};
