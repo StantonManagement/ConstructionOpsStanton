@@ -297,7 +297,7 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
 
       {/* Requests List */}
       <div className="space-y-4">
-        {filteredRequests.map((request) => (
+              {filteredRequests.map((request) => (
           <div 
             key={request.id} 
             className="bg-white border border-gray-200 rounded-lg p-4 cursor-pointer hover:shadow-md transition-all duration-200"
@@ -310,7 +310,7 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
                     {request.project?.name} - {request.project?.client_name}
                   </span>
                   {getStatusBadge(request.request_status)}
-                </div>
+                    </div>
                 
                 <div className="text-sm text-gray-600 mb-2">
                   <div>PM Phone: {request.pm_phone_number}</div>
@@ -322,9 +322,9 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
                   {request.received_notes && (
                     <div className="mt-2 p-2 bg-gray-50 rounded border">
                       <strong>Received Notes:</strong> {request.received_notes}
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
                 
                 <div className="text-xs text-gray-500">
                   Created: {request.created_at ? formatDate(request.created_at) : 'Unknown'}
@@ -340,19 +340,19 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
                   💬 Click to view Daily Logs and replies
                 </div>
               </div>
-              <button
+                      <button
                 onClick={(e) => {
                   e.stopPropagation();
                   handleDeleteRequest(request.id);
                 }}
                 className="text-red-600 hover:text-red-800 p-1"
-                title="Delete request"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </div>
+                        title="Delete request"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
           </div>
-        ))}
+              ))}
 
         {/* Empty State */}
         {filteredRequests.length === 0 && (
@@ -402,8 +402,8 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">PM Phone Number *</label>
-                <input
-                  type="tel"
+                  <input
+                    type="tel"
                   value={pmPhoneNumber}
                   onChange={(e) => {
                     setPmPhoneNumber(e.target.value);
@@ -468,23 +468,23 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
                 <h3 className="text-lg font-semibold text-gray-900">
                   Daily Logs - {selectedRequest.project?.name}
                 </h3>
-                <button
-                  onClick={handleCloseViewModal}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-              
+              <button
+                onClick={handleCloseViewModal}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
               <div className="mt-2 text-sm text-gray-600">
                 <div>Project: {selectedRequest.project?.name} - {selectedRequest.project?.client_name}</div>
                 <div>PM Phone: {selectedRequest.pm_phone_number}</div>
                 <div>Request Status: {selectedRequest.request_status}</div>
                 <div>Request Time: {selectedRequest.request_time || '18:00'} EST</div>
-              </div>
-            </div>
+                  </div>
+                </div>
 
             <div className="p-6 overflow-y-auto max-h-[60vh]">
               {loadingNotes ? (
@@ -493,7 +493,7 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
                   <span className="ml-2 text-gray-600">Loading PM notes...</span>
                 </div>
               ) : pmNotes.length > 0 ? (
-                <div className="space-y-4">
+                  <div className="space-y-4">
                   <h4 className="text-md font-semibold text-gray-900 mb-4">
                     PM Notes from Payment Applications ({pmNotes.length})
                   </h4>
@@ -521,11 +521,11 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
                         <div className="text-sm text-gray-900 font-medium mb-1">PM Notes:</div>
                         <div className="text-sm text-gray-700 whitespace-pre-wrap">
                           {note.pm_notes}
-                        </div>
-                      </div>
                     </div>
-                  ))}
+                  </div>
                 </div>
+                  ))}
+              </div>
               ) : (
                 <div className="text-center py-8">
                   <div className="text-4xl mb-4">📝</div>
@@ -546,12 +546,12 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
                     <span>No Daily Logs available</span>
                   )}
                 </div>
-                <button
-                  onClick={handleCloseViewModal}
+              <button
+                onClick={handleCloseViewModal}
                   className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
-                >
-                  Close
-                </button>
+              >
+                Close
+              </button>
               </div>
             </div>
           </div>

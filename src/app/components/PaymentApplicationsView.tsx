@@ -86,7 +86,7 @@ function CompactStats({ pendingSMS, reviewQueue, readyChecks, weeklyTotal, onSta
 }
 
 // Payment Card Component
-function PaymentCard({ application, isSelected, onSelect, onVerify, getDocumentForApp, sendForSignature }: any) {
+function PaymentCard({ application, isSelected, onSelect, onVerify, getDocumentForApp, sendForSignature, onCardClick }: any) {
   const [grandTotal, setGrandTotal] = useState(0);
   const [showDetails, setShowDetails] = useState(false);
 
@@ -145,7 +145,10 @@ function PaymentCard({ application, isSelected, onSelect, onVerify, getDocumentF
   const doc = getDocumentForApp(application.id);
 
   return (
-    <div className={`bg-white border rounded-lg p-4 transition-all ${isSelected ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}>
+    <div 
+      className={`bg-white border rounded-lg p-4 transition-all cursor-pointer ${isSelected ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300 hover:shadow-md'}`}
+      onClick={() => onCardClick && onCardClick(application)}
+    >
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-3">
           <input
@@ -215,7 +218,7 @@ function PaymentCard({ application, isSelected, onSelect, onVerify, getDocumentF
 }
 
 // Payment Row Component (for table view)
-function PaymentRow({ application, isSelected, onSelect, onVerify, getDocumentForApp, sendForSignature }: any) {
+function PaymentRow({ application, isSelected, onSelect, onVerify, getDocumentForApp, sendForSignature, onCardClick }: any) {
   const [grandTotal, setGrandTotal] = useState(0);
 
   useEffect(() => {
@@ -271,7 +274,10 @@ function PaymentRow({ application, isSelected, onSelect, onVerify, getDocumentFo
   const doc = getDocumentForApp(application.id);
 
   return (
-    <tr className={`border-b border-gray-200 hover:bg-gray-50 ${isSelected ? 'bg-blue-50' : ''}`}>
+    <tr 
+      className={`border-b border-gray-200 hover:bg-gray-50 cursor-pointer ${isSelected ? 'bg-blue-50' : ''}`}
+      onClick={() => onCardClick && onCardClick(application)}
+    >
       <td className="px-4 py-3">
         <input
           type="checkbox"
@@ -399,7 +405,7 @@ function Pagination({ currentPage, totalPages, onPageChange, totalItems, itemsPe
 }
 
 // Payment Table Component
-function PaymentTable({ applications, onVerify, getDocumentForApp, sendForSignature, selectedItems, onSelectItem, onSelectAll, currentPage, totalPages, onPageChange, totalItems, itemsPerPage }: any) {
+function PaymentTable({ applications, onVerify, getDocumentForApp, sendForSignature, selectedItems, onSelectItem, onSelectAll, currentPage, totalPages, onPageChange, totalItems, itemsPerPage, onCardClick }: any) {
   const allSelected = applications.length > 0 && selectedItems.length === applications.length;
   const someSelected = selectedItems.length > 0 && selectedItems.length < applications.length;
 
@@ -450,6 +456,7 @@ function PaymentTable({ applications, onVerify, getDocumentForApp, sendForSignat
                 onVerify={onVerify}
                 getDocumentForApp={getDocumentForApp}
                 sendForSignature={sendForSignature}
+                onCardClick={onCardClick}
               />
             ))}
           </tbody>
@@ -612,7 +619,7 @@ function MobileFilterDrawer({ show, onClose, statusFilter, setStatusFilter, proj
 
   return (
     <div className="fixed inset-0 z-50 lg:hidden">
-      <div className="absolute inset-0 bg-black bg-opacity-50" onClick={onClose} />
+      <div className="absolute inset-0  bg-opacity-50" onClick={onClose} />
       <div className="absolute right-0 top-0 h-full w-80 bg-white shadow-xl">
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           <h3 className="text-lg font-semibold text-gray-900">Filters</h3>
@@ -667,6 +674,9 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
     weekly_total: 0,
   });
   const [paymentDocuments, setPaymentDocuments] = useState<any[]>([]);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedPaymentApp, setSelectedPaymentApp] = useState<any>(null);
+  const [loadingPaymentDetails, setLoadingPaymentDetails] = useState(false);
 
   const itemsPerPage = 10;
 
@@ -895,6 +905,50 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
     console.log('Stat clicked:', type);
   };
 
+  const handlePaymentCardClick = async (application: any) => {
+    setSelectedPaymentApp(application);
+    setLoadingPaymentDetails(true);
+    setShowPaymentModal(true);
+    
+    try {
+      // Fetch detailed payment application data
+      const { data: paymentDetails, error } = await supabase
+        .from('payment_applications')
+        .select(`
+          *,
+          project:projects(id, name, client_name, budget, spent, start_date, target_completion_date),
+          contractor:contractors(id, name, trade, phone, email),
+          line_item_progress:payment_line_item_progress(
+            id,
+            submitted_percent,
+            pm_verified_percent,
+            line_item:project_line_items(
+              id,
+              item_no,
+              description_of_work,
+              scheduled_value,
+              percent_completed
+            )
+          )
+        `)
+        .eq('id', application.id)
+        .single();
+
+      if (error) throw error;
+      
+      setSelectedPaymentApp(paymentDetails);
+    } catch (err) {
+      console.error('Error fetching payment details:', err);
+    } finally {
+      setLoadingPaymentDetails(false);
+    }
+  };
+
+  const handleClosePaymentModal = () => {
+    setShowPaymentModal(false);
+    setSelectedPaymentApp(null);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -999,6 +1053,7 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
             onPageChange={handlePageChange}
             totalItems={filteredApps.length}
             itemsPerPage={itemsPerPage}
+            onCardClick={handlePaymentCardClick}
           />
         </div>
       </div>
@@ -1026,6 +1081,155 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
         setSortDir={setSortDir}
         onFilterChange={handleFilterChange}
       />
+
+      {/* Payment Application Modal */}
+      {showPaymentModal && (
+        <div className="fixed inset-0  bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {loadingPaymentDetails ? 'Loading Payment Details...' : `Payment Application #${selectedPaymentApp?.id}`}
+                </h3>
+                <button
+                  onClick={handleClosePaymentModal}
+                  className="text-gray-400 hover:text-gray-600 p-1"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+              {loadingPaymentDetails ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                  <span className="ml-3 text-gray-600">Loading payment details...</span>
+                </div>
+              ) : selectedPaymentApp ? (
+                <div className="space-y-6">
+                  {/* Payment Overview */}
+                  <div className="bg-gray-50 rounded-lg p-6">
+                    <h4 className="text-lg font-semibold text-gray-900 mb-4">Payment Overview</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      <div>
+                        <label className="text-sm font-medium text-gray-600">Project</label>
+                        <p className="text-lg font-semibold text-gray-900">{selectedPaymentApp.project?.name}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-600">Contractor</label>
+                        <p className="text-lg font-semibold text-gray-900">{selectedPaymentApp.contractor?.name}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-600">Trade</label>
+                        <p className="text-lg font-semibold text-gray-900">{selectedPaymentApp.contractor?.trade || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-600">Status</label>
+                        <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
+                          selectedPaymentApp.status === 'approved' ? 'bg-green-100 text-green-800' :
+                          selectedPaymentApp.status === 'submitted' ? 'bg-red-100 text-red-800' :
+                          selectedPaymentApp.status === 'needs_review' ? 'bg-yellow-100 text-yellow-800' :
+                          selectedPaymentApp.status === 'check_ready' ? 'bg-purple-100 text-purple-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {selectedPaymentApp.status.replace('_', ' ').toUpperCase()}
+                        </span>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-600">Current Payment</label>
+                        <p className="text-lg font-semibold text-gray-900">{formatCurrency(selectedPaymentApp.current_payment || 0)}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-600">Created</label>
+                        <p className="text-lg font-semibold text-gray-900">{formatDate(selectedPaymentApp.created_at)}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Line Items */}
+                  <div>
+                    <h4 className="text-lg font-semibold text-gray-900 mb-4">Line Items ({selectedPaymentApp.line_item_progress?.length || 0})</h4>
+                    {selectedPaymentApp.line_item_progress?.length > 0 ? (
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full divide-y divide-gray-200">
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Item No</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Scheduled Value</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Submitted %</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">PM Verified %</th>
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-200">
+                            {selectedPaymentApp.line_item_progress.map((lip: any) => (
+                              <tr key={lip.id} className="hover:bg-gray-50">
+                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                  {lip.line_item?.item_no}
+                                </td>
+                                <td className="px-6 py-4 text-sm text-gray-900">
+                                  {lip.line_item?.description_of_work}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                  {formatCurrency(lip.line_item?.scheduled_value || 0)}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                  {lip.submitted_percent || 0}%
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                  {lip.pm_verified_percent || 0}%
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <p className="text-gray-500 text-center py-4">No line items found for this payment application</p>
+                    )}
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+                    <div className="text-sm text-gray-600">
+                      Payment Application #{selectedPaymentApp.id}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => {
+                          handleVerifyPayment(selectedPaymentApp.id);
+                          handleClosePaymentModal();
+                        }}
+                        className={`px-4 py-2 rounded-md text-sm font-semibold transition-colors ${
+                          selectedPaymentApp.status === "approved"
+                            ? "bg-green-600 text-white hover:bg-green-700"
+                            : "bg-blue-600 text-white hover:bg-blue-700"
+                        }`}
+                      >
+                        {selectedPaymentApp.status === "approved" ? "View Details" : "Verify Payment"}
+                      </button>
+                      <button
+                        onClick={handleClosePaymentModal}
+                        className="px-4 py-2 bg-gray-600 text-white rounded-md text-sm font-semibold hover:bg-gray-700 transition-colors"
+                      >
+                        Close
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <div className="text-4xl mb-4">📋</div>
+                  <p className="text-gray-500 font-medium">No payment details found</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
