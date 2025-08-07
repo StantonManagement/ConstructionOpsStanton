@@ -585,22 +585,30 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
         <div className="bg-white rounded-lg border shadow-sm p-4">
           <div className="flex items-center justify-between mb-4">
             <h3
-              className={`text-lg font-semibold text-gray-900 ${
-                onSwitchToPayments ? 'cursor-pointer hover:text-blue-600 transition-colors' : ''
-              }`}
-              onClick={onSwitchToPayments ? () => {
-                // Switch to payments tab
-                onSwitchToPayments();
-              } : undefined}
-              role={onSwitchToPayments ? 'button' : undefined}
-              tabIndex={onSwitchToPayments ? 0 : undefined}
+              className="text-lg font-semibold text-gray-900 cursor-pointer hover:text-blue-600 transition-colors"
+              onClick={() => {
+                // Navigate to projects tab
+                const params = new URLSearchParams(window.location.search);
+                params.set('tab', 'projects');
+                window.history.pushState({}, '', `${window.location.pathname}?${params.toString()}`);
+                window.dispatchEvent(new PopStateEvent('popstate'));
+              }}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  const params = new URLSearchParams(window.location.search);
+                  params.set('tab', 'projects');
+                  window.history.pushState({}, '', `${window.location.pathname}?${params.toString()}`);
+                  window.dispatchEvent(new PopStateEvent('popstate'));
+                }
+              }}
             >
               🏗️ Active Projects ({enhancedProjects.length})
-              {onSwitchToPayments && (
-                <span className="text-xs text-blue-600 font-medium ml-2">
-                  → Click to view payments
-                </span>
-              )}
+              <span className="text-xs text-blue-600 font-medium ml-2">
+                → Click to view all projects
+              </span>
             </h3>
             {projects.length > 5 && (
               <button className="text-blue-600 hover:text-blue-800 text-sm font-medium" onClick={() => {
