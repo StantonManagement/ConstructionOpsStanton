@@ -267,146 +267,326 @@ const Header: React.FC<HeaderProps> = ({ onShowProfile, onLogout, userData, onSe
   };
 
   return (
-    <div className="bg-white shadow-sm border-b sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo and Title */}
-          <div className="flex items-center gap-3 flex-1 min-w-0">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
-              <span className="text-white font-bold text-sm">COC</span>
+    <div className="bg-white shadow-sm border-b fixed top-0 left-0 right-0 z-40 lg:left-64 transition-all duration-300 h-16">
+      <div className="h-full flex items-center justify-between px-4 sm:px-6 lg:px-8">
+        {/* Logo and Title - Hidden on desktop since sidebar has it */}
+        <div className="flex items-center gap-3 flex-1 min-w-0 lg:hidden">
+          <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg" role="img" aria-label="Construction Operations Center Logo">
+            <span className="text-white font-bold text-sm">COC</span>
+          </div>
+          <div className="flex flex-col min-w-0">
+            <h1 className="text-lg font-bold text-gray-900 truncate">
+              <span className="hidden sm:inline">Construction Operations</span>
+              <span className="sm:hidden">COC</span>
+          </h1>
+            <p className="text-xs text-gray-500 hidden sm:block">Stanton Management</p>
+          </div>
+        </div>
+
+        {/* Desktop Actions */}
+        <div className="hidden md:flex items-center gap-6">
+          {/* Search Bar */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" aria-hidden="true" />
+            <form onSubmit={handleSearchSubmit} className="relative">
+              <input
+                type="text"
+                placeholder="Search projects, contracts..."
+                value={localSearchQuery}
+                onChange={handleSearchChange}
+                className="pl-10 pr-10 py-2 w-64 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50"
+                aria-label="Search projects and contracts"
+              />
+              {localSearchQuery && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLocalSearchQuery('');
+                    if (onSearch) onSearch('');
+                  }}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  aria-label="Clear search"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </form>
+          </div>
+        </div>
+
+        {/* Right Side - DateTime, Notifications, and User Menu */}
+        <div className="hidden md:flex items-center gap-4">
+          {/* DateTime Display */}
+          <div className="flex flex-col items-end text-sm" role="status" aria-live="polite">
+            <div className="flex items-center text-gray-600">
+              <Clock className="w-4 h-4 mr-1" aria-hidden="true" />
+              <span className="font-medium">{time}</span>
             </div>
-            <div className="flex flex-col min-w-0">
-              <h1 className="text-lg font-bold text-gray-900 truncate">
-                <span className="hidden sm:inline">Construction Operations</span>
-                <span className="sm:hidden">COC</span>
-              </h1>
-              <p className="text-xs text-gray-500 hidden sm:block">Stanton Management</p>
-            </div>
+            <span className="text-xs text-gray-500">{date}</span>
           </div>
 
-          {/* Desktop Actions */}
-          <div className="hidden md:flex items-center gap-6">
-            {/* Search Bar */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <form onSubmit={handleSearchSubmit} className="relative">
-                <input
-                  type="text"
-                  placeholder="Search projects, contracts..."
-                  value={localSearchQuery}
-                  onChange={handleSearchChange}
-                  className="pl-10 pr-10 py-2 w-64 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50"
-                />
-                {localSearchQuery && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setLocalSearchQuery('');
-                      if (onSearch) onSearch('');
-                    }}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                )}
-              </form>
-            </div>
+          {/* Notifications */}
+          <div className="relative">
+            <button
+              className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+              onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
+              aria-label={`Notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ''}`}
+              aria-expanded={isNotificationsOpen}
+              aria-haspopup="true"
+            >
+              <Bell className="w-5 h-5" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium" aria-label={`${unreadCount} unread notifications`}>
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </button>
 
-            {/* DateTime Display */}
-            <div className="flex flex-col items-end text-sm">
-              <div className="flex items-center text-gray-600">
-                <Clock className="w-4 h-4 mr-1" />
-                <span className="font-medium">{time}</span>
-              </div>
-              <span className="text-xs text-gray-500">{date}</span>
-            </div>
-
-            {/* Notifications */}
-            <div className="relative">
-              <button
-                className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-                onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
-              >
-                <Bell className="w-5 h-5" />
-                {unreadCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
-                    {unreadCount > 9 ? '9+' : unreadCount}
-                  </span>
-                )}
-              </button>
-
-              {/* Notifications Dropdown */}
-              {isNotificationsOpen && (
-                <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
-                  <div className="px-4 py-2 border-b border-gray-100">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-sm font-semibold text-gray-900">Notifications</h3>
-                      <div className="flex items-center gap-2">
-                        {isLoadingNotifications && (
-                          <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                        )}
-                        {unreadCount > 0 && (
-                          <button
-                            onClick={markAllAsRead}
-                            className="text-xs text-blue-600 hover:text-blue-800"
-                          >
-                            Mark all as read
-                          </button>
-                        )}
-                      </div>
+            {/* Notifications Dropdown */}
+            {isNotificationsOpen && (
+              <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50" role="menu" aria-label="Notifications">
+                <div className="px-4 py-2 border-b border-gray-100">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-gray-900">Notifications</h3>
+          <div className="flex items-center gap-2">
+                      {isLoadingNotifications && (
+                        <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" aria-label="Loading notifications"></div>
+                      )}
+                      {unreadCount > 0 && (
+                        <button
+                          onClick={markAllAsRead}
+                          className="text-xs text-blue-600 hover:text-blue-800"
+                          aria-label="Mark all notifications as read"
+                        >
+                          Mark all as read
+                        </button>
+                      )}
                     </div>
                   </div>
-                  <div className="max-h-64 overflow-y-auto">
-                    {notifications.length > 0 ? (
-                      notifications.map((notification) => (
-                        <button
-                          key={notification.id}
-                          onClick={() => handleNotificationClick(notification)}
-                          className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors ${
-                            notification.unread ? 'bg-blue-50' : ''
-                          }`}
-                        >
-                          <div className="flex items-start gap-3">
-                            <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
-                              notification.unread ? 'bg-blue-500' : 'bg-gray-300'
-                            }`} />
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1">
-                                {getNotificationIcon(notification.type)}
-                                <p className={`text-sm font-medium ${
-                                  notification.unread ? 'text-gray-900' : 'text-gray-700'
-                                }`}>
-                                  {notification.title}
-                                </p>
-                              </div>
-                              <p className="text-sm text-gray-600 mb-1">{notification.message}</p>
-                              <p className="text-xs text-gray-500">{notification.time}</p>
-                            </div>
-                          </div>
-                        </button>
-                      ))
-                    ) : (
-                      <div className="px-4 py-8 text-center text-gray-500">
-                        <Bell className="w-8 h-8 mx-auto mb-2 text-gray-300" />
-                        <p className="text-sm">No notifications</p>
-                      </div>
-                    )}
-                  </div>
                 </div>
-              )}
+                <div className="max-h-64 overflow-y-auto">
+                  {notifications.length > 0 ? (
+                    notifications.map((notification) => (
+                      <button
+                        key={notification.id}
+                        onClick={() => handleNotificationClick(notification)}
+                        className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors ${
+                          notification.unread ? 'bg-blue-50' : ''
+                        }`}
+                        role="menuitem"
+                        aria-label={`${notification.title}: ${notification.message}`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
+                            notification.unread ? 'bg-blue-500' : 'bg-gray-300'
+                          }`} aria-hidden="true" />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              {getNotificationIcon(notification.type)}
+                              <p className={`text-sm font-medium ${
+                                notification.unread ? 'text-gray-900' : 'text-gray-700'
+                              }`}>
+                                {notification.title}
+                              </p>
+                            </div>
+                            <p className="text-sm text-gray-600 mb-1">{notification.message}</p>
+                            <p className="text-xs text-gray-500">{notification.time}</p>
+                          </div>
+                        </div>
+                      </button>
+                    ))
+                  ) : (
+                    <div className="px-4 py-8 text-center text-gray-500" role="status">
+                      <Bell className="w-8 h-8 mx-auto mb-2 text-gray-300" aria-hidden="true" />
+                      <p className="text-sm">No notifications</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* User Menu */}
+          <div className="relative">
+            <button
+              className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+              aria-label={`User menu for ${userData?.name || 'User'}`}
+              aria-expanded={isUserMenuOpen}
+              aria-haspopup="true"
+            >
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center overflow-hidden shadow-md">
+              {userData?.avatar_url ? (
+                <img 
+                  src={userData.avatar_url} 
+                  alt={`Profile picture for ${userData.name}`}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                    (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+                  }}
+                />
+              ) : null}
+                <User className={`w-4 h-4 text-white ${userData?.avatar_url ? 'hidden' : ''}`} />
+              </div>
+              <div className="hidden lg:block text-left">
+                <p className="text-sm font-medium text-gray-900">{userData?.name || 'User'}</p>
+                <p className="text-xs text-gray-500 capitalize">{userData?.role || 'User'}</p>
+              </div>
+              <ChevronDown className="w-4 h-4 text-gray-400" />
+            </button>
+
+            {/* User Dropdown Menu */}
+            {isUserMenuOpen && (
+              <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50" role="menu" aria-label="User menu">
+                <div className="px-4 py-3 border-b border-gray-100">
+                  <p className="text-sm font-medium text-gray-900">{userData?.name || 'User'}</p>
+                  <p className="text-xs text-gray-500">{userData?.email}</p>
+                </div>
+                <div className="py-1">
+                  <button
+                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                    onClick={() => {
+                      onShowProfile();
+                      setIsUserMenuOpen(false);
+                    }}
+                    role="menuitem"
+                  >
+                    <User className="w-4 h-4" />
+                    Profile Settings
+                  </button>
+                  <button
+                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                    role="menuitem"
+                  >
+                    <Settings className="w-4 h-4" />
+                    Preferences
+            </button>
+          </div>
+                <div className="border-t border-gray-100 pt-1">
+          <button
+                    className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                    onClick={() => {
+                      onLogout();
+                      setIsUserMenuOpen(false);
+                    }}
+                    role="menuitem"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Sign Out
+            </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Mobile Menu Button - Hidden since we have sidebar now */}
+        <div className="md:hidden">
+          <button
+            className="w-10 h-10 flex items-center justify-center text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            aria-label="Open mobile menu"
+            aria-expanded={isMenuOpen}
+          >
+            {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+        </div>
+      </div>
+
+      {/* Mobile Menu Dropdown - Simplified since we have sidebar */}
+      {isMenuOpen && (
+        <div className="md:hidden border-t border-gray-200 bg-white absolute top-16 left-0 right-0">
+          <div className="py-4 space-y-4">
+            {/* Mobile Search */}
+            <div className="px-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" aria-hidden="true" />
+                <form onSubmit={handleSearchSubmit} className="relative">
+                  <input
+                    type="text"
+                    placeholder="Search..."
+                    value={localSearchQuery}
+                    onChange={handleSearchChange}
+                    className="w-full pl-10 pr-10 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50"
+                    aria-label="Search projects and contracts"
+                  />
+                  {localSearchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setLocalSearchQuery('');
+                        if (onSearch) onSearch('');
+                      }}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      aria-label="Clear search"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </form>
+              </div>
             </div>
 
-            {/* User Menu */}
-            <div className="relative">
-              <button
-                className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100 transition-colors"
-                onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-              >
-                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center overflow-hidden shadow-md">
+            {/* Mobile DateTime */}
+            <div className="flex items-center justify-center text-sm text-gray-600 px-4" role="status" aria-live="polite">
+              <Clock className="w-4 h-4 mr-2" aria-hidden="true" />
+              <span className="font-medium">{time}</span>
+              <span className="mx-2">•</span>
+              <span>{date}</span>
+            </div>
+
+            {/* Mobile Notifications */}
+            <div className="px-4">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-semibold text-gray-900">Notifications</h3>
+                {unreadCount > 0 && (
+                  <span className="bg-red-500 text-white text-xs rounded-full px-2 py-1" aria-label={`${unreadCount} unread notifications`}>
+                    {unreadCount}
+                  </span>
+                )}
+              </div>
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {notifications.slice(0, 3).map((notification) => (
+                  <div
+                    key={notification.id}
+                    className={`p-3 rounded-lg border ${
+                      notification.unread ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'
+                    }`}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => handleNotificationClick(notification)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        handleNotificationClick(notification);
+                      }
+                    }}
+                    aria-label={`${notification.title}: ${notification.message}`}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      {getNotificationIcon(notification.type)}
+                      <p className={`text-sm font-medium ${
+                        notification.unread ? 'text-gray-900' : 'text-gray-700'
+                      }`}>
+                        {notification.title}
+                      </p>
+                    </div>
+                    <p className="text-sm text-gray-600 mb-1">{notification.message}</p>
+                    <p className="text-xs text-gray-500">{notification.time}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Mobile User Section */}
+            <div className="border-t border-gray-200 pt-4 px-4">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center overflow-hidden shadow-md">
                   {userData?.avatar_url ? (
                     <img 
                       src={userData.avatar_url} 
-                      alt="Profile" 
+                      alt={`Profile picture for ${userData.name}`}
                       className="w-full h-full object-cover"
                       onError={(e) => {
                         (e.target as HTMLImageElement).style.display = 'none';
@@ -414,196 +594,45 @@ const Header: React.FC<HeaderProps> = ({ onShowProfile, onLogout, userData, onSe
                       }}
                     />
                   ) : null}
-                  <User className={`w-4 h-4 text-white ${userData?.avatar_url ? 'hidden' : ''}`} />
+                  <User className={`w-6 h-6 text-white ${userData?.avatar_url ? 'hidden' : ''}`} />
                 </div>
-                <div className="hidden lg:block text-left">
-                  <p className="text-sm font-medium text-gray-900">{userData?.name || 'User'}</p>
-                  <p className="text-xs text-gray-500 capitalize">{userData?.role || 'User'}</p>
+                <div className="flex-1">
+                  <p className="font-medium text-gray-900">{userData?.name || 'User'}</p>
+                  <p className="text-sm text-gray-500 capitalize">{userData?.role || 'User'}</p>
                 </div>
-                <ChevronDown className="w-4 h-4 text-gray-400" />
+              </div>
+              <div className="space-y-2">
+                <button
+                  className="w-full flex items-center gap-3 py-3 px-4 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+                  onClick={() => {
+                    onShowProfile();
+                    setIsMenuOpen(false);
+                  }}
+                >
+                  <User className="w-4 h-4" />
+                  Profile Settings
+                </button>
+                <button
+                  className="w-full flex items-center gap-3 py-3 px-4 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+                >
+                  <Settings className="w-4 h-4" />
+                  Preferences
               </button>
-
-              {/* User Dropdown Menu */}
-              {isUserMenuOpen && (
-                <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
-                  <div className="px-4 py-3 border-b border-gray-100">
-                    <p className="text-sm font-medium text-gray-900">{userData?.name || 'User'}</p>
-                    <p className="text-xs text-gray-500">{userData?.email}</p>
-                  </div>
-                  <div className="py-1">
-                    <button
-                      className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                      onClick={() => {
-                        onShowProfile();
-                        setIsUserMenuOpen(false);
-                      }}
-                    >
-                      <User className="w-4 h-4" />
-                      Profile Settings
-                    </button>
-                    <button
-                      className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                    >
-                      <Settings className="w-4 h-4" />
-                      Preferences
-                    </button>
-                  </div>
-                  <div className="border-t border-gray-100 pt-1">
-                    <button
-                      className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
-                      onClick={() => {
-                        onLogout();
-                        setIsUserMenuOpen(false);
-                      }}
-                    >
-                      <LogOut className="w-4 h-4" />
-                      Sign Out
-                    </button>
-                  </div>
-                </div>
-              )}
+              <button
+                  className="w-full flex items-center gap-3 py-3 px-4 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                onClick={() => {
+                  onLogout();
+                  setIsMenuOpen(false);
+                }}
+              >
+                <LogOut className="w-4 h-4" />
+                  Sign Out
+              </button>
+              </div>
             </div>
-          </div>
-
-          {/* Mobile Menu Button */}
-          <div className="md:hidden">
-            <button
-              className="w-10 h-10 flex items-center justify-center text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-            >
-              {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </button>
           </div>
         </div>
-
-        {/* Mobile Menu Dropdown */}
-        {isMenuOpen && (
-          <div className="md:hidden border-t border-gray-200 bg-white">
-            <div className="py-4 space-y-4">
-              {/* Mobile Search */}
-              <div className="px-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <form onSubmit={handleSearchSubmit} className="relative">
-                    <input
-                      type="text"
-                      placeholder="Search..."
-                      value={localSearchQuery}
-                      onChange={handleSearchChange}
-                      className="w-full pl-10 pr-10 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50"
-                    />
-                    {localSearchQuery && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setLocalSearchQuery('');
-                          if (onSearch) onSearch('');
-                        }}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    )}
-                  </form>
-                </div>
-              </div>
-
-              {/* Mobile DateTime */}
-              <div className="flex items-center justify-center text-sm text-gray-600 px-4">
-                <Clock className="w-4 h-4 mr-2" />
-                <span className="font-medium">{time}</span>
-                <span className="mx-2">•</span>
-                <span>{date}</span>
-              </div>
-
-              {/* Mobile Notifications */}
-              <div className="px-4">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-sm font-semibold text-gray-900">Notifications</h3>
-                  {unreadCount > 0 && (
-                    <span className="bg-red-500 text-white text-xs rounded-full px-2 py-1">
-                      {unreadCount}
-                    </span>
-                  )}
-                </div>
-                <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {notifications.slice(0, 3).map((notification) => (
-                    <div
-                      key={notification.id}
-                      className={`p-3 rounded-lg border ${
-                        notification.unread ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2 mb-1">
-                        {getNotificationIcon(notification.type)}
-                        <p className={`text-sm font-medium ${
-                          notification.unread ? 'text-gray-900' : 'text-gray-700'
-                        }`}>
-                          {notification.title}
-                        </p>
-                      </div>
-                      <p className="text-sm text-gray-600 mb-1">{notification.message}</p>
-                      <p className="text-xs text-gray-500">{notification.time}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Mobile User Section */}
-              <div className="border-t border-gray-200 pt-4 px-4">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center overflow-hidden shadow-md">
-                    {userData?.avatar_url ? (
-                      <img 
-                        src={userData.avatar_url} 
-                        alt="Profile" 
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = 'none';
-                          (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
-                        }}
-                      />
-                    ) : null}
-                    <User className={`w-6 h-6 text-white ${userData?.avatar_url ? 'hidden' : ''}`} />
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-gray-900">{userData?.name || 'User'}</p>
-                    <p className="text-sm text-gray-500 capitalize">{userData?.role || 'User'}</p>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <button
-                    className="w-full flex items-center gap-3 py-3 px-4 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
-                    onClick={() => {
-                      onShowProfile();
-                      setIsMenuOpen(false);
-                    }}
-                  >
-                    <User className="w-4 h-4" />
-                    Profile Settings
-                  </button>
-                  <button
-                    className="w-full flex items-center gap-3 py-3 px-4 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
-                  >
-                    <Settings className="w-4 h-4" />
-                    Preferences
-                  </button>
-                  <button
-                    className="w-full flex items-center gap-3 py-3 px-4 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                    onClick={() => {
-                      onLogout();
-                      setIsMenuOpen(false);
-                    }}
-                  >
-                    <LogOut className="w-4 h-4" />
-                    Sign Out
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
+      )}
 
       {/* Click outside to close dropdowns */}
       {(isUserMenuOpen || isMenuOpen || isNotificationsOpen) && (
@@ -614,6 +643,7 @@ const Header: React.FC<HeaderProps> = ({ onShowProfile, onLogout, userData, onSe
             setIsMenuOpen(false);
             setIsNotificationsOpen(false);
           }}
+          aria-hidden="true"
         />
       )}
     </div>

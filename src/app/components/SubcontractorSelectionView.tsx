@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Project } from '../context/DataContext';
 import { supabase } from '@/lib/supabaseClient';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 type Props = {
   selectedProject: Project;
@@ -34,7 +35,16 @@ const LoadingSpinner: React.FC = () => (
 const ProjectHeader: React.FC<{
   project: Project;
   onBack: () => void;
-}> = ({ project, onBack }) => (
+}> = ({ project, onBack }) => {
+  const router = useRouter();
+  
+  const handleBackToProjects = () => {
+    const params = new URLSearchParams();
+    params.set('tab', 'projects');
+    router.replace(`/?${params.toString()}`, { scroll: false });
+  };
+  
+  return (
   <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-2xl p-8 text-white shadow-lg">
     <div className="flex items-center justify-between">
       <div>
@@ -51,7 +61,7 @@ const ProjectHeader: React.FC<{
         )}
       </div>
       <button
-        onClick={onBack}
+        onClick={handleBackToProjects}
         className="bg-white/20 hover:bg-white/30 backdrop-blur-sm px-4 py-2 rounded-lg text-white font-medium transition-all duration-200 flex items-center space-x-2"
       >
         <span>←</span>
@@ -59,7 +69,8 @@ const ProjectHeader: React.FC<{
       </button>
     </div>
   </div>
-);
+  );
+};
 
 const ContractorCard: React.FC<{
   contract: ContractWithVendor;
@@ -183,7 +194,8 @@ const ActionBar: React.FC<{
   sending: boolean;
   error: string | null;
   success: string | null;
-}> = ({ selectedCount, onCancel, onSend, sending, error, success }) => (
+  router: any;
+}> = ({ selectedCount, onCancel, onSend, sending, error, success, router }) => (
   <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
     {/* Status Messages */}
     {error && (
@@ -231,7 +243,11 @@ const ActionBar: React.FC<{
     {/* Action Buttons */}
     <div className="flex items-center gap-4">
       <button
-        onClick={onCancel}
+        onClick={() => {
+          const params = new URLSearchParams();
+          params.set('tab', 'projects');
+          router.replace(`/?${params.toString()}`, { scroll: false });
+        }}
         disabled={sending}
         className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-3 px-6 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
       >
@@ -279,6 +295,8 @@ const EmptyState: React.FC = () => (
 );
 
 const SubcontractorSelectionView: React.FC<Props> = ({ selectedProject, setSelectedProject }) => {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [contracts, setContracts] = useState<ContractWithVendor[]>([]);
   const [selectedSubs, setSelectedSubs] = useState<number[]>([]);
   const [loading, setLoading] = useState(false);
@@ -358,7 +376,11 @@ const SubcontractorSelectionView: React.FC<Props> = ({ selectedProject, setSelec
         <h2 className="text-2xl font-bold text-green-700 mb-2">Payment Requests Sent!</h2>
         <p className="text-gray-700 text-lg mb-4">All selected contractors have been notified.</p>
         <button
-          onClick={() => setSelectedProject(null)}
+          onClick={() => {
+            const params = new URLSearchParams();
+            params.set('tab', 'projects');
+            router.replace(`/?${params.toString()}`, { scroll: false });
+          }}
           className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium text-lg transition-all duration-200 shadow-sm hover:shadow-md"
         >
           Back to Projects
@@ -427,6 +449,7 @@ const SubcontractorSelectionView: React.FC<Props> = ({ selectedProject, setSelec
         sending={sending}
         error={sendError}
         success={sendSuccess}
+        router={router}
       />
     </div>
   );

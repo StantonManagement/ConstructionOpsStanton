@@ -1,5 +1,5 @@
 import React, { ReactNode, useEffect, useState } from 'react';
-import { DollarSign, Users, Settings, Building, BarChart2, ShieldCheck, ChevronDown, Folder } from 'lucide-react';
+import { DollarSign, Users, Settings, Building, BarChart2, ShieldCheck, ChevronDown, Folder, Home, Menu, X, FileText } from 'lucide-react';
 import { Project } from '../context/DataContext';
 import { supabase } from '@/lib/supabaseClient';
 
@@ -7,6 +7,7 @@ type NavigationProps = {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   setSelectedProject: (project: Project | null) => void;
+  selectedProject?: Project | null;
 };
 
 type NavButtonProps = {
@@ -18,138 +19,266 @@ type NavButtonProps = {
   onClick?: () => void;
 };
 
-const NavButton: React.FC<NavButtonProps> = ({ id, activeTab, setActiveTab, icon, children, onClick }) => {
+const NavButton: React.FC<NavButtonProps> = ({ id, activeTab, setActiveTab, icon, children }) => {
   const isActive = activeTab === id;
   
   return (
-    <button 
+    <button
       onClick={() => {
         setActiveTab(id);
-        onClick?.();
       }}
       className={`
-        flex items-center justify-center lg:justify-start py-3 px-3 lg:px-2 text-sm font-medium rounded-lg lg:rounded-none transition-colors
+        w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-200
         ${isActive 
-          ? 'bg-blue-50 text-blue-600 border-blue-500 lg:bg-transparent lg:border-b-2 lg:border-l-0 lg:border-r-0 lg:border-t-0' 
-          : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50 lg:hover:bg-transparent lg:hover:border-b-2 lg:hover:border-gray-300'
+          ? 'bg-blue-100 text-blue-700 border-r-2 border-blue-500' 
+          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
         }
-        w-full lg:w-auto min-w-0
       `}
     >
-      <span className="flex-shrink-0">{icon}</span>
-      <span className="ml-2 truncate">{children}</span>
+      <span className="flex-shrink-0">
+        {icon}
+      </span>
+      <span className="ml-3 truncate">{children}</span>
     </button>
   );
 };
 
-const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab, setSelectedProject }) => {
-  const [role, setRole] = useState<string | null>(null);
+// Breadcrumb component for main content area
+const Breadcrumb: React.FC<{ activeTab: string; selectedProject?: Project | null }> = ({ activeTab, selectedProject }) => {
+  const getTabLabel = (tab: string) => {
+    const labels: Record<string, string> = {
+      overview: 'Overview',
+      payment: 'Payments',
+      subcontractors: 'Subcontractors',
+      compliance: 'Compliance',
+      metrics: 'Metrics',
+      manage: 'Manage'
+    };
+    return labels[tab] || tab;
+  };
+
+  return (
+    <div className="flex items-center space-x-2 text-sm text-gray-500 mb-4">
+      <Home className="w-4 h-4" />
+      <span>/</span>
+      <span className="text-gray-900 font-medium">{getTabLabel(activeTab)}</span>
+      {selectedProject && (
+        <>
+          <span>/</span>
+          <span className="text-gray-900 font-medium">{selectedProject.name}</span>
+        </>
+      )}
+    </div>
+  );
+};
+
+const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab, setSelectedProject, selectedProject }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [notificationCounts, setNotificationCounts] = useState<Record<string, number>>({});
 
   useEffect(() => {
     const getRole = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        const { data } = await supabase
-          .from("users")
-          .select("role")
-          .eq("uuid", session.user.id)
-          .single();
-        setRole(data?.role || null);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          const { data, error } = await supabase
+            .from("users")
+            .select("role")
+            .eq("uuid", session.user.id)
+            .single();
+          
+          if (error) {
+            console.error('Error fetching user role:', error);
+          } else {
+            setUserRole(data?.role || null);
+          }
+        }
+      } catch (error) {
+        console.error('Error in getRole:', error);
       }
     };
     getRole();
   }, []);
 
+  // Fetch notification counts for badges with better error handling
+  const fetchNotificationCounts = async () => {
+    try {
+      const results = await Promise.allSettled([
+        supabase.from('payment_applications').select('id').eq('status', 'pending'),
+        supabase.from('subcontractors').select('id').eq('status', 'pending'),
+        supabase.from('compliance_checks').select('id').eq('status', 'pending')
+      ]);
+
+      const newCounts: Record<string, number> = {};
+
+      // Payment applications count
+      if (results[0].status === 'fulfilled') {
+        const paymentsResult = results[0];
+        if (paymentsResult.value.data) {
+          newCounts.payment = Array.isArray(paymentsResult.value.data) ? paymentsResult.value.data.length : 0;
+        }
+      }
+
+      // Subcontractors count
+      if (results[1].status === 'fulfilled') {
+        const subcontractorsResult = results[1];
+        if (subcontractorsResult.value.data) {
+          newCounts.subcontractors = Array.isArray(subcontractorsResult.value.data) ? subcontractorsResult.value.data.length : 0;
+        }
+      }
+
+      // Compliance count
+      if (results[2].status === 'fulfilled') {
+        const complianceResult = results[2];
+        if (complianceResult.value.data) {
+          newCounts.compliance = Array.isArray(complianceResult.value.data) ? complianceResult.value.data.length : 0;
+        }
+      }
+
+      setNotificationCounts(newCounts);
+    } catch (error) {
+      console.error('Error fetching notification counts:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchNotificationCounts();
+  }, []);
+
   const navigationItems = [
-    { id: 'overview', icon: <Building className="w-4 h-4"/>, label: 'Overview' },
-    { id: 'payment', icon: <DollarSign className="w-4 h-4"/>, label: 'Payments', onClick: () => setSelectedProject(null) },
-    { id: 'subcontractors', icon: <Users className="w-4 h-4"/>, label: 'Subcontractors' },
-    { id: 'compliance', icon: <ShieldCheck className="w-4 h-4"/>, label: 'Compliance' },
-    { id: 'metrics', icon: <BarChart2 className="w-4 h-4"/>, label: 'Metrics' },
-    { id: 'manage', icon: <Settings className="w-4 h-4"/>, label: 'Manage' },
+    {
+      id: 'overview',
+      icon: <Home className="w-5 h-5"/>,
+      label: 'Overview'
+    },
+    {
+      id: 'projects',
+      icon: <Building className="w-5 h-5"/>,
+      label: 'Projects'
+    },
+    {
+      id: 'payment-applications',
+      icon: <DollarSign className="w-5 h-5"/>,
+      label: 'Payments Apps'
+    },
+    
+   
+    {
+      id: 'subcontractors',
+      icon: <Users className="w-5 h-5"/>,
+      label: 'Contractors'
+    },
+    {
+      id: 'daily-logs',
+      icon: <FileText className="w-5 h-5"/>,
+      label: 'Daily Logs'
+    },
+    // {
+    //   id: 'compliance',
+    //   icon: <ShieldCheck className="w-5 h-5"/>,
+    //   label: 'Compliance'
+    // },
+    {
+      id: 'metrics',
+      icon: <BarChart2 className="w-5 h-5"/>,
+      label: 'Reports'
+    },
+    {
+      id: 'manage',
+      icon: <Settings className="w-5 h-5"/>,
+      label: 'Manage'
+    }
   ];
 
   return (
-    <div className="bg-white border-b sticky top-16 z-40">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Mobile Navigation Toggle */}
-        <div className="lg:hidden">
-          <button
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="w-full flex items-center justify-between py-3 text-sm font-medium text-gray-700 hover:text-gray-900"
-          >
-            <div className="flex items-center">
-              {navigationItems.find(item => item.id === activeTab)?.icon}
-              <span className="ml-2">{navigationItems.find(item => item.id === activeTab)?.label}</span>
-            </div>
-            <ChevronDown className={`w-4 h-4 transition-transform ${isMobileMenuOpen ? 'rotate-180' : ''}`} />
-          </button>
-        </div>
-
-        {/* Desktop Navigation */}
-        <nav className="hidden lg:flex lg:space-x-6 py-1">
-          {navigationItems.map((item) => (
-            <NavButton
-              key={item.id}
-              id={item.id}
-              activeTab={activeTab}
-              setActiveTab={setActiveTab}
-              icon={item.icon}
-              onClick={item.onClick}
-            >
-              {item.label}
-            </NavButton>
-          ))}
-          {role === "admin" && (
-            <button
-              onClick={() => window.location.href = "/pm-dashboard"}
-              className="flex items-center py-3 px-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:border-b-2 hover:border-gray-300"
-            >
-              <Folder className="w-4 h-4" />
-              <span className="ml-2">PM Dashboard</span>
-            </button>
-          )}
-        </nav>
-
-        {/* Mobile Navigation Menu */}
-        {isMobileMenuOpen && (
-          <div className="lg:hidden border-t bg-white">
-            <nav className="py-3">
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {navigationItems.map((item) => (
-                  <NavButton
-                    key={item.id}
-                    id={item.id}
-                    activeTab={activeTab}
-                    setActiveTab={(tab) => {
-                      setActiveTab(tab);
-                      setIsMobileMenuOpen(false);
-                      item.onClick?.();
-                    }}
-                    icon={item.icon}
-                  >
-                    {item.label}
-                  </NavButton>
-                ))}
-                {role === "admin" && (
-                  <button
-                    onClick={() => {
-                      window.location.href = "/pm-dashboard";
-                      setIsMobileMenuOpen(false);
-                    }}
-                    className="flex items-center justify-center py-3 px-3 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors w-full min-w-0"
-                  >
-                    <Folder className="w-4 h-4 flex-shrink-0" />
-                    <span className="ml-2 truncate">PM Dashboard</span>
-                  </button>
-                )}
-              </div>
-            </nav>
-          </div>
-        )}
+    <>
+      {/* Mobile Menu Button */}
+      <div className="lg:hidden fixed top-20 left-4 z-50">
+        <button
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          className="p-2 bg-white rounded-lg shadow-lg border border-gray-200"
+          aria-label="Toggle mobile menu"
+        >
+          {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+        </button>
       </div>
-    </div>
+
+      {/* Mobile Sidebar Overlay */}
+      {isMobileMenuOpen && (
+        <div 
+          className="lg:hidden fixed inset-0  bg-opacity-50 z-40"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* Navigation sidebar */}
+      <nav className={`
+        fixed top-0 left-0 h-full w-64 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out z-40
+        ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+      `}>
+        <div className="flex flex-col h-full">
+          {/* Header */}
+          <div className="p-6 border-b border-gray-200">
+            <div className="flex items-center">
+              <Building className="w-8 h-8 text-blue-600" />
+              <h1 className="ml-3 text-xl font-bold text-gray-900">Construction Ops Stanton</h1>
+            </div>
+            {selectedProject && (
+              <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                <p className="text-sm font-medium text-blue-900">Selected Project</p>
+                <p className="text-sm text-blue-700 truncate">{selectedProject.name}</p>
+              </div>
+            )}
+          </div>
+
+          {/* Navigation items */}
+          <div className="flex-1 overflow-y-auto py-4">
+            <div className="space-y-2 px-4">
+              {navigationItems.map((item) => (
+                <NavButton
+                  key={item.id}
+                  id={item.id}
+                  activeTab={activeTab}
+                  setActiveTab={(tab) => {
+                    setActiveTab(tab);
+                    setIsMobileMenuOpen(false);
+                  }}
+                  icon={item.icon}
+                >
+                  {item.label}
+                </NavButton>
+              ))}
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="p-4 border-t border-gray-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
+                  <span className="text-sm font-medium text-gray-600">
+                    {userRole ? userRole.charAt(0).toUpperCase() : 'U'}
+                  </span>
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm font-medium text-gray-900">User</p>
+                  <p className="text-xs text-gray-500">{userRole || 'Loading...'}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      {/* Main Content Area */}
+      <div className={`
+        transition-all duration-300
+        ${isMobileMenuOpen ? 'lg:ml-64' : 'lg:ml-64'}
+      `}>
+        {/* Breadcrumb moved to individual page components if needed */}
+      </div>
+    </>
   );
 };
 

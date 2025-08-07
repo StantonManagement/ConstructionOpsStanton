@@ -1,6 +1,8 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useData, Project } from '../context/DataContext';
 import { supabase } from '@/lib/supabaseClient';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { ArrowLeft } from 'lucide-react';
 
 type PaymentProcessingViewProps = {
   setSelectedProject: (project: Project) => void;
@@ -379,6 +381,8 @@ const PaymentProcessingView: React.FC<PaymentProcessingViewProps> = ({
   setSelectedProject,
   searchQuery = ''
 }) => {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { projects } = useData();
   const { apps, loading, error, refetch } = usePaymentApplications();
   const [search, setSearch] = useState('');
@@ -450,7 +454,12 @@ const PaymentProcessingView: React.FC<PaymentProcessingViewProps> = ({
 
   const handleProjectSelection = useCallback((project: Project) => {
     setSelectedProject(project);
-  }, [setSelectedProject]);
+    // Update URL to include the selected project
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('tab', 'payment');
+    params.set('project', project.id.toString());
+    router.replace(`/?${params.toString()}`, { scroll: false });
+  }, [setSelectedProject, searchParams, router]);
 
   if (error) {
     return (
@@ -462,6 +471,21 @@ const PaymentProcessingView: React.FC<PaymentProcessingViewProps> = ({
 
   return (
     <div className="space-y-8 text-gray-900">
+      {/* Back to Projects Button */}
+      <div className="flex items-center justify-between">
+        <button
+          onClick={() => {
+            const params = new URLSearchParams();
+            params.set('tab', 'projects');
+            router.replace(`/?${params.toString()}`, { scroll: false });
+          }}
+          className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Projects
+        </button>
+      </div>
+
       {/* Enhanced Header 
       <div className="text-center mb-8">
         <h2 className="text-3xl font-bold text-gray-900 mb-2">Payment Processing</h2>
