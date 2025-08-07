@@ -781,22 +781,32 @@ const AddContractForm: React.FC<{
     const newErrors: Record<string, string> = {};
 
     if (!formData.projectId) newErrors.projectId = 'Project is required';
-    if (!formData.subcontractorId) newErrors.subcontractorId = 'Vendor is required';
-    if (!formData.contractAmount) newErrors.contractAmount = 'Contract amount is required';
-    if (!formData.startDate) newErrors.startDate = 'Start date is required';
-
-    if (formData.startDate && formData.endDate) {
-      if (new Date(formData.startDate) > new Date(formData.endDate)) {
-        newErrors.endDate = 'End date must be after start date';
-      }
-    }
-
-    if (formData.contractAmount && (isNaN(Number(formData.contractAmount)) || Number(formData.contractAmount) <= 0)) {
+    if (!formData.subcontractorId) newErrors.subcontractorId = 'Subcontractor is required';
+    if (!formData.contractAmount) {
+      newErrors.contractAmount = 'Contract amount is required';
+    } else if (isNaN(Number(formData.contractAmount)) || Number(formData.contractAmount) <= 0) {
       newErrors.contractAmount = 'Contract amount must be a positive number';
     }
+    if (!formData.contractNickname.trim()) newErrors.contractNickname = 'Contract nickname is required';
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+  };
+
+  const validateLineItemField = (value: string, fieldName: string): string => {
+    if (value === '') return '';
+
+    const numValue = Number(value);
+    if (isNaN(numValue)) {
+      return `${fieldName} must be a valid number`;
+    }
+    if (numValue < 0) {
+      return `${fieldName} cannot be negative`;
+    }
+    if (numValue > 100) {
+      return `${fieldName} cannot be greater than 100`;
+    }
+    return '';
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -927,41 +937,61 @@ const AddContractForm: React.FC<{
     setDirty(true);
   };
 
-  const handleLineItemChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setLineItemForm(prev => ({ ...prev, [name]: value }));
-    setDirty(true);
-  };
+  const handleLineItemChange = (field: keyof LineItem) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setLineItemForm(prev => ({ ...prev, [field]: value }));
 
-  const handleLineItemSubmit = () => {
-    if (editingLineItemIndex === null) {
-      setLineItems(prev => [...prev, lineItemForm]);
-    } else {
-      setLineItems(prev => prev.map((item, idx) => idx === editingLineItemIndex ? lineItemForm : item));
+    // Clear any existing error for this field
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: '' }));
     }
+  };
+
+  const handleSaveLineItem = () => {
+    if (!lineItemForm.itemNo || !lineItemForm.description || !lineItemForm.scheduledValue) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
+    // Validate From Previous and This Period fields
+    const fromPreviousError = validateLineItemField(lineItemForm.fromPrevious, 'From Previous');
+    const thisPeriodError = validateLineItemField(lineItemForm.thisPeriod, 'This Period');
+    const materialStoredError = validateLineItemField(lineItemForm.materialStored, 'Material Stored');
+    const percentGCError = validateLineItemField(lineItemForm.percentGC, '% G/C');
+
+    if (fromPreviousError || thisPeriodError || materialStoredError || percentGCError) {
+      setErrors({
+        ...errors,
+        fromPrevious: fromPreviousError,
+        thisPeriod: thisPeriodError,
+        materialStored: materialStoredError,
+        percentGC: percentGCError
+      });
+      return;
+    }
+
+    const newItem: LineItem = {
+      ...lineItemForm,
+      scheduledValue: Number(lineItemForm.scheduledValue) || 0,
+      fromPrevious: Number(lineItemForm.fromPrevious) || 0,
+      thisPeriod: Number(lineItemForm.thisPeriod) || 0,
+      materialStored: Number(lineItemForm.materialStored) || 0,
+      percentGC: Number(lineItemForm.percentGC) || 0,
+    };
+
+    if (editingLineItemIndex !== null) {
+      const updatedItems = [...lineItems];
+      updatedItems[editingLineItemIndex] = newItem;
+      setLineItems(updatedItems);
+      setEditingLineItemIndex(null);
+    } else {
+      setLineItems([...lineItems, newItem]);
+    }
+
     setLineItemForm({ itemNo: '', description: '', scheduledValue: '', fromPrevious: '', thisPeriod: '', materialStored: '', percentGC: '' });
-    setEditingLineItemIndex(null);
     setShowLineItemForm(false);
-    setDirty(true);
-  };
-
-  const handleLineItemEdit = (idx: number) => {
-    setLineItemForm(lineItems[idx]);
-    setEditingLineItemIndex(idx);
-    setShowLineItemForm(true);
-    setDirty(true);
-  };
-
-  const handleLineItemRemove = (idx: number) => {
-    setLineItems(prev => prev.filter((_, i) => i !== idx));
-    setDirty(true);
-  };
-
-  const handleLineItemCancel = () => {
-    setLineItemForm({ itemNo: '', description: '', scheduledValue: '', fromPrevious: '', thisPeriod: '', materialStored: '', percentGC: '' });
-    setEditingLineItemIndex(null);
-    setShowLineItemForm(false);
-    setDirty(true);
+    // Clear any validation errors
+    setErrors({});
   };
 
   return (
@@ -1136,7 +1166,7 @@ const AddContractForm: React.FC<{
                     type="text"
                     name="itemNo"
                     value={lineItemForm.itemNo}
-                    onChange={handleLineItemChange}
+                    onChange={handleLineItemChange('itemNo')}
                     className="w-full px-3 py-2 text-base border rounded-lg bg-white text-gray-900"
                     required
                   />
@@ -1147,7 +1177,7 @@ const AddContractForm: React.FC<{
                     type="text"
                     name="description"
                     value={lineItemForm.description}
-                    onChange={handleLineItemChange}
+                    onChange={handleLineItemChange('description')}
                     className="w-full px-3 py-2 text-base border rounded-lg bg-white text-gray-900"
                     required
                   />
@@ -1158,55 +1188,99 @@ const AddContractForm: React.FC<{
                     type="number"
                     name="scheduledValue"
                     value={lineItemForm.scheduledValue}
-                    onChange={handleLineItemChange}
+                    onChange={handleLineItemChange('scheduledValue')}
                     className="w-full px-3 py-2 text-base border rounded-lg bg-white text-gray-900"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">From Previous</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">From Previous Application</label>
                   <input
                     type="number"
-                    name="fromPrevious"
+                    step="0.01"
+                    min="0"
+                    max="100"
                     value={lineItemForm.fromPrevious}
-                    onChange={handleLineItemChange}
-                    className="w-full px-3 py-2 text-base border rounded-lg bg-white text-gray-900"
+                    onChange={handleLineItemChange('fromPrevious')}
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                      errors.fromPrevious ? 'border-red-300' : 'border-gray-300'
+                    }`}
+                    placeholder="0.00"
                   />
+                  {errors.fromPrevious && (
+                    <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+                      <AlertCircle className="w-4 h-4" />
+                      {errors.fromPrevious}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">This Period</label>
                   <input
                     type="number"
-                    name="thisPeriod"
+                    step="0.01"
+                    min="0"
+                    max="100"
                     value={lineItemForm.thisPeriod}
-                    onChange={handleLineItemChange}
-                    className="w-full px-3 py-2 text-base border rounded-lg bg-white text-gray-900"
+                    onChange={handleLineItemChange('thisPeriod')}
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                      errors.thisPeriod ? 'border-red-300' : 'border-gray-300'
+                    }`}
+                    placeholder="0.00"
                   />
+                  {errors.thisPeriod && (
+                    <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+                      <AlertCircle className="w-4 h-4" />
+                      {errors.thisPeriod}
+                    </p>
+                  )}
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Material Stored</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Material Presently Stored</label>
                   <input
                     type="number"
-                    name="materialStored"
+                    step="0.01"
+                    min="0"
+                    max="100"
                     value={lineItemForm.materialStored}
-                    onChange={handleLineItemChange}
-                    className="w-full px-3 py-2 text-base border rounded-lg bg-white text-gray-900"
+                    onChange={handleLineItemChange('materialStored')}
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                      errors.materialStored ? 'border-red-300' : 'border-gray-300'
+                    }`}
+                    placeholder="0.00"
                   />
+                  {errors.materialStored && (
+                    <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+                      <AlertCircle className="w-4 h-4" />
+                      {errors.materialStored}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">% G/C</label>
                   <input
                     type="number"
-                    name="percentGC"
+                    step="0.01"
+                    min="0"
+                    max="100"
                     value={lineItemForm.percentGC}
-                    onChange={handleLineItemChange}
-                    className="w-full px-3 py-2 text-base border rounded-lg bg-white text-gray-900"
+                    onChange={handleLineItemChange('percentGC')}
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                      errors.percentGC ? 'border-red-300' : 'border-gray-300'
+                    }`}
+                    placeholder="0.00"
                   />
+                  {errors.percentGC && (
+                    <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+                      <AlertCircle className="w-4 h-4" />
+                      {errors.percentGC}
+                    </p>
+                  )}
                 </div>
                 <div className="md:col-span-4 flex gap-2">
                   <button
                     type="button"
-                    onClick={handleLineItemSubmit}
+                    onClick={handleSaveLineItem}
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                   >
                     {editingLineItemIndex === null ? 'Add' : 'Update'}
@@ -1214,7 +1288,12 @@ const AddContractForm: React.FC<{
                   {editingLineItemIndex !== null && (
                     <button
                       type="button"
-                      onClick={handleLineItemCancel}
+                      onClick={() => {
+                        setLineItemForm({ itemNo: '', description: '', scheduledValue: '', fromPrevious: '', thisPeriod: '', materialStored: '', percentGC: '' });
+                        setEditingLineItemIndex(null);
+                        setShowLineItemForm(false);
+                        setErrors({});
+                      }}
                       className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300"
                     >
                       Cancel
@@ -1266,14 +1345,21 @@ const AddContractForm: React.FC<{
                         <button
                           type="button"
                           className="text-blue-600 hover:underline"
-                          onClick={() => handleLineItemEdit(idx)}
+                          onClick={() => {
+                            setLineItemForm(item);
+                            setEditingLineItemIndex(idx);
+                            setShowLineItemForm(true);
+                          }}
                         >
                           Edit
                         </button>
                         <button
                           type="button"
                           className="text-red-600 hover:underline"
-                          onClick={() => handleLineItemRemove(idx)}
+                          onClick={() => {
+                            setLineItems(prev => prev.filter((_, i) => i !== idx));
+                            setErrors({}); // Clear errors when removing item
+                          }}
                         >
                           Remove
                         </button>
