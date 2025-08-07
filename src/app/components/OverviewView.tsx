@@ -10,8 +10,8 @@ interface PaymentApplication {
   status: 'needs_review' | 'submitted';
   current_payment: number;
   created_at: string;
-  project: { name: string } | null;
-  contractor: { name: string } | null;
+  project: { id: string, name: string } | null;
+  contractor: { id: string, name: string } | null;
   grand_total?: number; // Added for consistency
 }
 
@@ -123,7 +123,6 @@ const DecisionQueueCards: React.FC<{ role: string | null, setError: (msg: string
           id,
           status,
           current_payment,
-          grand_total,
           created_at,
           project_id,
           contractor_id,
@@ -143,7 +142,7 @@ const DecisionQueueCards: React.FC<{ role: string | null, setError: (msg: string
         id: item.id,
         status: item.status,
         current_payment: Number(item.current_payment) || 0,
-        grand_total: Number(item.grand_total) || 0,
+        // grand_total is removed as per the error
         created_at: item.created_at,
         project: item.project || { id: null, name: 'Unknown Project' },
         contractor: item.contractor || { id: null, name: 'Unknown Contractor' },
@@ -176,7 +175,7 @@ const DecisionQueueCards: React.FC<{ role: string | null, setError: (msg: string
         map[projectName] = { projectName, count: 0, total: 0, highestPriority: priority };
       }
       map[projectName].count += 1;
-      map[projectName].total += app.current_payment || app.grand_total || 0;
+      map[projectName].total += app.current_payment || 0; // Using current_payment
       // Update highest priority if this app is higher
       if (priorityOrder.indexOf(priority) < priorityOrder.indexOf(map[projectName].highestPriority)) {
         map[projectName].highestPriority = priority;

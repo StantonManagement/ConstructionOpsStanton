@@ -359,7 +359,7 @@ function ProjectOverview({ project, onCreatePaymentApps, onStatsPaymentAppClick 
           .select('*')
           .eq('id', project.id)
           .single(),
-        
+
         // Contractors
         supabase
           .from('project_contractors')
@@ -370,7 +370,7 @@ function ProjectOverview({ project, onCreatePaymentApps, onStatsPaymentAppClick 
             )
           `)
           .eq('project_id', project.id),
-        
+
         // Payment applications
         supabase
           .from('payment_applications')
@@ -382,21 +382,21 @@ function ProjectOverview({ project, onCreatePaymentApps, onStatsPaymentAppClick 
           `)
           .eq('project_id', project.id)
           .order('created_at', { ascending: false }),
-        
+
         // Daily log requests
         supabase
           .from('daily_log_requests')
           .select('*')
           .eq('project_id', project.id)
           .order('request_date', { ascending: false }),
-        
+
         // PM notes
         supabase
           .from('pm_notes')
           .select('*')
           .eq('project_id', project.id)
           .order('created_at', { ascending: false }),
-        
+
         // Line items
         supabase
           .from('project_line_items')
@@ -408,7 +408,7 @@ function ProjectOverview({ project, onCreatePaymentApps, onStatsPaymentAppClick 
           `)
           .eq('project_id', project.id)
           .order('display_order', { ascending: true }),
-        
+
         // Contracts
         supabase
           .from('contracts')
@@ -1076,7 +1076,7 @@ function DailyLogRequests({ projects }: { projects: any[] }) {
   const [selectedProject, setSelectedProject] = useState<any>(null);
   const [pmPhoneNumber, setPmPhoneNumber] = useState('');
   const [requestTime, setRequestTime] = useState('18:00'); // Default to 6 PM EST
-  
+
   // New state for view modal
   const [showViewModal, setShowViewModal] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
@@ -1186,7 +1186,7 @@ function DailyLogRequests({ projects }: { projects: any[] }) {
       received: { color: 'bg-green-100 text-green-800', text: 'Received' },
       failed: { color: 'bg-red-100 text-red-800', text: 'Failed' }
     };
-    
+
     const config = statusConfig[status] || { color: 'bg-gray-100 text-gray-800', text: status };
     return <span className={`text-xs px-2 py-1 rounded-full ${config.color}`}>{config.text}</span>;
   };
@@ -1196,7 +1196,7 @@ function DailyLogRequests({ projects }: { projects: any[] }) {
     setSelectedRequest(request);
     setShowViewModal(true);
     setLoadingNotes(true);
-    
+
     try {
       // Fetch PM notes from payment applications for this project
       const { data: notes, error } = await supabase
@@ -1205,7 +1205,7 @@ function DailyLogRequests({ projects }: { projects: any[] }) {
         .eq('project_id', request.project_id)
         .not('pm_notes', 'is', null)
         .order('created_at', { ascending: false });
-      
+
       if (!error && notes) {
         setPmNotes(notes);
       } else {
@@ -1245,7 +1245,7 @@ function DailyLogRequests({ projects }: { projects: any[] }) {
           <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
             <div className="p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Add Daily Log Request</h3>
-              
+
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Project</label>
@@ -1354,7 +1354,7 @@ function DailyLogRequests({ projects }: { projects: any[] }) {
                       </span>
                       {getStatusBadge(request.request_status)}
                     </div>
-                    
+
                     <div className="text-sm text-gray-600 mb-2">
                       <div>PM Phone: {request.pm_phone_number}</div>
                       <div>Request Date: {request.request_date}</div>
@@ -1368,7 +1368,7 @@ function DailyLogRequests({ projects }: { projects: any[] }) {
                         </div>
                       )}
                     </div>
-                    
+
                     <div className="text-xs text-gray-500">
                       Created: {request.created_at ? formatDate(request.created_at) : 'Unknown'}
                       {request.last_request_sent_at && (
@@ -1378,7 +1378,7 @@ function DailyLogRequests({ projects }: { projects: any[] }) {
                         <span> • Received: {formatDate(request.received_at)}</span>
                       )}
                     </div>
-                    
+
                     <div className="mt-2 text-xs text-blue-600 font-medium">
                       💬 Click to view Daily Logs and replies
                     </div>
@@ -1428,7 +1428,7 @@ function DailyLogRequests({ projects }: { projects: any[] }) {
                   </svg>
                 </button>
               </div>
-              
+
               <div className="mt-2 text-sm text-gray-600">
                 <div>Project: {selectedRequest.project?.name} - {selectedRequest.project?.client_name}</div>
                 <div>PM Phone: {selectedRequest.pm_phone_number}</div>
@@ -1463,11 +1463,11 @@ function DailyLogRequests({ projects }: { projects: any[] }) {
                           {note.status}
                         </span>
                       </div>
-                      
+
                       <div className="text-sm text-gray-600 mb-2">
                         <div>Created: {formatDate(note.created_at)}</div>
                       </div>
-                      
+
                       <div className="bg-white rounded p-3 border border-gray-200">
                         <div className="text-sm text-gray-900 font-medium mb-1">PM Notes:</div>
                         <div className="text-sm text-gray-700 whitespace-pre-wrap">
@@ -1522,7 +1522,7 @@ function CompactStatCard({ icon, label, value, change, color, onClick }: any) {
     purple: "border-purple-400 bg-purple-50",
     red: "border-red-400 bg-red-50",
   };
-  
+
   return (
     <div 
       className={`p-3 sm:p-4 rounded-lg border-l-4 ${colorClasses[color]} hover:shadow-md transition-shadow cursor-pointer`}
@@ -2084,7 +2084,7 @@ function PaymentTable({ applications, onVerify, getDocumentForApp, sendForSignat
             </span>
           </div>
         </div>
-        
+
         {/* Mobile Cards */}
         <div className="divide-y divide-gray-200">
           {(applications || []).filter(Boolean).map((app: any) => (
@@ -2109,7 +2109,7 @@ function PaymentTable({ applications, onVerify, getDocumentForApp, sendForSignat
           <p className="text-sm text-gray-400">All caught up!</p>
         </div>
       )}
-      
+
       <Pagination
         currentPage={currentPage}
         totalPages={totalPages}
@@ -2160,7 +2160,7 @@ function BulkActionsBar({ selectedCount, onDeleteSelected, onApproveSelected, on
 function ProjectCard({ project, onCreatePaymentApps }: any) {
   const [loading, setLoading] = useState(false);
   const percent = project.budget > 0 ? Math.min(100, Math.round((project.spent / project.budget) * 100)) : 0;
-  
+
   const handleCreatePaymentApps = async () => {
     setLoading(true);
     try {
@@ -2188,7 +2188,7 @@ function ProjectCard({ project, onCreatePaymentApps }: any) {
           )}
         </div>
       </div>
-      
+
       <div className="space-y-2 text-sm mb-4">
         <div className="flex justify-between">
           <span className="text-gray-600">Contractors</span>
@@ -2215,7 +2215,7 @@ function ProjectCard({ project, onCreatePaymentApps }: any) {
           </span>
         </div>
       </div>
-      
+
       <button
         onClick={handleCreatePaymentApps}
         disabled={loading}
@@ -2411,7 +2411,7 @@ function MobileFilterDrawer({ show, onClose, statusFilter, setStatusFilter, proj
               </svg>
             </button>
           </div>
-          
+
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
@@ -2496,7 +2496,7 @@ function FilterSidebar({ statusFilter, setStatusFilter, projectFilter, setProjec
         </svg>
         Filters
       </h3>
-      
+
       <div className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
@@ -2589,7 +2589,7 @@ export default function PMDashboard() {
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [activeTab, setActiveTab] = useState('payments'); // Default to 'payments'
   const [isRefreshing, setIsRefreshing] = useState(false);
-  
+
   // Stats modal state
   const [showStatsModal, setShowStatsModal] = useState(false);
   const [statsModalData, setStatsModalData] = useState<any[]>([]);
@@ -2623,14 +2623,14 @@ export default function PMDashboard() {
         setUserData(null);
         return null;
       }
-      
+
       const userDataObj = {
         name: data.name || '',
         email: data.email || user.email || '',
         avatar_url: data.avatar_url || '',
         role: data.role || ''
       };
-      
+
       setUserData(userDataObj);
       return data;
     } catch (error) {
@@ -2663,7 +2663,7 @@ export default function PMDashboard() {
         `)
         .order("created_at", { ascending: false });
       if (appsError) throw new Error(appsError.message);
-      
+
       const sortedApps = (appsRaw || []).sort((a, b) => {
         if (a.status === "submitted" && b.status !== "submitted") return -1;
         if (a.status !== "submitted" && b.status === "submitted") return 1;
@@ -2672,14 +2672,14 @@ export default function PMDashboard() {
         return dateB - dateA;
       });
       setPaymentApps(sortedApps);
-      
+
       const { data: projectsRaw, error: projectsError } = await supabase
         .from("projects")
         .select("*, id, name, client_name, current_phase, at_risk, target_completion_date, budget, spent")
         .eq("status", "active");
       if (projectsError) throw new Error(projectsError.message);
       setProjects(projectsRaw || []);
-      
+
       const { data: smsConvos } = await supabase
         .from("payment_sms_conversations")
         .select("id, conversation_state");
@@ -2864,7 +2864,7 @@ export default function PMDashboard() {
           project_contractors!inner(project_id)
         `)
         .eq('project_contractors.project_id', projectId);
-      
+
       if (error) throw error;
       setContractors(data || []);
     } catch (error) {
@@ -2938,7 +2938,7 @@ export default function PMDashboard() {
 
   const handleDeleteSelected = async () => {
     if (selectedItems.length === 0) return;
-    
+
     const confirmed = confirm(`Are you sure you want to delete ${selectedItems.length} payment application(s)?`);
     if (!confirmed) return;
 
@@ -2947,9 +2947,9 @@ export default function PMDashboard() {
         .from('payment_applications')
         .delete()
         .in('id', selectedItems);
-      
+
       if (error) throw error;
-      
+
       await loadDashboardData();
       setSelectedItems([]);
       alert(`${selectedItems.length} payment application(s) deleted successfully`);
@@ -2961,7 +2961,7 @@ export default function PMDashboard() {
 
   const handleApproveSelected = async () => {
     if (selectedItems.length === 0) return;
-    
+
     const confirmed = confirm(`Are you sure you want to approve ${selectedItems.length} payment application(s)?`);
     if (!confirmed) return;
 
@@ -2970,9 +2970,9 @@ export default function PMDashboard() {
         .from('payment_applications')
         .update({ status: 'approved' })
         .in('id', selectedItems);
-      
+
       if (error) throw error;
-      
+
       await loadDashboardData();
       setSelectedItems([]);
       alert(`${selectedItems.length} payment application(s) approved successfully`);
@@ -3008,7 +3008,7 @@ export default function PMDashboard() {
               )
             `)
             .neq('conversation_state', 'completed');
-          
+
           if (smsError) throw smsError;
           data = smsConvos || [];
           title = 'SMS Pending Conversations';
@@ -3026,7 +3026,7 @@ export default function PMDashboard() {
               contractor:contractors(id, name, trade)
             `)
             .eq('status', 'submitted');
-          
+
           if (reviewError) throw reviewError;
           data = reviewApps || [];
           title = 'Review Queue Applications';
@@ -3044,7 +3044,7 @@ export default function PMDashboard() {
               contractor:contractors(id, name, trade)
             `)
             .eq('status', 'sms_sent');
-          
+
           if (readyError) throw readyError;
           data = readyApps || [];
           title = 'SMS Sent Applications';
@@ -3064,7 +3064,7 @@ export default function PMDashboard() {
               contractor:contractors(id, name, trade)
             `)
             .gte('created_at', weekAgo.toISOString());
-          
+
           if (weeklyError) throw weeklyError;
           data = weeklyApps || [];
           title = 'Weekly Applications';
@@ -3337,7 +3337,7 @@ export default function PMDashboard() {
                   </svg>
                 </button>
               </div>
-              
+
               <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
                 {loadingStatsModal ? (
                   <div className="flex items-center justify-center py-12">
@@ -3441,14 +3441,14 @@ export default function PMDashboard() {
           </div>
         )}
       </main>
-      
+
       {/* User Profile Modal */}
       <UserProfile 
         isOpen={showProfile} 
         onClose={() => setShowProfile(false)}
         onProfileUpdate={handleProfileUpdate}
       />
-      
+
       {/* Navigation Back to Main Dashboard */}
       <div className="fixed bottom-4 right-4 z-50">
         <button

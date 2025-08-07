@@ -346,11 +346,11 @@ function Pagination({ currentPage, totalPages, onPageChange, totalItems, itemsPe
     const maxVisible = 5;
     let start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
     let end = Math.min(totalPages, start + maxVisible - 1);
-    
+
     if (end - start + 1 < maxVisible) {
       start = Math.max(1, end - maxVisible + 1);
     }
-    
+
     for (let i = start; i <= end; i++) {
       pages.push(i);
     }
@@ -368,7 +368,7 @@ function Pagination({ currentPage, totalPages, onPageChange, totalItems, itemsPe
           Showing {startItem} to {endItem} of {totalItems} results
         </span>
       </div>
-      
+
       <div className="flex items-center space-x-2">
         <button
           onClick={() => onPageChange(currentPage - 1)}
@@ -377,7 +377,7 @@ function Pagination({ currentPage, totalPages, onPageChange, totalItems, itemsPe
         >
           <ChevronLeft className="w-4 h-4" />
         </button>
-        
+
         {pageNumbers.map((page) => (
           <button
             key={page}
@@ -391,7 +391,7 @@ function Pagination({ currentPage, totalPages, onPageChange, totalItems, itemsPe
             {page}
           </button>
         ))}
-        
+
         <button
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
@@ -462,7 +462,7 @@ function PaymentTable({ applications, onVerify, getDocumentForApp, sendForSignat
           </tbody>
         </table>
       </div>
-      
+
       <Pagination
         currentPage={currentPage}
         totalPages={totalPages}
@@ -492,7 +492,7 @@ function BulkActionsBar({ selectedCount, onDeleteSelected, onApproveSelected, on
             Clear selection
           </button>
         </div>
-        
+
         <div className="flex items-center gap-2">
           <button
             onClick={onApproveSelected}
@@ -517,7 +517,7 @@ function FilterSidebar({ statusFilter, setStatusFilter, projectFilter, setProjec
   return (
     <div className="w-48 bg-white border border-gray-200 rounded-lg p-4 h-fit">
       <h3 className="text-sm font-semibold text-gray-900 mb-4">Quick Filters</h3>
-      
+
       {/* Status Filter */}
       <div className="mb-4">
         <h4 className="text-xs font-medium text-gray-700 mb-2">Status</h4>
@@ -547,7 +547,7 @@ function FilterSidebar({ statusFilter, setStatusFilter, projectFilter, setProjec
           ))}
         </div>
       </div>
-      
+
       {/* Project Filter */}
       <div className="mb-4">
         <h4 className="text-xs font-medium text-gray-700 mb-2">Project</h4>
@@ -567,7 +567,7 @@ function FilterSidebar({ statusFilter, setStatusFilter, projectFilter, setProjec
           ))}
         </select>
       </div>
-      
+
       {/* Sort Options */}
       <div className="mb-4">
         <h4 className="text-xs font-medium text-gray-700 mb-2">Sort</h4>
@@ -593,7 +593,7 @@ function FilterSidebar({ statusFilter, setStatusFilter, projectFilter, setProjec
             </label>
           ))}
         </div>
-        
+
         <div className="mt-2">
           <label className="flex items-center">
             <input
@@ -630,7 +630,7 @@ function MobileFilterDrawer({ show, onClose, statusFilter, setStatusFilter, proj
             <XCircle className="w-6 h-6" />
           </button>
         </div>
-        
+
         <div className="p-4 overflow-y-auto h-full">
           <FilterSidebar
             statusFilter={statusFilter}
@@ -684,7 +684,7 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
   const fetchApplications = useCallback(async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
       const { data: appsRaw, error: appsError } = await supabase
         .from("payment_applications")
@@ -703,7 +703,7 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
         .order("created_at", { ascending: false });
 
       if (appsError) throw new Error(appsError.message);
-      
+
       const sortedApps = (appsRaw || []).sort((a, b) => {
         if (a.status === "submitted" && b.status !== "submitted") return -1;
         if (a.status !== "submitted" && b.status === "submitted") return 1;
@@ -711,48 +711,48 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
         const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
         return dateB - dateA;
       });
-      
+
       setApplications(sortedApps);
-      
+
       // Fetch projects for filter
       const { data: projectsRaw, error: projectsError } = await supabase
         .from("projects")
         .select("id, name, client_name")
         .eq("status", "active");
-      
+
       if (projectsError) throw new Error(projectsError.message);
       setProjects(projectsRaw || []);
-      
+
       // Calculate stats
       const { data: smsConvos } = await supabase
         .from("payment_sms_conversations")
         .select("id, conversation_state");
-      
+
       const pendingSMS = (smsConvos || []).filter(
         (c: any) => c.conversation_state !== "completed"
       ).length;
-      
+
       const reviewQueue = (appsRaw || []).filter((app: any) =>
         app.status === "submitted"
       ).length;
-      
+
       const readyChecks = (appsRaw || []).filter((app: any) =>
         app.status === "sms_sent"
       ).length;
-      
+
       const now = new Date();
       const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
       const weeklyTotal = (appsRaw || [])
         .filter((a: any) => a.created_at && new Date(a.created_at) >= weekAgo && a.status !== 'approved')
         .reduce((sum: number, a: any) => sum + (a.current_payment || 0), 0);
-      
+
       setStats({
         pending_sms: pendingSMS,
         review_queue: reviewQueue,
         ready_checks: readyChecks,
         weekly_total: weeklyTotal,
       });
-      
+
     } catch (err) {
       console.error('Error fetching applications:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch applications');
@@ -808,7 +808,7 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
     // Apply sorting
     filtered.sort((a, b) => {
       let aValue: any, bValue: any;
-      
+
       switch (sortBy) {
         case 'status':
           aValue = a.status;
@@ -909,7 +909,7 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
     setSelectedPaymentApp(application);
     setLoadingPaymentDetails(true);
     setShowPaymentModal(true);
-    
+
     try {
       // Fetch detailed payment application data
       const { data: paymentDetails, error } = await supabase
@@ -935,7 +935,7 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
         .single();
 
       if (error) throw error;
-      
+
       setSelectedPaymentApp(paymentDetails);
     } catch (err) {
       console.error('Error fetching payment details:', err);
