@@ -291,19 +291,24 @@ const TabNavigation: React.FC<{
         <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
           {tabs.map((tab) => {
             const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
                 onClick={() => onTabChange(tab.id)}
                 className={`flex-1 flex items-center justify-center gap-2 py-3 px-2 text-sm font-medium rounded-md transition-all ${
-                  activeTab === tab.id
-                    ? `bg-white text-${tab.color}-600 shadow-sm`
+                  isActive
+                    ? 'bg-white text-blue-600 shadow-sm'
                     : 'text-gray-500 hover:text-gray-700'
                 }`}
               >
-                <Icon className="w-4 h-4" />
+                <Icon className={`w-4 h-4 ${isActive ? 'text-blue-600' : 'text-gray-400'}`} />
                 <span className="truncate">{tab.label}</span>
-                <span className="px-1.5 py-0.5 bg-gray-200 text-gray-600 text-xs rounded-full min-w-[1.5rem] text-center">
+                <span className={`px-1.5 py-0.5 text-xs rounded-full min-w-[1.5rem] text-center ${
+                  isActive 
+                    ? 'bg-blue-100 text-blue-700' 
+                    : 'bg-gray-200 text-gray-600'
+                }`}>
                   {tab.count}
                 </span>
               </button>
@@ -318,21 +323,22 @@ const TabNavigation: React.FC<{
           <nav className="-mb-px flex space-x-8">
             {tabs.map((tab) => {
               const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
               return (
                 <button
                   key={tab.id}
                   onClick={() => onTabChange(tab.id)}
                   className={`group flex items-center gap-2 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-all ${
-                    activeTab === tab.id
-                      ? `border-${tab.color}-500 text-${tab.color}-600`
+                    isActive
+                      ? 'border-blue-500 text-blue-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }`}
                 >
-                  <Icon className={`w-5 h-5 ${activeTab === tab.id ? `text-${tab.color}-600` : 'text-gray-400 group-hover:text-gray-600'}`} />
+                  <Icon className={`w-5 h-5 ${isActive ? 'text-blue-600' : 'text-gray-400 group-hover:text-gray-600'}`} />
                   <span>{tab.label}</span>
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    activeTab === tab.id 
-                      ? `bg-${tab.color}-100 text-${tab.color}-800` 
+                    isActive 
+                      ? 'bg-blue-100 text-blue-800' 
                       : 'bg-gray-100 text-gray-600'
                   }`}>
                     {tab.count}
@@ -1359,6 +1365,9 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
     const subtab = searchParams.get('subtab') as 'projects' | 'vendors' | 'contracts' | null;
     if (subtab && ['projects', 'vendors', 'contracts'].includes(subtab)) {
       setActiveTab(subtab);
+    } else {
+      // If no subtab is specified, default to projects
+      setActiveTab('projects');
     }
   }, [searchParams]);
 
