@@ -1,11 +1,10 @@
 import React, { useState, ChangeEvent, FormEvent, ReactNode, useCallback, useMemo, useEffect } from 'react';
 import { useData } from '../context/DataContext';
 import { supabase } from '@/lib/supabaseClient';
-import { Building, UserPlus, FilePlus, AlertCircle, CheckCircle, X } from 'lucide-react';
+import { Building, UserPlus, FilePlus, AlertCircle, CheckCircle, X, Search, Filter, Plus, Edit3, Eye, Trash2, Archive, Star, Calendar, DollarSign } from 'lucide-react';
 import LineItemFormModal from '@/components/LineItemFormModal';
 import LineItemEditor, { LineItem } from '@/components/LineItemEditor';
 import { useRouter, useSearchParams } from 'next/navigation';
-
 
 // Enhanced notification system
 type NotificationType = 'success' | 'error' | 'warning' | 'info';
@@ -39,29 +38,29 @@ interface FieldConfig {
   defaultValue?: string;
 }
 
-// Enhanced notification component
+// Enhanced notification component with better positioning
 const NotificationManager: React.FC<{
   notifications: NotificationData[];
   onRemove: (id: string) => void;
 }> = ({ notifications, onRemove }) => {
   return (
-    <div className="fixed top-4 left-4 right-4 sm:top-6 sm:right-6 sm:left-auto z-50 space-y-2 sm:max-w-sm">
+    <div className="fixed top-4 right-4 z-50 space-y-2 max-w-sm">
       {notifications.map((notification) => (
         <div
           key={notification.id}
           className={`
-            px-4 py-3 sm:px-6 sm:py-3 rounded-lg shadow-lg animate-slide-in flex items-center gap-3 w-full sm:min-w-80
-            ${notification.type === 'success' ? 'bg-green-500 text-white' : ''}
-            ${notification.type === 'error' ? 'bg-red-500 text-white' : ''}
-            ${notification.type === 'warning' ? 'bg-yellow-500 text-white' : ''}
-            ${notification.type === 'info' ? 'bg-blue-500 text-white' : ''}
+            px-4 py-3 rounded-lg shadow-lg animate-slide-in flex items-center gap-3 min-w-80 backdrop-blur-sm
+            ${notification.type === 'success' ? 'bg-green-500/90 text-white' : ''}
+            ${notification.type === 'error' ? 'bg-red-500/90 text-white' : ''}
+            ${notification.type === 'warning' ? 'bg-yellow-500/90 text-white' : ''}
+            ${notification.type === 'info' ? 'bg-blue-500/90 text-white' : ''}
           `}
         >
           {notification.type === 'success' && <CheckCircle className="w-5 h-5 flex-shrink-0" />}
           {notification.type === 'error' && <AlertCircle className="w-5 h-5 flex-shrink-0" />}
           {notification.type === 'warning' && <AlertCircle className="w-5 h-5 flex-shrink-0" />}
           {notification.type === 'info' && <AlertCircle className="w-5 h-5 flex-shrink-0" />}
-          <span className="flex-1 text-sm sm:text-base">{notification.message}</span>
+          <span className="flex-1 text-sm">{notification.message}</span>
           <button
             onClick={() => onRemove(notification.id)}
             className="hover:opacity-70 transition-opacity flex-shrink-0"
@@ -74,7 +73,455 @@ const NotificationManager: React.FC<{
   );
 };
 
-// Enhanced form component with validation
+// Improved Quick Actions Component
+const QuickActions: React.FC<{
+  activeTab: string;
+  onAddNew: () => void;
+  selectedCount: number;
+  onBulkDelete: () => void;
+  onExport?: () => void;
+}> = ({ activeTab, onAddNew, selectedCount, onBulkDelete, onExport }) => {
+  const getAddLabel = () => {
+    switch (activeTab) {
+      case 'projects': return 'New Project';
+      case 'vendors': return 'New Vendor';
+      case 'contracts': return 'New Contract';
+      default: return 'Add New';
+    }
+  };
+
+  const getIcon = () => {
+    switch (activeTab) {
+      case 'projects': return <Building className="w-4 h-4" />;
+      case 'vendors': return <UserPlus className="w-4 h-4" />;
+      case 'contracts': return <FilePlus className="w-4 h-4" />;
+      default: return <Plus className="w-4 h-4" />;
+    }
+  };
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+      {selectedCount > 0 && (
+        <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+          <span className="text-sm font-medium text-blue-700">
+            {selectedCount} selected
+          </span>
+          <button
+            onClick={onBulkDelete}
+            className="flex items-center gap-1 px-2 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
+          >
+            <Trash2 className="w-3 h-3" />
+            Delete
+          </button>
+        </div>
+      )}
+
+      <button
+        onClick={onAddNew}
+        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-sm"
+      >
+        {getIcon()}
+        <span className="hidden sm:inline">{getAddLabel()}</span>
+        <span className="sm:hidden">Add</span>
+      </button>
+
+      {onExport && (
+        <button
+          onClick={onExport}
+          className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
+        >
+          <Archive className="w-4 h-4" />
+          <span className="hidden sm:inline">Export</span>
+        </button>
+      )}
+    </div>
+  );
+};
+
+// Improved Search and Filter Bar
+const SearchFilterBar: React.FC<{
+  searchTerm: string;
+  onSearchChange: (value: string) => void;
+  activeTab: string;
+  filters: any;
+  onFilterChange: (key: string, value: string) => void;
+  onClearFilters: () => void;
+}> = ({ searchTerm, onSearchChange, activeTab, filters, onFilterChange, onClearFilters }) => {
+  const [showFilters, setShowFilters] = useState(false);
+
+  const hasActiveFilters = Object.values(filters).some(value => value !== 'all');
+
+  return (
+    <div className="space-y-4">
+      {/* Search Bar */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+        <input
+          type="text"
+          placeholder={`Search ${activeTab}...`}
+          value={searchTerm}
+          onChange={(e) => onSearchChange(e.target.value)}
+          className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder-gray-500"
+        />
+      </div>
+
+      {/* Filter Toggle */}
+      <div className="flex items-center justify-between">
+        <button
+          onClick={() => setShowFilters(!showFilters)}
+          className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors ${
+            hasActiveFilters 
+              ? 'bg-blue-50 border-blue-200 text-blue-700' 
+              : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+          }`}
+        >
+          <Filter className="w-4 h-4" />
+          <span className="text-sm font-medium">Filters</span>
+          {hasActiveFilters && (
+            <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">
+              Active
+            </span>
+          )}
+        </button>
+
+        {hasActiveFilters && (
+          <button
+            onClick={onClearFilters}
+            className="text-sm text-gray-500 hover:text-gray-700 underline"
+          >
+            Clear all filters
+          </button>
+        )}
+      </div>
+
+      {/* Filter Options */}
+      {showFilters && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-4 bg-gray-50 rounded-lg border">
+          <select
+            value={filters.status}
+            onChange={(e) => onFilterChange('status', e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
+          >
+            <option value="all">All Status</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+            <option value="pending">Pending</option>
+            <option value="completed">Completed</option>
+          </select>
+
+          {activeTab === 'vendors' && (
+            <>
+              <select
+                value={filters.trade}
+                onChange={(e) => onFilterChange('trade', e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
+              >
+                <option value="all">All Trades</option>
+                <option value="electrical">Electrical</option>
+                <option value="plumbing">Plumbing</option>
+                <option value="hvac">HVAC</option>
+                <option value="roofing">Roofing</option>
+                <option value="drywall">Drywall</option>
+                <option value="painting">Painting</option>
+                <option value="flooring">Flooring</option>
+                <option value="landscaping">Landscaping</option>
+                <option value="general">General</option>
+              </select>
+
+              <select
+                value={filters.performance}
+                onChange={(e) => onFilterChange('performance', e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
+              >
+                <option value="all">All Performance</option>
+                <option value="high">High (4-5 stars)</option>
+                <option value="medium">Medium (3-4 stars)</option>
+                <option value="low">Low (1-3 stars)</option>
+              </select>
+            </>
+          )}
+
+          {activeTab === 'contracts' && (
+            <>
+              <select
+                value={filters.contractValue}
+                onChange={(e) => onFilterChange('contractValue', e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
+              >
+                <option value="all">All Values</option>
+                <option value="high">High ($100k+)</option>
+                <option value="medium">Medium ($50k-$100k)</option>
+                <option value="low">Low (&lt;$50k)</option>
+              </select>
+
+              <select
+                value={filters.expiry}
+                onChange={(e) => onFilterChange('expiry', e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
+              >
+                <option value="all">All Expiry</option>
+                <option value="expiring">Expiring Soon (≤30 days)</option>
+                <option value="expired">Expired</option>
+                <option value="ongoing">Ongoing</option>
+              </select>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Enhanced Tab Navigation
+const TabNavigation: React.FC<{
+  activeTab: string;
+  onTabChange: (tab: string) => void;
+  counts: { projects: number; vendors: number; contracts: number };
+}> = ({ activeTab, onTabChange, counts }) => {
+  const tabs = [
+    { id: 'projects', label: 'Projects', icon: Building, color: 'blue', count: counts.projects },
+    { id: 'vendors', label: 'Vendors', icon: UserPlus, color: 'green', count: counts.vendors },
+    { id: 'contracts', label: 'Contracts', icon: FilePlus, color: 'purple', count: counts.contracts },
+  ];
+
+  return (
+    <>
+      {/* Mobile Tab Navigation */}
+      <div className="sm:hidden">
+        <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => onTabChange(tab.id)}
+                className={`flex-1 flex items-center justify-center gap-2 py-3 px-2 text-sm font-medium rounded-md transition-all ${
+                  activeTab === tab.id
+                    ? `bg-white text-${tab.color}-600 shadow-sm`
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+                <span className="truncate">{tab.label}</span>
+                <span className="px-1.5 py-0.5 bg-gray-200 text-gray-600 text-xs rounded-full min-w-[1.5rem] text-center">
+                  {tab.count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Desktop Tab Navigation */}
+      <div className="hidden sm:block">
+        <div className="border-b border-gray-200">
+          <nav className="-mb-px flex space-x-8">
+            {tabs.map((tab) => {
+              const Icon = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => onTabChange(tab.id)}
+                  className={`group flex items-center gap-2 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-all ${
+                    activeTab === tab.id
+                      ? `border-${tab.color}-500 text-${tab.color}-600`
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  <Icon className={`w-5 h-5 ${activeTab === tab.id ? `text-${tab.color}-600` : 'text-gray-400 group-hover:text-gray-600'}`} />
+                  <span>{tab.label}</span>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    activeTab === tab.id 
+                      ? `bg-${tab.color}-100 text-${tab.color}-800` 
+                      : 'bg-gray-100 text-gray-600'
+                  }`}>
+                    {tab.count}
+                  </span>
+                </button>
+              );
+            })}
+          </nav>
+        </div>
+      </div>
+    </>
+  );
+};
+
+// Enhanced Card Component with better styling
+const ItemCard: React.FC<{
+  item: any;
+  type: 'project' | 'vendor' | 'contract';
+  selected: boolean;
+  onSelect: (id: number) => void;
+  onView: (item: any) => void;
+  onEdit: (item: any) => void;
+}> = ({ item, type, selected, onSelect, onView, onEdit }) => {
+  const getCardIcon = () => {
+    switch (type) {
+      case 'project': return <Building className="w-5 h-5 text-blue-600" />;
+      case 'vendor': return <UserPlus className="w-5 h-5 text-green-600" />;
+      case 'contract': return <FilePlus className="w-5 h-5 text-purple-600" />;
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status?.toLowerCase()) {
+      case 'active': return 'bg-green-100 text-green-800 border-green-200';
+      case 'completed': return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'pending': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'cancelled': return 'bg-red-100 text-red-800 border-red-200';
+      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  return (
+    <div 
+      className="group bg-white rounded-xl shadow-sm border border-gray-200 p-5 cursor-pointer hover:shadow-md hover:border-gray-300 transition-all duration-200"
+      onClick={() => onView(item)}
+    >
+      <div className="flex items-start justify-between mb-4">
+        <div className="flex items-start space-x-3" onClick={(e) => e.stopPropagation()}>
+          <input
+            type="checkbox"
+            checked={selected}
+            onChange={() => onSelect(item.id)}
+            className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+          />
+          <div className="flex items-center gap-2">
+            {getCardIcon()}
+            <div>
+              <h3 className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
+                {type === 'project' ? item.name : 
+                 type === 'vendor' ? item.name : 
+                 (item.contract_nickname || item.project?.name || 'Unknown Project')}
+              </h3>
+              <p className="text-sm text-gray-500">
+                {type === 'project' ? item.client_name || 'No client' :
+                 type === 'vendor' ? `ID: #${item.id}` :
+                 `Contract #${item.id}`}
+              </p>
+            </div>
+          </div>
+        </div>
+        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${getStatusColor(item.status || 'active')}`}>
+          {item.status || 'Active'}
+        </span>
+      </div>
+
+      {/* Type-specific content */}
+      {type === 'project' && (
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div>
+              <span className="text-gray-500">Phase:</span>
+              <span className="ml-1 text-gray-900 font-medium">{item.current_phase || 'Not set'}</span>
+            </div>
+            <div>
+              <span className="text-gray-500">Budget:</span>
+              <span className="ml-1 text-gray-900 font-medium">${(item.budget || 0).toLocaleString()}</span>
+            </div>
+          </div>
+          {item.budget && (
+            <div>
+              <div className="flex items-center justify-between text-sm mb-2">
+                <span className="text-gray-500">Progress</span>
+                <span className="font-medium">{Math.round(((item.spent || 0) / item.budget) * 100)}%</span>
+              </div>
+              <div className="bg-gray-200 rounded-full h-2">
+                <div
+                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${Math.min(((item.spent || 0) / item.budget) * 100, 100)}%` }}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {type === 'vendor' && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
+              {item.trade}
+            </span>
+          </div>
+          <div className="space-y-2 text-sm">
+            <div className="flex items-center gap-2">
+              <span className="text-gray-500">Phone:</span>
+              <span className="text-gray-900">{item.phone || 'Not provided'}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-gray-500">Performance:</span>
+              <div className="flex items-center gap-1">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Star
+                    key={star}
+                    className={`w-4 h-4 ${
+                      star <= ((item as any).performance_score || 0)
+                        ? 'text-yellow-400 fill-current'
+                        : 'text-gray-300'
+                    }`}
+                  />
+                ))}
+                <span className="text-sm text-gray-600 ml-1">
+                  {(item as any).performance_score || 'N/A'}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {type === 'contract' && (
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div>
+              <span className="text-gray-500">Vendor:</span>
+              <span className="ml-1 text-gray-900 font-medium">{item.subcontractor?.name || 'Unknown'}</span>
+            </div>
+            <div>
+              <span className="text-gray-500">Amount:</span>
+              <span className="ml-1 text-gray-900 font-medium">${(item.contract_amount || 0).toLocaleString()}</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-4 text-sm">
+            <div className="flex items-center gap-1">
+              <Calendar className="w-4 h-4 text-gray-400" />
+              <span className="text-gray-500">Start:</span>
+              <span className="text-gray-900">{item.start_date || 'Not set'}</span>
+            </div>
+            {item.end_date && (
+              <div className="flex items-center gap-1">
+                <Calendar className="w-4 h-4 text-gray-400" />
+                <span className="text-gray-500">End:</span>
+                <span className="text-gray-900">{item.end_date}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      <div className="mt-4 flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+        <button
+          onClick={() => onView(item)}
+          className="flex items-center gap-1 px-3 py-1.5 text-gray-600 hover:text-blue-600 text-sm font-medium border border-gray-300 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors"
+        >
+          <Eye className="w-3 h-3" />
+          View
+        </button>
+        <button
+          onClick={() => onEdit(item)}
+          className="flex items-center gap-1 px-3 py-1.5 text-blue-600 hover:text-blue-700 text-sm font-medium border border-blue-300 rounded-lg hover:bg-blue-50 transition-colors"
+        >
+          <Edit3 className="w-3 h-3" />
+          Edit
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// Enhanced form component (keeping existing functionality but with better styling)
 type AddFormProps = {
   title: string;
   icon: ReactNode;
@@ -102,8 +549,7 @@ const AddForm: React.FC<AddFormProps> = ({
         acc[field.name] = field.defaultValue || '';
         return acc;
       }, {} as Record<string, string>);
-      
-      // Merge with initialData if provided
+
       return initialData ? { ...defaultData, ...initialData } : defaultData;
     }
   );
@@ -192,24 +638,24 @@ const AddForm: React.FC<AddFormProps> = ({
     str.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 
   return (
-    <div className="bg-white rounded-xl p-6 w-full shadow-2xl">
+    <div className="bg-white rounded-xl p-6 w-full shadow-2xl max-h-[90vh] overflow-y-auto">
       <div className="flex justify-between items-center mb-6">
         <h3 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
           {icon}
           {title}
         </h3>
-                              <button 
-                        onClick={onClose} 
-                        className="text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-100"
-                        disabled={isLoading}
-                      >
-          <X className="w-6 h-6" />
+        <button 
+          onClick={onClose} 
+          className="text-gray-500 hover:text-gray-700 p-2 rounded-full hover:bg-gray-100 transition-colors"
+          disabled={isLoading}
+        >
+          <X className="w-5 h-5" />
         </button>
       </div>
       <form onSubmit={handleSubmit} className="space-y-5">
         {fields.map(field => (
           <div key={field.name}>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
               {labelize(field.name)}
               {field.required && <span className="text-red-500 ml-1">*</span>}
             </label>
@@ -220,10 +666,10 @@ const AddForm: React.FC<AddFormProps> = ({
               onChange={handleChange}
               onBlur={handleBlur}
               className={`
-                w-full px-5 py-3 text-base border rounded-lg focus:ring-2 focus:ring-blue-500 transition-all duration-200 bg-gray-50 text-black placeholder-gray-400
+                w-full px-4 py-3 text-base border rounded-lg focus:ring-2 focus:ring-blue-500 transition-all duration-200 bg-white text-gray-900 placeholder-gray-500
                 ${errors[field.name] && touched[field.name] 
                   ? 'border-red-300 focus:border-red-500 focus:ring-red-500' 
-                  : 'border-gray-200 focus:border-blue-500'
+                  : 'border-gray-300 focus:border-blue-500'
                 }
               `}
               placeholder={field.placeholder}
@@ -238,11 +684,11 @@ const AddForm: React.FC<AddFormProps> = ({
           </div>
         ))}
 
-        <div className="flex justify-end gap-3 pt-4">
+        <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors duration-200"
+            className="px-6 py-2.5 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors duration-200 font-medium"
             disabled={isLoading}
           >
             Cancel
@@ -250,7 +696,7 @@ const AddForm: React.FC<AddFormProps> = ({
           <button
             type="submit"
             disabled={isLoading}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 disabled:bg-blue-400 flex items-center gap-2"
+            className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 disabled:bg-blue-400 flex items-center gap-2 font-medium"
           >
             {isLoading ? (
               <>
@@ -258,7 +704,7 @@ const AddForm: React.FC<AddFormProps> = ({
                 Saving...
               </>
             ) : (
-              'Add'
+              'Save'
             )}
           </button>
         </div>
@@ -267,7 +713,7 @@ const AddForm: React.FC<AddFormProps> = ({
   );
 };
 
-// Enhanced contract form with better error handling
+// Contract form component (keeping existing functionality)
 const AddContractForm: React.FC<{ 
   onClose: () => void; 
   onSuccess?: () => void;
@@ -425,7 +871,6 @@ const AddContractForm: React.FC<{
 
         if (isEdit && initialData?.id) {
           // For edit mode, we might want to update existing line items or add new ones
-          // For now, we'll just insert new ones
           const { error: lineItemsError } = await supabase
             .from('project_line_items')
             .insert(itemsToInsert);
@@ -520,31 +965,31 @@ const AddContractForm: React.FC<{
   };
 
   return (
-    <div className="bg-white rounded-xl p-6 w-full shadow-2xl">
+    <div className="bg-white rounded-xl p-6 w-full shadow-2xl max-h-[90vh] overflow-y-auto">
       <div className="flex justify-between items-center mb-6">
         <h3 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
           <FilePlus className="w-6 h-6 text-blue-600" />
           {isEdit ? 'Edit Contract' : 'Add Contract'}
         </h3>
-                              <button 
-                        onClick={onClose} 
-                        className="text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-100"
-                        disabled={loading}
-                      >
-          <X className="w-6 h-6" />
+        <button 
+          onClick={onClose} 
+          className="text-gray-500 hover:text-gray-700 p-2 rounded-full hover:bg-gray-100 transition-colors"
+          disabled={loading}
+        >
+          <X className="w-5 h-5" />
         </button>
       </div>
       <form onSubmit={handleSubmit} className="space-y-5">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
             Project <span className="text-red-500">*</span>
           </label>
           <select
             value={formData.projectId}
             onChange={handleInputChange('projectId')}
             className={`
-              w-full px-5 py-3 text-base border rounded-lg focus:ring-2 focus:ring-blue-500 bg-gray-50 text-black
-              ${errors.projectId ? 'border-red-300' : 'border-gray-200'}
+              w-full px-4 py-3 text-base border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white text-gray-900
+              ${errors.projectId ? 'border-red-300' : 'border-gray-300'}
             `}
             disabled={loading}
           >
@@ -562,15 +1007,15 @@ const AddContractForm: React.FC<{
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
             Vendor <span className="text-red-500">*</span>
           </label>
           <select
             value={formData.subcontractorId}
             onChange={handleInputChange('subcontractorId')}
             className={`
-              w-full px-5 py-3 text-base border rounded-lg focus:ring-2 focus:ring-blue-500 bg-gray-50 text-black
-              ${errors.subcontractorId ? 'border-red-300' : 'border-gray-200'}
+              w-full px-4 py-3 text-base border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white text-gray-900
+              ${errors.subcontractorId ? 'border-red-300' : 'border-gray-300'}
             `}
             disabled={loading}
           >
@@ -588,7 +1033,7 @@ const AddContractForm: React.FC<{
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
             Contract Amount <span className="text-red-500">*</span>
           </label>
           <input
@@ -598,8 +1043,8 @@ const AddContractForm: React.FC<{
             value={formData.contractAmount}
             onChange={handleInputChange('contractAmount')}
             className={`
-              w-full px-5 py-3 text-base border rounded-lg focus:ring-2 focus:ring-blue-500 bg-gray-50 text-black
-              ${errors.contractAmount ? 'border-red-300' : 'border-gray-200'}
+              w-full px-4 py-3 text-base border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white text-gray-900
+              ${errors.contractAmount ? 'border-red-300' : 'border-gray-300'}
             `}
             placeholder="0.00"
             disabled={loading}
@@ -613,7 +1058,7 @@ const AddContractForm: React.FC<{
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
             Contract Nickname
           </label>
           <input
@@ -621,8 +1066,8 @@ const AddContractForm: React.FC<{
             value={formData.contractNickname}
             onChange={handleInputChange('contractNickname')}
             className={`
-              w-full px-5 py-3 text-base border rounded-lg focus:ring-2 focus:ring-blue-500 bg-gray-50 text-black
-              ${errors.contractNickname ? 'border-red-300' : 'border-gray-200'}
+              w-full px-4 py-3 text-base border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white text-gray-900
+              ${errors.contractNickname ? 'border-red-300' : 'border-gray-300'}
             `}
             placeholder="e.g., Plumbing Phase 1, Electrical Rough-In"
             disabled={loading}
@@ -635,51 +1080,53 @@ const AddContractForm: React.FC<{
           )}
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">
-            Start Date <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="date"
-            value={formData.startDate}
-            onChange={handleInputChange('startDate')}
-            className={`
-              w-full px-5 py-3 text-base border rounded-lg focus:ring-2 focus:ring-blue-500 bg-gray-50 text-black
-              ${errors.startDate ? 'border-red-300' : 'border-gray-200'}
-            `}
-            disabled={loading}
-          />
-          {errors.startDate && (
-            <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
-              <AlertCircle className="w-4 h-4" />
-              {errors.startDate}
-            </p>
-          )}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Start Date <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="date"
+              value={formData.startDate}
+              onChange={handleInputChange('startDate')}
+              className={`
+                w-full px-4 py-3 text-base border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white text-gray-900
+                ${errors.startDate ? 'border-red-300' : 'border-gray-300'}
+              `}
+              disabled={loading}
+            />
+            {errors.startDate && (
+              <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+                <AlertCircle className="w-4 h-4" />
+                {errors.startDate}
+              </p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">End Date</label>
+            <input
+              type="date"
+              value={formData.endDate}
+              onChange={handleInputChange('endDate')}
+              min={formData.startDate}
+              className={`
+                w-full px-4 py-3 text-base border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white text-gray-900
+                ${errors.endDate ? 'border-red-300' : 'border-gray-300'}
+              `}
+              disabled={loading}
+            />
+            {errors.endDate && (
+              <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+                <AlertCircle className="w-4 h-4" />
+                {errors.endDate}
+              </p>
+            )}
+          </div>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">End Date</label>
-          <input
-            type="date"
-            value={formData.endDate}
-            onChange={handleInputChange('endDate')}
-            min={formData.startDate}
-            className={`
-              w-full px-5 py-3 text-base border rounded-lg focus:ring-2 focus:ring-blue-500 bg-gray-50 text-black
-              ${errors.endDate ? 'border-red-300' : 'border-gray-200'}
-            `}
-            disabled={loading}
-          />
-          {errors.endDate && (
-            <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
-              <AlertCircle className="w-4 h-4" />
-              {errors.endDate}
-            </p>
-          )}
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">Line Items</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Line Items</label>
           <div className="border rounded-lg p-4 bg-gray-50 mb-4">
             {showLineItemForm ? (
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end mb-4">
@@ -690,7 +1137,7 @@ const AddContractForm: React.FC<{
                     name="itemNo"
                     value={lineItemForm.itemNo}
                     onChange={handleLineItemChange}
-                    className="w-full px-3 py-2 text-base border rounded-lg bg-white text-black"
+                    className="w-full px-3 py-2 text-base border rounded-lg bg-white text-gray-900"
                     required
                   />
                 </div>
@@ -701,7 +1148,7 @@ const AddContractForm: React.FC<{
                     name="description"
                     value={lineItemForm.description}
                     onChange={handleLineItemChange}
-                    className="w-full px-3 py-2 text-base border rounded-lg bg-white text-black"
+                    className="w-full px-3 py-2 text-base border rounded-lg bg-white text-gray-900"
                     required
                   />
                 </div>
@@ -712,7 +1159,7 @@ const AddContractForm: React.FC<{
                     name="scheduledValue"
                     value={lineItemForm.scheduledValue}
                     onChange={handleLineItemChange}
-                    className="w-full px-3 py-2 text-base border rounded-lg bg-white text-black"
+                    className="w-full px-3 py-2 text-base border rounded-lg bg-white text-gray-900"
                     required
                   />
                 </div>
@@ -723,7 +1170,7 @@ const AddContractForm: React.FC<{
                     name="fromPrevious"
                     value={lineItemForm.fromPrevious}
                     onChange={handleLineItemChange}
-                    className="w-full px-3 py-2 text-base border rounded-lg bg-white text-black"
+                    className="w-full px-3 py-2 text-base border rounded-lg bg-white text-gray-900"
                   />
                 </div>
                 <div>
@@ -733,7 +1180,7 @@ const AddContractForm: React.FC<{
                     name="thisPeriod"
                     value={lineItemForm.thisPeriod}
                     onChange={handleLineItemChange}
-                    className="w-full px-3 py-2 text-base border rounded-lg bg-white text-black"
+                    className="w-full px-3 py-2 text-base border rounded-lg bg-white text-gray-900"
                   />
                 </div>
                 <div>
@@ -743,7 +1190,7 @@ const AddContractForm: React.FC<{
                     name="materialStored"
                     value={lineItemForm.materialStored}
                     onChange={handleLineItemChange}
-                    className="w-full px-3 py-2 text-base border rounded-lg bg-white text-black"
+                    className="w-full px-3 py-2 text-base border rounded-lg bg-white text-gray-900"
                   />
                 </div>
                 <div>
@@ -753,7 +1200,7 @@ const AddContractForm: React.FC<{
                     name="percentGC"
                     value={lineItemForm.percentGC}
                     onChange={handleLineItemChange}
-                    className="w-full px-3 py-2 text-base border rounded-lg bg-white text-black"
+                    className="w-full px-3 py-2 text-base border rounded-lg bg-white text-gray-900"
                   />
                 </div>
                 <div className="md:col-span-4 flex gap-2">
@@ -782,7 +1229,7 @@ const AddContractForm: React.FC<{
                   onClick={() => setShowLineItemForm(true)}
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold shadow flex items-center gap-2"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                  <Plus className="w-4 h-4" />
                   Add Line Item
                 </button>
               </div>
@@ -842,11 +1289,11 @@ const AddContractForm: React.FC<{
           </div>
         </div>
 
-        <div className="flex justify-end gap-3 pt-4">
+        <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors duration-200"
+            className="px-6 py-2.5 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors duration-200 font-medium"
             disabled={loading}
           >
             Cancel
@@ -854,7 +1301,7 @@ const AddContractForm: React.FC<{
           <button
             type="submit"
             disabled={loading}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 disabled:bg-blue-400 flex items-center gap-2"
+            className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 disabled:bg-blue-400 flex items-center gap-2 font-medium"
           >
             {loading ? (
               <>
@@ -862,7 +1309,7 @@ const AddContractForm: React.FC<{
                 Saving...
               </>
             ) : (
-              'Add Contract'
+              isEdit ? 'Update Contract' : 'Create Contract'
             )}
           </button>
         </div>
@@ -871,7 +1318,7 @@ const AddContractForm: React.FC<{
   );
 };
 
-// Enhanced main component with notification system
+// Enhanced main component
 interface ManageViewProps {
   searchQuery?: string;
 }
@@ -887,6 +1334,18 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
   const [showUnsavedWarning, setShowUnsavedWarning] = useState(false);
   const [isLoading, setIsLoading] = useState<Record<string, boolean>>({});
   const [searchTerm, setSearchTerm] = useState('');
+  const [activeTab, setActiveTab] = useState<'projects' | 'vendors' | 'contracts'>('projects');
+  const [filters, setFilters] = useState({
+    status: 'all',
+    trade: 'all',
+    performance: 'all',
+    contractValue: 'all',
+    expiry: 'all'
+  });
+  const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
+  const [viewModal, setViewModal] = useState<'project' | 'vendor' | 'contract' | null>(null);
+  const [editModal, setEditModal] = useState<'project' | 'vendor' | 'contract' | null>(null);
+  const [selectedItem, setSelectedItem] = useState<any>(null);
 
   // Sync global search query with local search term
   useEffect(() => {
@@ -894,7 +1353,6 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
       setSearchTerm(searchQuery);
     }
   }, [searchQuery]);
-  const [activeTab, setActiveTab] = useState<'projects' | 'vendors' | 'contracts'>('projects');
 
   // URL-based subtab management
   useEffect(() => {
@@ -906,25 +1364,11 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
 
   const handleSubtabChange = (subtab: 'projects' | 'vendors' | 'contracts') => {
     setActiveTab(subtab);
-    // Update URL without page reload
     const params = new URLSearchParams(searchParams.toString());
     params.set('subtab', subtab);
-    // Ensure we're on the manage tab
     params.set('tab', 'manage');
     router.replace(`/?${params.toString()}`, { scroll: false });
   };
-  const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [filterTrade, setFilterTrade] = useState<string>('all');
-  const [filterPerformance, setFilterPerformance] = useState<string>('all');
-  const [filterContractValue, setFilterContractValue] = useState<string>('all');
-  const [filterExpiry, setFilterExpiry] = useState<string>('all');
-  const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
-  const [showBulkActions, setShowBulkActions] = useState(false);
-  const [showMobileFilters, setShowMobileFilters] = useState(false);
-  const [dirty, setDirty] = useState(false);
-  const [viewModal, setViewModal] = useState<'project' | 'vendor' | 'contract' | null>(null);
-  const [editModal, setEditModal] = useState<'project' | 'vendor' | 'contract' | null>(null);
-  const [selectedItem, setSelectedItem] = useState<any>(null);
 
   const addNotification = useCallback((
     type: NotificationType, 
@@ -945,7 +1389,6 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
     setNotifications(prev => prev.filter(n => n.id !== id));
   }, []);
 
-  // Function to refresh contracts data
   const refreshContracts = useCallback(async () => {
     try {
       const { data } = await supabase
@@ -1032,7 +1475,6 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
     }
   };
 
-  // Enhanced field configurations with validation
   const projectFields: FieldConfig[] = [
     { name: 'name', placeholder: 'Project Name', required: true, validators: [validators.required] },
     { name: 'client_name', placeholder: 'Client Name', required: true, validators: [validators.required] },
@@ -1071,52 +1513,67 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
     setShowUnsavedWarning(false);
   };
 
+  const handleFilterChange = (key: string, value: string) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleClearFilters = () => {
+    setFilters({
+      status: 'all',
+      trade: 'all',
+      performance: 'all',
+      contractValue: 'all',
+      expiry: 'all'
+    });
+  };
+
   // Search and filter functions
   const filteredProjects = useMemo(() => {
     return projects.filter(project => {
       const matchesSearch = project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            project.client_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            project.current_phase?.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesFilter = filterStatus === 'all' || (project as any).status === filterStatus;
+      const matchesFilter = filters.status === 'all' || (project as any).status === filters.status;
       return matchesSearch && matchesFilter;
     });
-  }, [projects, searchTerm, filterStatus]);
+  }, [projects, searchTerm, filters.status]);
 
   const filteredVendors = useMemo(() => {
     return subcontractors.filter(vendor => {
       const matchesSearch = vendor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            vendor.trade.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            (vendor as any).email?.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesFilter = filterStatus === 'all' || vendor.status === filterStatus;
-      return matchesSearch && matchesFilter;
+      const matchesStatus = filters.status === 'all' || vendor.status === filters.status;
+      const matchesTrade = filters.trade === 'all' || vendor.trade.toLowerCase() === filters.trade.toLowerCase();
+      return matchesSearch && matchesStatus && matchesTrade;
     });
-  }, [subcontractors, searchTerm, filterStatus]);
+  }, [subcontractors, searchTerm, filters]);
 
   const filteredContracts = useMemo(() => {
     return contracts.filter(contract => {
       const matchesSearch = contract.project?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            contract.subcontractor?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            (contract.contract_nickname || '').toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesStatus = filterStatus === 'all' || contract.status === filterStatus;
-      const matchesValue = filterContractValue === 'all' ||
-        (filterContractValue === 'high' && (contract.contract_amount || 0) >= 100000) ||
-        (filterContractValue === 'medium' && (contract.contract_amount || 0) >= 50000 && (contract.contract_amount || 0) < 100000) ||
-        (filterContractValue === 'low' && (contract.contract_amount || 0) < 50000);
-      const matchesExpiry = filterExpiry === 'all' ||
-        (filterExpiry === 'expiring' && (() => {
+      const matchesStatus = filters.status === 'all' || contract.status === filters.status;
+      const matchesValue = filters.contractValue === 'all' ||
+        (filters.contractValue === 'high' && (contract.contract_amount || 0) >= 100000) ||
+        (filters.contractValue === 'medium' && (contract.contract_amount || 0) >= 50000 && (contract.contract_amount || 0) < 100000) ||
+        (filters.contractValue === 'low' && (contract.contract_amount || 0) < 50000);
+      const matchesExpiry = filters.expiry === 'all' ||
+        (filters.expiry === 'expiring' && (() => {
           if (!contract.end_date || contract.status === 'completed') return false;
           const endDate = new Date(contract.end_date);
           const now = new Date();
           const daysUntilExpiry = (endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
           return daysUntilExpiry <= 30 && daysUntilExpiry > 0;
         })()) ||
-        (filterExpiry === 'expired' && (() => {
+        (filters.expiry === 'expired' && (() => {
           if (!contract.end_date) return false;
           const endDate = new Date(contract.end_date);
           const now = new Date();
           return endDate < now;
         })()) ||
-        (filterExpiry === 'ongoing' && (() => {
+        (filters.expiry === 'ongoing' && (() => {
           if (!contract.end_date) return true;
           const endDate = new Date(contract.end_date);
           const now = new Date();
@@ -1124,9 +1581,8 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
         })());
       return matchesSearch && matchesStatus && matchesValue && matchesExpiry;
     });
-  }, [contracts, searchTerm, filterStatus, filterContractValue, filterExpiry]);
+  }, [contracts, searchTerm, filters]);
 
-  // Bulk operations
   const handleSelectAll = () => {
     const currentData = activeTab === 'projects' ? filteredProjects :
                        activeTab === 'vendors' ? filteredVendors : filteredContracts;
@@ -1182,14 +1638,14 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
     }
   };
 
-  const handleViewItem = (item: any, type: 'project' | 'vendor' | 'contract') => {
+  const handleViewItem = (item: any) => {
     setSelectedItem(item);
-    setViewModal(type);
+    setViewModal(activeTab === 'projects' ? 'project' : activeTab === 'vendors' ? 'vendor' : 'contract');
   };
 
-  const handleEditItem = (item: any, type: 'project' | 'vendor' | 'contract') => {
+  const handleEditItem = (item: any) => {
     setSelectedItem(item);
-    setEditModal(type);
+    setEditModal(activeTab === 'projects' ? 'project' : activeTab === 'vendors' ? 'vendor' : 'contract');
   };
 
   const handleCloseViewModal = () => {
@@ -1202,1181 +1658,125 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
     setSelectedItem(null);
   };
 
-  // Contract Analytics Component
-  const ContractAnalytics: React.FC<{ contracts: any[] }> = ({ contracts }) => {
-    const analytics = useMemo(() => {
-      const total = contracts.length;
-      const active = contracts.filter(c => c.status === 'active').length;
-      const completed = contracts.filter(c => c.status === 'completed').length;
-      const totalValue = contracts.reduce((sum, c) => sum + (c.contract_amount || 0), 0);
-      const avgContractValue = total > 0 ? totalValue / total : 0;
-      const upcomingExpiry = contracts.filter(c => {
-        if (!c.end_date || c.status === 'completed') return false;
-        const endDate = new Date(c.end_date);
-        const now = new Date();
-        const daysUntilExpiry = (endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
-        return daysUntilExpiry <= 30 && daysUntilExpiry > 0;
-      }).length;
-      
-      return { total, active, completed, totalValue, avgContractValue, upcomingExpiry };
-    }, [contracts]);
-
-    return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-          <div className="flex items-center">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <FilePlus className="h-6 w-6 text-blue-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Total Contracts</p>
-              <p className="text-2xl font-bold text-gray-900">{analytics.total}</p>
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-          <div className="flex items-center">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <CheckCircle className="h-6 w-6 text-green-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Active Contracts</p>
-              <p className="text-2xl font-bold text-gray-900">{analytics.active}</p>
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-          <div className="flex items-center">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <Building className="h-6 w-6 text-purple-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Total Value</p>
-              <p className="text-2xl font-bold text-gray-900">${analytics.totalValue.toLocaleString()}</p>
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-          <div className="flex items-center">
-            <div className="p-2 bg-yellow-100 rounded-lg">
-              <AlertCircle className="h-6 w-6 text-yellow-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Avg Contract Value</p>
-              <p className="text-2xl font-bold text-gray-900">${analytics.avgContractValue.toLocaleString()}</p>
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-          <div className="flex items-center">
-            <div className="p-2 bg-orange-100 rounded-lg">
-              <AlertCircle className="h-6 w-6 text-orange-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Expiring Soon</p>
-              <p className="text-2xl font-bold text-gray-900">{analytics.upcomingExpiry}</p>
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-          <div className="flex items-center">
-            <div className="p-2 bg-gray-100 rounded-lg">
-              <CheckCircle className="h-6 w-6 text-gray-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Completed</p>
-              <p className="text-2xl font-bold text-gray-900">{analytics.completed}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
+  // Get current filtered data
+  const getCurrentData = () => {
+    switch (activeTab) {
+      case 'projects': return filteredProjects;
+      case 'vendors': return filteredVendors;
+      case 'contracts': return filteredContracts;
+      default: return [];
+    }
   };
 
-  // Contract Card Component (Mobile)
-  const ContractCard: React.FC<{
-    contract: any;
-    onSelect: (id: number) => void;
-    onView: (item: any, type: 'project' | 'vendor' | 'contract') => void;
-    onEdit: (item: any, type: 'project' | 'vendor' | 'contract') => void;
-    selected: boolean;
-  }> = ({ contract, onSelect, onView, onEdit, selected }) => {
-    const getStatusColor = (status: string) => {
-      switch (status?.toLowerCase()) {
-        case 'active': return 'bg-green-100 text-green-800';
-        case 'completed': return 'bg-blue-100 text-blue-800';
-        case 'pending': return 'bg-yellow-100 text-yellow-800';
-        case 'cancelled': return 'bg-red-100 text-red-800';
-        default: return 'bg-gray-100 text-gray-800';
-      }
-    };
-
-    const getDaysUntilExpiry = () => {
-      if (!contract.end_date || contract.status === 'completed') return null;
-      const endDate = new Date(contract.end_date);
-      const now = new Date();
-      const daysUntilExpiry = Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-      return daysUntilExpiry;
-    };
-
-    const daysUntilExpiry = getDaysUntilExpiry();
-
-    return (
-      <div 
-        className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 cursor-pointer hover:shadow-md transition-all duration-200"
-        onClick={() => onView(contract, 'contract')}
-      >
-        <div className="flex justify-between items-start mb-3">
-          <div className="flex items-start space-x-3" onClick={(e) => e.stopPropagation()}>
-            <input
-              type="checkbox"
-              checked={selected}
-              onChange={() => onSelect(contract.id)}
-              className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-            />
-            <div>
-              <h3 className="font-semibold text-gray-900">
-                {contract.contract_nickname || contract.project?.name || 'Unknown Project'}
-              </h3>
-              <p className="text-sm text-gray-500">
-                {contract.contract_nickname ? `${contract.project?.name || 'Unknown Project'} • ` : ''}Contract #{contract.id}
-              </p>
-            </div>
-          </div>
-          <div className="flex flex-col items-end space-y-1">
-            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(contract.status)}`}>
-              {contract.status || 'Active'}
-            </span>
-            {daysUntilExpiry !== null && daysUntilExpiry <= 30 && (
-              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                daysUntilExpiry <= 7 ? 'bg-red-100 text-red-800' : 'bg-orange-100 text-orange-800'
-              }`}>
-                {daysUntilExpiry} days left
-              </span>
-            )}
-          </div>
-        </div>
-        
-        <div className="space-y-2 text-sm">
-          <div>
-            <span className="text-gray-500">Vendor:</span>
-            <span className="ml-1 text-gray-900">{contract.subcontractor?.name || 'Unknown Vendor'}</span>
-          </div>
-          <div>
-            <span className="text-gray-500">Amount:</span>
-            <span className="ml-1 text-gray-900 font-medium">${(contract.contract_amount || 0).toLocaleString()}</span>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <span className="text-gray-500">Start:</span>
-              <div className="text-gray-900">{contract.start_date || 'Not set'}</div>
-            </div>
-            <div>
-              <span className="text-gray-500">End:</span>
-              <div className="text-gray-900">{contract.end_date || 'Ongoing'}</div>
-            </div>
-          </div>
-        </div>
-        
-        <div className="mt-4 flex justify-end" onClick={(e) => e.stopPropagation()}>
-          <button
-            onClick={() => onEdit(contract, 'contract')}
-            className="px-3 py-1 text-blue-600 hover:text-blue-900 text-sm font-medium border border-blue-600 rounded hover:bg-blue-50 transition-colors"
-          >
-            Edit
-          </button>
-        </div>
-      </div>
-    );
-  };
-
-  // Contract Table Component (Desktop)
-  const ContractTable: React.FC<{
-    contracts: any[];
-    onSelect: (id: number) => void;
-    onView: (item: any, type: 'project' | 'vendor' | 'contract') => void;
-    onEdit: (item: any, type: 'project' | 'vendor' | 'contract') => void;
-    selectedItems: Set<number>;
-  }> = ({ contracts, onSelect, onView, onEdit, selectedItems }) => {
-    const getStatusColor = (status: string) => {
-      switch (status?.toLowerCase()) {
-        case 'active': return 'bg-green-100 text-green-800';
-        case 'completed': return 'bg-blue-100 text-blue-800';
-        case 'pending': return 'bg-yellow-100 text-yellow-800';
-        case 'cancelled': return 'bg-red-100 text-red-800';
-        default: return 'bg-gray-100 text-gray-800';
-      }
-    };
-
-    const getDaysUntilExpiry = (contract: any) => {
-      if (!contract.end_date || contract.status === 'completed') return null;
-      const endDate = new Date(contract.end_date);
-      const now = new Date();
-      const daysUntilExpiry = Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-      return daysUntilExpiry;
-    };
-
-    return (
-      <div className="hidden sm:block bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                <input
-                  type="checkbox"
-                  checked={selectedItems.size === contracts.length && contracts.length > 0}
-                  onChange={() => {
-                    if (selectedItems.size === contracts.length) {
-                      contracts.forEach(c => onSelect(c.id));
-                    } else {
-                      contracts.forEach(c => onSelect(c.id));
-                    }
-                  }}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Contract
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Vendor
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Amount
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Duration
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Status
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {contracts.map((contract) => {
-              const daysUntilExpiry = getDaysUntilExpiry(contract);
-              return (
-                <tr 
-                  key={contract.id} 
-                  className="hover:bg-gray-50 cursor-pointer transition-colors duration-150"
-                  onClick={() => onView(contract, 'contract')}
-                >
-                  <td className="px-6 py-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                    <input
-                      type="checkbox"
-                      checked={selectedItems.has(contract.id)}
-                      onChange={() => onSelect(contract.id)}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    />
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="flex-shrink-0 h-10 w-10">
-                        <div className="h-10 w-10 rounded-lg bg-purple-100 flex items-center justify-center">
-                          <FilePlus className="h-5 w-5 text-purple-600" />
-                        </div>
-                      </div>
-                      <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">
-                          {contract.contract_nickname || contract.project?.name || 'Unknown Project'}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {contract.contract_nickname ? `${contract.project?.name || 'Unknown Project'} • ` : ''}Contract #{contract.id}
-                        </div>
-                        {daysUntilExpiry !== null && daysUntilExpiry <= 30 && (
-                          <div className={`text-xs mt-1 ${
-                            daysUntilExpiry <= 7 ? 'text-red-600' : 'text-orange-600'
-                          }`}>
-                            {daysUntilExpiry} days until expiry
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {contract.subcontractor?.name || 'Unknown Vendor'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
-                    ${(contract.contract_amount || 0).toLocaleString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    <div>{contract.start_date || 'Not set'}</div>
-                    <div className="text-gray-500">{contract.end_date || 'Ongoing'}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(contract.status)}`}>
-                      {contract.status || 'Active'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={() => onEdit(contract, 'contract')}
-                        className="text-blue-600 hover:text-blue-900 text-sm font-medium"
-                      >
-                        Edit
-                      </button>
-                      <span className="text-gray-300">|</span>
-                      <span className="text-xs text-gray-500">Click row to view</span>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-            {contracts.length === 0 && (
-              <tr>
-                <td colSpan={7} className="px-6 py-12 text-center">
-                  <div className="text-gray-400 mb-4">
-                    <FilePlus className="w-12 h-12 mx-auto" />
-                  </div>
-                  <p className="text-gray-500">No contracts found</p>
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-    );
-  };
+  const currentData = getCurrentData();
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <NotificationManager 
           notifications={notifications} 
           onRemove={removeNotification} 
         />
 
         {/* Header */}
-        <div className="mb-6 sm:mb-8">
+        <div className="mb-8">
           <div className="text-center sm:text-left">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+            <h1 className="text-3xl font-bold text-gray-900 mb-4">
               Construction Management
             </h1>
-            <div className="grid grid-cols-3 gap-2 sm:gap-4 text-center">
-              <div className="bg-white rounded-lg p-3 sm:p-4 shadow-sm border border-gray-100">
-                <div className="text-lg sm:text-xl font-bold text-blue-600">Projects</div>
-                <div className="text-xs sm:text-sm text-gray-600">{projects.length}</div>
-              </div>
-              <div className="bg-white rounded-lg p-3 sm:p-4 shadow-sm border border-gray-100">
-                <div className="text-lg sm:text-xl font-bold text-green-600">Vendors</div>
-                <div className="text-xs sm:text-sm text-gray-600">{subcontractors.length}</div>
-              </div>
-              <div className="bg-white rounded-lg p-3 sm:p-4 shadow-sm border border-gray-100">
-                <div className="text-lg sm:text-xl font-bold text-purple-600">Contracts</div>
-                <div className="text-xs sm:text-sm text-gray-600">{contracts.length}</div>
-              </div>
-            </div>
+            <p className="text-gray-600 mb-6">
+              Manage your projects, vendors, and contracts in one place
+            </p>
           </div>
         </div>
 
-        {/* Mobile Tab Navigation */}
-        <div className="sm:hidden mb-4">
-          <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
-            <button
-              onClick={() => handleSubtabChange('projects')}
-              className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors ${
-                activeTab === 'projects'
-                  ? 'bg-white text-blue-600 shadow-sm'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              Projects ({filteredProjects.length})
-            </button>
-            <button
-              onClick={() => handleSubtabChange('vendors')}
-              className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors ${
-                activeTab === 'vendors'
-                  ? 'bg-white text-green-600 shadow-sm'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              Vendors ({filteredVendors.length})
-            </button>
-            <button
-              onClick={() => handleSubtabChange('contracts')}
-              className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors ${
-                activeTab === 'contracts'
-                  ? 'bg-white text-purple-600 shadow-sm'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              Contracts ({filteredContracts.length})
-            </button>
-          </div>
+        {/* Tab Navigation */}
+        <div className="mb-8">
+          <TabNavigation
+            activeTab={activeTab}
+            onTabChange={handleSubtabChange}
+            counts={{
+              projects: filteredProjects.length,
+              vendors: filteredVendors.length,
+              contracts: filteredContracts.length
+            }}
+          />
         </div>
 
-        {/* Desktop Tab Navigation */}
-        <div className="hidden sm:block mb-6">
-          <div className="border-b border-gray-200">
-            <nav className="-mb-px flex space-x-8">
-              <button
-                onClick={() => handleSubtabChange('projects')}
-                className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'projects'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                Projects
-                <span className="ml-2 bg-gray-100 text-gray-900 py-0.5 px-2.5 rounded-full text-xs">
-                  {filteredProjects.length}
-                </span>
-              </button>
-              <button
-                onClick={() => handleSubtabChange('vendors')}
-                className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'vendors'
-                    ? 'border-green-500 text-green-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                Vendors
-                <span className="ml-2 bg-gray-100 text-gray-900 py-0.5 px-2.5 rounded-full text-xs">
-                  {filteredVendors.length}
-                </span>
-              </button>
-              <button
-                onClick={() => handleSubtabChange('contracts')}
-                className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'contracts'
-                    ? 'border-purple-500 text-purple-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                Contracts
-                <span className="ml-2 bg-gray-100 text-gray-900 py-0.5 px-2.5 rounded-full text-xs">
-                  {filteredContracts.length}
-                </span>
-              </button>
-            </nav>
-          </div>
-        </div>
-
-        {/* Search and Controls */}
+        {/* Search and Filters */}
         <div className="mb-6">
-          {/* Mobile Controls */}
-          <div className="sm:hidden space-y-3">
-            <div className="flex gap-2">
-              <div className="flex-1 relative">
-                <input
-                  type="text"
-                  placeholder="Search..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowMobileFilters(!showMobileFilters)}
-                className="px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 hover:bg-gray-50"
-              >
-                Filter
-              </button>
-              {selectedItems.size > 0 ? (
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-600">{selectedItems.size} selected</span>
-                  <button
-                    onClick={handleBulkDelete}
-                    className="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-1"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                    Delete
-                  </button>
-                </div>
-              ) : (
-                <button
-                  onClick={() => handleOpenForm(activeTab === 'projects' ? 'project' : activeTab === 'vendors' ? 'vendor' : 'contract')}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
-                  Add
-                </button>
-              )}
-            </div>
+          <SearchFilterBar
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            activeTab={activeTab}
+            filters={filters}
+            onFilterChange={handleFilterChange}
+            onClearFilters={handleClearFilters}
+          />
+        </div>
 
-            {showMobileFilters && (
-              <div className="bg-white text-gray-700 p-4 rounded-lg border border-gray-200 space-y-3">
-                <select
-                  value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value)}
-                  className="w-full px-3 py-2  text-gray-700 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="all">All Status</option>
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                  <option value="pending">Pending</option>
-                  <option value="completed">Completed</option>
-                </select>
-                
-                {activeTab === 'vendors' && (
-                  <>
-                    <select
-                      value={filterTrade}
-                      onChange={(e) => setFilterTrade(e.target.value)}
-                      className="w-full px-3 py-2  text-gray-700 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value="all">All Trades</option>
-                      <option value="electrical">Electrical</option>
-                      <option value="plumbing">Plumbing</option>
-                      <option value="hvac">HVAC</option>
-                      <option value="roofing">Roofing</option>
-                      <option value="drywall">Drywall</option>
-                      <option value="painting">Painting</option>
-                      <option value="flooring">Flooring</option>
-                      <option value="landscaping">Landscaping</option>
-                      <option value="general">General</option>
-                    </select>
-                    
-                    <select
-                      value={filterPerformance}
-                      onChange={(e) => setFilterPerformance(e.target.value)}
-                      className="w-full px-3 py-2  text-gray-700 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value="all">All Performance</option>
-                      <option value="high">High (4-5 stars)</option>
-                      <option value="medium">Medium (3-4 stars)</option>
-                      <option value="low">Low (1-3 stars)</option>
-                    </select>
-                  </>
-                )}
-                
-                {activeTab === 'contracts' && (
-                  <>
-                    <select
-                      value={filterContractValue}
-                      onChange={(e) => setFilterContractValue(e.target.value)}
-                      className="w-full px-3 py-2  text-gray-700 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value="all">All Values</option>
-                      <option value="high">High ($100k+)</option>
-                      <option value="medium">Medium ($50k-$100k)</option>
-                      <option value="low">Low (&lt;$50k)</option>
-                    </select>
-                    
-                    <select
-                      value={filterExpiry}
-                      onChange={(e) => setFilterExpiry(e.target.value)}
-                      className="w-full px-3 py-2  text-gray-700 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value="all">All Expiry</option>
-                      <option value="expiring">Expiring Soon (≤30 days)</option>
-                      <option value="expired">Expired</option>
-                      <option value="ongoing">Ongoing</option>
-                    </select>
-                  </>
-                )}
-              </div>
+        {/* Quick Actions */}
+        <div className="mb-6 flex justify-between items-center">
+          <div className="flex items-center gap-4">
+            {selectedItems.size > 0 && (
+              <span className="text-sm text-gray-600">
+                {selectedItems.size} of {currentData.length} selected
+              </span>
             )}
           </div>
+          <QuickActions
+            activeTab={activeTab}
+            onAddNew={() => handleOpenForm(activeTab === 'projects' ? 'project' : activeTab === 'vendors' ? 'vendor' : 'contract')}
+            selectedCount={selectedItems.size}
+            onBulkDelete={handleBulkDelete}
+            onExport={() => addNotification('info', 'Export feature coming soon!')}
+          />
+        </div>
 
-          {/* Desktop Controls */}
-          <div className="hidden sm:flex sm:items-center sm:justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Search..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-80 pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                </div>
-              </div>
+        {/* Content Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {currentData.map((item) => (
+            <ItemCard
+              key={item.id}
+              item={item}
+              type={activeTab === 'projects' ? 'project' : activeTab === 'vendors' ? 'vendor' : 'contract'}
+              selected={selectedItems.has(item.id)}
+              onSelect={handleItemSelect}
+              onView={handleViewItem}
+              onEdit={handleEditItem}
+            />
+          ))}
+        </div>
 
-              <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="all">All Status</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-                <option value="pending">Pending</option>
-                <option value="completed">Completed</option>
-              </select>
-              
-              {activeTab === 'vendors' && (
-                <>
-                  <select
-                    value={filterTrade}
-                    onChange={(e) => setFilterTrade(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="all">All Trades</option>
-                    <option value="electrical">Electrical</option>
-                    <option value="plumbing">Plumbing</option>
-                    <option value="hvac">HVAC</option>
-                    <option value="roofing">Roofing</option>
-                    <option value="drywall">Drywall</option>
-                    <option value="painting">Painting</option>
-                    <option value="flooring">Flooring</option>
-                    <option value="landscaping">Landscaping</option>
-                    <option value="general">General</option>
-                  </select>
-                  
-                  <select
-                    value={filterPerformance}
-                    onChange={(e) => setFilterPerformance(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="all">All Performance</option>
-                    <option value="high">High (4-5 stars)</option>
-                    <option value="medium">Medium (3-4 stars)</option>
-                    <option value="low">Low (1-3 stars)</option>
-                  </select>
-                </>
-              )}
-              
-              {activeTab === 'contracts' && (
-                <>
-                  <select
-                    value={filterContractValue}
-                    onChange={(e) => setFilterContractValue(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="all">All Values</option>
-                    <option value="high">High ($100k+)</option>
-                    <option value="medium">Medium ($50k-$100k)</option>
-                    <option value="low">Low (&lt;$50k)</option>
-                  </select>
-                  
-                  <select
-                    value={filterExpiry}
-                    onChange={(e) => setFilterExpiry(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="all">All Expiry</option>
-                    <option value="expiring">Expiring Soon (≤30 days)</option>
-                    <option value="expired">Expired</option>
-                    <option value="ongoing">Ongoing</option>
-                  </select>
-                </>
-              )}
+        {/* Empty State */}
+        {currentData.length === 0 && (
+          <div className="text-center py-12">
+            <div className="text-gray-400 mb-4">
+              {activeTab === 'projects' && <Building className="w-16 h-16 mx-auto" />}
+              {activeTab === 'vendors' && <UserPlus className="w-16 h-16 mx-auto" />}
+              {activeTab === 'contracts' && <FilePlus className="w-16 h-16 mx-auto" />}
             </div>
-            
-            <div className="flex items-center space-x-4">
-              {selectedItems.size > 0 && (
-                <div className="flex items-center space-x-3">
-                  <span className="text-sm text-gray-600">{selectedItems.size} selected</span>
-                  <button
-                    onClick={handleBulkDelete}
-                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-2"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                    Delete
-                  </button>
-                </div>
-              )}
-
-              <button
-                onClick={() => handleOpenForm(activeTab === 'projects' ? 'project' : activeTab === 'vendors' ? 'vendor' : 'contract')}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                Add {activeTab === 'projects' ? 'Project' : activeTab === 'vendors' ? 'Vendor' : 'Contract'}
-              </button>
-            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              No {activeTab} found
+            </h3>
+            <p className="text-gray-500 mb-6">
+              {searchTerm ? `No ${activeTab} match your search criteria.` : `Get started by creating your first ${activeTab.slice(0, -1)}.`}
+            </p>
+            <button
+              onClick={() => handleOpenForm(activeTab === 'projects' ? 'project' : activeTab === 'vendors' ? 'vendor' : 'contract')}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+            >
+              <Plus className="w-5 h-5" />
+              Add {activeTab === 'projects' ? 'Project' : activeTab === 'vendors' ? 'Vendor' : 'Contract'}
+            </button>
           </div>
-        </div>
-
-        {/* Content */}
-        <div className="space-y-4">
-          {activeTab === 'projects' && (
-            <div>
-              {/* Mobile Cards */}
-              <div className="sm:hidden space-y-4">
-                {filteredProjects.map((project) => (
-                  <div 
-                    key={project.id} 
-                    className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 cursor-pointer hover:shadow-md transition-all duration-200"
-                    onClick={() => handleViewItem(project, 'project')}
-                  >
-                    <div className="flex justify-between items-start mb-3">
-                      <div className="flex items-start space-x-3" onClick={(e) => e.stopPropagation()}>
-                        <input
-                          type="checkbox"
-                          checked={selectedItems.has(project.id)}
-                          onChange={() => handleItemSelect(project.id)}
-                          className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                        />
-                        <div>
-                          <h3 className="font-semibold text-gray-900">{project.name}</h3>
-                          <p className="text-sm text-gray-500">{project.client_name || 'No client'}</p>
-                        </div>
-                      </div>
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        {(project as any).status || 'Active'}
-                      </span>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <span className="text-gray-500">Phase:</span>
-                        <span className="ml-1 text-gray-900">{project.current_phase || 'Not set'}</span>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Budget:</span>
-                        <span className="ml-1 text-gray-900">${(project.budget || 0).toLocaleString()}</span>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Started:</span>
-                        <span className="ml-1 text-gray-900">{(project as any).start_date || 'Not set'}</span>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Spent:</span>
-                        <span className="ml-1 text-gray-900">${(project.spent || 0).toLocaleString()}</span>
-                      </div>
-                    </div>
-
-                    {project.budget && (
-                      <div className="mt-4">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-gray-500">Progress</span>
-                          <span className="font-medium">{Math.round(((project.spent || 0) / project.budget) * 100)}%</span>
-                        </div>
-                        <div className="mt-1 bg-gray-200 rounded-full h-2">
-                          <div
-                            className="bg-blue-600 h-2 rounded-full"
-                            style={{ width: `${Math.min(((project.spent || 0) / project.budget) * 100, 100)}%` }}
-                          />
-                        </div>
-                      </div>
-                    )}
-                    
-                    <div className="mt-4 flex justify-end" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        onClick={() => handleEditItem(project, 'project')}
-                        className="px-3 py-1 text-blue-600 hover:text-blue-900 text-sm font-medium border border-blue-600 rounded hover:bg-blue-50 transition-colors"
-                      >
-                        Edit
-                      </button>
-                    </div>
-                  </div>
-                ))}
-
-                {filteredProjects.length === 0 && (
-                  <div className="text-center py-12">
-                    <div className="text-gray-400 mb-4">
-                      <Building className="w-12 h-12 mx-auto" />
-                    </div>
-                    <p className="text-gray-500">No projects found</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Desktop Table */}
-              <div className="hidden sm:block bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        <input
-                          type="checkbox"
-                          checked={selectedItems.size === filteredProjects.length && filteredProjects.length > 0}
-                          onChange={handleSelectAll}
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                        />
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Project
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Client
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Phase
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Budget
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Status
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Progress
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {filteredProjects.map((project) => (
-                      <tr 
-                        key={project.id} 
-                        className="hover:bg-gray-50 cursor-pointer transition-colors duration-150"
-                        onClick={() => handleViewItem(project, 'project')}
-                      >
-                        <td className="px-6 py-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                          <input
-                            type="checkbox"
-                            checked={selectedItems.has(project.id)}
-                            onChange={() => handleItemSelect(project.id)}
-                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                          />
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div className="flex-shrink-0 h-10 w-10">
-                              <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                                <Building className="h-5 w-5 text-blue-600" />
-                              </div>
-                            </div>
-                            <div className="ml-4">
-                              <div className="text-sm font-medium text-gray-900">{project.name}</div>
-                              <div className="text-sm text-gray-500">Started: {(project as any).start_date || 'Not set'}</div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {project.client_name || 'Not specified'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {project.current_phase || 'Not set'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          ${(project.budget || 0).toLocaleString()}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                                                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                          {(project as any).status || 'Active'}
-                        </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          <div className="flex items-center">
-                            <div className="flex-1">
-                              <div className="bg-gray-200 rounded-full h-2">
-                                <div
-                                  className="bg-blue-600 h-2 rounded-full"
-                                  style={{ width: `${project.budget ? Math.min(((project.spent || 0) / project.budget) * 100, 100) : 0}%` }}
-                                />
-                              </div>
-                            </div>
-                            <div className="ml-2 text-xs">
-                              ${(project.spent || 0).toLocaleString()} / ${(project.budget || 0).toLocaleString()}
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900" onClick={(e) => e.stopPropagation()}>
-                          <div className="flex space-x-2">
-                            <button
-                              onClick={() => handleEditItem(project, 'project')}
-                              className="text-blue-600 hover:text-blue-900 text-sm font-medium"
-                            >
-                              Edit
-                            </button>
-                            <span className="text-gray-300">|</span>
-                            <span className="text-xs text-gray-500">Click row to view</span>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                    {filteredProjects.length === 0 && (
-                      <tr>
-                        <td colSpan={8} className="px-6 py-12 text-center">
-                          <div className="text-gray-400 mb-4">
-                            <Building className="w-12 h-12 mx-auto" />
-                          </div>
-                          <p className="text-gray-500">No projects found</p>
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'vendors' && (
-            <div>
-              {/* Mobile Cards */}
-              <div className="sm:hidden space-y-4">
-                {filteredVendors.map((vendor) => (
-                  <div 
-                    key={vendor.id} 
-                    className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 cursor-pointer hover:shadow-md transition-all duration-200"
-                    onClick={() => handleViewItem(vendor, 'vendor')}
-                  >
-                    <div className="flex justify-between items-start mb-3">
-                      <div className="flex items-start space-x-3" onClick={(e) => e.stopPropagation()}>
-                        <input
-                          type="checkbox"
-                          checked={selectedItems.has(vendor.id)}
-                          onChange={() => handleItemSelect(vendor.id)}
-                          className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                        />
-                        <div>
-                          <h3 className="font-semibold text-gray-900">{vendor.name}</h3>
-                          <p className="text-sm text-gray-500">ID: #{vendor.id}</p>
-                        </div>
-                      </div>
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        {vendor.status || 'Active'}
-                      </span>
-                    </div>
-                    
-                    <div className="mb-3">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                        {vendor.trade}
-                      </span>
-                    </div>
-
-                    <div className="space-y-2 text-sm">
-                      <div>
-                        <span className="text-gray-500">Phone:</span>
-                        <span className="ml-1 text-gray-900">{vendor.phone || 'Not provided'}</span>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Email:</span>
-                        <span className="ml-1 text-gray-900">{(vendor as any).email || 'Not provided'}</span>
-                      </div>
-                    </div>
-
-                    <div className="mt-3 flex items-center justify-between">
-                      <span className="text-sm text-gray-500">Performance:</span>
-                      <div className="flex items-center space-x-2">
-                        <div className="flex">
-                          {[1, 2, 3, 4, 5].map((star) => (
-                            <svg
-                              key={star}
-                              className={`w-4 h-4 ${
-                                star <= ((vendor as any).performance_score || 0)
-                                  ? 'text-yellow-400'
-                                  : 'text-gray-300'
-                              }`}
-                              fill="currentColor"
-                              viewBox="0 0 20 20"
-                            >
-                              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                            </svg>
-                          ))}
-                        </div>
-                        <span className="text-sm text-gray-600">
-                          {(vendor as any).performance_score ? `${(vendor as any).performance_score}/5` : 'Not rated'}
-                        </span>
-                      </div>
-                    </div>
-                    
-                    <div className="mt-4 flex justify-end" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        onClick={() => handleEditItem(vendor, 'vendor')}
-                        className="px-3 py-1 text-blue-600 hover:text-blue-900 text-sm font-medium border border-blue-600 rounded hover:bg-blue-50 transition-colors"
-                      >
-                        Edit
-                      </button>
-                    </div>
-                  </div>
-                ))}
-
-                {filteredVendors.length === 0 && (
-                  <div className="text-center py-12">
-                    <div className="text-gray-400 mb-4">
-                      <UserPlus className="w-12 h-12 mx-auto" />
-                    </div>
-                    <p className="text-gray-500">No vendors found</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Desktop Table */}
-              <div className="hidden sm:block bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        <input
-                          type="checkbox"
-                          checked={selectedItems.size === filteredVendors.length && filteredVendors.length > 0}
-                          onChange={handleSelectAll}
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                        />
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Vendor
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Trade
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Contact
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Performance
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Status
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {filteredVendors.map((vendor) => (
-                      <tr 
-                        key={vendor.id} 
-                        className="hover:bg-gray-50 cursor-pointer transition-colors duration-150"
-                        onClick={() => handleViewItem(vendor, 'vendor')}
-                      >
-                        <td className="px-6 py-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                          <input
-                            type="checkbox"
-                            checked={selectedItems.has(vendor.id)}
-                            onChange={() => handleItemSelect(vendor.id)}
-                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                          />
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div className="flex-shrink-0 h-10 w-10">
-                              <div className="h-10 w-10 rounded-lg bg-green-100 flex items-center justify-center">
-                                <UserPlus className="h-5 w-5 text-green-600" />
-                              </div>
-                            </div>
-                            <div className="ml-4">
-                              <div className="text-sm font-medium text-gray-900">{vendor.name}</div>
-                              <div className="text-sm text-gray-500">ID: #{vendor.id}</div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                            {vendor.trade}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          <div>{vendor.phone}</div>
-                          <div className="text-gray-500">{(vendor as any).email}</div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <span className="text-sm text-gray-900 mr-2">
-                              {(vendor as any).performance_score ? `${(vendor as any).performance_score}/5` : 'Not rated'}
-                            </span>
-                            <div className="flex">
-                              {[1, 2, 3, 4, 5].map((star) => (
-                                <svg
-                                  key={star}
-                                  className={`w-4 h-4 ${
-                                    star <= ((vendor as any).performance_score || 0)
-                                      ? 'text-yellow-400'
-                                      : 'text-gray-300'
-                                  }`}
-                                  fill="currentColor"
-                                  viewBox="0 0 20 20"
-                                >
-                                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                                </svg>
-                              ))}
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            {vendor.status || 'Active'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900" onClick={(e) => e.stopPropagation()}>
-                          <div className="flex space-x-2">
-                            <button
-                              onClick={() => handleEditItem(vendor, 'vendor')}
-                              className="text-blue-600 hover:text-blue-900 text-sm font-medium"
-                            >
-                              Edit
-                            </button>
-                            <span className="text-gray-300">|</span>
-                            <span className="text-xs text-gray-500">Click row to view</span>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                    {filteredVendors.length === 0 && (
-                      <tr>
-                        <td colSpan={7} className="px-6 py-12 text-center">
-                          <div className="text-gray-400 mb-4">
-                            <UserPlus className="w-12 h-12 mx-auto" />
-                          </div>
-                          <p className="text-gray-500">No vendors found</p>
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'contracts' && (
-            <div>
-              {/* Analytics */}
-              <ContractAnalytics contracts={filteredContracts} />
-              
-              {/* Mobile Cards */}
-              <div className="sm:hidden space-y-4">
-                {filteredContracts.map((contract) => (
-                  <ContractCard
-                    key={contract.id}
-                    contract={contract}
-                    onSelect={handleItemSelect}
-                    onView={handleViewItem}
-                    onEdit={handleEditItem}
-                    selected={selectedItems.has(contract.id)}
-                  />
-                ))}
-
-                {filteredContracts.length === 0 && (
-                  <div className="text-center py-12">
-                    <div className="text-gray-400 mb-4">
-                      <FilePlus className="w-12 h-12 mx-auto" />
-                    </div>
-                    <p className="text-gray-500">No contracts found</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Desktop Table */}
-              <ContractTable
-                contracts={filteredContracts}
-                onSelect={handleItemSelect}
-                onView={handleViewItem}
-                onEdit={handleEditItem}
-                selectedItems={selectedItems}
-              />
-            </div>
-          )}
-        </div>
+        )}
       </div>
 
       {/* Modal Forms */}
       {openForm === 'project' && (
-        <div className="fixed inset-0  bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full">
             <AddForm
               title="Add New Project"
               icon={<Building className="w-6 h-6 text-blue-600" />}
@@ -2391,8 +1791,8 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
       )}
 
       {openForm === 'vendor' && (
-        <div className="fixed inset-0  bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full">
             <AddForm
               title="Add New Vendor"
               icon={<UserPlus className="w-6 h-6 text-blue-600" />}
@@ -2407,8 +1807,8 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
       )}
 
       {openForm === 'contract' && (
-        <div className="fixed inset-0 bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full">
             <AddContractForm
               onClose={() => setOpenForm(null)}
               onSuccess={() => addNotification('success', 'Contract added successfully!')}
@@ -2420,91 +1820,59 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
       )}
 
       {/* View Modals */}
-      {viewModal === 'project' && selectedItem && (
-        <div className="fixed inset-0  bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      {viewModal && selectedItem && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full p-6">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-semibold text-gray-800">Project Details</h3>
+              <h3 className="text-xl font-semibold text-gray-800">
+                {viewModal === 'project' ? 'Project' : viewModal === 'vendor' ? 'Vendor' : 'Contract'} Details
+              </h3>
               <button onClick={handleCloseViewModal} className="text-gray-400 hover:text-gray-700">
                 <X className="w-6 h-6" />
               </button>
             </div>
             <div className="space-y-4">
-              <div><span className="font-semibold">Name:</span> {selectedItem.name}</div>
-              <div><span className="font-semibold">Client:</span> {selectedItem.client_name || 'Not specified'}</div>
-              <div><span className="font-semibold">Phase:</span> {selectedItem.current_phase || 'Not set'}</div>
-              <div><span className="font-semibold">Budget:</span> ${(selectedItem.budget || 0).toLocaleString()}</div>
-              <div><span className="font-semibold">Spent:</span> ${(selectedItem.spent || 0).toLocaleString()}</div>
-              <div><span className="font-semibold">Status:</span> {(selectedItem as any).status || 'Active'}</div>
-              <div><span className="font-semibold">Start Date:</span> {(selectedItem as any).start_date || 'Not set'}</div>
-            </div>
-            <div className="mt-6 flex justify-end">
-              <button
-                onClick={() => handleEditItem(selectedItem, 'project')}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Edit Project
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {viewModal === 'vendor' && selectedItem && (
-        <div className="fixed inset-0  bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-semibold text-gray-800">Vendor Details</h3>
-              <button onClick={handleCloseViewModal} className="text-gray-400 hover:text-gray-700">
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-            <div className="space-y-4">
-              <div><span className="font-semibold">Name:</span> {selectedItem.name}</div>
-              <div><span className="font-semibold">Trade:</span> {selectedItem.trade}</div>
-              <div><span className="font-semibold">Phone:</span> {selectedItem.phone || 'Not provided'}</div>
-              <div><span className="font-semibold">Email:</span> {(selectedItem as any).email || 'Not provided'}</div>
-              <div><span className="font-semibold">Status:</span> {selectedItem.status || 'Active'}</div>
-              <div><span className="font-semibold">Performance Score:</span> {(selectedItem as any).performance_score || 'Not rated'}/5</div>
-            </div>
-            <div className="mt-6 flex justify-end">
-              <button
-                onClick={() => handleEditItem(selectedItem, 'vendor')}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Edit Vendor
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {viewModal === 'contract' && selectedItem && (
-        <div className="fixed inset-0 bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-semibold text-gray-800">Contract Details</h3>
-              <button onClick={handleCloseViewModal} className="text-gray-400 hover:text-gray-700">
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-            <div className="space-y-4">
-              <div><span className="font-semibold">Project:</span> {selectedItem.project?.name || 'Unknown Project'}</div>
-              <div><span className="font-semibold">Vendor:</span> {selectedItem.subcontractor?.name || 'Unknown Vendor'}</div>
-              {selectedItem.contract_nickname && (
-                <div><span className="font-semibold">Contract Nickname:</span> {selectedItem.contract_nickname}</div>
+              {viewModal === 'project' && (
+                <>
+                  <div><span className="font-semibold">Name:</span> {selectedItem.name}</div>
+                  <div><span className="font-semibold">Client:</span> {selectedItem.client_name || 'Not specified'}</div>
+                  <div><span className="font-semibold">Phase:</span> {selectedItem.current_phase || 'Not set'}</div>
+                  <div><span className="font-semibold">Budget:</span> ${(selectedItem.budget || 0).toLocaleString()}</div>
+                  <div><span className="font-semibold">Spent:</span> ${(selectedItem.spent || 0).toLocaleString()}</div>
+                  <div><span className="font-semibold">Status:</span> {(selectedItem as any).status || 'Active'}</div>
+                  <div><span className="font-semibold">Start Date:</span> {(selectedItem as any).start_date || 'Not set'}</div>
+                </>
               )}
-              <div><span className="font-semibold">Contract Amount:</span> ${(selectedItem.contract_amount || 0).toLocaleString()}</div>
-              <div><span className="font-semibold">Start Date:</span> {selectedItem.start_date || 'Not set'}</div>
-              <div><span className="font-semibold">End Date:</span> {selectedItem.end_date || 'Ongoing'}</div>
-              <div><span className="font-semibold">Status:</span> {selectedItem.status || 'Active'}</div>
+              {viewModal === 'vendor' && (
+                <>
+                  <div><span className="font-semibold">Name:</span> {selectedItem.name}</div>
+                  <div><span className="font-semibold">Trade:</span> {selectedItem.trade}</div>
+                  <div><span className="font-semibold">Phone:</span> {selectedItem.phone || 'Not provided'}</div>
+                  <div><span className="font-semibold">Email:</span> {(selectedItem as any).email || 'Not provided'}</div>
+                  <div><span className="font-semibold">Status:</span> {selectedItem.status || 'Active'}</div>
+                  <div><span className="font-semibold">Performance Score:</span> {(selectedItem as any).performance_score || 'Not rated'}/5</div>
+                </>
+              )}
+              {viewModal === 'contract' && (
+                <>
+                  <div><span className="font-semibold">Project:</span> {selectedItem.project?.name || 'Unknown Project'}</div>
+                  <div><span className="font-semibold">Vendor:</span> {selectedItem.subcontractor?.name || 'Unknown Vendor'}</div>
+                  {selectedItem.contract_nickname && (
+                    <div><span className="font-semibold">Contract Nickname:</span> {selectedItem.contract_nickname}</div>
+                  )}
+                  <div><span className="font-semibold">Contract Amount:</span> ${(selectedItem.contract_amount || 0).toLocaleString()}</div>
+                  <div><span className="font-semibold">Start Date:</span> {selectedItem.start_date || 'Not set'}</div>
+                  <div><span className="font-semibold">End Date:</span> {selectedItem.end_date || 'Ongoing'}</div>
+                  <div><span className="font-semibold">Status:</span> {selectedItem.status || 'Active'}</div>
+                </>
+              )}
             </div>
             <div className="mt-6 flex justify-end">
               <button
-                onClick={() => handleEditItem(selectedItem, 'contract')}
+                onClick={() => handleEditItem(selectedItem)}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
-                Edit Contract
+                Edit {viewModal === 'project' ? 'Project' : viewModal === 'vendor' ? 'Vendor' : 'Contract'}
               </button>
             </div>
           </div>
@@ -2513,8 +1881,8 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
 
       {/* Edit Modals */}
       {editModal === 'project' && selectedItem && (
-        <div className="fixed inset-0  bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full">
             <AddForm
               title="Edit Project"
               icon={<Building className="w-6 h-6 text-blue-600" />}
@@ -2536,8 +1904,8 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
       )}
 
       {editModal === 'vendor' && selectedItem && (
-        <div className="fixed inset-0  bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full">
             <AddForm
               title="Edit Vendor"
               icon={<UserPlus className="w-6 h-6 text-blue-600" />}
@@ -2558,8 +1926,8 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
       )}
 
       {editModal === 'contract' && selectedItem && (
-        <div className="fixed inset-0  bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full">
             <AddContractForm
               onClose={handleCloseEditModal}
               onSuccess={async () => {
@@ -2577,7 +1945,7 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
 
       {/* Unsaved Warning Modal */}
       {showUnsavedWarning && (
-        <div className="fixed inset-0  bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
             <div className="flex items-center gap-3 mb-4">
               <AlertCircle className="w-8 h-8 text-yellow-500" />
