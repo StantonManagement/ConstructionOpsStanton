@@ -410,23 +410,78 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
     return () => subscription.unsubscribe();
   }, []);
 
-  // Memoize calculations to prevent unnecessary recalculations
+  // Enhanced project stats with contractor data
+  const [enhancedProjects, setEnhancedProjects] = useState<any[]>([]);
+  const [statsLoading, setStatsLoading] = useState(true);
+
+  // Fetch enhanced project data with contractor stats
+  const fetchEnhancedProjectData = useCallback(async () => {
+    if (projects.length === 0) return;
+    
+    setStatsLoading(true);
+    try {
+      const enhancedData = await Promise.all(projects.map(async (project) => {
+        // Get contractors data for budget and spent calculations
+        const { data: contractorsData } = await supabase
+          .from('project_contractors')
+          .select('contract_amount, paid_to_date')
+          .eq('project_id', project.id)
+          .eq('contract_status', 'active');
+
+        const calculatedBudget = contractorsData?.reduce((sum, contract) => 
+          sum + (Number(contract.contract_amount) || 0), 0) || 0;
+        
+        const calculatedSpent = contractorsData?.reduce((sum, contract) => 
+          sum + (Number(contract.paid_to_date) || 0), 0) || 0;
+
+        return {
+          ...project,
+          calculatedBudget,
+          calculatedSpent
+        };
+      }));
+
+      setEnhancedProjects(enhancedData);
+    } catch (error) {
+      console.error('Error fetching enhanced project data:', error);
+      setEnhancedProjects(projects.map(p => ({ ...p, calculatedBudget: 0, calculatedSpent: 0 })));
+    } finally {
+      setStatsLoading(false);
+    }
+  }, [projects]);
+
+  useEffect(() => {
+    fetchEnhancedProjectData();
+  }, [fetchEnhancedProjectData]);
+
+  // Filter enhanced projects based on search query
+  const filteredEnhancedProjects = useMemo(() => {
+    if (!searchQuery.trim()) return enhancedProjects;
+    const searchLower = searchQuery.toLowerCase();
+    return enhancedProjects.filter(project =>
+      project.name.toLowerCase().includes(searchLower) ||
+      project.client_name?.toLowerCase().includes(searchLower) ||
+      project.current_phase?.toLowerCase().includes(searchLower)
+    );
+  }, [enhancedProjects, searchQuery]);
+
+  // Memoize calculations using enhanced project data
   const stats = useMemo(() => {
-    const totalProjects = filteredProjects.length;
-    const activeProjects = filteredProjects.filter(p =>
+    const totalProjects = filteredEnhancedProjects.length;
+    const activeProjects = filteredEnhancedProjects.filter(p =>
       !p.current_phase?.toLowerCase().includes('complete') &&
       !p.current_phase?.toLowerCase().includes('closed')
     ).length;
 
-    // Ensure proper number conversion and validation
-    const totalBudget = filteredProjects.reduce((sum, p) => {
-      const budget = Number(p.budget);
-      return sum + (isNaN(budget) ? 0 : budget);
+    // Use calculated budget and spent from contractor data
+    const totalBudget = filteredEnhancedProjects.reduce((sum, p) => {
+      const budget = Number(p.calculatedBudget) || 0;
+      return sum + budget;
     }, 0);
 
-    const totalSpent = filteredProjects.reduce((sum, p) => {
-      const spent = Number(p.spent);
-      return sum + (isNaN(spent) ? 0 : spent);
+    const totalSpent = filteredEnhancedProjects.reduce((sum, p) => {
+      const spent = Number(p.calculatedSpent) || 0;
+      return sum + spent;
     }, 0);
 
     const remainingBudget = totalBudget - totalSpent;
@@ -444,7 +499,7 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
       utilizationRate,
       avgProjectBudget
     };
-  }, [filteredProjects]);
+  }, [filteredEnhancedProjects]);
 
   const StatCard: React.FC<{
     title: string;
@@ -540,7 +595,7 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
               role={onSwitchToPayments ? 'button' : undefined}
               tabIndex={onSwitchToPayments ? 0 : undefined}
             >
-              🏗️ Active Projects ({projects.length})
+              🏗️ Active Projects ({enhancedProjects.length})
               {onSwitchToPayments && (
                 <span className="text-xs text-blue-600 font-medium ml-2">
                   → Click to view payments
@@ -561,16 +616,25 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
           </div>
           {error && <div className="text-red-600 mt-2">{error}</div>}
           <div className="space-y-3 max-h-96 overflow-y-auto">
-            {filteredProjects.length === 0 ? (
+            {statsLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="w-6 h-6 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                <span className="ml-3 text-gray-600">Loading project data...</span>
+              </div>
+            ) : filteredEnhancedProjects.length === 0 ? (
               <div className="text-gray-500 text-center py-8 flex flex-col items-center gap-2">
                 <span className="text-2xl">📋</span>
                 <span>{searchQuery ? 'No projects match your search' : 'No active projects'}</span>
               </div>
             ) : (
-              filteredProjects.map((project) => (
+              filteredEnhancedProjects.map((project) => (
                 <ProjectCard
                   key={project.id}
-                  project={project}
+                  project={{
+                    ...project,
+                    budget: project.calculatedBudget,
+                    spent: project.calculatedSpent
+                  }}
                   onSelect={onProjectSelect}
                 />
               ))
