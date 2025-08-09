@@ -4,28 +4,28 @@ import { Project } from '../context/DataContext';
 import { supabase } from '@/lib/supabaseClient';
 
 type NavigationProps = {
-  activeView: string;
-  onViewChange: (view: string) => void;
-  setSelectedProject?: (project: Project | null) => void;
+  activeTab: string;
+  setActiveTab: (tab: string) => void;
+  setSelectedProject: (project: Project | null) => void;
   selectedProject?: Project | null;
 };
 
 type NavButtonProps = {
   id: string;
-  activeView: string;
-  onViewChange: (view: string) => void;
+  activeTab: string;
+  setActiveTab: (tab: string) => void;
   icon: ReactNode;
   children: ReactNode;
   onClick?: () => void;
 };
 
-const NavButton: React.FC<NavButtonProps> = ({ id, activeView, onViewChange, icon, children }) => {
-  const isActive = activeView === id;
+const NavButton: React.FC<NavButtonProps> = ({ id, activeTab, setActiveTab, icon, children }) => {
+  const isActive = activeTab === id;
   
   return (
     <button
       onClick={() => {
-        onViewChange(id);
+        setActiveTab(id);
       }}
       className={`
         w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-200
@@ -44,8 +44,8 @@ const NavButton: React.FC<NavButtonProps> = ({ id, activeView, onViewChange, ico
 };
 
 // Breadcrumb component for main content area
-const Breadcrumb: React.FC<{ activeView: string; selectedProject?: Project | null }> = ({ activeView, selectedProject }) => {
-  const getViewLabel = (view: string) => {
+const Breadcrumb: React.FC<{ activeTab: string; selectedProject?: Project | null }> = ({ activeTab, selectedProject }) => {
+  const getTabLabel = (tab: string) => {
     const labels: Record<string, string> = {
       overview: 'Overview',
       payment: 'Payments',
@@ -54,14 +54,14 @@ const Breadcrumb: React.FC<{ activeView: string; selectedProject?: Project | nul
       metrics: 'Metrics',
       manage: 'Manage'
     };
-    return labels[view] || view;
+    return labels[tab] || tab;
   };
 
   return (
     <div className="flex items-center space-x-2 text-sm text-gray-500 mb-4">
       <Home className="w-4 h-4" />
       <span>/</span>
-      <span className="text-gray-900 font-medium">{getViewLabel(activeView)}</span>
+      <span className="text-gray-900 font-medium">{getTabLabel(activeTab)}</span>
       {selectedProject && (
         <>
           <span>/</span>
@@ -72,7 +72,7 @@ const Breadcrumb: React.FC<{ activeView: string; selectedProject?: Project | nul
   );
 };
 
-const Navigation: React.FC<NavigationProps> = ({ activeView, onViewChange, setSelectedProject, selectedProject }) => {
+const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab, setSelectedProject, selectedProject }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [notificationCounts, setNotificationCounts] = useState<Record<string, number>>({});
@@ -214,7 +214,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeView, onViewChange, setSe
 
       {/* Navigation sidebar */}
       <nav className={`
-        fixed top-0 left-0 h-full w-64 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out z-50
+        fixed top-0 left-0 h-full w-64 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out z-40
         ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
         <div className="flex flex-col h-full">
@@ -239,9 +239,9 @@ const Navigation: React.FC<NavigationProps> = ({ activeView, onViewChange, setSe
                 <NavButton
                   key={item.id}
                   id={item.id}
-                  activeView={activeView}
-                  onViewChange={(view) => {
-                    onViewChange(view);
+                  activeTab={activeTab}
+                  setActiveTab={(tab) => {
+                    setActiveTab(tab);
                     setIsMobileMenuOpen(false);
                   }}
                   icon={item.icon}
@@ -271,7 +271,13 @@ const Navigation: React.FC<NavigationProps> = ({ activeView, onViewChange, setSe
         </div>
       </nav>
 
-      
+      {/* Main Content Area */}
+      <div className={`
+        transition-all duration-300
+        ${isMobileMenuOpen ? 'lg:ml-64' : 'lg:ml-64'}
+      `}>
+        {/* Breadcrumb moved to individual page components if needed */}
+      </div>
     </>
   );
 };
