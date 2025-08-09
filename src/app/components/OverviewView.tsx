@@ -537,7 +537,7 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
       )}
       {onClick && (
         <div className="text-xs text-blue-600 font-medium mt-1">
-          Click to view payments →
+          Click to view projects →
         </div>
       )}
     </div>
@@ -553,9 +553,13 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
           subtitle={`${stats.activeProjects} active`}
           colorClass="bg-blue-50"
           icon="🏗️"
-          onClick={onSwitchToPayments ? () => {
-            onSwitchToPayments();
-          } : undefined}
+          onClick={() => {
+            // Navigate to projects tab
+            const params = new URLSearchParams(window.location.search);
+            params.set('tab', 'projects');
+            window.history.pushState({}, '', `${window.location.pathname}?${params.toString()}`);
+            window.dispatchEvent(new PopStateEvent('popstate'));
+          }}
         />
         <StatCard
           title="Total Budget"
