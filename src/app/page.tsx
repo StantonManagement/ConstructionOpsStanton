@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { DataProvider } from './context/DataContext';
-import ConstructionDashboard from './dashboard/ConstructionDashboard';
-import PMDashboard from './dashboard/PMDashboard';
-import AuthScreen from './dashboard/AuthScreen';
+import ConstructionDashboard from './components/ConstructionDashboard';
+import PMDashboard from './components/PMDashboard';
+import AuthScreen from './components/AuthScreen';
 import { supabase } from '@/lib/supabaseClient';
 
 // Construction-themed loading component
