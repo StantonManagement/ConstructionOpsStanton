@@ -45,7 +45,7 @@ const OverviewView: React.FC = () => {
         .select(`
           *,
           project:projects(id, name),
-          contractor:project_contractors(id, name)
+          contractor:contractors(id, name)
         `)
         .in('status', ['submitted', 'sms_sent']);
       
