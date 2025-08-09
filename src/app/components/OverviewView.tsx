@@ -251,7 +251,7 @@ const DecisionQueueCards: React.FC<{ role: string | null, setError: (msg: string
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 shadow-lg p-6 hover:shadow-xl transition-shadow duration-300">
+    <div className="bg-white rounded-2xl border-2 border-gray-300 shadow-xl p-6 hover:shadow-2xl hover:border-purple-400 transition-all duration-300">
       <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-3">
         <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center text-white">
           📋
@@ -277,11 +277,11 @@ const DecisionQueueCards: React.FC<{ role: string | null, setError: (msg: string
               <div
                 key={proj.projectName}
                 className={`group bg-gradient-to-r ${
-                  proj.highestPriority === 'urgent' ? 'from-red-50 to-red-100 hover:from-red-100 hover:to-red-200 border-red-300' :
-                  proj.highestPriority === 'high' ? 'from-orange-50 to-orange-100 hover:from-orange-100 hover:to-orange-200 border-orange-300' :
-                  proj.highestPriority === 'medium' ? 'from-yellow-50 to-yellow-100 hover:from-yellow-100 hover:to-yellow-200 border-yellow-300' :
-                  'from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 border-gray-300'
-                } rounded-2xl p-5 border-2 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer transform hover:scale-[1.01]`}
+                  proj.highestPriority === 'urgent' ? 'from-red-50 to-red-100 hover:from-red-100 hover:to-red-200 border-red-400' :
+                  proj.highestPriority === 'high' ? 'from-orange-50 to-orange-100 hover:from-orange-100 hover:to-orange-200 border-orange-400' :
+                  proj.highestPriority === 'medium' ? 'from-yellow-50 to-yellow-100 hover:from-yellow-100 hover:to-yellow-200 border-yellow-400' :
+                  'from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 border-gray-400'
+                } rounded-2xl p-5 border-2 shadow-lg hover:shadow-xl transition-all duration-200 cursor-pointer transform hover:scale-[1.02]`}
                 onClick={navigateToPMDashboard}
                 role="button"
                 tabIndex={0}
@@ -348,7 +348,7 @@ const DecisionQueueCards: React.FC<{ role: string | null, setError: (msg: string
                   return (
                     <div
                       key={app.id}
-                      className="group bg-white hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 rounded-xl p-4 border border-gray-200 hover:border-blue-300 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer transform hover:scale-[1.01]"
+                      className="group bg-white hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 rounded-xl p-4 border-2 border-gray-300 hover:border-blue-400 shadow-lg hover:shadow-xl transition-all duration-200 cursor-pointer transform hover:scale-[1.02]"
                       onClick={() => navigateToPaymentApp(app.id)}
                       role="button"
                       tabIndex={0}
@@ -560,9 +560,9 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
     onClick?: () => void;
   }> = ({ title, value, subtitle, colorClass, icon, onClick }) => (
     <div
-      className={`group ${colorClass} rounded-2xl p-6 text-center transition-all duration-300 hover:shadow-xl transform hover:scale-105 ${
-        onClick ? 'cursor-pointer hover:shadow-2xl' : ''
-      } backdrop-blur-sm border border-white/20`}
+      className={`group ${colorClass} rounded-2xl p-6 text-center transition-all duration-300 shadow-lg hover:shadow-2xl transform hover:scale-105 ${
+        onClick ? 'cursor-pointer hover:shadow-3xl' : ''
+      } backdrop-blur-sm border-2 border-white/30`}
       onClick={onClick}
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}
@@ -644,7 +644,7 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
 
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
           {/* Enhanced Projects List */}
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-lg p-6 hover:shadow-xl transition-shadow duration-300">
+          <div className="bg-white rounded-2xl border-2 border-gray-300 shadow-xl p-6 hover:shadow-2xl hover:border-blue-400 transition-all duration-300">
             <div className="flex items-center justify-between mb-6">
               <h3
                 className="text-xl font-bold text-gray-900 cursor-pointer hover:text-blue-600 transition-colors flex items-center gap-3"
@@ -711,15 +711,16 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
                 </div>
               ) : (
                 filteredEnhancedProjects.map((project) => (
-                  <ProjectCard
-                    key={project.id}
-                    project={{
-                      ...project,
-                      budget: project.calculatedBudget,
-                      spent: project.calculatedSpent
-                    }}
-                    onSelect={onProjectSelect}
-                  />
+                  <div key={project.id} className="border-2 border-gray-200 rounded-xl shadow-lg hover:shadow-xl hover:border-blue-300 transition-all duration-300">
+                    <ProjectCard
+                      project={{
+                        ...project,
+                        budget: project.calculatedBudget,
+                        spent: project.calculatedSpent
+                      }}
+                      onSelect={onProjectSelect}
+                    />
+                  </div>
                 ))
               )}
             </div>
