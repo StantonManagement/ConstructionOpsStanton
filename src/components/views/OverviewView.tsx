@@ -1,167 +1,70 @@
+
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { useData } from '../context/DataContext';
-import ProjectCard from '../../components/ProjectCard';
+import { useData } from '@/app/context/DataContext';
+import ProjectCard from '@/components/shared/ProjectCard';
 import { supabase } from '@/lib/supabaseClient';
-import { Project } from '../context/DataContext';
+import { Project } from '@/app/context/DataContext';
 
-// Types for better type safety
-interface PaymentApplication {
-  id: string;
-  status: 'needs_review' | 'submitted';
-  current_payment: number;
-  created_at: string;
-  project: { id: string, name: string } | null;
-  contractor: { id: string, name: string } | null;
-  grand_total?: number; // Added for consistency
-}
-
-interface StatusConfig {
-  color: string;
-  label: string;
-  icon: string;
-}
-
-interface OverviewViewProps {
-  onProjectSelect?: (project: Project) => void;
-  onSwitchToPayments?: () => void;
-  searchQuery?: string;
-}
-
-// Loading skeleton component
-const LoadingSkeleton: React.FC = () => (
-  <div className="space-y-4">
-    {[1, 2, 3].map((i) => (
-      <div key={i} className="border rounded-lg p-4 bg-gray-50 animate-pulse">
-        <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-        <div className="h-3 bg-gray-200 rounded w-1/2 mb-2"></div>
-        <div className="h-3 bg-gray-200 rounded w-1/4"></div>
-      </div>
-    ))}
-  </div>
-);
-
-// Extracted queue card component for better reusability
-const QueueCard: React.FC<{
-  app: PaymentApplication;
-  status: StatusConfig;
-  onReview: (id: string) => void
-}> = ({ app, status, onReview }) => (
-  <div
-    className="flex flex-col border rounded-lg p-4 sm:p-6 bg-white shadow hover:shadow-lg transition-all duration-200 group focus-within:ring-2 focus-within:ring-blue-400 cursor-pointer min-h-[120px] sm:min-h-[140px]"
-    tabIndex={0}
-    aria-label={`Review application for ${app.project?.name}`}
-    onClick={() => onReview(app.id)}
-    onKeyDown={(e) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        onReview(app.id);
-      }
-    }}
-  >
-    <div className="flex items-center gap-2 mb-3 sm:mb-4">
-      <span className={`px-2 py-1 rounded text-xs sm:text-sm font-semibold ${status.color}`}>{status.icon} {status.label}</span>
-      <span className="ml-auto text-xs sm:text-sm text-gray-500">{app.created_at ? new Date(app.created_at).toLocaleDateString() : '-'}</span>
-    </div>
-    <div className="flex items-center gap-2 font-bold text-base sm:text-lg text-blue-900 mb-2 sm:mb-3">
-      <span className="text-blue-500">🏗️</span>
-      {app.project?.name || 'Unknown Project'}
-    </div>
-    <div className="flex items-center gap-2 text-sm sm:text-base text-gray-700 mb-2 sm:mb-3">
-      <span className="text-green-600">👷</span>
-      Contractor: <span className="font-medium">{app.contractor?.name || 'Unknown'}</span>
-    </div>
-    <div className="flex items-center gap-2 text-sm sm:text-base text-gray-700 mb-4 sm:mb-6">
-      <span className="text-yellow-600">💲</span>
-      Amount:
-      <span
-        className="font-semibold text-green-700 bg-green-50 px-2 py-1 rounded cursor-help relative group-hover:bg-green-100"
-        tabIndex={0}
-        aria-label={`Amount for this application: $${(app.current_payment || app.grand_total || 0).toLocaleString()}`}
-      >
-        ${(app.current_payment || app.grand_total || 0).toLocaleString()}
-      </span>
-    </div>
-    <button
-      onClick={(e) => {
-        e.stopPropagation(); // Prevent card click
-        onReview(app.id);
-      }}
-      className="bg-blue-600 hover:bg-blue-700 text-white rounded px-4 py-3 sm:px-6 sm:py-3 font-medium transition-colors w-max self-end focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-sm sm:text-base min-h-[44px] sm:min-h-[48px]"
-      aria-label={`Go to review for ${app.project?.name}`}
-    >
-      Go to Application
-    </button>
-  </div>
-);
-
-const DecisionQueueCards: React.FC<{ role: string | null, setError: (msg: string) => void }> = ({ role, setError }) => {
-  const [queue, setQueue] = useState<PaymentApplication[]>([]);
+const OverviewView: React.FC = () => {
+  const { state } = useData();
+  const [enhancedProjects, setEnhancedProjects] = useState<Array<Project & { calculatedBudget: number; calculatedSpent: number; spent: number }>>([]);
+  const [queue, setQueue] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setLocalError] = useState<string | null>(null);
 
-  const navigateToPaymentApp = (paymentAppId: string) => {
-    window.location.href = `/payments/${paymentAppId}/verify`;
-  };
+  const fetchEnhancedProjects = useCallback(async () => {
+    try {
+      const { data: projects, error: projectsError } = await supabase.from('projects').select('*');
+      if (projectsError) throw projectsError;
 
-  const navigateToPMDashboard = () => {
-    if (role === "admin") {
-      window.location.href = "/pm-dashboard";
-    } else if (role !== null) {
-      setError("You are not authenticated for the page");
+      const { data: contractors, error: contractorsError } = await supabase.from('project_contractors').select('*');
+      if (contractorsError) throw contractorsError;
+
+      const enhanced = projects?.map(project => {
+        const projectContractors = contractors?.filter(c => c.project_id === project.id) || [];
+        const calculatedBudget = projectContractors.reduce((sum, c) => sum + (Number(c.contract_amount) || 0), 0);
+        const calculatedSpent = projectContractors.reduce((sum, c) => sum + (Number(c.paid_to_date) || 0), 0);
+        
+        return {
+          ...project,
+          calculatedBudget,
+          calculatedSpent,
+          spent: calculatedSpent
+        };
+      }) || [];
+
+      setEnhancedProjects(enhanced);
+    } catch (error) {
+      console.error('Error fetching enhanced projects:', error);
     }
-  };
+  }, []);
 
   const fetchQueue = useCallback(async () => {
     try {
-      setLocalError(null);
-      setLoading(true);
-
-      // More robust query with better error handling
       const { data, error } = await supabase
         .from('payment_applications')
         .select(`
-          id,
-          status,
-          current_payment,
-          created_at,
-          project_id,
-          contractor_id,
-          project:projects!inner(id, name),
-          contractor:contractors!inner(id, name)
+          *,
+          project:projects(id, name),
+          contractor:project_contractors(id, name)
         `)
-        .in('status', ['needs_review', 'submitted'])
-        .order('created_at', { ascending: false })
-        .limit(20);
-
-      if (error) {
-        console.error('Supabase error:', error);
-        throw new Error(`Database error: ${error.message}`);
-      }
-
-      const processedQueue = (data || []).map((item: any) => ({
-        id: item.id,
-        status: item.status,
-        current_payment: Number(item.current_payment) || 0,
-        // grand_total is removed as per the error
-        created_at: item.created_at,
-        project: item.project || { id: null, name: 'Unknown Project' },
-        contractor: item.contractor || { id: null, name: 'Unknown Contractor' },
-      }));
-
-      setQueue(processedQueue);
-    } catch (err: any) {
-      console.error('Error fetching queue:', err);
-      setLocalError(err.message || 'Failed to load decision queue');
-    } finally {
-      setLoading(false);
+        .in('status', ['submitted', 'sms_sent']);
+      
+      if (error) throw error;
+      setQueue(data || []);
+    } catch (error) {
+      console.error('Error fetching queue:', error);
+      setQueue([]);
     }
   }, []);
 
   useEffect(() => {
-    fetchQueue();
-    const interval = setInterval(fetchQueue, 30000);
-    return () => clearInterval(interval);
-  }, [fetchQueue]);
+    const loadData = async () => {
+      setLoading(true);
+      await Promise.all([fetchEnhancedProjects(), fetchQueue()]);
+      setLoading(false);
+    };
+    loadData();
+  }, [fetchEnhancedProjects, fetchQueue]);
 
   // Group queue by project and determine highest priority
   const projectQueueSummary = useMemo(() => {
@@ -189,305 +92,17 @@ const DecisionQueueCards: React.FC<{ role: string | null, setError: (msg: string
     urgent: { color: 'bg-red-100 text-red-800 border-red-300', label: 'Urgent', icon: '🚨' },
     high: { color: 'bg-orange-100 text-orange-800 border-orange-300', label: 'High', icon: '⚡' },
     medium: { color: 'bg-yellow-100 text-yellow-800 border-yellow-300', label: 'Medium', icon: '⚠️' },
-    low: { color: 'bg-gray-100 text-gray-800 border-gray-300', label: 'Low', icon: '📌' },
+    low: { color: 'bg-gray-100 text-gray-800 border-gray-300', label: 'Low', icon: '📝' }
   };
 
-  if (error) {
-    return (
-      <div className="bg-white rounded-lg border shadow-sm p-4">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">📋 Decisions Queue</h3>
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <div className="text-red-700 text-center py-4 flex flex-col items-center gap-3">
-            <span className="text-2xl">⚠️</span>
-            <div className="text-sm font-medium">{error}</div>
-            <div className="flex gap-2">
-              <button
-                onClick={fetchQueue}
-                disabled={loading}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 text-sm font-medium"
-              >
-                {loading ? 'Retrying...' : 'Retry'}
-              </button>
-              <button
-                onClick={() => setLocalError(null)}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-sm font-medium"
-              >
-                Dismiss
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="bg-white rounded-lg border shadow-sm p-4">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4">📋 Decisions Queue</h3>
-      {loading ? (
-        <LoadingSkeleton />
-      ) : projectQueueSummary.length === 0 ? (
-        <div className="text-gray-500 text-center py-8 flex flex-col items-center gap-2">
-          <span className="text-2xl">✅</span>
-          <span>No items need your attention.</span>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {projectQueueSummary.map((proj) => {
-            const badge = priorityBadge[proj.highestPriority as keyof typeof priorityBadge] || priorityBadge.medium;
-            return (
-              <div
-                key={proj.projectName}
-                className={`flex items-center justify-between border rounded-lg p-4 shadow hover:shadow-md transition-all cursor-pointer ${
-                  proj.highestPriority === 'urgent' ? 'border-red-300 bg-red-50 hover:bg-red-100' :
-                  proj.highestPriority === 'high' ? 'border-orange-300 bg-orange-50 hover:bg-orange-100' :
-                  proj.highestPriority === 'medium' ? 'border-yellow-300 bg-yellow-50 hover:bg-yellow-100' :
-                  'border-gray-200 bg-gray-50 hover:bg-gray-100'
-                }`}
-                onClick={navigateToPMDashboard}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    navigateToPMDashboard();
-                  }
-                }}
-              >
-                <div>
-                  <div className="flex items-center gap-2 font-bold text-lg text-blue-900">
-                    {proj.projectName}
-                    <span
-                      className={`ml-2 px-2 py-0.5 rounded-full text-xs font-semibold border ${badge.color}`}
-                      title={badge.label + ' Priority'}
-                    >
-                      {badge.icon} {badge.label}
-                    </span>
-                  </div>
-                  <div className="text-sm text-gray-700">{proj.count} payment{proj.count > 1 ? 's' : ''} need review</div>
-                  <div className="text-xs text-green-700 mt-1">Total: ${proj.total.toLocaleString()}</div>
-                  <div className="text-xs text-blue-600 mt-1 font-medium">Click to view details →</div>
-                </div>
-                <button
-                  className="bg-blue-600 hover:bg-blue-700 text-white rounded px-4 py-2 font-medium transition-colors"
-                  disabled={role === null}
-                  onClick={(e) => {
-                    e.stopPropagation(); // Prevent card click
-                    navigateToPMDashboard();
-                  }}
-                >
-                  {role === null ? "Checking role..." : "View All"}
-                </button>
-              </div>
-            );
-          })}
-
-          {/* Individual Payment Applications */}
-          {queue.length > 0 && (
-            <div className="mt-6">
-              <h4 className="text-sm font-semibold text-gray-700 mb-3">Individual Applications</h4>
-              <div className="space-y-3">
-                {queue.slice(0, 3).map((app) => {
-                  const statusConfig = {
-                    submitted: { color: 'bg-red-100 text-red-800', label: 'Submitted', icon: '🚨' },
-                    needs_review: { color: 'bg-yellow-100 text-yellow-800', label: 'Needs Review', icon: '⚠️' }
-                  };
-                  const status = statusConfig[app.status] || statusConfig.needs_review;
-
-                  return (
-                    <div
-                      key={app.id}
-                      className="flex items-center justify-between border rounded-lg p-3 bg-white shadow hover:shadow-md transition-all cursor-pointer"
-                      onClick={() => navigateToPaymentApp(app.id)}
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          navigateToPaymentApp(app.id);
-                        }
-                      }}
-                    >
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className={`px-2 py-1 rounded text-xs font-semibold ${status.color}`}>
-                            {status.icon} {status.label}
-                          </span>
-                          <span className="text-xs text-gray-500">
-                            {app.created_at ? new Date(app.created_at).toLocaleDateString() : '-'}
-                          </span>
-                        </div>
-                        <div className="text-sm font-medium text-gray-900">{app.project?.name || 'Unknown Project'}</div>
-                        <div className="text-xs text-gray-600">Contractor: {app.contractor?.name || 'Unknown'}</div>
-                        <div className="text-xs text-green-700 font-medium">
-                          ${(app.current_payment || app.grand_total || 0).toLocaleString()}
-                        </div>
-                      </div>
-                      <div className="text-blue-600 text-xs font-medium">Click to review →</div>
-                    </div>
-                  );
-                })}
-                {queue.length > 3 && (
-                  <div className="text-center py-2">
-                    <span className="text-xs text-gray-500">
-                      +{queue.length - 3} more applications
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-};
-
-const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchToPayments, searchQuery = '' }) => {
-  const { projects } = useData();
-  const [role, setRole] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  // Filter projects based on search query
-  const filteredProjects = useMemo(() => {
-    if (!searchQuery.trim()) return projects;
-    const searchLower = searchQuery.toLowerCase();
-    return projects.filter(project =>
-      project.name.toLowerCase().includes(searchLower) ||
-      project.client_name?.toLowerCase().includes(searchLower) ||
-      project.current_phase?.toLowerCase().includes(searchLower)
-    );
-  }, [projects, searchQuery]);
-
-  useEffect(() => {
-    const getRole = async () => {
-      try {
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        console.log("Session:", session, "Error:", sessionError);
-
-        if (sessionError) {
-          console.error("Session error:", sessionError);
-          setRole("unknown");
-          return;
-        }
-
-        if (session?.user) {
-          const { data, error } = await supabase
-            .from("users")
-            .select("role")
-            .eq("uuid", session.user.id)
-            .single();
-
-          console.log("User role fetch:", data, error);
-
-          if (error) {
-            console.error("Role fetch error:", error);
-            // If user doesn't exist in users table, assume they need to be set up
-            setRole("pending");
-          } else {
-            setRole(data?.role || "user");
-          }
-        } else {
-          setRole("unauthenticated");
-        }
-      } catch (err) {
-        console.error("Error fetching user role:", err);
-        setRole("unknown");
-      }
-    };
-
-    getRole();
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        getRole();
-      } else if (event === 'SIGNED_OUT') {
-        setRole("unauthenticated");
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  // Enhanced project stats with contractor data
-  const [enhancedProjects, setEnhancedProjects] = useState<any[]>([]);
-  const [statsLoading, setStatsLoading] = useState(true);
-
-  // Fetch enhanced project data with contractor stats
-  const fetchEnhancedProjectData = useCallback(async () => {
-    if (projects.length === 0) return;
-    
-    setStatsLoading(true);
-    try {
-      const enhancedData = await Promise.all(projects.map(async (project) => {
-        // Get contractors data for budget and spent calculations
-        const { data: contractorsData } = await supabase
-          .from('project_contractors')
-          .select('contract_amount, paid_to_date')
-          .eq('project_id', project.id)
-          .eq('contract_status', 'active');
-
-        const calculatedBudget = contractorsData?.reduce((sum, contract) => 
-          sum + (Number(contract.contract_amount) || 0), 0) || 0;
-        
-        const calculatedSpent = contractorsData?.reduce((sum, contract) => 
-          sum + (Number(contract.paid_to_date) || 0), 0) || 0;
-
-        return {
-          ...project,
-          calculatedBudget,
-          calculatedSpent
-        };
-      }));
-
-      setEnhancedProjects(enhancedData);
-    } catch (error) {
-      console.error('Error fetching enhanced project data:', error);
-      setEnhancedProjects(projects.map(p => ({ ...p, calculatedBudget: 0, calculatedSpent: 0 })));
-    } finally {
-      setStatsLoading(false);
-    }
-  }, [projects]);
-
-  useEffect(() => {
-    fetchEnhancedProjectData();
-  }, [fetchEnhancedProjectData]);
-
-  // Filter enhanced projects based on search query
-  const filteredEnhancedProjects = useMemo(() => {
-    if (!searchQuery.trim()) return enhancedProjects;
-    const searchLower = searchQuery.toLowerCase();
-    return enhancedProjects.filter(project =>
-      project.name.toLowerCase().includes(searchLower) ||
-      project.client_name?.toLowerCase().includes(searchLower) ||
-      project.current_phase?.toLowerCase().includes(searchLower)
-    );
-  }, [enhancedProjects, searchQuery]);
-
-  // Memoize calculations using enhanced project data
-  const stats = useMemo(() => {
-    const totalProjects = filteredEnhancedProjects.length;
-    const activeProjects = filteredEnhancedProjects.filter(p =>
-      !p.current_phase?.toLowerCase().includes('complete') &&
-      !p.current_phase?.toLowerCase().includes('closed')
-    ).length;
-
-    // Use calculated budget and spent from contractor data
-    const totalBudget = filteredEnhancedProjects.reduce((sum, p) => {
-      const budget = Number(p.calculatedBudget) || 0;
-      return sum + budget;
-    }, 0);
-
-    const totalSpent = filteredEnhancedProjects.reduce((sum, p) => {
-      const spent = Number(p.calculatedSpent) || 0;
-      return sum + spent;
-    }, 0);
-
+  // Calculate overall project statistics
+  const projectStats = useMemo(() => {
+    const totalProjects = enhancedProjects.length;
+    const activeProjects = enhancedProjects.filter(p => p.current_phase !== 'completed').length;
+    const totalBudget = enhancedProjects.reduce((sum, p) => sum + (p.calculatedBudget || p.budget || 0), 0);
+    const totalSpent = enhancedProjects.reduce((sum, p) => sum + (p.calculatedSpent || 0), 0);
     const remainingBudget = totalBudget - totalSpent;
-    const utilizationRate = totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100 * 10) / 10 : 0;
-
-    // Calculate average project budget
+    const utilizationRate = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0;
     const avgProjectBudget = totalProjects > 0 ? Math.round(totalBudget / totalProjects) : 0;
 
     return {
@@ -499,160 +114,126 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
       utilizationRate,
       avgProjectBudget
     };
-  }, [filteredEnhancedProjects]);
+  }, [enhancedProjects]);
 
-  const StatCard: React.FC<{
-    title: string;
-    value: string | number;
-    subtitle?: string;
-    colorClass: string;
-    icon?: string;
-    onClick?: () => void;
-  }> = ({ title, value, subtitle, colorClass, icon, onClick }) => (
-    <div
-      className={`${colorClass} rounded-lg p-4 text-center transition-transform hover:scale-105 ${
-        onClick ? 'cursor-pointer hover:shadow-md' : ''
-      }`}
-      onClick={onClick}
-      role={onClick ? 'button' : undefined}
-      tabIndex={onClick ? 0 : undefined}
-    >
-      <div className="flex items-center justify-center gap-2 mb-1">
-        {icon && <span className="text-lg">{icon}</span>}
-        <div className={`text-2xl font-bold ${colorClass.includes('blue') ? 'text-blue-700' :
-                                           colorClass.includes('green') ? 'text-green-700' :
-                                           colorClass.includes('yellow') ? 'text-yellow-700' :
-                                           'text-red-700'}`}>
-          {value}
+  if (loading) {
+    return (
+      <div className="p-6 space-y-6">
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="h-24 bg-gray-200 rounded"></div>
+            ))}
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="h-48 bg-gray-200 rounded"></div>
+            ))}
+          </div>
         </div>
       </div>
-      <div className={`text-sm font-medium ${colorClass.includes('blue') ? 'text-blue-900' :
-                                            colorClass.includes('green') ? 'text-green-900' :
-                                            colorClass.includes('yellow') ? 'text-yellow-900' :
-                                            'text-red-900'}`}>
-        {title}
-      </div>
-      {subtitle && (
-        <div className="text-xs opacity-75 mt-1">{subtitle}</div>
-      )}
-      {onClick && (
-        <div className="text-xs text-blue-600 font-medium mt-1">
-          Click to view payments →
-        </div>
-      )}
-    </div>
-  );
+    );
+  }
 
   return (
-    <div className="space-y-8">
-      {/* Enhanced Stats Bar */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
-        <StatCard
-          title="Total Projects"
-          value={stats.totalProjects}
-          subtitle={`${stats.activeProjects} active`}
-          colorClass="bg-blue-50"
-          icon="🏗️"
-          onClick={onSwitchToPayments ? () => {
-            onSwitchToPayments();
-          } : undefined}
-        />
-        <StatCard
-          title="Total Budget"
-          value={`$${stats.totalBudget.toLocaleString()}`}
-          subtitle={`Avg: $${stats.avgProjectBudget.toLocaleString()}`}
-          colorClass="bg-green-50"
-          icon="💰"
-        />
-        <StatCard
-          title="Total Spent"
-          value={`$${stats.totalSpent.toLocaleString()}`}
-          subtitle={`${stats.utilizationRate}% utilized`}
-          colorClass={stats.utilizationRate > 90 ? "bg-red-50" : stats.utilizationRate > 75 ? "bg-yellow-50" : "bg-green-50"}
-          icon="💸"
-        />
-        <StatCard
-          title="Remaining Budget"
-          value={`$${stats.remainingBudget.toLocaleString()}`}
-          subtitle={stats.remainingBudget < 0 ? "Over budget!" : "Available"}
-          colorClass={stats.remainingBudget >= 0 ? "bg-green-50" : "bg-red-50"}
-          icon={stats.remainingBudget >= 0 ? "✅" : "⚠️"}
-        />
+    <div className="p-6 space-y-6">
+      <div className="mb-8">
+        <h2 className="text-3xl font-bold text-gray-900 mb-2">Project Overview</h2>
+        <p className="text-gray-600">Monitor your construction projects and financial performance</p>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
-        {/* Enhanced Projects List */}
-        <div className="bg-white rounded-lg border shadow-sm p-4">
-          <div className="flex items-center justify-between mb-4">
-            <h3
-              className="text-lg font-semibold text-gray-900 cursor-pointer hover:text-blue-600 transition-colors"
-              onClick={() => {
-                // Navigate to projects tab
-                const params = new URLSearchParams(window.location.search);
-                params.set('tab', 'projects');
-                window.history.pushState({}, '', `${window.location.pathname}?${params.toString()}`);
-                window.dispatchEvent(new PopStateEvent('popstate'));
-              }}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  const params = new URLSearchParams(window.location.search);
-                  params.set('tab', 'projects');
-                  window.history.pushState({}, '', `${window.location.pathname}?${params.toString()}`);
-                  window.dispatchEvent(new PopStateEvent('popstate'));
-                }
-              }}
-            >
-              🏗️ Active Projects ({enhancedProjects.length})
-              <span className="text-xs text-blue-600 font-medium ml-2">
-                → Click to view all projects
-              </span>
-            </h3>
-            {projects.length > 5 && (
-              <button className="text-blue-600 hover:text-blue-800 text-sm font-medium" onClick={() => {
-                if (role === "admin") {
-                  window.location.href = "/pm-dashboard";
-                } else {
-                  setError("You are not authenticated for the page");
-                }
-              }}>
-                View All
-              </button>
-            )}
-          </div>
-          {error && <div className="text-red-600 mt-2">{error}</div>}
-          <div className="space-y-3 max-h-96 overflow-y-auto">
-            {statsLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="w-6 h-6 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                <span className="ml-3 text-gray-600">Loading project data...</span>
-              </div>
-            ) : filteredEnhancedProjects.length === 0 ? (
-              <div className="text-gray-500 text-center py-8 flex flex-col items-center gap-2">
-                <span className="text-2xl">📋</span>
-                <span>{searchQuery ? 'No projects match your search' : 'No active projects'}</span>
-              </div>
-            ) : (
-              filteredEnhancedProjects.map((project) => (
-                <ProjectCard
-                  key={project.id}
-                  project={{
-                    ...project,
-                    budget: project.calculatedBudget,
-                    spent: project.calculatedSpent
-                  }}
-                  onSelect={onProjectSelect}
-                />
-              ))
-            )}
+      {/* Key Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Total Projects</p>
+              <p className="text-2xl font-bold text-gray-900">{projectStats.totalProjects}</p>
+            </div>
+            <div className="h-12 w-12 bg-blue-100 rounded-lg flex items-center justify-center">
+              <span className="text-blue-600 text-xl">🏗️</span>
+            </div>
           </div>
         </div>
 
-        {/* Decisions Queue Cards */}
-        <DecisionQueueCards role={role} setError={setError} />
+        <div 
+          className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 cursor-pointer hover:bg-gray-50 transition-colors"
+          onClick={() => window.dispatchEvent(new CustomEvent('navigate-to', { detail: 'projects' }))}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Active Projects</p>
+              <p className="text-2xl font-bold text-gray-900">{projectStats.activeProjects}</p>
+            </div>
+            <div className="h-12 w-12 bg-green-100 rounded-lg flex items-center justify-center">
+              <span className="text-green-600 text-xl">⚡</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Total Budget</p>
+              <p className="text-2xl font-bold text-gray-900">${(projectStats.totalBudget / 1000000).toFixed(1)}M</p>
+            </div>
+            <div className="h-12 w-12 bg-yellow-100 rounded-lg flex items-center justify-center">
+              <span className="text-yellow-600 text-xl">💰</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Utilization Rate</p>
+              <p className="text-2xl font-bold text-gray-900">{Math.round(projectStats.utilizationRate)}%</p>
+            </div>
+            <div className="h-12 w-12 bg-purple-100 rounded-lg flex items-center justify-center">
+              <span className="text-purple-600 text-xl">📊</span>
+            </div>
+          </div>
+        </div>
       </div>
+
+      {/* Projects Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {enhancedProjects.map((project) => (
+          <ProjectCard
+            key={project.id}
+            project={project}
+            onSelect={() => window.dispatchEvent(new CustomEvent('navigate-to', { detail: 'projects' }))}
+          />
+        ))}
+      </div>
+
+      {/* Payment Queue Summary */}
+      {projectQueueSummary.length > 0 && (
+        <div className="mt-8">
+          <h3 className="text-xl font-semibold text-gray-900 mb-4">Pending Payment Applications</h3>
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+            <div className="divide-y divide-gray-200">
+              {projectQueueSummary.map((summary, index) => (
+                <div key={index} className="p-4 hover:bg-gray-50">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium border ${priorityBadge[summary.highestPriority as keyof typeof priorityBadge]?.color}`}>
+                        {priorityBadge[summary.highestPriority as keyof typeof priorityBadge]?.icon} {priorityBadge[summary.highestPriority as keyof typeof priorityBadge]?.label}
+                      </span>
+                      <h4 className="font-medium text-gray-900">{summary.projectName}</h4>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-medium text-gray-900">{summary.count} applications</p>
+                      <p className="text-sm text-gray-600">${summary.total.toLocaleString()}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
