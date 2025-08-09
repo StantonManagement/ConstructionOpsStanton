@@ -3,7 +3,7 @@
 
 import React, { useState } from 'react';
 import { useData } from '../context/DataContext';
-import OverviewView from '../../components/views/OverviewView';
+import OverviewView from './OverviewView';
 import SubcontractorsView from './SubcontractorsView';
 import ManageView from './ManageView';
 import PaymentProcessingView from './PaymentProcessingView';
