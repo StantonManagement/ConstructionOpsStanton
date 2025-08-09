@@ -4,28 +4,28 @@ import { Project } from '../context/DataContext';
 import { supabase } from '@/lib/supabaseClient';
 
 type NavigationProps = {
-  activeTab: string;
-  setActiveTab: (tab: string) => void;
-  setSelectedProject: (project: Project | null) => void;
+  activeView: string;
+  onViewChange: (view: string) => void;
+  setSelectedProject?: (project: Project | null) => void;
   selectedProject?: Project | null;
 };
 
 type NavButtonProps = {
   id: string;
-  activeTab: string;
-  setActiveTab: (tab: string) => void;
+  activeView: string;
+  onViewChange: (view: string) => void;
   icon: ReactNode;
   children: ReactNode;
   onClick?: () => void;
 };
 
-const NavButton: React.FC<NavButtonProps> = ({ id, activeTab, setActiveTab, icon, children }) => {
-  const isActive = activeTab === id;
+const NavButton: React.FC<NavButtonProps> = ({ id, activeView, onViewChange, icon, children }) => {
+  const isActive = activeView === id;
   
   return (
     <button
       onClick={() => {
-        setActiveTab(id);
+        onViewChange(id);
       }}
       className={`
         w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-200
@@ -44,8 +44,8 @@ const NavButton: React.FC<NavButtonProps> = ({ id, activeTab, setActiveTab, icon
 };
 
 // Breadcrumb component for main content area
-const Breadcrumb: React.FC<{ activeTab: string; selectedProject?: Project | null }> = ({ activeTab, selectedProject }) => {
-  const getTabLabel = (tab: string) => {
+const Breadcrumb: React.FC<{ activeView: string; selectedProject?: Project | null }> = ({ activeView, selectedProject }) => {
+  const getViewLabel = (view: string) => {
     const labels: Record<string, string> = {
       overview: 'Overview',
       payment: 'Payments',
@@ -54,14 +54,14 @@ const Breadcrumb: React.FC<{ activeTab: string; selectedProject?: Project | null
       metrics: 'Metrics',
       manage: 'Manage'
     };
-    return labels[tab] || tab;
+    return labels[view] || view;
   };
 
   return (
     <div className="flex items-center space-x-2 text-sm text-gray-500 mb-4">
       <Home className="w-4 h-4" />
       <span>/</span>
-      <span className="text-gray-900 font-medium">{getTabLabel(activeTab)}</span>
+      <span className="text-gray-900 font-medium">{getViewLabel(activeView)}</span>
       {selectedProject && (
         <>
           <span>/</span>
@@ -72,7 +72,7 @@ const Breadcrumb: React.FC<{ activeTab: string; selectedProject?: Project | null
   );
 };
 
-const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab, setSelectedProject, selectedProject }) => {
+const Navigation: React.FC<NavigationProps> = ({ activeView, onViewChange, setSelectedProject, selectedProject }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [notificationCounts, setNotificationCounts] = useState<Record<string, number>>({});
@@ -239,9 +239,9 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab, setSel
                 <NavButton
                   key={item.id}
                   id={item.id}
-                  activeTab={activeTab}
-                  setActiveTab={(tab) => {
-                    setActiveTab(tab);
+                  activeView={activeView}
+                  onViewChange={(view) => {
+                    onViewChange(view);
                     setIsMobileMenuOpen(false);
                   }}
                   icon={item.icon}
