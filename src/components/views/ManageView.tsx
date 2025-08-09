@@ -177,8 +177,11 @@ const ManageView: React.FC = () => {
 
   const filteredContractors = useMemo(() => {
     return state.contractors.filter(contractor => {
-      const matchesSearch = contractor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          contractor.trade.toLowerCase().includes(searchTerm.toLowerCase());
+      const name = contractor.name || '';
+      const trade = contractor.trade || '';
+      
+      const matchesSearch = name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          trade.toLowerCase().includes(searchTerm.toLowerCase());
       return matchesSearch;
     });
   }, [state.contractors, searchTerm]);
