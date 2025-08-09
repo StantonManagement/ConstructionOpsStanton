@@ -214,7 +214,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeView, onViewChange, setSe
 
       {/* Navigation sidebar */}
       <nav className={`
-        fixed top-0 left-0 h-full w-64 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out z-40
+        fixed top-0 left-0 h-full w-64 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out z-50
         ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
         <div className="flex flex-col h-full">
@@ -271,13 +271,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeView, onViewChange, setSe
         </div>
       </nav>
 
-      {/* Main Content Area */}
-      <div className={`
-        transition-all duration-300
-        ${isMobileMenuOpen ? 'lg:ml-64' : 'lg:ml-64'}
-      `}>
-        {/* Breadcrumb moved to individual page components if needed */}
-      </div>
+      
     </>
   );
 };

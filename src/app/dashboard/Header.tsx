@@ -64,7 +64,7 @@ const Header: React.FC<HeaderProps> = ({ onShowProfile, onLogout, userData, onSe
   // Fetch notifications from database
   const fetchNotifications = useCallback(async () => {
     if (!userData?.name) return; // Don't fetch if no user data
-    
+
     setIsLoadingNotifications(true);
     try {
       // Get current user's ID
@@ -113,7 +113,7 @@ const Header: React.FC<HeaderProps> = ({ onShowProfile, onLogout, userData, onSe
   const getTimeAgo = (date: Date): string => {
     const now = new Date();
     const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-    
+
     if (diffInSeconds < 60) return 'Just now';
     if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
     if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
@@ -441,7 +441,7 @@ const Header: React.FC<HeaderProps> = ({ onShowProfile, onLogout, userData, onSe
               <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50" role="menu" aria-label="User menu">
                 <div className="px-4 py-3 border-b border-gray-100">
                   <p className="text-sm font-medium text-gray-900">{userData?.name || 'User'}</p>
-                  <p className="text-xs text-gray-500">{userData?.email}</p>
+                  <p className="text-sm text-gray-500">{userData?.email}</p>
                 </div>
                 <div className="py-1">
                   <button

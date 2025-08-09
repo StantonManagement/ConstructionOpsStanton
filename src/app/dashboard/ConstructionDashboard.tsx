@@ -39,7 +39,7 @@ export default function ConstructionDashboard() {
     <div className="min-h-screen bg-gray-50">
       <Header />
       <Navigation activeView={activeView} onViewChange={setActiveView} />
-      <main className="container mx-auto px-4 py-6">
+      <main className="lg:ml-64 container mx-auto px-4 py-6">
         {renderView()}
       </main>
     </div>
