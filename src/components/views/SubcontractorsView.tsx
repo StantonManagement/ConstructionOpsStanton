@@ -1,22 +1,21 @@
-
 import React, { useState, useMemo } from 'react';
 import { Search, Filter, Phone, Mail, MapPin, Calendar, CheckCircle, XCircle, AlertCircle, UserPlus } from 'lucide-react';
-import { useData } from '@/app/context/DataContext';
+import { useData, Subcontractor } from '@/app/context/DataContext';
 import { supabase } from '@/lib/supabaseClient';
 import { sendSMS } from '@/lib/sms';
 
 // Define Subcontractor type locally since it's not in the main types
-interface Subcontractor {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  trade: string;
-  project_id?: string;
-  contract_amount?: number;
-  paid_to_date?: number;
-  status?: string;
-}
+// interface Subcontractor {
+//   id: string;
+//   name: string;
+//   email: string;
+//   phone: string;
+//   trade: string;
+//   project_id?: string;
+//   contract_amount?: number;
+//   paid_to_date?: number;
+//   status?: string;
+// }
 
 const SubcontractorsView: React.FC = () => {
   const { state } = useData();
@@ -37,13 +36,13 @@ const SubcontractorsView: React.FC = () => {
       const name = sub.name || '';
       const trade = sub.trade || '';
       const email = sub.email || '';
-      
+
       const matchesSearch = name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            trade.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            email.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesTrade = filterTrade === 'all' || trade === filterTrade;
       const matchesStatus = filterStatus === 'all' || sub.status === filterStatus;
-      
+
       return matchesSearch && matchesTrade && matchesStatus;
     });
   }, [subcontractors, searchTerm, filterTrade, filterStatus]);

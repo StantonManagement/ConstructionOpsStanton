@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useData } from '@/app/context/DataContext';
 import ProjectCard from '@/components/shared/ProjectCard';
@@ -23,7 +22,7 @@ const OverviewView: React.FC = () => {
         const projectContractors = contractors?.filter(c => c.project_id === project.id) || [];
         const calculatedBudget = projectContractors.reduce((sum, c) => sum + (Number(c.contract_amount) || 0), 0);
         const calculatedSpent = projectContractors.reduce((sum, c) => sum + (Number(c.paid_to_date) || 0), 0);
-        
+
         return {
           ...project,
           calculatedBudget,
@@ -48,7 +47,7 @@ const OverviewView: React.FC = () => {
           contractor:contractors(id, name)
         `)
         .in('status', ['submitted', 'sms_sent']);
-      
+
       if (error) throw error;
       setQueue(data || []);
     } catch (error) {
@@ -157,7 +156,7 @@ const OverviewView: React.FC = () => {
           </div>
         </div>
 
-        <div 
+        <div
           className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 cursor-pointer hover:bg-gray-50 transition-colors"
           onClick={() => window.dispatchEvent(new CustomEvent('navigate-to', { detail: 'projects' }))}
         >

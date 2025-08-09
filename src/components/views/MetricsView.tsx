@@ -1,4 +1,3 @@
-
 import React, { useMemo } from 'react';
 import { useData } from '@/app/context/DataContext';
 import { TrendingUp, TrendingDown, DollarSign, Calendar, Users, Building } from 'lucide-react';
@@ -15,10 +14,10 @@ const MetricsView: React.FC = () => {
     const totalProjects = projects.length;
     const activeProjects = projects.filter(p => p.current_phase === 'active').length;
     const completedProjects = projects.filter(p => p.current_phase === 'completed').length;
-    
+
     // Calculate budget metrics
     const totalBudget = projects.reduce((sum, p) => sum + (p.budget || 0), 0);
-    
+
     // Calculate payment metrics
     const totalPayments = paymentApplications.reduce((sum, p) => sum + (p.total_amount || 0), 0);
     const pendingPayments = paymentApplications.filter(p => p.status === 'pending').length;
@@ -180,13 +179,13 @@ const MetricsView: React.FC = () => {
                 <span className="font-semibold">{metrics.budget.utilization}%</span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2">
-                <div 
-                  className="bg-blue-600 h-2 rounded-full" 
+                <div
+                  className="bg-blue-600 h-2 rounded-full"
                   style={{ width: `${metrics.budget.utilization}%` }}
                 />
               </div>
             </div>
-            
+
             <div className="pt-4 space-y-2">
               <div className="flex justify-between items-center text-sm">
                 <span className="text-gray-600">Allocated Budget</span>

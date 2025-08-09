@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useData, Project } from '@/app/context/DataContext';
 import { supabase } from '@/lib/supabaseClient';
@@ -22,7 +21,7 @@ const PaymentProcessingView: React.FC = () => {
         .from('payment_applications')
         .select('*')
         .eq('project_id', projectId);
-      
+
       if (error) throw error;
       setPaymentApplications(data || []);
     } catch (error) {
