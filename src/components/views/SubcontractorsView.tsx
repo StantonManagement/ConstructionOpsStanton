@@ -34,10 +34,14 @@ const SubcontractorsView: React.FC = () => {
 
   const filteredSubcontractors = useMemo(() => {
     return subcontractors.filter(sub => {
-      const matchesSearch = sub.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           sub.trade.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           sub.email.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesTrade = filterTrade === 'all' || sub.trade === filterTrade;
+      const name = sub.name || '';
+      const trade = sub.trade || '';
+      const email = sub.email || '';
+      
+      const matchesSearch = name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           trade.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           email.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesTrade = filterTrade === 'all' || trade === filterTrade;
       const matchesStatus = filterStatus === 'all' || sub.status === filterStatus;
       
       return matchesSearch && matchesTrade && matchesStatus;
@@ -45,7 +49,7 @@ const SubcontractorsView: React.FC = () => {
   }, [subcontractors, searchTerm, filterTrade, filterStatus]);
 
   const uniqueTrades = useMemo(() => {
-    return Array.from(new Set(subcontractors.map(sub => sub.trade)));
+    return Array.from(new Set(subcontractors.map(sub => sub.trade || 'Unknown').filter(trade => trade !== 'Unknown')));
   }, [subcontractors]);
 
   const handleSendMessage = async (subcontractor: Subcontractor) => {
