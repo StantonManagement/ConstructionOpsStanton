@@ -68,7 +68,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
           .select('id, status')
           .eq('project_id', project.id);
 
-        // Get total budget and spent
+        // Get total budget from active contracts
         const { data: budgetData } = await supabase
           .from('project_contractors')
           .select('contract_amount, paid_to_date')
@@ -78,8 +78,15 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
         const totalBudget = budgetData?.reduce((sum: number, contract: any) => 
           sum + (Number(contract.contract_amount) || 0), 0) || 0;
         
-        const totalSpent = budgetData?.reduce((sum: number, contract: any) => 
-          sum + (Number(contract.paid_to_date) || 0), 0) || 0;
+        // Calculate actual spent from approved payment applications only
+        const { data: approvedPayments } = await supabase
+          .from('payment_applications')
+          .select('current_payment')
+          .eq('project_id', project.id)
+          .eq('status', 'approved');
+
+        const totalSpent = approvedPayments?.reduce((sum: number, payment: any) => 
+          sum + (Number(payment.current_payment) || 0), 0) || 0;
 
         const activePaymentApps = paymentAppsData?.filter((app: any) => 
           ['submitted', 'needs_review', 'approved'].includes(app.status)).length || 0;

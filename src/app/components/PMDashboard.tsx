@@ -297,8 +297,16 @@ function ProjectOverview({ project, onCreatePaymentApps, onStatsPaymentAppClick 
           const totalBudget = contractors?.reduce((sum: number, c: any) => 
             sum + (Number(c.contract_amount) || 0), 0
           ) || 0;
-          const totalSpent = contractors?.reduce((sum: number, c: any) => 
-            sum + (Number(c.paid_to_date) || 0), 0
+          
+          // Calculate actual spent from approved payment applications
+          const { data: approvedPayments } = await supabase
+            .from('payment_applications')
+            .select('current_payment')
+            .eq('project_id', project.id)
+            .eq('status', 'approved');
+
+          const totalSpent = approvedPayments?.reduce((sum: number, payment: any) => 
+            sum + (Number(payment.current_payment) || 0), 0
           ) || 0;
 
           setProjectStats({

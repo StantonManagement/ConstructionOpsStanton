@@ -195,8 +195,13 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
 
         <div className="bg-white rounded-lg shadow-sm p-4 border flex items-center justify-between cursor-pointer" onClick={onSwitchToPayments}>
           <div>
-            <div className="text-sm text-gray-500 font-medium">Total Revenue</div>
-            <div className="text-2xl font-bold">$1,234.56</div> {/* Placeholder */}
+            <div className="text-sm text-gray-500 font-medium">Total Approved</div>
+            <div className="text-2xl font-bold">
+              ${projects.reduce((sum, project) => {
+                // This would need real approved payment data - placeholder for now
+                return sum + (project.spent || 0);
+              }, 0).toLocaleString()}
+            </div>
           </div>
           <div className="bg-purple-100 rounded-full p-3">
             <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m0 0h10m-3.5-6a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM4.5 19a2.5 2.5 0 005 0h-5z"></path></svg>

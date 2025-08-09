@@ -76,21 +76,58 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     // Update project budget - add current payment to spent amount
     if (updatedApp.current_payment) {
-      const currentSpent = updatedApp.project.spent || 0;
-      const newSpentAmount = currentSpent + updatedApp.current_payment;
-      
-      const { error: budgetUpdateError } = await supabase
-        .from('projects')
-        .update({
-          spent: newSpentAmount
-        })
-        .eq('id', updatedApp.project_id);
+      // Calculate total spent from all approved payment applications for this project
+      const { data: approvedPayments, error: paymentsFetchError } = await supabase
+        .from('payment_applications')
+        .select('current_payment')
+        .eq('project_id', updatedApp.project_id)
+        .eq('status', 'approved');
 
-      if (budgetUpdateError) {
-        console.error('Error updating project budget:', budgetUpdateError);
-        // Don't fail the approval if budget update fails, but log it
+      if (paymentsFetchError) {
+        console.error('Error fetching approved payments:', paymentsFetchError);
       } else {
-        console.log(`Updated project ${updatedApp.project_id} spent amount: ${currentSpent} + ${updatedApp.current_payment} = ${newSpentAmount}`);
+        const totalSpent = approvedPayments.reduce((sum, payment) => sum + (payment.current_payment || 0), 0);
+        
+        const { error: budgetUpdateError } = await supabase
+          .from('projects')
+          .update({
+            spent: totalSpent
+          })
+          .eq('id', updatedApp.project_id);
+
+        if (budgetUpdateError) {
+          console.error('Error updating project budget:', budgetUpdateError);
+          // Don't fail the approval if budget update fails, but log it
+        } else {
+          console.log(`Updated project ${updatedApp.project_id} total spent amount: ${totalSpent}`);
+        }
+      }
+
+      // Also update the contractor's paid_to_date
+      const { data: contractorPayments, error: contractorPaymentsError } = await supabase
+        .from('payment_applications')
+        .select('current_payment')
+        .eq('project_id', updatedApp.project_id)
+        .eq('contractor_id', updatedApp.contractor_id)
+        .eq('status', 'approved');
+
+      if (!contractorPaymentsError && contractorPayments) {
+        const contractorTotalPaid = contractorPayments.reduce((sum, payment) => sum + (payment.current_payment || 0), 0);
+        
+        // Update the project_contractors table with the new paid_to_date
+        const { error: contractorUpdateError } = await supabase
+          .from('project_contractors')
+          .update({
+            paid_to_date: contractorTotalPaid
+          })
+          .eq('project_id', updatedApp.project_id)
+          .eq('contractor_id', updatedApp.contractor_id);
+
+        if (contractorUpdateError) {
+          console.error('Error updating contractor paid_to_date:', contractorUpdateError);
+        } else {
+          console.log(`Updated contractor ${updatedApp.contractor_id} paid_to_date: ${contractorTotalPaid}`);
+        }
       }
     }
 
