@@ -366,21 +366,21 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
 
       {/* Add Request Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg w-full max-w-md mx-4 max-h-[90vh] overflow-hidden">
-            <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200">
-              <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Add Daily Log Request</h2>
+        <div className="fixed inset-0  bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-md w-full">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h2 className="text-xl font-semibold text-gray-900">Add Daily Log Request</h2>
               <button
                 onClick={() => setShowAddModal(false)}
-                className="text-gray-400 hover:text-gray-600 p-1"
+                className="text-gray-400 hover:text-gray-600"
               >
-                <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
             
-            <div className="p-4 sm:p-6 space-y-4 overflow-y-auto max-h-[calc(90vh-140px)]">
+            <div className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Project *</label>
                 <select
@@ -389,7 +389,7 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
                     const project = projects.find(p => p.id === Number(e.target.value));
                     setSelectedProject(project);
                   }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                 >
                   <option value="">Select a project</option>
                   {projects.map(project => (
@@ -402,14 +402,14 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">PM Phone Number *</label>
-                <input
-                  type="tel"
+                  <input
+                    type="tel"
                   value={pmPhoneNumber}
                   onChange={(e) => {
                     setPmPhoneNumber(e.target.value);
                     if (phoneError) setPhoneError('');
                   }}
-                  className={`w-full px-3 py-2 border rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base ${
+                  className={`w-full px-3 py-2 border rounded-md focus:ring-blue-500 focus:border-blue-500 ${
                     phoneError ? 'border-red-300' : 'border-gray-300'
                   }`}
                   placeholder="+1234567890"
@@ -425,7 +425,7 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
                   type="time"
                   value={requestTime}
                   onChange={(e) => setRequestTime(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                 />
                 <p className="text-xs text-gray-500 mt-1">
                   Select the time when the system should send daily SMS requests (EST timezone)
@@ -433,24 +433,24 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
               </div>
 
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                <p className="text-xs sm:text-sm text-blue-800">
+                <p className="text-sm text-blue-800">
                   <strong>How it works:</strong> The system will automatically send SMS requests to the PM daily at {requestTime} EST, 
                   asking for notes about each active project. It will retry every 30 minutes until notes are received.
                 </p>
               </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2 sm:gap-3 p-4 sm:p-6 border-t border-gray-200">
+            <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200">
               <button
                 onClick={() => setShowAddModal(false)}
-                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 text-sm sm:text-base order-2 sm:order-1"
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
               >
                 Cancel
               </button>
               <button
                 onClick={handleAddRequest}
                 disabled={!selectedProject || !pmPhoneNumber.trim()}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base order-1 sm:order-2"
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Add Request
               </button>
@@ -461,34 +461,32 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
 
       {/* View Request Modal */}
       {showViewModal && selectedRequest && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-hidden mx-4">
-            <div className="p-4 sm:p-6 border-b border-gray-200">
-              <div className="flex items-start justify-between">
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 truncate">
-                    Daily Logs - {selectedRequest.project?.name}
-                  </h3>
-                </div>
-                <button
-                  onClick={handleCloseViewModal}
-                  className="text-gray-400 hover:text-gray-600 p-1 ml-2 flex-shrink-0"
-                >
-                  <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
+        <div className="fixed inset-0 backdrop-blur-sm bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Daily Logs - {selectedRequest.project?.name}
+                </h3>
+              <button
+                onClick={handleCloseViewModal}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
             
-              <div className="mt-2 text-xs sm:text-sm text-gray-600 space-y-1">
-                <div className="truncate">Project: {selectedRequest.project?.name} - {selectedRequest.project?.client_name}</div>
+              <div className="mt-2 text-sm text-gray-600">
+                <div>Project: {selectedRequest.project?.name} - {selectedRequest.project?.client_name}</div>
                 <div>PM Phone: {selectedRequest.pm_phone_number}</div>
                 <div>Request Status: {selectedRequest.request_status}</div>
                 <div>Request Time: {selectedRequest.request_time || '18:00'} EST</div>
-              </div>
-            </div>
+                  </div>
+                </div>
 
-            <div className="p-4 sm:p-6 overflow-y-auto max-h-[60vh]">
+            <div className="p-6 overflow-y-auto max-h-[60vh]">
               {loadingNotes ? (
                 <div className="flex items-center justify-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -496,16 +494,16 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
                 </div>
               ) : pmNotes.length > 0 ? (
                   <div className="space-y-4">
-                  <h4 className="text-sm sm:text-base font-semibold text-gray-900 mb-4">
+                  <h4 className="text-md font-semibold text-gray-900 mb-4">
                     PM Notes from Payment Applications ({pmNotes.length})
                   </h4>
                   {pmNotes.map((note, index) => (
-                    <div key={note.id} className="bg-gray-50 rounded-lg p-3 sm:p-4 border border-gray-200">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-2 gap-2">
-                        <span className="text-xs sm:text-sm font-medium text-gray-900">
+                    <div key={note.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-gray-900">
                           Payment App #{note.id}
                         </span>
-                        <span className={`text-xs px-2 py-1 rounded-full self-start sm:self-center ${
+                        <span className={`text-xs px-2 py-1 rounded-full ${
                           note.status === 'approved' ? 'bg-green-100 text-green-800' :
                           note.status === 'rejected' ? 'bg-red-100 text-red-800' :
                           note.status === 'submitted' ? 'bg-blue-100 text-blue-800' :
@@ -515,17 +513,17 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
                         </span>
                       </div>
                       
-                      <div className="text-xs sm:text-sm text-gray-600 mb-2">
+                      <div className="text-sm text-gray-600 mb-2">
                         <div>Created: {formatDate(note.created_at)}</div>
                       </div>
                       
-                      <div className="bg-white rounded p-2 sm:p-3 border border-gray-200">
-                        <div className="text-xs sm:text-sm text-gray-900 font-medium mb-1">PM Notes:</div>
-                        <div className="text-xs sm:text-sm text-gray-700 whitespace-pre-wrap break-words">
+                      <div className="bg-white rounded p-3 border border-gray-200">
+                        <div className="text-sm text-gray-900 font-medium mb-1">PM Notes:</div>
+                        <div className="text-sm text-gray-700 whitespace-pre-wrap">
                           {note.pm_notes}
-                        </div>
-                      </div>
                     </div>
+                  </div>
+                </div>
                   ))}
               </div>
               ) : (
@@ -539,21 +537,21 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
               )}
             </div>
 
-            <div className="p-4 sm:p-6 border-t border-gray-200 bg-gray-50">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                <div className="text-xs sm:text-sm text-gray-600">
+            <div className="p-6 border-t border-gray-200 bg-gray-50">
+              <div className="flex justify-between items-center">
+                <div className="text-sm text-gray-600">
                   {pmNotes.length > 0 ? (
                     <span>Found {pmNotes.length} PM note{pmNotes.length !== 1 ? 's' : ''} from payment applications</span>
                   ) : (
                     <span>No Daily Logs available</span>
                   )}
                 </div>
-                <button
-                  onClick={handleCloseViewModal}
-                  className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 text-sm sm:text-base w-full sm:w-auto"
-                >
-                  Close
-                </button>
+              <button
+                onClick={handleCloseViewModal}
+                  className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+              >
+                Close
+              </button>
               </div>
             </div>
           </div>
