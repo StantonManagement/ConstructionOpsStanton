@@ -2866,15 +2866,25 @@ export default function PMDashboard() {
   const fetchContractorsForProject = async (projectId: number) => {
     try {
       const { data, error } = await supabase
-        .from('contractors')
+        .from('contracts')
         .select(`
-          id, name, trade, phone,
-          project_contractors!inner(project_id)
+          subcontractor_id,
+          contract_nickname,
+          contractors!contracts_subcontractor_id_fkey (
+            id, name, trade, phone
+          )
         `)
-        .eq('project_contractors.project_id', projectId);
+        .eq('project_id', projectId);
 
       if (error) throw error;
-      setContractors(data || []);
+      
+      // Transform the data to match the expected contractor structure
+      const contractors = data?.map(contract => ({
+        ...contract.contractors,
+        contract_nickname: contract.contract_nickname
+      })) || [];
+      
+      setContractors(contractors);
     } catch (error) {
       console.error('Error fetching contractors:', error);
       setContractors([]);
