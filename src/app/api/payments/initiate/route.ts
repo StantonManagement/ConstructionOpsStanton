@@ -90,8 +90,7 @@ export async function POST(req: NextRequest) {
             contractor_id: contractor.id,
             contract_amount: contractor.contract_amount,
             paid_to_date: 0,
-            contract_status: 'active',
-            is_approved: false
+            contract_status: 'active'
           });
 
         if (projectContractorError) {
