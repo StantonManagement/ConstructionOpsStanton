@@ -356,9 +356,23 @@ const SubcontractorSelectionView: React.FC<Props> = ({ selectedProject, setSelec
       if (!res.ok || data.error) {
         setSendError(data.error || 'Failed to send payment requests.');
       } else {
-        setSendSuccess('Payment requests sent successfully!');
-        setSelectedProject(null);
-        setSelectedSubs([]);
+        // Count successful sends
+        const successCount = data.results?.filter((r: any) => r.status === 'sms_sent').length || selectedSubs.length;
+        const errorCount = data.results?.filter((r: any) => r.error).length || 0;
+        
+        let successMessage = `Payment requests sent successfully to ${successCount} contractor${successCount > 1 ? 's' : ''}!`;
+        if (errorCount > 0) {
+          successMessage += ` (${errorCount} failed to send)`;
+        }
+        
+        setSendSuccess(successMessage);
+        
+        // Auto-redirect after 3 seconds
+        setTimeout(() => {
+          const params = new URLSearchParams();
+          params.set('tab', 'projects');
+          router.replace(`/?${params.toString()}`, { scroll: false });
+        }, 3000);
       }
     } catch (e) {
       console.error('Network or fetch error:', e);
@@ -369,22 +383,50 @@ const SubcontractorSelectionView: React.FC<Props> = ({ selectedProject, setSelec
 
   if (sendSuccess) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-8">
-        <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-4">
-          <span className="text-4xl">✅</span>
+      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-6">
+        {/* Success Animation */}
+        <div className="relative">
+          <div className="w-24 h-24 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center mb-4 shadow-lg animate-bounce">
+            <span className="text-4xl text-white">✅</span>
+          </div>
+          <div className="absolute -inset-2 bg-green-200 rounded-full animate-ping opacity-20"></div>
         </div>
-        <h2 className="text-2xl font-bold text-green-700 mb-2">Payment Requests Sent!</h2>
-        <p className="text-gray-700 text-lg mb-4">All selected contractors have been notified.</p>
-        <button
-          onClick={() => {
-            const params = new URLSearchParams();
-            params.set('tab', 'projects');
-            router.replace(`/?${params.toString()}`, { scroll: false });
-          }}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium text-lg transition-all duration-200 shadow-sm hover:shadow-md"
-        >
-          Back to Projects
-        </button>
+        
+        {/* Success Message */}
+        <div className="text-center max-w-md">
+          <h2 className="text-3xl font-bold text-green-700 mb-3">Payment Requests Sent!</h2>
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+            <p className="text-green-800 font-medium">{sendSuccess}</p>
+            <p className="text-green-600 text-sm mt-2">
+              Contractors will receive SMS notifications with links to submit their payment applications.
+            </p>
+          </div>
+        </div>
+
+        {/* Project Info */}
+        <div className="bg-white rounded-lg border border-gray-200 p-4 max-w-md w-full">
+          <div className="text-center">
+            <div className="text-sm text-gray-500 mb-1">Project:</div>
+            <div className="font-semibold text-gray-900">{selectedProject.name}</div>
+          </div>
+        </div>
+
+        {/* Auto-redirect Notice */}
+        <div className="text-center">
+          <p className="text-sm text-gray-500 mb-4">
+            Redirecting to projects in 3 seconds...
+          </p>
+          <button
+            onClick={() => {
+              const params = new URLSearchParams();
+              params.set('tab', 'projects');
+              router.replace(`/?${params.toString()}`, { scroll: false });
+            }}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-medium text-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:-translate-y-1"
+          >
+            Back to Projects Now
+          </button>
+        </div>
       </div>
     );
   }
