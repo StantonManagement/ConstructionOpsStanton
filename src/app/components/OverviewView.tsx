@@ -560,55 +560,94 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
     onClick?: () => void;
   }> = ({ title, value, subtitle, colorClass, icon, onClick }) => (
     <div
-      className={`group ${colorClass} rounded-2xl p-6 text-center transition-all duration-300 shadow-lg hover:shadow-2xl transform hover:scale-105 ${
-        onClick ? 'cursor-pointer hover:shadow-3xl' : ''
-      } backdrop-blur-sm border-2 border-white/30`}
+      className={`group ${colorClass} rounded-3xl p-8 text-center transition-all duration-300 shadow-xl hover:shadow-2xl transform hover:scale-[1.02] ${
+        onClick ? 'cursor-pointer border border-gray-200 hover:border-blue-300' : 'border border-gray-200'
+      } relative overflow-hidden`}
       onClick={onClick}
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}
     >
-      <div className="flex items-center justify-center gap-3 mb-3">
-        {icon && (
-          <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center text-2xl backdrop-blur-sm">
-            {icon}
+      {/* Decorative background pattern */}
+      <div className="absolute inset-0 opacity-5">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-white rounded-full -translate-y-16 translate-x-16"></div>
+        <div className="absolute bottom-0 left-0 w-24 h-24 bg-white rounded-full translate-y-12 -translate-x-12"></div>
+      </div>
+
+      <div className="relative z-10">
+        {/* Icon and Value Row */}
+        <div className="flex flex-col items-center mb-6">
+          {icon && (
+            <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-3xl mb-4 shadow-lg ${
+              colorClass.includes('blue') ? 'bg-blue-500 text-white' :
+              colorClass.includes('emerald') ? 'bg-emerald-500 text-white' :
+              colorClass.includes('amber') ? 'bg-amber-500 text-white' :
+              colorClass.includes('red') ? 'bg-red-500 text-white' :
+              'bg-gray-500 text-white'
+            }`}>
+              {icon}
+            </div>
+          )}
+          <div className={`text-4xl font-bold ${
+            colorClass.includes('blue') ? 'text-blue-700' :
+            colorClass.includes('emerald') ? 'text-emerald-700' :
+            colorClass.includes('amber') ? 'text-amber-700' :
+            colorClass.includes('red') ? 'text-red-700' :
+            'text-gray-700'
+          }`}>
+            {value}
+          </div>
+        </div>
+
+        {/* Title */}
+        <div className={`text-lg font-bold mb-3 ${
+          colorClass.includes('blue') ? 'text-blue-800' :
+          colorClass.includes('emerald') ? 'text-emerald-800' :
+          colorClass.includes('amber') ? 'text-amber-800' :
+          colorClass.includes('red') ? 'text-red-800' :
+          'text-gray-800'
+        }`}>
+          {title}
+        </div>
+
+        {/* Subtitle */}
+        {subtitle && (
+          <div className={`text-sm font-medium mb-4 ${
+            colorClass.includes('blue') ? 'text-blue-600' :
+            colorClass.includes('emerald') ? 'text-emerald-600' :
+            colorClass.includes('amber') ? 'text-amber-600' :
+            colorClass.includes('red') ? 'text-red-600' :
+            'text-gray-600'
+          }`}>
+            {subtitle}
           </div>
         )}
-        <div className={`text-3xl font-bold ${colorClass.includes('blue') ? 'text-blue-800' :
-                                           colorClass.includes('green') ? 'text-green-800' :
-                                           colorClass.includes('yellow') ? 'text-yellow-800' :
-                                           colorClass.includes('purple') ? 'text-purple-800' :
-                                           'text-red-800'}`}>
-          {value}
-        </div>
+
+        {/* Click indicator */}
+        {onClick && (
+          <div className={`text-sm font-semibold px-4 py-2 rounded-xl inline-block group-hover:shadow-md transition-all duration-200 ${
+            colorClass.includes('blue') ? 'text-blue-700 bg-blue-200/50 group-hover:bg-blue-200' :
+            colorClass.includes('emerald') ? 'text-emerald-700 bg-emerald-200/50 group-hover:bg-emerald-200' :
+            colorClass.includes('amber') ? 'text-amber-700 bg-amber-200/50 group-hover:bg-amber-200' :
+            colorClass.includes('red') ? 'text-red-700 bg-red-200/50 group-hover:bg-red-200' :
+            'text-gray-700 bg-gray-200/50 group-hover:bg-gray-200'
+          }`}>
+            View Details →
+          </div>
+        )}
       </div>
-      <div className={`text-sm font-semibold mb-2 ${colorClass.includes('blue') ? 'text-blue-900' :
-                                            colorClass.includes('green') ? 'text-green-900' :
-                                            colorClass.includes('yellow') ? 'text-yellow-900' :
-                                            colorClass.includes('purple') ? 'text-purple-900' :
-                                            'text-red-900'}`}>
-        {title}
-      </div>
-      {subtitle && (
-        <div className="text-xs opacity-75 mb-2">{subtitle}</div>
-      )}
-      {onClick && (
-        <div className="text-xs font-semibold text-blue-700 bg-white/30 px-3 py-1 rounded-lg inline-block group-hover:bg-white/50 transition-colors">
-          Click to view projects →
-        </div>
-      )}
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100">
-      <div className="space-y-8 p-6">
-        {/* Enhanced Stats Bar */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
+      <div className="space-y-10 p-8">
+        {/* Enhanced Dashboard Stats */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
           <StatCard
             title="Total Projects"
             value={stats.totalProjects}
             subtitle={`${stats.activeProjects} active`}
-            colorClass="bg-gradient-to-br from-blue-400 to-blue-600"
+            colorClass="bg-gradient-to-br from-blue-50 to-blue-100"
             icon="🏗️"
             onClick={() => {
               const params = new URLSearchParams(window.location.search);
@@ -621,33 +660,33 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
             title="Total Budget"
             value={`$${stats.totalBudget.toLocaleString()}`}
             subtitle={`Avg: $${stats.avgProjectBudget.toLocaleString()}`}
-            colorClass="bg-gradient-to-br from-green-400 to-emerald-600"
+            colorClass="bg-gradient-to-br from-emerald-50 to-emerald-100"
             icon="💰"
           />
           <StatCard
             title="Total Spent"
             value={`$${stats.totalSpent.toLocaleString()}`}
             subtitle={`${stats.utilizationRate}% utilized`}
-            colorClass={stats.utilizationRate > 90 ? "bg-gradient-to-br from-red-400 to-red-600" : 
-                       stats.utilizationRate > 75 ? "bg-gradient-to-br from-yellow-400 to-orange-500" : 
-                       "bg-gradient-to-br from-green-400 to-emerald-600"}
+            colorClass={stats.utilizationRate > 90 ? "bg-gradient-to-br from-red-50 to-red-100" : 
+                       stats.utilizationRate > 75 ? "bg-gradient-to-br from-amber-50 to-amber-100" : 
+                       "bg-gradient-to-br from-emerald-50 to-emerald-100"}
             icon="💸"
           />
           <StatCard
             title="Remaining Budget"
             value={`$${stats.remainingBudget.toLocaleString()}`}
             subtitle={stats.remainingBudget < 0 ? "Over budget!" : "Available"}
-            colorClass={stats.remainingBudget >= 0 ? "bg-gradient-to-br from-green-400 to-emerald-600" : "bg-gradient-to-br from-red-400 to-red-600"}
+            colorClass={stats.remainingBudget >= 0 ? "bg-gradient-to-br from-emerald-50 to-emerald-100" : "bg-gradient-to-br from-red-50 to-red-100"}
             icon={stats.remainingBudget >= 0 ? "✅" : "⚠️"}
           />
         </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-10">
           {/* Enhanced Projects List */}
-          <div className="bg-white rounded-2xl border-2 border-gray-300 shadow-xl p-6 hover:shadow-2xl hover:border-blue-400 transition-all duration-300">
-            <div className="flex items-center justify-between mb-6">
+          <div className="bg-white/80 backdrop-blur-sm rounded-3xl border border-gray-200 shadow-2xl p-8 hover:shadow-3xl hover:border-blue-300 transition-all duration-300">
+            <div className="flex items-center justify-between mb-8">
               <h3
-                className="text-xl font-bold text-gray-900 cursor-pointer hover:text-blue-600 transition-colors flex items-center gap-3"
+                className="text-2xl font-bold text-gray-900 cursor-pointer hover:text-blue-600 transition-colors flex items-center gap-4"
                 onClick={() => {
                   const params = new URLSearchParams(window.location.search);
                   params.set('tab', 'projects');
@@ -666,12 +705,17 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
                   }
                 }}
               >
-                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-xl flex items-center justify-center text-white">
+                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-2xl flex items-center justify-center text-white shadow-lg">
                   🏗️
                 </div>
-                Active Projects ({enhancedProjects.length})
-                <span className="text-sm text-blue-600 font-medium bg-blue-50 px-3 py-1 rounded-lg">
-                  → View all
+                <div className="flex flex-col">
+                  <span>Active Projects</span>
+                  <span className="text-sm text-blue-600 font-medium">
+                    {enhancedProjects.length} total projects
+                  </span>
+                </div>
+                <span className="text-sm text-blue-600 font-semibold bg-blue-50 px-4 py-2 rounded-xl border border-blue-200 hover:bg-blue-100 transition-colors">
+                  View All →
                 </span>
               </h3>
               {projects.length > 5 && (
