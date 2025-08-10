@@ -1588,7 +1588,24 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
   // Fetch enhanced project data with spent calculations
   const fetchEnhancedProjects = useCallback(async () => {
     try {
-      const enrichedProjects = await Promise.all(projects.map(async (project: any) => {
+      // Fetch fresh project data from database
+      const { data: freshProjects, error: projectsError } = await supabase
+        .from('projects')
+        .select('*');
+
+      if (projectsError) {
+        throw projectsError;
+      }
+
+      if (!freshProjects) {
+        setEnhancedProjects([]);
+        return;
+      }
+
+      // Update the projects in the context
+      dispatch({ type: 'SET_PROJECTS', payload: freshProjects });
+
+      const enrichedProjects = await Promise.all(freshProjects.map(async (project: any) => {
         // Get contract data for this project
         const { data: contractorData } = await supabase
           .from('project_contractors')
@@ -1613,18 +1630,15 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
       setEnhancedProjects(enrichedProjects);
     } catch (error) {
       console.error('Error fetching enhanced project data:', error);
-      setEnhancedProjects(projects); // Fallback to original projects
+      // Fallback to existing projects if available
+      setEnhancedProjects(projects.map(p => ({ ...p, calculatedBudget: p.budget || 0, calculatedSpent: p.spent || 0 })));
     }
-  }, [projects]);
+  }, [dispatch, projects]);
 
-  // Update enhanced projects when projects change
+  // Update enhanced projects when component mounts and when explicitly refreshed
   useEffect(() => {
-    if (projects.length > 0) {
-      fetchEnhancedProjects();
-    } else {
-      setEnhancedProjects([]);
-    }
-  }, [projects, fetchEnhancedProjects]);
+    fetchEnhancedProjects();
+  }, []); // Only run on mount, fetchEnhancedProjects will handle refreshing projects
 
   const addProject = async (formData: Record<string, string>) => {
     setIsLoading(prev => ({ ...prev, project: true }));
@@ -1690,21 +1704,46 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
 
     try {
       const { name, trade, phone, email } = formData;
-      const { data, error } = await supabase.from('contractors').insert([{
-        name,
-        trade,
-        phone,
-        email,
-      }]).select().single();
+      
+      if (editModal === 'vendor' && selectedItem) {
+        // Update existing vendor
+        const { data, error } = await supabase
+          .from('contractors')
+          .update({
+            name,
+            trade,
+            phone,
+            email,
+          })
+          .eq('id', selectedItem.id)
+          .select()
+          .single();
 
-      if (error) throw error;
+        if (error) throw error;
 
-      dispatch({ type: 'ADD_SUBCONTRACTOR', payload: data });
-      addNotification('success', 'Vendor added successfully!');
-      setOpenForm(null);
+        // Refresh subcontractors data
+        await refreshSubcontractors();
+        addNotification('success', 'Vendor updated successfully!');
+        setEditModal(null);
+        setSelectedItem(null);
+      } else {
+        // Add new vendor
+        const { data, error } = await supabase.from('contractors').insert([{
+          name,
+          trade,
+          phone,
+          email,
+        }]).select().single();
+
+        if (error) throw error;
+
+        dispatch({ type: 'ADD_SUBCONTRACTOR', payload: data });
+        addNotification('success', 'Vendor added successfully!');
+        setOpenForm(null);
+      }
 
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to add vendor';
+      const message = error instanceof Error ? error.message : 'Failed to save vendor';
       addNotification('error', message);
       throw error;
     } finally {
