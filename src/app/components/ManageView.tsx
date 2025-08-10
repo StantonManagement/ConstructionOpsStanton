@@ -1554,6 +1554,34 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
     }
   }, [dispatch, addNotification]);
 
+  const refreshSubcontractors = useCallback(async () => {
+    try {
+      const { data } = await supabase.from('contractors').select('*');
+      if (data) {
+        // Map DB fields to Subcontractor interface as needed
+        const mapped = data.map((c: any) => ({
+          id: c.id,
+          name: c.name,
+          trade: c.trade,
+          contractAmount: c.contract_amount ?? 0,
+          paidToDate: c.paid_to_date ?? 0,
+          lastPayment: c.last_payment ?? '',
+          status: c.status ?? 'active',
+          changeOrdersPending: c.change_orders_pending ?? false,
+          lineItemCount: c.line_item_count ?? 0,
+          phone: c.phone ?? '',
+          email: c.email ?? '',
+          hasOpenPaymentApp: c.has_open_payment_app ?? false,
+          compliance: { insurance: c.insurance_status ?? 'valid', license: c.license_status ?? 'valid' },
+        }));
+        dispatch({ type: 'SET_SUBCONTRACTORS', payload: mapped });
+      }
+    } catch (error) {
+      console.error('Error refreshing subcontractors:', error);
+      addNotification('error', 'Failed to refresh subcontractors data');
+    }
+  }, [dispatch, addNotification]);
+
   // Enhanced project data with calculated spent amounts
   const [enhancedProjects, setEnhancedProjects] = useState<any[]>([]);
 
@@ -1832,23 +1860,16 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
 
       if (error) throw error;
 
-      // Update local state
+      // Update local state and refresh data
       if (activeTab === 'projects') {
-        selectedItems.forEach(id => {
-          dispatch({ type: 'DELETE_PROJECT', payload: id });
-        });
         // Refresh enhanced projects data
-        fetchEnhancedProjects();
+        await fetchEnhancedProjects();
       } else if (activeTab === 'vendors') {
-        selectedItems.forEach(id => {
-          dispatch({ type: 'DELETE_SUBCONTRACTOR', payload: id });
-        });
+        // Refresh subcontractors data
+        await refreshSubcontractors();
       } else if (activeTab === 'contracts') {
-        selectedItems.forEach(id => {
-          dispatch({ type: 'DELETE_CONTRACT', payload: id });
-        });
         // Refresh contracts data
-        refreshContracts();
+        await refreshContracts();
       }
 
       addNotification('success', `Successfully deleted ${selectedItems.size} item(s)`);

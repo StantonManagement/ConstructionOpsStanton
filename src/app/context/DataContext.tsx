@@ -206,6 +206,11 @@ function dataReducer(state: InitialDataType, action: { type: string; payload?: u
         subcontractors: action.payload as Subcontractor[],
       };
     }
+    case 'DELETE_SUBCONTRACTOR':
+      return {
+        ...state,
+        subcontractors: state.subcontractors.filter(s => s.id !== action.payload)
+      };
     case 'SET_CONTRACTS': {
       return {
         ...state,
