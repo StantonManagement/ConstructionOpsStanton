@@ -30,6 +30,7 @@ export async function POST(req: NextRequest) {
       .select(`
         subcontractor_id,
         contract_nickname,
+        contract_amount,
         contractors!contracts_subcontractor_id_fkey (
           id, name, phone
         )
@@ -37,14 +38,27 @@ export async function POST(req: NextRequest) {
       .eq('project_id', projectId)
       .in('subcontractor_id', contractorIds);
     if (contractsError) {
+      console.error('Error fetching contractors from contracts:', contractsError);
       return NextResponse.json({ error: 'Error fetching contractors from contracts' }, { status: 500 });
     }
 
+    // Validate that we have valid contracts with amounts > 0
+    const validContracts = contractsData?.filter(contract => 
+      contract.contract_amount && Number(contract.contract_amount) > 0
+    ) || [];
+
+    if (validContracts.length === 0) {
+      return NextResponse.json({ 
+        error: 'No valid contracts found with contract amounts > 0. Please ensure contractors have valid contract amounts set.' 
+      }, { status: 400 });
+    }
+
     // Transform the data to get contractors with contract info
-    const contractors = contractsData?.map(contract => ({
+    const contractors = validContracts.map(contract => ({
       ...contract.contractors,
-      contract_nickname: contract.contract_nickname
-    })) || [];
+      contract_nickname: contract.contract_nickname,
+      contract_amount: contract.contract_amount
+    }));
 
     
 
