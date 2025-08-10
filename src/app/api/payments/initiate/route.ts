@@ -44,18 +44,26 @@ export async function POST(req: NextRequest) {
 
     const results = [];
     for (const contractor of contractors) {
-      // Create payment application
+      // Create payment application with all required fields
       const { data: paymentApp, error: paymentAppError } = await supabase
         .from('payment_applications')
         .insert({
           project_id: projectId,
           contractor_id: contractor.id,
           status: 'sms_sent',
+          current_payment: 0,
+          payment_period_end: new Date().toISOString().split('T')[0], // Current date as YYYY-MM-DD
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         })
         .select()
         .single();
       if (paymentAppError || !paymentApp) {
-        results.push({ contractorId: contractor.id, error: 'Failed to create payment application' });
+        console.error('Payment application creation error:', paymentAppError);
+        results.push({ 
+          contractorId: contractor.id, 
+          error: paymentAppError?.message || 'Failed to create payment application'
+        });
         continue;
       }
 
@@ -82,12 +90,18 @@ export async function POST(req: NextRequest) {
           calculated_amount: 0,
           pm_adjustment_reason: null,
           verification_photos_count: 0,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         }));
         const { error: progressError } = await supabase
           .from('payment_line_item_progress')
           .insert(progressRecords);
         if (progressError) {
-          results.push({ contractorId: contractor.id, error: 'Failed to create line item progress records' });
+          console.error('Line item progress creation error:', progressError);
+          results.push({ 
+            contractorId: contractor.id, 
+            error: progressError?.message || 'Failed to create line item progress records'
+          });
           continue;
         }
       }
@@ -97,13 +111,19 @@ export async function POST(req: NextRequest) {
         .from('payment_sms_conversations')
         .insert({
           payment_app_id: paymentApp.id,
-          contractor_phone: contractor.phone,
+          contractor_phone: contractor.phone || '',
           conversation_state: 'awaiting_start',
           responses: [],
           line_items: lineItems || [],
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         });
       if (smsConvError) {
-        results.push({ contractorId: contractor.id, error: 'Failed to create sms conversation' });
+        console.error('SMS conversation creation error:', smsConvError);
+        results.push({ 
+          contractorId: contractor.id, 
+          error: smsConvError?.message || 'Failed to create sms conversation'
+        });
         continue;
       }
 
@@ -128,8 +148,12 @@ export async function POST(req: NextRequest) {
             to: contractor.phone,
           });
           results.push({ contractorId: contractor.id, status: 'sms_sent' });
-        } catch {
-          results.push({ contractorId: contractor.id, error: 'Failed to send SMS' });
+        } catch (smsError: any) {
+          console.error('SMS sending error:', smsError);
+          results.push({ 
+            contractorId: contractor.id, 
+            error: `Failed to send SMS: ${smsError?.message || 'Unknown error'}`
+          });
         }
       } else {
         results.push({ contractorId: contractor.id, error: 'Missing phone number' });
