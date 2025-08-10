@@ -24,23 +24,29 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
 
-    const { data: contractors, error: contractorsError } = await supabase
-      .from('contractors')
-      .select('id, name, phone')
-      .in('id', contractorIds);
-    if (contractorsError) {
-      return NextResponse.json({ error: 'Error fetching contractors' }, { status: 500 });
-    }
-
-    // Fetch contracts for these contractors and project to get nicknames
-    const { data: contracts, error: contractsError } = await supabase
+    // Fetch contractors through the contracts table
+    const { data: contractsData, error: contractsError } = await supabase
       .from('contracts')
-      .select('subcontractor_id, contract_nickname')
+      .select(`
+        subcontractor_id,
+        contract_nickname,
+        contractors!contracts_subcontractor_id_fkey (
+          id, name, phone
+        )
+      `)
       .eq('project_id', projectId)
       .in('subcontractor_id', contractorIds);
     if (contractsError) {
-      return NextResponse.json({ error: 'Error fetching contracts' }, { status: 500 });
+      return NextResponse.json({ error: 'Error fetching contractors from contracts' }, { status: 500 });
     }
+
+    // Transform the data to get contractors with contract info
+    const contractors = contractsData?.map(contract => ({
+      ...contract.contractors,
+      contract_nickname: contract.contract_nickname
+    })) || [];
+
+    
 
     const results = [];
     for (const contractor of contractors) {
@@ -129,9 +135,8 @@ export async function POST(req: NextRequest) {
 
       // Send SMS via Twilio
       if (contractor.phone && TWILIO_PHONE_NUMBER) {
-        // Find contract for this contractor to get nickname
-        const contract = contracts?.find(c => c.subcontractor_id === contractor.id);
-        const contractNickname = contract?.contract_nickname;
+        // Use contract nickname from contractor object
+        const contractNickname = contractor.contract_nickname;
         
         // Format: "project name - contract nickname - contractor name"
         let messageTitle = `${project.name}`;
