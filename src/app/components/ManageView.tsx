@@ -80,7 +80,9 @@ const QuickActions: React.FC<{
   selectedCount: number;
   onBulkDelete: () => void;
   onExport?: () => void;
-}> = ({ activeTab, onAddNew, selectedCount, onBulkDelete, onExport }) => {
+  onSelectAll: () => void;
+  totalCount: number;
+}> = ({ activeTab, onAddNew, selectedCount, onBulkDelete, onExport, onSelectAll, totalCount }) => {
   const getAddLabel = () => {
     switch (activeTab) {
       case 'projects': return 'New Project';
@@ -115,6 +117,13 @@ const QuickActions: React.FC<{
           </button>
         </div>
       )}
+
+      <button
+        onClick={onSelectAll}
+        className="flex items-center gap-2 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
+      >
+        {selectedCount === totalCount && totalCount > 0 ? 'Deselect All' : 'Select All'}
+      </button>
 
       <button
         onClick={onAddNew}
@@ -1470,6 +1479,8 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
   const [viewModal, setViewModal] = useState<'project' | 'vendor' | 'contract' | null>(null);
   const [editModal, setEditModal] = useState<'project' | 'vendor' | 'contract' | null>(null);
   const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   // Sync global search query with local search term
   useEffect(() => {
@@ -1782,9 +1793,8 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
   }, [contracts, searchTerm, filters]);
 
   const handleSelectAll = () => {
-    const currentData = activeTab === 'projects' ? filteredProjects :
-                       activeTab === 'vendors' ? filteredVendors : filteredContracts;
-    if (selectedItems.size === currentData.length) {
+    const currentData = getCurrentData();
+    if (selectedItems.size === currentData.length && currentData.length > 0) {
       setSelectedItems(new Set());
     } else {
       setSelectedItems(new Set(currentData.map(item => item.id)));
@@ -1801,11 +1811,15 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
     setSelectedItems(newSelected);
   };
 
-  const handleBulkDelete = async () => {
+  const handleBulkDelete = () => {
+    if (selectedItems.size === 0) return;
+    setShowDeleteConfirmation(true);
+  };
+
+  const confirmBulkDelete = async () => {
     if (selectedItems.size === 0) return;
 
-    const confirmed = window.confirm(`Are you sure you want to delete ${selectedItems.size} item(s)?`);
-    if (!confirmed) return;
+    setDeleteLoading(true);
 
     try {
       const tableName = activeTab === 'projects' ? 'projects' :
@@ -1818,21 +1832,33 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
 
       if (error) throw error;
 
+      // Update local state
       if (activeTab === 'projects') {
         selectedItems.forEach(id => {
           dispatch({ type: 'DELETE_PROJECT', payload: id });
         });
+        // Refresh enhanced projects data
+        fetchEnhancedProjects();
       } else if (activeTab === 'vendors') {
         selectedItems.forEach(id => {
           dispatch({ type: 'DELETE_SUBCONTRACTOR', payload: id });
         });
+      } else if (activeTab === 'contracts') {
+        selectedItems.forEach(id => {
+          dispatch({ type: 'DELETE_CONTRACT', payload: id });
+        });
+        // Refresh contracts data
+        refreshContracts();
       }
 
       addNotification('success', `Successfully deleted ${selectedItems.size} item(s)`);
       setSelectedItems(new Set());
+      setShowDeleteConfirmation(false);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to delete items';
       addNotification('error', message);
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -1928,6 +1954,8 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
             selectedCount={selectedItems.size}
             onBulkDelete={handleBulkDelete}
             onExport={() => addNotification('info', 'Export feature coming soon!')}
+            onSelectAll={handleSelectAll}
+            totalCount={currentData.length}
           />
         </div>
 
@@ -2140,6 +2168,53 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
               initialData={selectedItem}
               isEdit={true}
             />
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirmation && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
+                <Trash2 className="w-6 h-6 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-800">Confirm Deletion</h3>
+                <p className="text-sm text-gray-600">This action cannot be undone</p>
+              </div>
+            </div>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to delete {selectedItems.size} {activeTab === 'projects' ? 'project' : activeTab === 'vendors' ? 'vendor' : 'contract'}{selectedItems.size > 1 ? 's' : ''}? 
+              This will permanently remove {selectedItems.size > 1 ? 'them' : 'it'} from your system.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button 
+                onClick={() => setShowDeleteConfirmation(false)} 
+                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+                disabled={deleteLoading}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={confirmBulkDelete} 
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:bg-red-400 flex items-center gap-2"
+                disabled={deleteLoading}
+              >
+                {deleteLoading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    Delete {selectedItems.size > 1 ? `${selectedItems.size} Items` : '1 Item'}
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}

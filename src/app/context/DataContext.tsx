@@ -212,6 +212,11 @@ function dataReducer(state: InitialDataType, action: { type: string; payload?: u
         contracts: action.payload as Contract[],
       };
     }
+    case 'DELETE_CONTRACT':
+      return { 
+        ...state, 
+        contracts: state.contracts.filter(contract => contract.id !== action.payload) 
+      };
     default:
       return state;
   }
