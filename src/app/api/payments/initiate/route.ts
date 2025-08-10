@@ -64,6 +64,46 @@ export async function POST(req: NextRequest) {
 
     const results = [];
     for (const contractor of contractors) {
+      // Check if a project_contractors record exists, if not create one with proper contract amount
+      const { data: existingProjectContractor, error: checkError } = await supabase
+        .from('project_contractors')
+        .select('id, contract_amount')
+        .eq('project_id', projectId)
+        .eq('contractor_id', contractor.id)
+        .single();
+
+      if (checkError && checkError.code !== 'PGRST116') { // PGRST116 = no rows returned
+        console.error('Error checking project_contractors:', checkError);
+        results.push({ 
+          contractorId: contractor.id, 
+          error: 'Failed to verify project contractor relationship'
+        });
+        continue;
+      }
+
+      // If no project_contractors record exists, create one with the contract amount from contracts table
+      if (!existingProjectContractor) {
+        const { error: projectContractorError } = await supabase
+          .from('project_contractors')
+          .insert({
+            project_id: projectId,
+            contractor_id: contractor.id,
+            contract_amount: contractor.contract_amount,
+            paid_to_date: 0,
+            contract_status: 'active',
+            is_approved: false
+          });
+
+        if (projectContractorError) {
+          console.error('Error creating project_contractors record:', projectContractorError);
+          results.push({ 
+            contractorId: contractor.id, 
+            error: `Failed to create project contractor relationship: ${projectContractorError.message}`
+          });
+          continue;
+        }
+      }
+
       // Create payment application with all required fields
       const { data: paymentApp, error: paymentAppError } = await supabase
         .from('payment_applications')
