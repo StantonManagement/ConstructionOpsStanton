@@ -284,13 +284,13 @@ const SearchFilterBar: React.FC<{
 // Enhanced Tab Navigation
 const TabNavigation: React.FC<{
   activeTab: string;
-  onTabChange: (tab: string) => void;
+  onTabChange: (tab: 'projects' | 'vendors' | 'contracts') => void;
   counts: { projects: number; vendors: number; contracts: number };
 }> = ({ activeTab, onTabChange, counts }) => {
   const tabs = [
-    { id: 'projects', label: 'Projects', icon: Building, color: 'blue', count: counts.projects },
-    { id: 'vendors', label: 'Vendors', icon: UserPlus, color: 'green', count: counts.vendors },
-    { id: 'contracts', label: 'Contracts', icon: FilePlus, color: 'purple', count: counts.contracts },
+    { id: 'projects' as const, label: 'Projects', icon: Building, color: 'blue', count: counts.projects },
+    { id: 'vendors' as const, label: 'Vendors', icon: UserPlus, color: 'green', count: counts.vendors },
+    { id: 'contracts' as const, label: 'Contracts', icon: FilePlus, color: 'purple', count: counts.contracts },
   ];
 
   return (

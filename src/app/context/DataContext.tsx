@@ -142,13 +142,15 @@ function dataReducer(state: InitialDataType, action: { type: string; payload?: u
         ],
       };
     }
-    case 'UPDATE_PROJECT':
+    case 'UPDATE_PROJECT': {
+      const payload = action.payload as Project;
       return {
         ...state,
         projects: state.projects.map(p => 
-          p.id === action.payload.id ? action.payload : p
+          p.id === payload.id ? payload : p
         )
       };
+    }
     case 'DELETE_PROJECT':
       return {
         ...state,

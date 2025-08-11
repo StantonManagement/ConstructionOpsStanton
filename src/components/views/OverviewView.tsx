@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from './supabaseClient';
-import { useData } from './dataContext';
-import ProjectCard from './ProjectCard';
-import ActivityFeed from './ActivityFeed';
-import { Project } from './types';
+import { supabase } from '@/lib/supabaseClient';
+import { useData } from '@/app/context/DataContext';
+import ProjectCard from '../ProjectCard';
+import { Project } from '@/app/context/DataContext';
 
 interface OverviewViewProps {
   onProjectSelect: (project: Project) => void;
@@ -230,7 +229,7 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
           <div className="space-y-3">
             {filteredProjects.length > 0 ? (
               filteredProjects.map(project => (
-                <ProjectCard key={project.id} project={project} onProjectSelect={onProjectSelect} />
+                <ProjectCard key={project.id} project={project} onSelect={onProjectSelect} />
               ))
             ) : (
               <p className="text-center text-gray-500 py-4">No projects found matching your search.</p>
@@ -244,7 +243,9 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
             <svg className="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
             <h2 className="text-lg font-semibold text-gray-800">Recent Activity</h2>
           </div>
-          <ActivityFeed />
+          <div className="text-gray-500 text-center py-8">
+            <p>Activity feed coming soon...</p>
+          </div>
         </div>
       </div>
     </div>
