@@ -55,7 +55,9 @@ export async function POST(req: NextRequest) {
 
     // Transform the data to get contractors with contract info
     const contractors = validContracts.map(contract => ({
-      ...contract.contractors,
+      id: contract.contractors.id,
+      name: contract.contractors.name,
+      phone: contract.contractors.phone,
       contract_nickname: contract.contract_nickname,
       contract_amount: contract.contract_amount
     }));
