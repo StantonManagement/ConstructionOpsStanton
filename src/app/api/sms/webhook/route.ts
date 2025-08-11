@@ -291,9 +291,9 @@ export async function POST(req: NextRequest) {
           const thisPeriodDollar = scheduled * (thisPeriodPercent / 100);
           totalThisPeriod += thisPeriodDollar;
           const desc = item?.description_of_work || 'Item';
-          summary += `${desc} - (${thisPeriodPercent.toFixed(1)}%) = $${thisPeriodDollar.toLocaleString(undefined, { maximumFractionDigits: 2 })}\n`;
+          summary += `${desc} - (${thisPeriodPercent.toFixed(1)}%) = $${thisPeriodDollar.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}\n`;
         });
-        summary += `Total Requested = $${totalThisPeriod.toLocaleString(undefined, { maximumFractionDigits: 2 })}\n`;
+        summary += `Total Requested = $${totalThisPeriod.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}\n`;
         summary += 'Please type "Yes" to submit or "No" to redo your answers.';
         twiml.message(summary);
       } else {
@@ -338,9 +338,9 @@ export async function POST(req: NextRequest) {
           const thisPeriodDollar = scheduled * (thisPeriodPercent / 100);
           totalThisPeriod += thisPeriodDollar;
           const desc = item?.description_of_work || 'Item';
-          summary += `${desc} - (${thisPeriodPercent.toFixed(1)}%) = $${thisPeriodDollar.toLocaleString(undefined, { maximumFractionDigits: 2 })}\n`;
+          summary += `${desc} - (${thisPeriodPercent.toFixed(1)}%) = $${thisPeriodDollar.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}\n`;
         });
-        summary += `Total Requested = $${totalThisPeriod.toLocaleString(undefined, { maximumFractionDigits: 2 })}\n`;
+        summary += `Total Requested = $${totalThisPeriod.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}\n`;
         summary += 'Please type "Yes" to submit or "No" to redo your answers.';
         twiml.message(summary);
       }
@@ -413,16 +413,34 @@ export async function POST(req: NextRequest) {
           responses: []
         })
         .eq('id', conv.id);
+      
+      // Reset all progress records to 0 since user is redoing
+      await supabase
+        .from('payment_line_item_progress')
+        .update({
+          submitted_percent: 0,
+          this_period_percent: 0,
+          calculated_amount: 0,
+          updated_at: new Date().toISOString()
+        })
+        .eq('payment_app_id', conv.payment_app_id);
+      
       // Fetch the first line item for the question
       if (numLineItems > 0) {
         const firstLineItemId = lineItems[0].id;
-        const { data: pliRow } = await supabase
-          .from('project_line_items')
-          .select('this_period, description_of_work')
-          .eq('id', firstLineItemId)
-          .single();
-        const prevPercent = pliRow?.this_period ?? 0;
-        const desc = pliRow?.description_of_work || lineItems[0].description_of_work || '';
+        
+        // Get the ACTUAL previous completed percentage from prior payment applications
+        const { data: allPrevProgress } = await supabase
+          .from('payment_line_item_progress')
+          .select('submitted_percent, payment_app_id')
+          .eq('line_item_id', firstLineItemId)
+          .gt('submitted_percent', 0)
+          .neq('payment_app_id', conv.payment_app_id) // Exclude current application
+          .order('payment_app_id', { ascending: false })
+          .limit(1);
+        
+        const prevPercent = allPrevProgress && allPrevProgress.length > 0 ? Number(allPrevProgress[0].submitted_percent) : 0;
+        const desc = lineItems[0].description_of_work || '';
         twiml.message(`What percent complete is your work for: ${desc}? (Previous: ${prevPercent}%)`);
       } else {
         twiml.message(ADDITIONAL_QUESTIONS[0]);

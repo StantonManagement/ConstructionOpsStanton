@@ -12,10 +12,6 @@ const nextConfig: NextConfig = {
 
     return config;
   },
-  // Suppress punycode deprecation warnings from dependencies
-  env: {
-    NODE_OPTIONS: '--no-deprecation',
-  },
 };
 
 export default nextConfig;
