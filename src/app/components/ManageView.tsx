@@ -1019,11 +1019,11 @@ const AddContractForm: React.FC<{
 
     const newItem: LineItem = {
       ...lineItemForm,
-      scheduledValue: Number(lineItemForm.scheduledValue) || 0,
-      fromPrevious: Number(lineItemForm.fromPrevious) || 0,
-      thisPeriod: Number(lineItemForm.thisPeriod) || 0,
-      materialStored: Number(lineItemForm.materialStored) || 0,
-      percentGC: Number(lineItemForm.percentGC) || 0,
+      scheduledValue: lineItemForm.scheduledValue,
+      fromPrevious: lineItemForm.fromPrevious,
+      thisPeriod: lineItemForm.thisPeriod,
+      materialStored: lineItemForm.materialStored,
+      percentGC: lineItemForm.percentGC,
     };
 
     if (editingLineItemIndex !== null) {
