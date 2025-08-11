@@ -1,0 +1,38 @@
+[16:40:41.196] Running build in Washington, D.C., USA (East) – iad1
+[16:40:41.197] Build machine configuration: 2 cores, 8 GB
+[16:40:41.240] Cloning github.com/StantonManagement/ConstructionOpsStanton (Branch: main, Commit: f7e7323)
+[16:40:42.336] Cloning completed: 1.095s
+[16:40:44.562] Restored build cache from previous deployment (7bWT74YnSGaTojSLPTq8b6whaVD3)
+[16:40:49.292] Running "vercel build"
+[16:40:49.927] Vercel CLI 44.7.3
+[16:40:50.682] Installing dependencies...
+[16:40:53.038] 
+[16:40:53.039] up to date in 2s
+[16:40:53.040] 
+[16:40:53.040] 171 packages are looking for funding
+[16:40:53.040]   run `npm fund` for details
+[16:40:53.069] Detected Next.js version: 15.3.3
+[16:40:53.074] Running "npm run build"
+[16:40:53.187] 
+[16:40:53.188] > cpps@0.1.0 build
+[16:40:53.188] > next build
+[16:40:53.188] 
+[16:40:54.113]    ▲ Next.js 15.3.3
+[16:40:54.114] 
+[16:40:54.159]    Creating an optimized production build ...
+[16:41:09.208]  ✓ Compiled successfully in 11.0s
+[16:41:09.213]    Linting and checking validity of types ...
+[16:41:22.159] Failed to compile.
+[16:41:22.159] 
+[16:41:22.160] ./src/app/api/payments/initiate/route.ts:58:32
+[16:41:22.160] Type error: Property 'id' does not exist on type '{ id: any; name: any; phone: any; }[]'.
+[16:41:22.160] 
+[16:41:22.160] [0m [90m 56 |[39m     [90m// Transform the data to get contractors with contract info[39m[0m
+[16:41:22.160] [0m [90m 57 |[39m     [36mconst[39m contractors [33m=[39m validContracts[33m.[39mmap(contract [33m=>[39m ({[0m
+[16:41:22.160] [0m[31m[1m>[22m[39m[90m 58 |[39m       id[33m:[39m contract[33m.[39mcontractors[33m.[39mid[33m,[39m[0m
+[16:41:22.160] [0m [90m    |[39m                                [31m[1m^[22m[39m[0m
+[16:41:22.160] [0m [90m 59 |[39m       name[33m:[39m contract[33m.[39mcontractors[33m.[39mname[33m,[39m[0m
+[16:41:22.160] [0m [90m 60 |[39m       phone[33m:[39m contract[33m.[39mcontractors[33m.[39mphone[33m,[39m[0m
+[16:41:22.160] [0m [90m 61 |[39m       contract_nickname[33m:[39m contract[33m.[39mcontract_nickname[33m,[39m[0m
+[16:41:22.193] Next.js build worker exited with code: 1 and signal: null
+[16:41:22.214] Error: Command "npm run build" exited with 1
