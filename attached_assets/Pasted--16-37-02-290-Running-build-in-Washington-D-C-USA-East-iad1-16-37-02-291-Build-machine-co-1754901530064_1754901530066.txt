@@ -1,0 +1,38 @@
+[16:37:02.290] Running build in Washington, D.C., USA (East) – iad1
+[16:37:02.291] Build machine configuration: 2 cores, 8 GB
+[16:37:02.304] Cloning github.com/StantonManagement/ConstructionOpsStanton (Branch: main, Commit: 21dd819)
+[16:37:02.941] Cloning completed: 637.000ms
+[16:37:05.466] Restored build cache from previous deployment (7bWT74YnSGaTojSLPTq8b6whaVD3)
+[16:37:10.388] Running "vercel build"
+[16:37:10.904] Vercel CLI 44.7.3
+[16:37:11.712] Installing dependencies...
+[16:37:13.298] 
+[16:37:13.299] up to date in 1s
+[16:37:13.299] 
+[16:37:13.300] 171 packages are looking for funding
+[16:37:13.300]   run `npm fund` for details
+[16:37:13.330] Detected Next.js version: 15.3.3
+[16:37:13.335] Running "npm run build"
+[16:37:13.442] 
+[16:37:13.442] > cpps@0.1.0 build
+[16:37:13.442] > next build
+[16:37:13.442] 
+[16:37:14.453]    ▲ Next.js 15.3.3
+[16:37:14.453] 
+[16:37:14.501]    Creating an optimized production build ...
+[16:37:29.660]  ✓ Compiled successfully in 12.0s
+[16:37:29.666]    Linting and checking validity of types ...
+[16:37:42.980] Failed to compile.
+[16:37:42.981] 
+[16:37:42.981] ./src/app/api/payments/initiate/route.ts:72:41
+[16:37:42.981] Type error: Property 'id' does not exist on type '{ contract_nickname: any; contract_amount: any; length: number; toString(): string; toLocaleString(): string; toLocaleString(locales: string | string[], options?: (NumberFormatOptions & DateTimeFormatOptions) | undefined): string; ... 37 more ...; [Symbol.unscopables]: { ...; }; }'.
+[16:37:42.981] 
+[16:37:42.981] [0m [90m 70 |[39m         [33m.[39mselect([32m'id, contract_amount'[39m)[0m
+[16:37:42.982] [0m [90m 71 |[39m         [33m.[39meq([32m'project_id'[39m[33m,[39m projectId)[0m
+[16:37:42.982] [0m[31m[1m>[22m[39m[90m 72 |[39m         [33m.[39meq([32m'contractor_id'[39m[33m,[39m contractor[33m.[39mid)[0m
+[16:37:42.982] [0m [90m    |[39m                                         [31m[1m^[22m[39m[0m
+[16:37:42.982] [0m [90m 73 |[39m         [33m.[39msingle()[33m;[39m[0m
+[16:37:42.982] [0m [90m 74 |[39m[0m
+[16:37:42.982] [0m [90m 75 |[39m       [36mif[39m (checkError [33m&&[39m checkError[33m.[39mcode [33m!==[39m [32m'PGRST116'[39m) { [90m// PGRST116 = no rows returned[39m[0m
+[16:37:43.013] Next.js build worker exited with code: 1 and signal: null
+[16:37:43.031] Error: Command "npm run build" exited with 1
