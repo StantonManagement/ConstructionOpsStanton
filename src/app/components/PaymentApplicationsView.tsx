@@ -24,10 +24,14 @@ const formatCurrency = (amount: number) => {
 };
 
 // Compact Stat Card Component
-function CompactStatCard({ icon, label, value, change, color, onClick }: any) {
+function CompactStatCard({ icon, label, value, change, color, onClick, isActive }: any) {
   return (
     <div 
-      className={`bg-white border border-gray-200 rounded-lg p-4 cursor-pointer transition-all hover:shadow-md ${onClick ? 'hover:border-blue-300' : ''}`}
+      className={`bg-white border rounded-lg p-4 cursor-pointer transition-all hover:shadow-md ${
+        isActive 
+          ? 'border-blue-500 bg-blue-50 shadow-md' 
+          : 'border-gray-200 hover:border-blue-300'
+      } ${onClick ? 'hover:border-blue-300' : ''}`}
       onClick={onClick}
     >
       <div className="flex items-center justify-between">
@@ -51,36 +55,40 @@ function CompactStatCard({ icon, label, value, change, color, onClick }: any) {
 }
 
 // Compact Stats Component
-function CompactStats({ pendingSMS, reviewQueue, readyChecks, weeklyTotal, onStatClick }: any) {
+function CompactStats({ pendingSMS, reviewQueue, readyChecks, weeklyTotal, onStatClick, currentFilter }: any) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
       <CompactStatCard
         icon="📱"
         label="SMS Pending"
         value={pendingSMS}
-        color="bg-orange-500"
+        color={currentFilter === 'sms_sent' ? 'bg-orange-600' : 'bg-orange-500'}
         onClick={() => onStatClick('sms_pending')}
+        isActive={currentFilter === 'sms_sent'}
       />
       <CompactStatCard
         icon="⚠️"
         label="Review Queue"
         value={reviewQueue}
-        color="bg-red-500"
+        color={currentFilter === 'submitted' ? 'bg-red-600' : 'bg-red-500'}
         onClick={() => onStatClick('review_queue')}
+        isActive={currentFilter === 'submitted'}
       />
       <CompactStatCard
         icon="💰"
         label="Ready Checks"
         value={readyChecks}
-        color="bg-purple-500"
+        color={currentFilter === 'approved' ? 'bg-purple-600' : 'bg-purple-500'}
         onClick={() => onStatClick('ready_checks')}
+        isActive={currentFilter === 'approved'}
       />
       <CompactStatCard
         icon="📊"
         label="Weekly Total"
         value={formatCurrency(weeklyTotal)}
-        color="bg-blue-500"
+        color={currentFilter === 'approved' ? 'bg-blue-600' : 'bg-blue-500'}
         onClick={() => onStatClick('weekly_total')}
+        isActive={currentFilter === 'approved'}
       />
     </div>
   );
@@ -766,22 +774,26 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
         .from("payment_sms_conversations")
         .select("id, conversation_state");
 
-      const pendingSMS = (smsConvos || []).filter(
-        (c: any) => c.conversation_state !== "completed"
-      ).length;
-
-      const reviewQueue = (appsRaw || []).filter((app: any) =>
-        app.status === "submitted"
-      ).length;
-
-      const readyChecks = (appsRaw || []).filter((app: any) =>
+      // SMS Pending: Applications with sms_sent status
+      const pendingSMS = (appsRaw || []).filter((app: any) =>
         app.status === "sms_sent"
       ).length;
 
+      // Review Queue: Applications with submitted or needs_review status
+      const reviewQueue = (appsRaw || []).filter((app: any) =>
+        app.status === "submitted" || app.status === "needs_review"
+      ).length;
+
+      // Ready Checks: Approved applications (these are the "ready checks")
+      const readyChecks = (appsRaw || []).filter((app: any) =>
+        app.status === "approved"
+      ).length;
+
+      // Weekly Total: Total amount of approved applications in the last 7 days
       const now = new Date();
       const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
       const weeklyTotal = (appsRaw || [])
-        .filter((a: any) => a.created_at && new Date(a.created_at) >= weekAgo && a.status !== 'approved')
+        .filter((a: any) => a.created_at && new Date(a.created_at) >= weekAgo && a.status === 'approved')
         .reduce((sum: number, a: any) => sum + (a.current_payment || 0), 0);
 
       setStats({
@@ -939,8 +951,24 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
   };
 
   const handleStatClick = async (type: string) => {
-    // TODO: Implement stat click handling
-    console.log('Stat clicked:', type);
+    switch (type) {
+      case 'sms_pending':
+        setStatusFilter('sms_sent');
+        break;
+      case 'review_queue':
+        setStatusFilter('submitted');
+        break;
+      case 'ready_checks':
+        setStatusFilter('approved');
+        break;
+      case 'weekly_total':
+        // Show all approved applications from the last week
+        setStatusFilter('approved');
+        // You could also add a date filter here if needed
+        break;
+      default:
+        setStatusFilter('all');
+    }
   };
 
   const handlePaymentCardClick = async (application: any) => {
@@ -1118,13 +1146,14 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
       </div>
 
       {/* Stats */}
-      <CompactStats
-        pendingSMS={stats.pending_sms}
-        reviewQueue={stats.review_queue}
-        readyChecks={stats.ready_checks}
-        weeklyTotal={stats.weekly_total}
-        onStatClick={handleStatClick}
-      />
+              <CompactStats
+          pendingSMS={stats.pending_sms}
+          reviewQueue={stats.review_queue}
+          readyChecks={stats.ready_checks}
+          weeklyTotal={stats.weekly_total}
+          onStatClick={handleStatClick}
+          currentFilter={statusFilter}
+        />
 
       {/* Main Content - Emphasized Table */}
       <div className="flex gap-4">

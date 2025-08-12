@@ -326,45 +326,20 @@ export default function PaymentVerificationPage() {
   // Fetch previous approved percentages for each line item
   useEffect(() => {
     async function fetchPreviousPercentages() {
-      if (!lineItems.length || !paymentApp?.contractor_id || !paymentApp?.project_id) return;
+      if (!lineItems.length) return;
       
       const lineItemIds = lineItems.map((li) => li.line_item_id).filter(Boolean);
       if (!lineItemIds.length) return;
 
       try {
-        // Get all approved payment applications for this contractor and project, excluding current one
-        const { data: previousApps, error: appsError } = await supabase
-          .from('payment_applications')
-          .select('id, created_at')
-          .eq('contractor_id', paymentApp.contractor_id)
-          .eq('project_id', paymentApp.project_id)
-          .eq('status', 'approved')
-          .neq('id', paymentAppId)
-          .order('created_at', { ascending: false });
+        // Get previous percentages directly from project_line_items table
+        const { data: projectLineItemsData, error: pliError } = await supabase
+          .from('project_line_items')
+          .select('id, from_previous_application')
+          .in('id', lineItemIds);
 
-        if (appsError) {
-          console.error('Error fetching previous payment applications:', appsError);
-          return;
-        }
-
-        if (!previousApps || previousApps.length === 0) {
-          // No previous approved applications, all previous percentages are 0
-          const zeroPercentages: Record<number, number> = {};
-          lineItemIds.forEach(id => { zeroPercentages[id] = 0; });
-          setPreviousPercentages(zeroPercentages);
-          return;
-        }
-
-        // Get the most recent approved application's line item progress
-        const mostRecentAppId = previousApps[0].id;
-        const { data: previousProgress, error: progressError } = await supabase
-          .from('payment_line_item_progress')
-          .select('line_item_id, pm_verified_percent')
-          .eq('payment_app_id', mostRecentAppId)
-          .in('line_item_id', lineItemIds);
-
-        if (progressError) {
-          console.error('Error fetching previous progress:', progressError);
+        if (pliError) {
+          console.error('Error fetching project line items:', pliError);
           return;
         }
 
@@ -372,9 +347,9 @@ export default function PaymentVerificationPage() {
         const prevPercentages: Record<number, number> = {};
         lineItemIds.forEach(id => { prevPercentages[id] = 0; }); // Default to 0
 
-        if (previousProgress) {
-          previousProgress.forEach((progress) => {
-            prevPercentages[progress.line_item_id] = Number(progress.pm_verified_percent) || 0;
+        if (projectLineItemsData) {
+          projectLineItemsData.forEach((pli) => {
+            prevPercentages[pli.id] = Number(pli.from_previous_application) || 0;
           });
         }
 
@@ -385,7 +360,7 @@ export default function PaymentVerificationPage() {
     }
 
     fetchPreviousPercentages();
-  }, [lineItems, paymentApp?.contractor_id, paymentApp?.project_id, paymentAppId]);
+  }, [lineItems]);
 
   // Map project_line_items by id for easy lookup
   const pliMap: Record<number, any> = {};
@@ -399,12 +374,12 @@ const lineItemsForTable = lineItems.map((li, idx) => {
   const item_no = pli.item_no || '';
   const description_of_work = pli.description_of_work || li.line_item?.description_of_work || '';
   
-  // Get percentages from SMS submission
+  // Get percentages from SMS submission and database
   const submittedPercent = editedPercentages[li.line_item_id]?.submitted_percent ?? (Number(li.submitted_percent) || 0);
   const pmVerifiedPercent = editedPercentages[li.line_item_id]?.pm_verified_percent ?? (Number(li.pm_verified_percent) || submittedPercent);
   
-  // Get previous percentage from database query (defaults to 0 for first application)
-  const previousPercent = previousPercentages[li.line_item_id] || 0;
+  // Get previous percentage from database (from_previous_application field)
+  const previousPercent = Number(pli.from_previous_application) || 0;
   
   // Calculate this period percentage (what was actually submitted this time)
   const thisPeriodPercent = Math.max(0, pmVerifiedPercent - previousPercent);
@@ -986,10 +961,10 @@ const lineItemsForTable = lineItems.map((li, idx) => {
                         {li.scheduled_value.toLocaleString(undefined, { style: 'currency', currency: 'USD', minimumFractionDigits: 0 })}
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-right text-sm text-gray-700">
-                        {li.previous.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                        {li.previous_percent.toFixed(1)}%
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-right text-sm text-gray-700">
-                        {li.this_period.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                        {li.this_period_percent.toFixed(1)}%
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-right text-sm">
                         {editingLineItem === li.line_item_id ? (

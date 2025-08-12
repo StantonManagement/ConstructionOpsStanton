@@ -5,13 +5,16 @@ import { Project } from '../app/context/DataContext';
 type Props = {
   project: Project;
   onSelect?: (project: Project) => void;
+  isLoading?: boolean;
 };
 
-const ProjectCard: React.FC<Props> = ({ project, onSelect }) => {
+const ProjectCard: React.FC<Props> = ({ project, onSelect, isLoading = false }) => {
   // Ensure consistent number handling
   const budget = project.budget ? Number(project.budget) : 0;
   const spent = project.spent ? Number(project.spent) : 0;
-  const percent = budget > 0 ? Math.min(100, Math.round((spent / budget) * 100)) : 0;
+  const percent = budget > 0 ? Math.min(100, (spent / budget) * 100) : 0;
+  // Ensure small percentages are still visible (minimum 1% width for any spent amount)
+  const displayPercent = spent > 0 && percent < 1 ? 1 : percent;
   
   const handleClick = () => {
     if (onSelect) {
@@ -64,36 +67,62 @@ const ProjectCard: React.FC<Props> = ({ project, onSelect }) => {
         </div>
         
         {/* Progress Bar */}
-        <div className="w-full bg-gray-200 rounded-full h-3 mb-2">
-          <div
-            className={`h-3 rounded-full transition-all duration-300 ${
-              percent > 95 ? 'bg-red-500' :
-              percent > 90 ? 'bg-orange-500' :
-              percent > 75 ? 'bg-yellow-500' :
-              'bg-green-500'
-            }`}
-            style={{ width: `${Math.min(percent, 100)}%` }}
-            role="progressbar"
-            aria-valuenow={percent}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-label={`Budget utilization: ${percent}%`}
-          ></div>
+        <div className="w-full bg-gray-200 rounded-full h-3 mb-2 relative overflow-hidden">
+          {isLoading ? (
+            <div className="h-3 bg-gradient-to-r from-gray-300 to-gray-400 rounded-full animate-pulse"></div>
+          ) : (
+            <div
+              className={`h-3 rounded-full transition-all duration-500 ease-out ${
+                percent > 95 ? 'bg-gradient-to-r from-red-500 to-red-600' :
+                percent > 90 ? 'bg-gradient-to-r from-orange-500 to-orange-600' :
+                percent > 75 ? 'bg-gradient-to-r from-yellow-500 to-yellow-600' :
+                'bg-gradient-to-r from-green-500 to-green-600'
+              }`}
+              style={{ 
+                width: `${Math.min(displayPercent, 100)}%`,
+                transition: 'width 0.5s ease-out'
+              }}
+              role="progressbar"
+              aria-valuenow={percent}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-label={`Budget utilization: ${percent.toFixed(2)}%`}
+            >
+              {/* Animated shimmer effect for high usage */}
+              {(percent > 75) && (
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse"></div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Budget Details */}
         <div className="flex justify-between items-center text-xs">
           <span className="text-gray-600">
-            Spent: <span className="font-medium text-gray-900">${spent.toLocaleString()}</span>
+            Spent: <span className="font-medium text-gray-900">
+              {isLoading ? (
+                <span className="inline-block w-16 h-3 bg-gray-200 rounded animate-pulse"></span>
+              ) : (
+                `$${spent.toLocaleString()}`
+              )}
+            </span>
           </span>
           <span className="text-gray-600">
-            Remaining: <span className="font-medium text-gray-900">${(budget - spent).toLocaleString()}</span>
+            Remaining: <span className="font-medium text-gray-900">
+              {isLoading ? (
+                <span className="inline-block w-16 h-3 bg-gray-200 rounded animate-pulse"></span>
+              ) : (
+                `$${(budget - spent).toLocaleString()}`
+              )}
+            </span>
           </span>
         </div>
         
         <div className="flex justify-between items-center text-xs mt-1">
-          <span className="text-gray-600">{percent}% utilized</span>
-          <span className={`font-medium ${statusInfo.color}`}>
+          <span className="text-gray-600 font-medium">
+            {percent < 0.01 ? '<0.01%' : percent.toFixed(2)}% utilized
+          </span>
+          <span className={`font-semibold ${statusInfo.color}`}>
             {statusInfo.text}
           </span>
         </div>

@@ -468,12 +468,26 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
   const [enhancedProjects, setEnhancedProjects] = useState<any[]>([]);
   const [statsLoading, setStatsLoading] = useState(true);
 
-  // Fetch enhanced project data with contractor stats
+  // Fetch enhanced project data with contractor stats and approved payments
   const fetchEnhancedProjectData = useCallback(async () => {
     if (projects.length === 0) return;
     
     setStatsLoading(true);
     try {
+      // Fetch approved payments for spent calculation
+      const { data: approvedPayments } = await supabase
+        .from('payment_applications')
+        .select('current_payment, project_id')
+        .eq('status', 'approved');
+
+      const approvedPaymentsByProject = (approvedPayments || []).reduce((acc: any, payment) => {
+        if (!acc[payment.project_id]) {
+          acc[payment.project_id] = 0;
+        }
+        acc[payment.project_id] += Number(payment.current_payment) || 0;
+        return acc;
+      }, {});
+
       const enhancedData = await Promise.all(projects.map(async (project) => {
         const { data: contractorsData } = await supabase
           .from('project_contractors')
@@ -484,8 +498,8 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
         const calculatedBudget = contractorsData?.reduce((sum, contract) => 
           sum + (Number(contract.contract_amount) || 0), 0) || 0;
         
-        const calculatedSpent = contractorsData?.reduce((sum, contract) => 
-          sum + (Number(contract.paid_to_date) || 0), 0) || 0;
+        // Use approved payments for spent calculation instead of paid_to_date
+        const calculatedSpent = approvedPaymentsByProject[project.id] || 0;
 
         return {
           ...project,
@@ -560,7 +574,7 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
     onClick?: () => void;
   }> = ({ title, value, subtitle, colorClass, icon, onClick }) => (
     <div
-      className={`group ${colorClass} rounded-3xl p-8 text-center transition-all duration-300 shadow-xl hover:shadow-2xl transform hover:scale-[1.02] ${
+      className={`group ${colorClass} rounded-2xl p-4 text-center transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-[1.02] ${
         onClick ? 'cursor-pointer border border-gray-200 hover:border-blue-300' : 'border border-gray-200'
       } relative overflow-hidden`}
       onClick={onClick}
@@ -569,15 +583,15 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
     >
       {/* Decorative background pattern */}
       <div className="absolute inset-0 opacity-5">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-white rounded-full -translate-y-16 translate-x-16"></div>
-        <div className="absolute bottom-0 left-0 w-24 h-24 bg-white rounded-full translate-y-12 -translate-x-12"></div>
+        <div className="absolute top-0 right-0 w-20 h-20 bg-white rounded-full -translate-y-10 translate-x-10"></div>
+        <div className="absolute bottom-0 left-0 w-16 h-16 bg-white rounded-full translate-y-8 -translate-x-8"></div>
       </div>
 
       <div className="relative z-10">
         {/* Icon and Value Row */}
-        <div className="flex flex-col items-center mb-6">
+        <div className="flex flex-col items-center mb-3">
           {icon && (
-            <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-3xl mb-4 shadow-lg ${
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl mb-2 shadow-md ${
               colorClass.includes('blue') ? 'bg-blue-500 text-white' :
               colorClass.includes('emerald') ? 'bg-emerald-500 text-white' :
               colorClass.includes('amber') ? 'bg-amber-500 text-white' :
@@ -587,7 +601,7 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
               {icon}
             </div>
           )}
-          <div className={`text-4xl font-bold ${
+          <div className={`text-2xl font-bold ${
             colorClass.includes('blue') ? 'text-blue-700' :
             colorClass.includes('emerald') ? 'text-emerald-700' :
             colorClass.includes('amber') ? 'text-amber-700' :
@@ -599,7 +613,7 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
         </div>
 
         {/* Title */}
-        <div className={`text-lg font-bold mb-3 ${
+        <div className={`text-sm font-bold mb-2 ${
           colorClass.includes('blue') ? 'text-blue-800' :
           colorClass.includes('emerald') ? 'text-emerald-800' :
           colorClass.includes('amber') ? 'text-amber-800' :
@@ -611,7 +625,7 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
 
         {/* Subtitle */}
         {subtitle && (
-          <div className={`text-sm font-medium mb-4 ${
+          <div className={`text-xs font-medium mb-2 ${
             colorClass.includes('blue') ? 'text-blue-600' :
             colorClass.includes('emerald') ? 'text-emerald-600' :
             colorClass.includes('amber') ? 'text-amber-600' :
@@ -624,7 +638,7 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
 
         {/* Click indicator */}
         {onClick && (
-          <div className={`text-sm font-semibold px-4 py-2 rounded-xl inline-block group-hover:shadow-md transition-all duration-200 ${
+          <div className={`text-xs font-semibold px-2 py-1 rounded-lg inline-block group-hover:shadow-md transition-all duration-200 ${
             colorClass.includes('blue') ? 'text-blue-700 bg-blue-200/50 group-hover:bg-blue-200' :
             colorClass.includes('emerald') ? 'text-emerald-700 bg-emerald-200/50 group-hover:bg-emerald-200' :
             colorClass.includes('amber') ? 'text-amber-700 bg-amber-200/50 group-hover:bg-amber-200' :
@@ -642,7 +656,7 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
       <div className="space-y-10 p-8">
         {/* Enhanced Dashboard Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
             title="Total Projects"
             value={stats.totalProjects}
@@ -754,18 +768,19 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
                   </span>
                 </div>
               ) : (
-                filteredEnhancedProjects.map((project) => (
-                  <div key={project.id} className="border-2 border-gray-200 rounded-xl shadow-lg hover:shadow-xl hover:border-blue-300 transition-all duration-300">
-                    <ProjectCard
-                      project={{
-                        ...project,
-                        budget: project.calculatedBudget,
-                        spent: project.calculatedSpent
-                      }}
-                      onSelect={onProjectSelect}
-                    />
-                  </div>
-                ))
+                                 filteredEnhancedProjects.map((project) => (
+                   <div key={project.id} className="border-2 border-gray-200 rounded-xl shadow-lg hover:shadow-xl hover:border-blue-300 transition-all duration-300">
+                     <ProjectCard
+                       project={{
+                         ...project,
+                         budget: project.calculatedBudget,
+                         spent: project.calculatedSpent
+                       }}
+                       onSelect={onProjectSelect}
+                       isLoading={statsLoading}
+                     />
+                   </div>
+                 ))
               )}
             </div>
           </div>

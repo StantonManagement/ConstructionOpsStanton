@@ -451,33 +451,42 @@ const ItemCard: React.FC<{
               <div className="flex items-center justify-between text-sm mb-2">
                 <span className="text-gray-500">Progress</span>
                 <span className="font-medium">
-                  {Math.round(((item.calculatedSpent || item.spent || 0) / (item.calculatedBudget || item.budget)) * 100)}%
+                  {((item.calculatedSpent || item.spent || 0) / (item.calculatedBudget || item.budget) * 100).toFixed(2)}%
                 </span>
               </div>
-              <div className="bg-gray-200 rounded-full h-2">
+              <div className="bg-gray-200 rounded-full h-3 relative overflow-hidden">
                 <div
-                  className={`h-2 rounded-full transition-all duration-300 ${
-                    Math.round(((item.calculatedSpent || item.spent || 0) / (item.calculatedBudget || item.budget)) * 100) > 90 
-                      ? 'bg-red-500' 
-                      : 'bg-blue-600'
+                  className={`h-3 rounded-full transition-all duration-500 ease-out ${
+                    ((item.calculatedSpent || item.spent || 0) / (item.calculatedBudget || item.budget)) * 100 > 95 ? 'bg-gradient-to-r from-red-500 to-red-600' :
+                    ((item.calculatedSpent || item.spent || 0) / (item.calculatedBudget || item.budget)) * 100 > 90 ? 'bg-gradient-to-r from-orange-500 to-orange-600' :
+                    ((item.calculatedSpent || item.spent || 0) / (item.calculatedBudget || item.budget)) * 100 > 75 ? 'bg-gradient-to-r from-yellow-500 to-yellow-600' :
+                    'bg-gradient-to-r from-green-500 to-green-600'
                   }`}
                   style={{ 
-                    width: `${Math.min(((item.calculatedSpent || item.spent || 0) / (item.calculatedBudget || item.budget)) * 100, 100)}%` 
+                    width: `${Math.min(((item.calculatedSpent || item.spent || 0) / (item.calculatedBudget || item.budget)) * 100 > 0 ? Math.max(((item.calculatedSpent || item.spent || 0) / (item.calculatedBudget || item.budget)) * 100, 1) : 0, 100)}%`,
+                    transition: 'width 0.5s ease-out'
                   }}
-                />
+                >
+                  {/* Animated shimmer effect for high usage */}
+                  {(((item.calculatedSpent || item.spent || 0) / (item.calculatedBudget || item.budget)) * 100 > 75) && (
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse"></div>
+                  )}
+                </div>
               </div>
               <div className="flex justify-between items-center text-xs mt-1">
-                <span className="text-gray-500">
-                  {Math.round(((item.calculatedSpent || item.spent || 0) / (item.calculatedBudget || item.budget)) * 100)}% utilized
+                <span className="text-gray-500 font-medium">
+                  {((item.calculatedSpent || item.spent || 0) / (item.calculatedBudget || item.budget)) * 100 < 0.01 ? '<0.01%' : (((item.calculatedSpent || item.spent || 0) / (item.calculatedBudget || item.budget)) * 100).toFixed(3)}% utilized
                 </span>
-                <span className={`font-medium ${
-                  Math.round(((item.calculatedSpent || item.spent || 0) / (item.calculatedBudget || item.budget)) * 100) > 90 
-                    ? 'text-red-600' 
-                    : 'text-green-600'
+                <span className={`font-semibold ${
+                  ((item.calculatedSpent || item.spent || 0) / (item.calculatedBudget || item.budget)) * 100 > 95 ? 'text-red-600' :
+                  ((item.calculatedSpent || item.spent || 0) / (item.calculatedBudget || item.budget)) * 100 > 90 ? 'text-orange-600' :
+                  ((item.calculatedSpent || item.spent || 0) / (item.calculatedBudget || item.budget)) * 100 > 75 ? 'text-yellow-600' :
+                  'text-green-700'
                 }`}>
-                  {Math.round(((item.calculatedSpent || item.spent || 0) / (item.calculatedBudget || item.budget)) * 100) > 90 
-                    ? '⚠️ High Usage' 
-                    : '✅ On Track'}
+                  {((item.calculatedSpent || item.spent || 0) / (item.calculatedBudget || item.budget)) * 100 > 95 ? '⚠️ Over budget' :
+                   ((item.calculatedSpent || item.spent || 0) / (item.calculatedBudget || item.budget)) * 100 > 90 ? '⚠️ Near limit' :
+                   ((item.calculatedSpent || item.spent || 0) / (item.calculatedBudget || item.budget)) * 100 > 75 ? '⚡ High usage' :
+                   '✅ On track'}
                 </span>
               </div>
             </div>
@@ -1605,6 +1614,20 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
       // Update the projects in the context
       dispatch({ type: 'SET_PROJECTS', payload: freshProjects });
 
+      // Fetch approved payments for spent calculation
+      const { data: approvedPayments } = await supabase
+        .from('payment_applications')
+        .select('current_payment, project_id')
+        .eq('status', 'approved');
+
+      const approvedPaymentsByProject = (approvedPayments || []).reduce((acc: any, payment) => {
+        if (!acc[payment.project_id]) {
+          acc[payment.project_id] = 0;
+        }
+        acc[payment.project_id] += Number(payment.current_payment) || 0;
+        return acc;
+      }, {});
+
       const enrichedProjects = await Promise.all(freshProjects.map(async (project: any) => {
         // Get contract data for this project
         const { data: contractorData } = await supabase
@@ -1616,8 +1639,8 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
         const calculatedBudget = contractorData?.reduce((sum: number, contract: any) => 
           sum + (Number(contract.contract_amount) || 0), 0) || 0;
         
-        const calculatedSpent = contractorData?.reduce((sum: number, contract: any) => 
-          sum + (Number(contract.paid_to_date) || 0), 0) || 0;
+        // Use approved payments for spent calculation instead of paid_to_date
+        const calculatedSpent = approvedPaymentsByProject[project.id] || 0;
 
         return {
           ...project,

@@ -1558,39 +1558,38 @@ function CompactStatCard({ icon, label, value, change, color, onClick }: any) {
 // Compact Stats Overview
 function CompactStats({ pendingSMS, reviewQueue, readyChecks, weeklyTotal, onStatClick }: any) {
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-      <CompactStatCard
-        icon="📱"
-        label="SMS Pending"
-        value={pendingSMS}
-        change={-5}
-        color="orange"
-        onClick={() => onStatClick('sms_pending')}
-      />
-      <CompactStatCard
-        icon="⚠️"
-        label="Review Queue"
-        value={reviewQueue}
-        change={12}
-        color="red"
-        onClick={() => onStatClick('review_queue')}
-      />
-      <CompactStatCard
-        icon="📤"
-        label="SMS Sent"
-        value={readyChecks}
-        change={8}
-        color="blue"
-        onClick={() => onStatClick('ready')}
-      />
-      <CompactStatCard
-        icon="💰"
-        label="Weekly"
-        value={formatCurrency(weeklyTotal)}
-        change={15}
-        color="purple"
-        onClick={() => onStatClick('weekly')}
-      />
+    <div className="mb-6">
+      <h3 className="text-md font-semibold text-gray-900 mb-3">Payment Applications</h3>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <CompactStatCard
+          icon="📱"
+          label="SMS Pending"
+          value={pendingSMS}
+          color="orange"
+          onClick={() => onStatClick('sms_pending')}
+        />
+        <CompactStatCard
+          icon="⚠️"
+          label="Review Queue"
+          value={reviewQueue}
+          color="red"
+          onClick={() => onStatClick('review_queue')}
+        />
+        <CompactStatCard
+          icon="📤"
+          label="SMS Sent"
+          value={readyChecks}
+          color="blue"
+          onClick={() => onStatClick('ready')}
+        />
+        <CompactStatCard
+          icon="💰"
+          label="Weekly Total"
+          value={formatCurrency(weeklyTotal)}
+          color="purple"
+          onClick={() => onStatClick('weekly')}
+        />
+      </div>
     </div>
   );
 }
@@ -2580,6 +2579,12 @@ export default function PMDashboard() {
     review_queue: 0,
     ready_checks: 0,
     weekly_total: 0,
+    total_projects: 0,
+    active_projects: 0,
+    at_risk_projects: 0,
+    total_budget: 0,
+    total_spent: 0,
+    completion_percentage: 0,
   });
   const [paymentApps, setPaymentApps] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
@@ -2688,6 +2693,29 @@ export default function PMDashboard() {
       if (projectsError) throw new Error(projectsError.message);
       setProjects(projectsRaw || []);
 
+      // Calculate overall project statistics
+      const { data: projectStats } = await supabase
+        .from("projects")
+        .select("id, status, at_risk, budget, spent");
+      
+      const { data: contractorStats } = await supabase
+        .from("project_contractors")
+        .select("contract_amount, paid_to_date")
+        .eq("contract_status", "active");
+      
+      const { data: approvedPayments } = await supabase
+        .from("payment_applications")
+        .select("current_payment")
+        .eq("status", "approved");
+
+      // Calculate totals
+      const totalProjects = (projectStats || []).length;
+      const activeProjects = (projectStats || []).filter((p: any) => p.status === "active").length;
+      const atRiskProjects = (projectStats || []).filter((p: any) => p.at_risk).length;
+      const totalBudget = (contractorStats || []).reduce((sum: number, c: any) => sum + (Number(c.contract_amount) || 0), 0);
+      const totalSpent = (approvedPayments || []).reduce((sum: number, p: any) => sum + (Number(p.current_payment) || 0), 0);
+      const completionPercentage = totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0;
+
       const { data: smsConvos } = await supabase
         .from("payment_sms_conversations")
         .select("id, conversation_state");
@@ -2703,13 +2731,20 @@ export default function PMDashboard() {
       const now = new Date();
       const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
       const weeklyTotal = (appsRaw || [])
-        .filter((a: any) => a.created_at && new Date(a.created_at) >= weekAgo && a.status !== 'approved')
+        .filter((a: any) => a.created_at && new Date(a.created_at) >= weekAgo && a.status === 'approved')
         .reduce((sum: number, a: any) => sum + (a.current_payment || 0), 0);
+      
       setStats({
         pending_sms: pendingSMS,
         review_queue: reviewQueue,
         ready_checks: readyChecks,
         weekly_total: weeklyTotal,
+        total_projects: totalProjects,
+        active_projects: activeProjects,
+        at_risk_projects: atRiskProjects,
+        total_budget: totalBudget,
+        total_spent: totalSpent,
+        completion_percentage: completionPercentage,
       });
       setLastRefresh(new Date());
     } catch (err: any) {
@@ -3226,6 +3261,97 @@ export default function PMDashboard() {
                 </>
               )}
             </button>
+          </div>
+        </div>
+
+        {/* Main Dashboard Overview */}
+        <div className="mb-8">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Dashboard Overview</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            {/* Total Projects Card */}
+            <div className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Total Projects</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats.total_projects}</p>
+                  <p className="text-xs text-gray-500">{stats.active_projects} active</p>
+                </div>
+                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <span className="text-blue-600 text-xl">🏗️</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Total Budget Card */}
+            <div className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Total Budget</p>
+                  <p className="text-2xl font-bold text-gray-900">{formatCurrency(stats.total_budget)}</p>
+                  <p className="text-xs text-gray-500">Contract value</p>
+                </div>
+                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                  <span className="text-green-600 text-xl">💰</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Total Spent Card */}
+            <div className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Total Spent</p>
+                  <p className="text-2xl font-bold text-gray-900">{formatCurrency(stats.total_spent)}</p>
+                  <p className="text-xs text-gray-500">Approved payments</p>
+                </div>
+                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                  <span className="text-purple-600 text-xl">💳</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Completion Progress Card */}
+            <div className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Progress</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats.completion_percentage}%</p>
+                  <p className="text-xs text-gray-500">
+                    {stats.completion_percentage > 90 ? '⚠️ Over budget' : '✅ On track'}
+                  </p>
+                </div>
+                <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                  <span className="text-orange-600 text-xl">📊</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Progress Bar */}
+          <div className="bg-white border border-gray-200 rounded-lg p-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-gray-700">Budget Utilization</span>
+              <span className="text-sm text-gray-600">
+                {formatCurrency(stats.total_spent)} / {formatCurrency(stats.total_budget)}
+              </span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-3">
+              <div
+                className={`h-3 rounded-full transition-all duration-500 ${
+                  stats.completion_percentage > 90 ? 'bg-red-500' : 
+                  stats.completion_percentage > 75 ? 'bg-yellow-500' : 'bg-green-500'
+                }`}
+                style={{ width: `${Math.min(stats.completion_percentage, 100)}%` }}
+              ></div>
+            </div>
+            <div className="flex justify-between items-center mt-2">
+              <span className="text-xs text-gray-500">
+                {stats.completion_percentage}% Complete
+              </span>
+              <span className="text-xs text-gray-500">
+                {stats.at_risk_projects > 0 ? `⚠️ ${stats.at_risk_projects} at risk` : '✅ All projects healthy'}
+              </span>
+            </div>
           </div>
         </div>
 

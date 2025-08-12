@@ -512,14 +512,14 @@ export async function generateG703Pdf({
       color: colors.black,
     });
 
-    // Use the percentage values directly from the data (if available) or calculate from dollar amounts
+    // Use the percentage values directly from the data
     const scheduledValue = li.scheduled_value || 0;
-    const previousPercent = (li as any).previous_percent ?? (scheduledValue > 0 ? ((li.previous || 0) / scheduledValue) * 100 : 0);
-    const thisPeriodPercent = (li as any).this_period_percent ?? (scheduledValue > 0 ? ((li.this_period || 0) / scheduledValue) * 100 : 0);
+    const previousPercent = (li as any).previous_percent || 0;
+    const thisPeriodPercent = (li as any).this_period_percent || 0;
     
-    // Dollar values (these should already be calculated correctly)
-    const prevValue = li.previous || 0;
-    const thisPeriodValue = li.this_period || 0;
+    // Calculate dollar values from percentages
+    const prevValue = (previousPercent / 100) * scheduledValue;
+    const thisPeriodValue = (thisPeriodPercent / 100) * scheduledValue;
     const totalCompletedValue = prevValue + thisPeriodValue + (li.material_presently_stored || 0);
 
     const values = [
@@ -527,7 +527,7 @@ export async function generateG703Pdf({
       li.description_of_work || '',
       li.scheduled_value ? `$${li.scheduled_value.toLocaleString()}` : '',
       prevValue > 0 ? `$${Math.round(prevValue).toLocaleString()}` : '',
-      thisPeriodPercent > 0 ? `${thisPeriodPercent.toFixed(1)}%` : '',
+      thisPeriodValue > 0 ? `$${Math.round(thisPeriodValue).toLocaleString()}` : '',
       li.material_presently_stored ? `$${li.material_presently_stored.toLocaleString()}` : '',
       totalCompletedValue > 0 ? `$${Math.round(totalCompletedValue).toLocaleString()}` : '',
       scheduledValue > 0 ? `${((totalCompletedValue / scheduledValue) * 100).toFixed(1)}%` : '',
@@ -593,9 +593,23 @@ export async function generateG703Pdf({
     color: colors.lightGray,
   });
 
+  // Calculate total dollar amounts for contract total row
+  const totalPreviousDollars = lineItems.reduce((sum, li) => {
+    const scheduledValue = li.scheduled_value || 0;
+    const previousPercent = (li as any).previous_percent || 0;
+    return sum + (scheduledValue * (previousPercent / 100));
+  }, 0);
+  
+  const totalThisPeriodDollars = lineItems.reduce((sum, li) => {
+    const scheduledValue = li.scheduled_value || 0;
+    const thisPeriodPercent = (li as any).this_period_percent || 0;
+    return sum + (scheduledValue * (thisPeriodPercent / 100));
+  }, 0);
+  
   const contractTotalValues = [
-    '', 'CONTRACT TOTAL', `$${contractTotal.toLocaleString()}`, `$${Math.round(prevTotal).toLocaleString()}`, 
-    thisPeriodTotal && contractTotal ? `${((thisPeriodTotal / contractTotal) * 100).toFixed(1)}%` : '',
+    '', 'CONTRACT TOTAL', `$${contractTotal.toLocaleString()}`, 
+    `$${Math.round(totalPreviousDollars).toLocaleString()}`,
+    `$${Math.round(totalThisPeriodDollars).toLocaleString()}`,
     `$${matStoredTotal.toLocaleString()}`, 
     `$${totalCompleted.toLocaleString()}`,
     contractTotal > 0 ? `${((totalCompleted / contractTotal) * 100).toFixed(1)}%` : '',
@@ -677,8 +691,9 @@ export async function generateG703Pdf({
   });
 
   const grandTotalValues = [
-    '', 'GRAND TOTAL', `$${contractTotal.toLocaleString()}`, `$${Math.round(prevTotal).toLocaleString()}`, 
-    thisPeriodTotal && contractTotal ? `${((thisPeriodTotal / contractTotal) * 100).toFixed(1)}%` : '',
+    '', 'GRAND TOTAL', `$${contractTotal.toLocaleString()}`, 
+    `$${Math.round(totalPreviousDollars).toLocaleString()}`,
+    `$${Math.round(totalThisPeriodDollars).toLocaleString()}`,
     `$${matStoredTotal.toLocaleString()}`, 
     `$${totalCompleted.toLocaleString()}`,
     contractTotal > 0 ? `${((totalCompleted / contractTotal) * 100).toFixed(1)}%` : '',

@@ -89,12 +89,12 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
           sum + (Number(payment.current_payment) || 0), 0) || 0;
 
         const activePaymentApps = paymentAppsData?.filter((app: any) => 
-          ['submitted', 'needs_review', 'approved'].includes(app.status)).length || 0;
+          ['submitted', 'needs_review'].includes(app.status)).length || 0;
 
         const completedPaymentApps = paymentAppsData?.filter((app: any) => 
-          ['check_ready', 'sms_sent'].includes(app.status)).length || 0;
+          ['approved'].includes(app.status)).length || 0;
 
-        const completionPercentage = totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0;
+                 const completionPercentage = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0;
 
         return {
           ...project,
@@ -193,7 +193,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
               )
             `)
             .eq('project_id', project.id)
-            .in('status', ['submitted', 'sms_sent']);
+            .in('status', ['submitted', 'needs_review']);
 
           if (!paymentAppsError && paymentApps) {
             data = paymentApps.map((app: any) => ({
@@ -220,7 +220,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
               )
             `)
             .eq('project_id', project.id)
-            .in('status', ['check_ready', 'sms_sent', 'approved']);
+            .in('status', ['approved']);
 
           if (!completedAppsError && completedApps) {
             data = completedApps.map((app: any) => ({
@@ -503,20 +503,61 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
             {/* Budget Progress */}
             <div className="mb-4">
               <div className="flex items-center justify-between text-sm mb-2">
-                <span className="text-gray-600">Budget</span>
-                <span className="font-medium text-gray-900">{formatCurrency(project.stats.totalBudget)}</span>
+                <span className="text-gray-600 font-medium">Budget Progress</span>
+                <span className="text-gray-900 font-semibold">{formatCurrency(project.stats.totalBudget)}</span>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div 
-                  className={`h-2 rounded-full transition-all duration-300 ${
-                    project.stats.completionPercentage > 90 ? 'bg-red-500' : 'bg-green-500'
+              
+              {/* Progress Bar */}
+              <div className="w-full bg-gray-200 rounded-full h-3 mb-2 relative overflow-hidden">
+                <div
+                  className={`h-3 rounded-full transition-all duration-500 ease-out ${
+                    project.stats.completionPercentage > 95 ? 'bg-gradient-to-r from-red-500 to-red-600' :
+                    project.stats.completionPercentage > 90 ? 'bg-gradient-to-r from-orange-500 to-orange-600' :
+                    project.stats.completionPercentage > 75 ? 'bg-gradient-to-r from-yellow-500 to-yellow-600' :
+                    'bg-gradient-to-r from-green-500 to-green-600'
                   }`}
-                  style={{ width: `${Math.min(project.stats.completionPercentage, 100)}%` }}
-                ></div>
+                  style={{ 
+                    width: `${Math.min(project.stats.completionPercentage > 0 ? Math.max(project.stats.completionPercentage, 1) : 0, 100)}%`,
+                    transition: 'width 0.5s ease-out'
+                  }}
+                  role="progressbar"
+                  aria-valuenow={project.stats.completionPercentage}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-label={`Budget utilization: ${project.stats.completionPercentage.toFixed(2)}%`}
+                >
+                  {/* Animated shimmer effect for high usage */}
+                  {(project.stats.completionPercentage > 75) && (
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse"></div>
+                  )}
+                </div>
               </div>
-              <div className="flex items-center justify-between text-xs text-gray-500 mt-1">
-                <span>Spent: {formatCurrency(project.stats.totalSpent)}</span>
-                <span>{project.stats.completionPercentage}%</span>
+
+              {/* Budget Details */}
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-gray-600">
+                  Spent: <span className="font-medium text-gray-900">{formatCurrency(project.stats.totalSpent)}</span>
+                </span>
+                <span className="text-gray-600">
+                  Remaining: <span className="font-medium text-gray-900">{formatCurrency(project.stats.totalBudget - project.stats.totalSpent)}</span>
+                </span>
+              </div>
+              
+              <div className="flex justify-between items-center text-xs mt-1">
+                                 <span className="text-gray-600 font-medium">
+                   {project.stats.completionPercentage < 0.01 ? '<0.01%' : project.stats.completionPercentage.toFixed(3)}% utilized
+                 </span>
+                <span className={`font-semibold ${
+                  project.stats.completionPercentage > 95 ? 'text-red-600' :
+                  project.stats.completionPercentage > 90 ? 'text-orange-600' :
+                  project.stats.completionPercentage > 75 ? 'text-yellow-600' :
+                  'text-green-700'
+                }`}>
+                  {project.stats.completionPercentage > 95 ? '⚠️ Over budget' :
+                   project.stats.completionPercentage > 90 ? '⚠️ Near limit' :
+                   project.stats.completionPercentage > 75 ? '⚡ High usage' :
+                   '✅ On track'}
+                </span>
               </div>
             </div>
 

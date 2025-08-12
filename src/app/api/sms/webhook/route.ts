@@ -173,9 +173,20 @@ export async function POST(req: NextRequest) {
         .single();
       console.log('Fetched plip:', plip, 'for payment_app_id:', conv.payment_app_id, 'line_item_id:', lineItemId, 'Error:', plipError);
 
-      // Calculate new this_period using scheduled_value from joined project_line_items
-      let scheduledValue = Array.isArray(plip?.project_line_items) ? Number(plip.project_line_items[0]?.scheduled_value) || 0 : 0;
-      let thisPeriod = Math.round((percent / 100) * scheduledValue);
+      // Calculate the difference between current percentage and previous percentage
+      const percentFloat = Number(percent);
+      const previousPercentFloat = Number(prevPercent);
+      const thisPeriodPercent = Math.max(0, percentFloat - previousPercentFloat); // This period is the difference
+      
+      // Fetch scheduled_value for calculation
+      const { data: currentPLI, error: currentPLIError } = await supabase
+        .from('project_line_items')
+        .select('scheduled_value')
+        .eq('id', lineItemId)
+        .single();
+      const scheduledValueFloat = Number(currentPLI?.scheduled_value) || 0;
+      const amountForThisPeriod = parseFloat((scheduledValueFloat * (thisPeriodPercent / 100)).toFixed(2));
+      
       // Move current this_period_percent to previous_percent and update percent
       if (plip?.id) {
         console.log('Updating progress for payment_app_id:', conv.payment_app_id, 'line_item_id:', lineItemId);
@@ -183,56 +194,23 @@ export async function POST(req: NextRequest) {
           .from('payment_line_item_progress')
           .update({ 
             previous_percent: plip.this_period_percent,
-            this_period_percent: percent,
-            submitted_percent: percent,
-            calculated_amount: thisPeriod
+            this_period_percent: percent, // Store the total percentage as before
+            submitted_percent: percent, // Keep the total percentage
+            calculated_amount: amountForThisPeriod // Use the calculated amount for this period
           })
           .eq('payment_app_id', conv.payment_app_id)
           .eq('line_item_id', lineItemId)
           .select();
         console.log('Progress update result:', progressUpdate, 'Error:', progressError);
-        // Optionally, also update project_line_items.percent_completed for visibility
-        console.log('Updating project_line_items.percent_completed, this_period, and amount_for_this_period for line_item_id:', lineItemId);
-        // Fetch the current payment_applications row for context
-        const { data: paymentApp, error: paymentAppError } = await supabase
-          .from('payment_applications')
-          .select('*')
-          .eq('id', conv.payment_app_id)
-          .single();
-        if (paymentAppError) {
-          console.error('Error fetching payment_applications for id:', conv.payment_app_id, paymentAppError);
-        } else {
-          console.log('Current payment_applications row:', paymentApp);
-        }
-        // Find the previous payment_app_id for this line_item_id with non-zero submitted_percent
-        const { data: prevProgress, error: prevProgressError } = await supabase
-          .from('payment_line_item_progress')
-          .select('submitted_percent, payment_app_id')
-          .eq('line_item_id', lineItemId)
-          .lt('payment_app_id', conv.payment_app_id)
-          .gt('submitted_percent', 0)
-          .order('payment_app_id', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        const previousSubmittedPercent = Number(prevProgress?.submitted_percent) || 0;
-        // Fetch scheduled_value for calculation
-        const { data: currentPLI, error: currentPLIError } = await supabase
-          .from('project_line_items')
-          .select('scheduled_value')
-          .eq('id', lineItemId)
-          .single();
-        const scheduledValueFloat = Number(currentPLI?.scheduled_value) || 0;
-        // Calculate amount_for_this_period as scheduled_value * (percent / 100)
-        const percentFloat = Number(percent);
-        const amountForThisPeriod = parseFloat((scheduledValueFloat * (percentFloat / 100)).toFixed(2));
+        
         // Update project_line_items with new values and set from_previous_application from previous progress
         const { data: pliUpdate, error: pliError } = await supabase
           .from('project_line_items')
           .update({ 
             percent_completed: percentFloat,
-            this_period: percentFloat,
+            this_period: percentFloat, // Store the total percentage as before
             amount_for_this_period: amountForThisPeriod,
-            from_previous_application: previousSubmittedPercent
+            from_previous_application: previousPercentFloat
           })
           .eq('id', lineItemId)
           .select();
@@ -272,26 +250,31 @@ export async function POST(req: NextRequest) {
         console.log('Updated payment_sms_conversations with:', updateObj);
       }
 
-      if (updateObj.conversation_state === 'awaiting_confirmation') {
-        // Show summary after all questions (including additional)
-        const { data: progressRows } = await supabase
-          .from('payment_line_item_progress')
-          .select('line_item_id, this_period_percent')
-          .eq('payment_app_id', conv.payment_app_id);
-        const { data: lineItemsData } = await supabase
-          .from('project_line_items')
-          .select('id, scheduled_value, description_of_work')
-          .in('id', (progressRows || []).map(r => r.line_item_id));
+             if (updateObj.conversation_state === 'awaiting_confirmation') {
+         // Show summary after all questions (including additional)
+         const { data: progressRows } = await supabase
+           .from('payment_line_item_progress')
+           .select('line_item_id, this_period_percent')
+           .eq('payment_app_id', conv.payment_app_id);
+         const { data: lineItemsData } = await supabase
+           .from('project_line_items')
+           .select('id, scheduled_value, description_of_work, from_previous_application')
+           .in('id', (progressRows || []).map(r => r.line_item_id));
         let summary = 'Summary of your application:\n';
         let totalThisPeriod = 0;
         (progressRows || []).forEach((row) => {
           const item = (lineItemsData || []).find(li => li.id === row.line_item_id);
-          const thisPeriodPercent = Number(row.this_period_percent) || 0;
+          const totalPercent = Number(row.this_period_percent) || 0; // This is the total percentage
           const scheduled = Number(item?.scheduled_value) || 0;
+          
+          // Calculate the difference for this period
+          const previousPercent = Number(item?.from_previous_application) || 0;
+          const thisPeriodPercent = Math.max(0, totalPercent - previousPercent);
           const thisPeriodDollar = scheduled * (thisPeriodPercent / 100);
+          
           totalThisPeriod += thisPeriodDollar;
           const desc = item?.description_of_work || 'Item';
-          summary += `${desc} - (${thisPeriodPercent.toFixed(1)}%) = $${thisPeriodDollar.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}\n`;
+          summary += `${desc} - (${thisPeriodPercent.toFixed(1)}% this period) = $${thisPeriodDollar.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}\n`;
         });
         summary += `Total Requested = $${totalThisPeriod.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}\n`;
         summary += 'Please type "Yes" to submit or "No" to redo your answers.';
@@ -320,15 +303,15 @@ export async function POST(req: NextRequest) {
           .from('payment_sms_conversations')
           .update(updateObj)
           .eq('id', conv.id);
-        // Show summary
-        const { data: progressRows } = await supabase
-          .from('payment_line_item_progress')
-          .select('line_item_id, this_period_percent')
-          .eq('payment_app_id', conv.payment_app_id);
-        const { data: lineItemsData } = await supabase
-          .from('project_line_items')
-          .select('id, scheduled_value, description_of_work')
-          .in('id', (progressRows || []).map(r => r.line_item_id));
+                 // Show summary
+         const { data: progressRows } = await supabase
+           .from('payment_line_item_progress')
+           .select('line_item_id, this_period_percent')
+           .eq('payment_app_id', conv.payment_app_id);
+         const { data: lineItemsData } = await supabase
+           .from('project_line_items')
+           .select('id, scheduled_value, description_of_work, from_previous_application')
+           .in('id', (progressRows || []).map(r => r.line_item_id));
         let summary = 'Summary of your application:\n';
         let totalThisPeriod = 0;
         (progressRows || []).forEach((row) => {
@@ -387,13 +370,18 @@ export async function POST(req: NextRequest) {
       }
       const { data: lineItemsData } = await supabase
         .from('project_line_items')
-        .select('id, scheduled_value')
+        .select('id, scheduled_value, from_previous_application')
         .in('id', (progressRows || []).map(r => r.line_item_id));
       const totalCurrentPayment = (progressRows || []).reduce((sum, row) => {
         const item = (lineItemsData || []).find(li => li.id === row.line_item_id);
-        const percent = Number(row.this_period_percent) || 0;
+        const totalPercent = Number(row.this_period_percent) || 0; // This is the total percentage
         const scheduled = Number(item?.scheduled_value) || 0;
-        return sum + (scheduled * (percent / 100));
+        
+        // Calculate the difference for this period
+        const previousPercent = Number(item?.from_previous_application) || 0;
+        const thisPeriodPercent = Math.max(0, totalPercent - previousPercent);
+        
+        return sum + (scheduled * (thisPeriodPercent / 100));
       }, 0);
       const { error: paymentAppUpdateError } = await supabase
         .from('payment_applications')
