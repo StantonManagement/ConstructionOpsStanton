@@ -48,22 +48,20 @@ export async function generateG703Pdf({
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
-  // Calculate totals with this_period as difference
+  // Calculate totals using proper dollar amounts from the line items
   const contractTotal = lineItems.reduce((sum, li) => sum + (li.scheduled_value || 0), 0);
-  const prevTotal = lineItems.reduce((sum, li) => sum + (((li.previous || 0) / 100) * (li.scheduled_value || 0)), 0);
-  const thisPeriodTotal = lineItems.reduce((sum, li) => {
-    const submittedPercent = li.this_period || 0;
-    const previousPercent = li.previous || 0;
-    const thisPeriodPercent = submittedPercent > previousPercent ? submittedPercent - previousPercent : 0;
-    return sum + ((thisPeriodPercent / 100) * (li.scheduled_value || 0));
-  }, 0);
+  
+  // Previous work completed (in dollars)
+  const prevTotal = lineItems.reduce((sum, li) => sum + (li.previous || 0), 0);
+  
+  // This period work completed (in dollars) 
+  const thisPeriodTotal = lineItems.reduce((sum, li) => sum + (li.this_period || 0), 0);
+  
+  // Material presently stored (in dollars)
   const matStoredTotal = lineItems.reduce((sum, li) => sum + (li.material_presently_stored || 0), 0);
-  const totalCompleted = lineItems.reduce((sum, li) => {
-    const submittedPercent = li.this_period || 0;
-    const previousPercent = li.previous || 0;
-    const thisPeriodPercent = submittedPercent > previousPercent ? submittedPercent - previousPercent : 0;
-    return sum + (((previousPercent + thisPeriodPercent) / 100) * (li.scheduled_value || 0)) + (li.material_presently_stored || 0);
-  }, 0);
+  
+  // Total completed work and stored materials (in dollars)
+  const totalCompleted = prevTotal + thisPeriodTotal + matStoredTotal;
   const balanceTotal = lineItems.reduce((sum, li) => sum + (li.balance_to_finish || 0), 0);
   const retainageTotal = lineItems.reduce((sum, li) => sum + (li.retainage || 0), 0);
 
@@ -514,22 +512,25 @@ export async function generateG703Pdf({
       color: colors.black,
     });
 
-    const previousPercent = li.previous || 0;
-    const submittedPercent = li.this_period || 0;
-    const thisPeriodPercent = submittedPercent > previousPercent ? submittedPercent - previousPercent : 0;
-    const prevValue = previousPercent && li.scheduled_value ? (previousPercent / 100) * li.scheduled_value : 0;
-    const thisPeriodValue = thisPeriodPercent && li.scheduled_value ? (thisPeriodPercent / 100) * li.scheduled_value : 0;
-    const totalCompletedPercentValue = (previousPercent + thisPeriodPercent) && li.scheduled_value ? ((previousPercent + thisPeriodPercent) / 100) * li.scheduled_value : 0;
+    // Use the percentage values directly from the data (if available) or calculate from dollar amounts
+    const scheduledValue = li.scheduled_value || 0;
+    const previousPercent = (li as any).previous_percent ?? (scheduledValue > 0 ? ((li.previous || 0) / scheduledValue) * 100 : 0);
+    const thisPeriodPercent = (li as any).this_period_percent ?? (scheduledValue > 0 ? ((li.this_period || 0) / scheduledValue) * 100 : 0);
+    
+    // Dollar values (these should already be calculated correctly)
+    const prevValue = li.previous || 0;
+    const thisPeriodValue = li.this_period || 0;
+    const totalCompletedValue = prevValue + thisPeriodValue + (li.material_presently_stored || 0);
 
     const values = [
       li.item_no?.toString() || '',
       li.description_of_work || '',
       li.scheduled_value ? `$${li.scheduled_value.toLocaleString()}` : '',
-      prevValue ? `$${Math.round(prevValue).toLocaleString()}` : '',
-      thisPeriodPercent ? `${thisPeriodPercent.toFixed(1)}%` : '',
+      prevValue > 0 ? `$${Math.round(prevValue).toLocaleString()}` : '',
+      thisPeriodPercent > 0 ? `${thisPeriodPercent.toFixed(1)}%` : '',
       li.material_presently_stored ? `$${li.material_presently_stored.toLocaleString()}` : '',
-      totalCompletedPercentValue ? `$${Math.round(totalCompletedPercentValue + (li.material_presently_stored || 0)).toLocaleString()}` : '',
-      li.total_completed && li.scheduled_value ? `${((li.total_completed / li.scheduled_value) * 100).toFixed(1)}%` : '',
+      totalCompletedValue > 0 ? `$${Math.round(totalCompletedValue).toLocaleString()}` : '',
+      scheduledValue > 0 ? `${((totalCompletedValue / scheduledValue) * 100).toFixed(1)}%` : '',
       li.balance_to_finish ? `$${li.balance_to_finish.toLocaleString()}` : '',
       li.retainage ? `$${li.retainage.toLocaleString()}` : '',
     ];

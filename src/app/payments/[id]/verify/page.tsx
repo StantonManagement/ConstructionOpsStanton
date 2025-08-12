@@ -63,6 +63,9 @@ export default function PaymentVerificationPage() {
   // Helper to get project_line_items for each line item
   const [projectLineItems, setProjectLineItems] = useState<any[]>([]);
   
+  // State for previous approved percentages
+  const [previousPercentages, setPreviousPercentages] = useState<Record<number, number>>({});
+  
   // State for PM editing percentages
   const [editingLineItem, setEditingLineItem] = useState<number | null>(null);
   const [editedPercentages, setEditedPercentages] = useState<Record<number, {
@@ -320,6 +323,70 @@ export default function PaymentVerificationPage() {
     fetchProjectLineItems();
   }, [lineItems]);
 
+  // Fetch previous approved percentages for each line item
+  useEffect(() => {
+    async function fetchPreviousPercentages() {
+      if (!lineItems.length || !paymentApp?.contractor_id || !paymentApp?.project_id) return;
+      
+      const lineItemIds = lineItems.map((li) => li.line_item_id).filter(Boolean);
+      if (!lineItemIds.length) return;
+
+      try {
+        // Get all approved payment applications for this contractor and project, excluding current one
+        const { data: previousApps, error: appsError } = await supabase
+          .from('payment_applications')
+          .select('id, created_at')
+          .eq('contractor_id', paymentApp.contractor_id)
+          .eq('project_id', paymentApp.project_id)
+          .eq('status', 'approved')
+          .neq('id', paymentAppId)
+          .order('created_at', { ascending: false });
+
+        if (appsError) {
+          console.error('Error fetching previous payment applications:', appsError);
+          return;
+        }
+
+        if (!previousApps || previousApps.length === 0) {
+          // No previous approved applications, all previous percentages are 0
+          const zeroPercentages: Record<number, number> = {};
+          lineItemIds.forEach(id => { zeroPercentages[id] = 0; });
+          setPreviousPercentages(zeroPercentages);
+          return;
+        }
+
+        // Get the most recent approved application's line item progress
+        const mostRecentAppId = previousApps[0].id;
+        const { data: previousProgress, error: progressError } = await supabase
+          .from('payment_line_item_progress')
+          .select('line_item_id, pm_verified_percent')
+          .eq('payment_app_id', mostRecentAppId)
+          .in('line_item_id', lineItemIds);
+
+        if (progressError) {
+          console.error('Error fetching previous progress:', progressError);
+          return;
+        }
+
+        // Map previous percentages by line item ID
+        const prevPercentages: Record<number, number> = {};
+        lineItemIds.forEach(id => { prevPercentages[id] = 0; }); // Default to 0
+
+        if (previousProgress) {
+          previousProgress.forEach((progress) => {
+            prevPercentages[progress.line_item_id] = Number(progress.pm_verified_percent) || 0;
+          });
+        }
+
+        setPreviousPercentages(prevPercentages);
+      } catch (error) {
+        console.error('Error in fetchPreviousPercentages:', error);
+      }
+    }
+
+    fetchPreviousPercentages();
+  }, [lineItems, paymentApp?.contractor_id, paymentApp?.project_id, paymentAppId]);
+
   // Map project_line_items by id for easy lookup
   const pliMap: Record<number, any> = {};
   projectLineItems.forEach((pli) => { pliMap[pli.id] = pli; });
@@ -332,18 +399,30 @@ const lineItemsForTable = lineItems.map((li, idx) => {
   const item_no = pli.item_no || '';
   const description_of_work = pli.description_of_work || li.line_item?.description_of_work || '';
   
-  // Previous work completed (as dollar amount)
-  const previous = Number(pli.from_previous_application) || 0;
-  
-  // Use edited percentage if available, otherwise use original
+  // Get percentages from SMS submission
   const submittedPercent = editedPercentages[li.line_item_id]?.submitted_percent ?? (Number(li.submitted_percent) || 0);
   const pmVerifiedPercent = editedPercentages[li.line_item_id]?.pm_verified_percent ?? (Number(li.pm_verified_percent) || submittedPercent);
   
-  // Calculate work completed this period (dollar amount)
-  const work_completed_this_period = (pmVerifiedPercent / 100) * scheduled_value;
-  const this_period = Math.max(0, work_completed_this_period - previous);
+  // Get previous percentage from database query (defaults to 0 for first application)
+  const previousPercent = previousPercentages[li.line_item_id] || 0;
   
-  // Total completed work (dollar amount)
+  // Calculate this period percentage (what was actually submitted this time)
+  const thisPeriodPercent = Math.max(0, pmVerifiedPercent - previousPercent);
+  
+  // Debug logging for payment calculation
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`Line Item ${li.line_item_id} (${description_of_work}):`, {
+      submittedPercent,
+      pmVerifiedPercent,
+      previousPercent,
+      thisPeriodPercent,
+      scheduledValue: scheduled_value
+    });
+  }
+  
+  // Calculate dollar amounts based on percentages
+  const previous = (previousPercent / 100) * scheduled_value; // Previous work in dollars
+  const this_period = (thisPeriodPercent / 100) * scheduled_value; // This period work in dollars
   const total_completed = previous + this_period + material_presently_stored;
   
   // Percentage complete (as percentage)
@@ -359,16 +438,19 @@ const lineItemsForTable = lineItems.map((li, idx) => {
     item_no,
     description_of_work,
     scheduled_value,
-    previous,
-    this_period,
+    previous, // Previous work in dollars
+    this_period, // This period work in dollars
     material_presently_stored,
     total_completed,
-    percent,
+    percent, // Total percentage complete
     balance_to_finish,
     retainage,
     current_payment: this_period,
-    submitted_percent: submittedPercent,
-    pm_verified_percent: pmVerifiedPercent,
+    submitted_percent: submittedPercent, // Original submitted percentage
+    pm_verified_percent: pmVerifiedPercent, // PM verified percentage
+    // Add percentage values for PDF generation
+    previous_percent: previousPercent, // Previous percentage (0 for first application)
+    this_period_percent: thisPeriodPercent, // This period percentage
   };
 });
   const grandTotal = lineItemsForTable.reduce((sum, li) => sum + li.current_payment, 0);
@@ -1201,7 +1283,7 @@ const lineItemsForTable = lineItems.map((li, idx) => {
 
       {/* Change Order Modal */}
       {showChangeOrderModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0  bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
             <div className="p-6">
               <div className="flex items-center gap-4 mb-6">
