@@ -507,7 +507,7 @@ const lineItemsForTable = lineItems.map((li, idx) => {
         }
       }
       
-      router.push("/pm-dashboard");
+      router.push("/");
     } catch (err) {
       setError((err instanceof Error ? err.message : "Failed to approve"));
     } finally {
@@ -555,7 +555,7 @@ const lineItemsForTable = lineItems.map((li, idx) => {
       
       // Show success message and redirect
       alert('Payment application rejected successfully!');
-      router.push("/pm-dashboard");
+      router.push("/");
     } catch (err) {
       setError((err instanceof Error ? err.message : "Failed to reject"));
     } finally {
@@ -603,7 +603,7 @@ const lineItemsForTable = lineItems.map((li, idx) => {
       
       // Show success message and redirect
       alert('Payment application recalled successfully!');
-      router.push("/pm-dashboard");
+      router.push("/");
     } catch (err) {
       setError((err instanceof Error ? err.message : "Failed to recall"));
     } finally {

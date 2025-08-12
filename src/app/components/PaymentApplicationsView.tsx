@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { DollarSign, Filter, Search, RefreshCw, CheckCircle, XCircle, Clock, AlertCircle, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
+import { generateG703Pdf } from '@/lib/g703Pdf';
 
 // Utility functions
 const formatDate = (dateString: string) => {
@@ -678,6 +679,43 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
   const [selectedPaymentApp, setSelectedPaymentApp] = useState<any>(null);
   const [loadingPaymentDetails, setLoadingPaymentDetails] = useState(false);
 
+  // Verification view state variables
+  const [showVerificationView, setShowVerificationView] = useState(false);
+  const [selectedPaymentForVerification, setSelectedPaymentForVerification] = useState<any>(null);
+  const [lineItemsForVerification, setLineItemsForVerification] = useState<any[]>([]);
+  const [previousPercentages, setPreviousPercentages] = useState<Record<number, number>>({});
+  const [pmVerifiedPercent, setPmVerifiedPercent] = useState<Record<number, number>>({});
+  const [notes, setNotes] = useState('');
+  const [changeOrders, setChangeOrders] = useState('');
+  const [verificationLoading, setVerificationLoading] = useState(false);
+  const [project, setProject] = useState<any>(null);
+  const [contractor, setContractor] = useState<any>(null);
+  const [document, setDocument] = useState<any>(null);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState<'approve' | 'reject' | 'recall' | null>(null);
+  const [rejectionNotes, setRejectionNotes] = useState('');
+  const [approvalNotes, setApprovalNotes] = useState('');
+  const [projectLineItems, setProjectLineItems] = useState<any[]>([]);
+  const [editingLineItem, setEditingLineItem] = useState<number | null>(null);
+  const [editedPercentages, setEditedPercentages] = useState<Record<number, {
+    submitted_percent: number;
+    pm_verified_percent: number;
+  }>>({});
+  const [savingChanges, setSavingChanges] = useState(false);
+  const [changeOrdersArray, setChangeOrdersArray] = useState<Array<{
+    id: string;
+    description: string;
+    amount: number;
+    percentage: number;
+  }>>([]);
+  const [showChangeOrderModal, setShowChangeOrderModal] = useState(false);
+  const [newChangeOrder, setNewChangeOrder] = useState({
+    description: '',
+    amount: 0,
+    percentage: 0
+  });
+  const [includeChangeOrderPageInPdf, setIncludeChangeOrderPageInPdf] = useState(false);
+
   const itemsPerPage = 10;
 
   // Fetch applications
@@ -948,6 +986,74 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
     setShowPaymentModal(false);
     setSelectedPaymentApp(null);
   };
+
+  // Verification view functions
+  const handleVerificationClose = () => {
+    setShowVerificationView(false);
+    setSelectedPaymentForVerification(null);
+    setLineItemsForVerification([]);
+    setPreviousPercentages({});
+    setPmVerifiedPercent({});
+    setNotes('');
+    setChangeOrders('');
+    setVerificationLoading(false);
+    setProject(null);
+    setContractor(null);
+    setDocument(null);
+    setActionLoading(false);
+    setShowConfirmDialog(null);
+    setRejectionNotes('');
+    setApprovalNotes('');
+    setProjectLineItems([]);
+    setEditingLineItem(null);
+    setEditedPercentages({});
+    setSavingChanges(false);
+    setChangeOrdersArray([]);
+    setShowChangeOrderModal(false);
+    setNewChangeOrder({ description: '', amount: 0, percentage: 0 });
+    setIncludeChangeOrderPageInPdf(false);
+  };
+
+  // Calculate line items for table display
+  const lineItemsForTable = lineItemsForVerification.map((li: any, idx: number) => {
+    const lineItem = Array.isArray(li.line_item) ? li.line_item[0] : li.line_item;
+    if (!lineItem) return null;
+
+    const scheduled_value = lineItem.scheduled_value || 0;
+    const previousPercent = previousPercentages[lineItem.id] || 0;
+    const thisPeriodPercent = Math.max(0, pmVerifiedPercent[lineItem.id] || 0 - previousPercent);
+    const previous = (previousPercent / 100) * scheduled_value;
+    const this_period = (thisPeriodPercent / 100) * scheduled_value;
+    const material_presently_stored = 0;
+    const total_completed = previous + this_period + material_presently_stored;
+    const percent = scheduled_value > 0 ? (total_completed / scheduled_value) * 100 : 0;
+    const balance_to_finish = scheduled_value - total_completed;
+    const retainage = 0;
+    const current_payment = this_period;
+
+    return {
+      idx: idx + 1,
+      line_item_id: lineItem.id,
+      item_no: lineItem.item_no,
+      description_of_work: lineItem.description_of_work,
+      scheduled_value,
+      previous,
+      this_period,
+      material_presently_stored,
+      total_completed,
+      percent,
+      balance_to_finish,
+      retainage,
+      current_payment,
+      submitted_percent: li.submitted_percent || 0,
+      pm_verified_percent: pmVerifiedPercent[lineItem.id] || li.submitted_percent || 0,
+      previous_percent: previousPercent,
+      this_period_percent: thisPeriodPercent
+    };
+  }).filter(Boolean) as any[];
+
+  // Calculate grand total
+  const grandTotal = lineItemsForTable.reduce((sum, li) => sum + (li?.current_payment || 0), 0);
 
   if (loading) {
     return (
@@ -1226,6 +1332,175 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
                   <p className="text-gray-500 font-medium">No payment details found</p>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Payment Verification View */}
+      {showVerificationView && selectedPaymentForVerification && (
+        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
+          {/* Header */}
+          <div className="bg-white shadow-sm border-b">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="flex items-center justify-between py-4">
+                <button
+                  type="button"
+                  onClick={handleVerificationClose}
+                  className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                  Back to Payment Applications
+                </button>
+                <div className="flex items-center gap-3">
+                  <span className={`px-3 py-1 text-sm font-medium rounded-full border ${
+                    selectedPaymentForVerification?.status === 'approved' ? 'bg-green-100 text-green-800 border-green-200' :
+                    selectedPaymentForVerification?.status === 'rejected' ? 'bg-red-100 text-red-800 border-red-200' :
+                    selectedPaymentForVerification?.status === 'pending' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
+                    'bg-gray-100 text-gray-800 border-gray-200'
+                  }`}>
+                    {selectedPaymentForVerification?.status?.toUpperCase() || 'PENDING'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            {/* Payment Application Header */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-8">
+              <div className="px-6 py-4 border-b border-gray-200">
+                <h1 className="text-2xl font-bold text-gray-900">Payment Application Review</h1>
+                <p className="text-gray-600 mt-1">Review and approve or reject this payment request</p>
+              </div>
+              <div className="px-6 py-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium text-gray-500">Project</label>
+                    <p className="text-lg font-semibold text-gray-900">{project?.name}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium text-gray-500">Contractor</label>
+                    <p className="text-lg font-semibold text-gray-900">{contractor?.name}</p>
+                    {contractor?.trade && (
+                      <p className="text-sm text-gray-600">{contractor.trade}</p>
+                    )}
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium text-gray-500">Submitted</label>
+                    <p className="text-lg font-semibold text-gray-900">
+                      {selectedPaymentForVerification?.created_at ? new Date(selectedPaymentForVerification.created_at).toLocaleDateString() : "-"}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium text-gray-500">Total Amount</label>
+                    <p className="text-2xl font-bold text-green-600">
+                      {grandTotal.toLocaleString(undefined, { style: 'currency', currency: 'USD', minimumFractionDigits: 0 })}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* PM Notes Section */}
+            <div className="bg-yellow-50 border-l-4 border-yellow-400 rounded-xl shadow-sm mb-8 px-6 py-4">
+              <div className="flex items-start gap-3">
+                <svg className="w-6 h-6 text-yellow-400 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 20h.01" />
+                </svg>
+                <div>
+                  <div className="text-sm font-semibold text-yellow-800 mb-1">Notes for Project Manager</div>
+                  <div className="text-gray-800 text-base">
+                    {selectedPaymentForVerification?.pm_notes?.trim() ? selectedPaymentForVerification.pm_notes : <span className="text-gray-500 italic">No notes provided.</span>}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* PDF Generation */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-8">
+              <div className="px-6 py-4 border-b border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-lg font-semibold text-gray-900">PDF Generation</h2>
+                    <p className="text-gray-600 mt-1">Generate and download the G-703 payment application form</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={async () => {
+                        if (!project || !contractor || !selectedPaymentForVerification?.id) {
+                          setError('Missing required data to generate PDF.');
+                          return;
+                        }
+                        const { pdfBytes, filename } = await generateG703Pdf({
+                          project: { name: project.name || '', address: (project as any).address || '' },
+                          contractor: { name: contractor.name || '' },
+                          applicationNumber: selectedPaymentForVerification.id,
+                          invoiceDate: selectedPaymentForVerification.created_at ? new Date(selectedPaymentForVerification.created_at).toLocaleDateString() : '',
+                          period: '',
+                          dateSubmitted: selectedPaymentForVerification.created_at ? new Date(selectedPaymentForVerification.created_at).toLocaleDateString() : '',
+                          previousDate: '',
+                          lineItems: lineItemsForTable,
+                          changeOrders: changeOrdersArray,
+                          includeChangeOrderPage: includeChangeOrderPageInPdf,
+                        });
+                        const blob = new Blob([new Uint8Array(pdfBytes)], { type: 'application/pdf' });
+                        const url = URL.createObjectURL(blob);
+                        const a = (typeof window !== 'undefined' && window.document) ? window.document.createElement('a') as HTMLAnchorElement : null;
+                        if (a) {
+                          a.href = url;
+                          a.download = filename;
+                          if (window.document.body) {
+                            window.document.body.appendChild(a);
+                            a.click();
+                            setTimeout(() => {
+                              window.document.body.removeChild(a);
+                              URL.revokeObjectURL(url);
+                            }, 100);
+                          } else {
+                            a.click();
+                            URL.revokeObjectURL(url);
+                          }
+                        }
+                      }}
+                      className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      Download PDF
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <div className="flex flex-col sm:flex-row gap-4 justify-end">
+                <button
+                  onClick={() => setShowConfirmDialog('reject')}
+                  disabled={actionLoading}
+                  className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  Reject Application
+                </button>
+                <button
+                  onClick={() => setShowConfirmDialog('approve')}
+                  disabled={actionLoading}
+                  className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  Approve Application
+                </button>
+              </div>
             </div>
           </div>
         </div>
