@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { DollarSign, Filter, Search, RefreshCw, CheckCircle, XCircle, Clock, AlertCircle, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
+import { DollarSign, Filter, Search, RefreshCw, CheckCircle, XCircle, Clock, AlertCircle, ChevronLeft, ChevronRight, Eye, Trash2 } from 'lucide-react';
 import { generateG703Pdf } from '@/lib/g703Pdf';
 
 // Utility functions
@@ -95,7 +95,7 @@ function CompactStats({ pendingSMS, reviewQueue, readyChecks, weeklyTotal, onSta
 }
 
 // Payment Card Component
-function PaymentCard({ application, isSelected, onSelect, onVerify, getDocumentForApp, sendForSignature, onCardClick }: any) {
+function PaymentCard({ application, isSelected, onSelect, onVerify, getDocumentForApp, sendForSignature, onCardClick, onDelete }: any) {
   const [showDetails, setShowDetails] = useState(false);
 
   if (!application) return null;
@@ -204,6 +204,16 @@ function PaymentCard({ application, isSelected, onSelect, onVerify, getDocumentF
               Sign
             </button>
           )}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(application.id);
+            }}
+            className="px-2 sm:px-3 py-1 bg-red-600 text-white rounded-md text-xs font-semibold hover:bg-red-700 transition-colors"
+            title="Delete payment application"
+          >
+            <Trash2 className="w-3 h-3" />
+          </button>
         </div>
       </div>
     </div>
@@ -211,7 +221,7 @@ function PaymentCard({ application, isSelected, onSelect, onVerify, getDocumentF
 }
 
 // Payment Row Component (for table view)
-function PaymentRow({ application, isSelected, onSelect, onVerify, getDocumentForApp, sendForSignature, onCardClick }: any) {
+function PaymentRow({ application, isSelected, onSelect, onVerify, getDocumentForApp, sendForSignature, onCardClick, onDelete }: any) {
 
   const statusConfig: any = {
     submitted: { 
@@ -304,6 +314,16 @@ function PaymentRow({ application, isSelected, onSelect, onVerify, getDocumentFo
               Sign
             </button>
           )}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(application.id);
+            }}
+            className="px-3 py-1 bg-red-600 text-white rounded-md text-xs font-semibold hover:bg-red-700 transition-colors"
+            title="Delete payment application"
+          >
+            <Trash2 className="w-3 h-3" />
+          </button>
         </div>
       </td>
     </tr>
@@ -376,7 +396,7 @@ function Pagination({ currentPage, totalPages, onPageChange, totalItems, itemsPe
 }
 
 // Payment Table Component
-function PaymentTable({ applications, onVerify, getDocumentForApp, sendForSignature, selectedItems, onSelectItem, onSelectAll, currentPage, totalPages, onPageChange, totalItems, itemsPerPage, onCardClick }: any) {
+function PaymentTable({ applications, onVerify, getDocumentForApp, sendForSignature, selectedItems, onSelectItem, onSelectAll, currentPage, totalPages, onPageChange, totalItems, itemsPerPage, onCardClick, onDelete }: any) {
   const allSelected = applications.length > 0 && selectedItems.length === applications.length;
   const someSelected = selectedItems.length > 0 && selectedItems.length < applications.length;
 
@@ -394,6 +414,7 @@ function PaymentTable({ applications, onVerify, getDocumentForApp, sendForSignat
             getDocumentForApp={getDocumentForApp}
             sendForSignature={sendForSignature}
             onCardClick={onCardClick}
+            onDelete={onDelete}
           />
         ))}
       </div>
@@ -445,6 +466,7 @@ function PaymentTable({ applications, onVerify, getDocumentForApp, sendForSignat
                 getDocumentForApp={getDocumentForApp}
                 sendForSignature={sendForSignature}
                 onCardClick={onCardClick}
+                onDelete={onDelete}
               />
             ))}
           </tbody>
@@ -607,7 +629,7 @@ function MobileFilterDrawer({ show, onClose, statusFilter, setStatusFilter, proj
 
   return (
     <div className="fixed inset-0 z-50 lg:hidden">
-      <div className="absolute inset-0 bg-black bg-opacity-50" onClick={onClose} />
+      <div className="absolute inset-0  bg-opacity-50 backdrop-blur-sm" onClick={onClose} />
       <div className="absolute right-0 top-0 h-full w-80 bg-white shadow-xl">
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           <h3 className="text-lg font-semibold text-gray-900">Filters</h3>
@@ -677,7 +699,8 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
   const [contractor, setContractor] = useState<any>(null);
   const [document, setDocument] = useState<any>(null);
   const [actionLoading, setActionLoading] = useState(false);
-  const [showConfirmDialog, setShowConfirmDialog] = useState<'approve' | 'reject' | 'recall' | null>(null);
+  const [showConfirmDialog, setShowConfirmDialog] = useState<'approve' | 'reject' | 'recall' | 'delete' | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<number | number[] | null>(null);
   const [rejectionNotes, setRejectionNotes] = useState('');
   const [approvalNotes, setApprovalNotes] = useState('');
   const [projectLineItems, setProjectLineItems] = useState<any[]>([]);
@@ -916,10 +939,96 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
     console.log('Sending for signature:', paymentAppId);
   };
 
+  const handleDeletePayment = async (paymentAppId: number) => {
+    setDeleteTarget(paymentAppId);
+    setShowConfirmDialog('delete');
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+
+    try {
+      const paymentAppIds = Array.isArray(deleteTarget) ? deleteTarget : [deleteTarget];
+      
+      for (const paymentAppId of paymentAppIds) {
+        // Delete related records first (foreign key constraints)
+        
+        // Delete payment_line_item_progress records
+        const { error: progressError } = await supabase
+          .from('payment_line_item_progress')
+          .delete()
+          .eq('payment_app_id', paymentAppId);
+
+        if (progressError) {
+          console.error('Error deleting payment line item progress:', progressError);
+          continue;
+        }
+
+        // Delete payment_sms_conversations records
+        const { error: smsError } = await supabase
+          .from('payment_sms_conversations')
+          .delete()
+          .eq('payment_app_id', paymentAppId);
+
+        if (smsError) {
+          console.error('Error deleting SMS conversations:', smsError);
+          continue;
+        }
+
+        // Delete payment_documents records
+        const { error: docsError } = await supabase
+          .from('payment_documents')
+          .delete()
+          .eq('payment_application_id', paymentAppId);
+
+        if (docsError) {
+          console.error('Error deleting payment documents:', docsError);
+          continue;
+        }
+
+        // Finally, delete the payment application
+        const { error: appError } = await supabase
+          .from('payment_applications')
+          .delete()
+          .eq('id', paymentAppId);
+
+        if (appError) {
+          console.error('Error deleting payment application:', appError);
+          continue;
+        }
+
+        // Remove from selected items if it was selected
+        setSelectedItems(prev => prev.filter(id => id !== paymentAppId));
+      }
+
+      // Clear selected items if bulk delete
+      if (Array.isArray(deleteTarget)) {
+        setSelectedItems([]);
+      }
+      
+      // Refresh the data
+      fetchApplications();
+      
+      // Show success message
+      const message = Array.isArray(deleteTarget) 
+        ? `${deleteTarget.length} payment application(s) deleted successfully.`
+        : 'Payment application deleted successfully.';
+      alert(message);
+      
+      // Reset state
+      setDeleteTarget(null);
+      setShowConfirmDialog(null);
+    } catch (error) {
+      console.error('Error deleting payment application(s):', error);
+      alert('Error deleting payment application(s). Please try again.');
+      setDeleteTarget(null);
+      setShowConfirmDialog(null);
+    }
+  };
+
   const handleDeleteSelected = async () => {
-    // TODO: Implement bulk delete
-    console.log('Deleting selected:', selectedItems);
-    setSelectedItems([]);
+    setDeleteTarget(selectedItems);
+    setShowConfirmDialog('delete');
   };
 
   const handleApproveSelected = async () => {
@@ -1131,6 +1240,7 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
             totalItems={filteredApps.length}
             itemsPerPage={itemsPerPage}
             onCardClick={handlePaymentCardClick}
+            onDelete={handleDeletePayment}
           />
         </div>
       </div>
@@ -1326,6 +1436,105 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Dialogs */}
+      {showConfirmDialog && (
+        <div className="fixed inset-0 bg-opacity-50 backdrop-blur-sm bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            {showConfirmDialog === 'delete' && (
+              <>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Confirm Deletion</h3>
+                <p className="text-gray-600 mb-6">
+                  {Array.isArray(deleteTarget) 
+                    ? `Are you sure you want to delete ${deleteTarget.length} payment application(s)? This action cannot be undone.`
+                    : `Are you sure you want to delete payment application #${deleteTarget}? This action cannot be undone.`
+                  }
+                </p>
+                <div className="flex gap-3 justify-end">
+                  <button
+                    onClick={() => {
+                      setShowConfirmDialog(null);
+                      setDeleteTarget(null);
+                    }}
+                    className="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-md"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={confirmDelete}
+                    className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </>
+            )}
+            
+            {showConfirmDialog === 'approve' && (
+              <>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Confirm Approval</h3>
+                <p className="text-gray-600 mb-4">Are you sure you want to approve this payment application?</p>
+                <textarea
+                  value={approvalNotes}
+                  onChange={(e) => setApprovalNotes(e.target.value)}
+                  placeholder="Add approval notes (optional)"
+                  className="w-full p-2 border border-gray-300 rounded-md mb-4 resize-none"
+                  rows={3}
+                />
+                <div className="flex gap-3 justify-end">
+                  <button
+                    onClick={() => setShowConfirmDialog(null)}
+                    className="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-md"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => {
+                      // TODO: Implement approval logic
+                      setShowConfirmDialog(null);
+                    }}
+                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                  >
+                    Approve
+                  </button>
+                </div>
+              </>
+            )}
+
+            {showConfirmDialog === 'reject' && (
+              <>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Confirm Rejection</h3>
+                <p className="text-gray-600 mb-4">Are you sure you want to reject this payment application?</p>
+                <textarea
+                  value={rejectionNotes}
+                  onChange={(e) => setRejectionNotes(e.target.value)}
+                  placeholder="Add rejection reason (required)"
+                  className="w-full p-2 border border-gray-300 rounded-md mb-4 resize-none"
+                  rows={3}
+                  required
+                />
+                <div className="flex gap-3 justify-end">
+                  <button
+                    onClick={() => setShowConfirmDialog(null)}
+                    className="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-md"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => {
+                      // TODO: Implement rejection logic
+                      setShowConfirmDialog(null);
+                    }}
+                    className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                  >
+                    Reject
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
