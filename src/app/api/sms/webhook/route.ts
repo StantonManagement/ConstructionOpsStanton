@@ -296,6 +296,13 @@ export async function POST(req: NextRequest) {
         summary += `Total Requested = ¤${grandTotal.toFixed(0)} - ${totalPreviousAmount.toFixed(0)} = ${totalThisPeriod.toFixed(0)} `;
         summary += 'Please type "Yes" to submit or "No" to redo your answers.';
         
+        // Update conversation state first, then send summary immediately
+        await supabase
+          .from('payment_sms_conversations')
+          .update({ conversation_state: 'awaiting_confirmation' })
+          .eq('id', conv.id);
+        
+        // Send summary immediately after state update
         twiml.message(summary);
       } else {
         twiml.message(nextQuestion);
@@ -315,14 +322,7 @@ export async function POST(req: NextRequest) {
           .eq('id', conv.id);
         twiml.message(nextQuestion);
       } else {
-        // All additional questions answered, show summary
-        updateObj.conversation_state = 'awaiting_confirmation';
-        await supabase
-          .from('payment_sms_conversations')
-          .update(updateObj)
-          .eq('id', conv.id);
-        
-        // Show summary
+        // All additional questions answered, show summary first, then move to confirmation
         const { data: progressRows } = await supabase
           .from('payment_line_item_progress')
           .select('line_item_id, this_period_percent')
@@ -367,6 +367,13 @@ export async function POST(req: NextRequest) {
         summary += `Total Requested = ¤${grandTotal.toFixed(0)} - ${totalPreviousAmount.toFixed(0)} = ${totalThisPeriod.toFixed(0)} `;
         summary += 'Please type "Yes" to submit or "No" to redo your answers.';
         
+        // Update conversation state first, then send summary immediately
+        await supabase
+          .from('payment_sms_conversations')
+          .update({ conversation_state: 'awaiting_confirmation' })
+          .eq('id', conv.id);
+        
+        // Send summary immediately after state update
         twiml.message(summary);
       }
     }
