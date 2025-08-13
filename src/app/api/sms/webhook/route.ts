@@ -321,6 +321,20 @@ export async function POST(req: NextRequest) {
       idx++;
       updateObj.current_question_index = idx;
 
+      // Save PM notes immediately when provided
+      if (idx - numLineItems === 0) {
+        // This is the PM notes question
+        const { error: pmNotesError } = await supabase
+          .from('payment_applications')
+          .update({ pm_notes: body })
+          .eq('id', conv.payment_app_id);
+        if (pmNotesError) {
+          console.error('Error saving pm_notes:', pmNotesError);
+        } else {
+          console.log('PM notes saved successfully:', body);
+        }
+      }
+
       if (idx - numLineItems < ADDITIONAL_QUESTIONS.length) {
         // Ask next additional question
         nextQuestion = ADDITIONAL_QUESTIONS[idx - numLineItems];
@@ -405,18 +419,7 @@ export async function POST(req: NextRequest) {
       if (appUpdateError) {
         console.error('Error updating payment_applications status:', appUpdateError);
       }
-      // Save PM notes from last response (notes for PM)
-      if (responses && responses.length > 0) {
-        const pmNotes = responses[responses.length - 1];
-        // Save to pm_notes field in payment_applications
-        const { error: pmNotesError } = await supabase
-          .from('payment_applications')
-          .update({ pm_notes: pmNotes })
-          .eq('id', conv.payment_app_id);
-        if (pmNotesError) {
-          console.error('Error saving pm_notes:', pmNotesError);
-        }
-      }
+      // PM notes are already saved when provided, no need to save again here
       // Calculate total current payment
       const { data: progressRows, error: progressRowsError } = await supabase
         .from('payment_line_item_progress')

@@ -133,12 +133,9 @@ const DecisionQueueCards: React.FC<{ role: string | null, setError: (msg: string
     window.location.href = `/payments/${paymentAppId}/verify?returnTo=/`;
   };
 
-  const navigateToPMDashboard = () => {
-    if (role === "admin") {
-      window.location.href = "/pm-dashboard";
-    } else if (role !== null) {
-      setError("You are not authenticated for the page");
-    }
+  const navigateToPaymentApplications = () => {
+    // Navigate to payment applications view instead of pm-dashboard
+    window.location.href = "/?tab=payment-applications";
   };
 
   const fetchQueue = useCallback(async () => {
@@ -286,15 +283,15 @@ const DecisionQueueCards: React.FC<{ role: string | null, setError: (msg: string
                   proj.highestPriority === 'medium' ? 'from-yellow-50 to-yellow-100 hover:from-yellow-100 hover:to-yellow-200 border-yellow-400' :
                   'from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 border-gray-400'
                 } rounded-2xl p-5 border-2 shadow-lg hover:shadow-xl transition-all duration-200 cursor-pointer transform hover:scale-[1.02]`}
-                onClick={navigateToPMDashboard}
+                onClick={navigateToPaymentApplications}
                 role="button"
                 tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    navigateToPMDashboard();
-                  }
-                }}
+                                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      navigateToPaymentApplications();
+                    }
+                  }}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
@@ -322,7 +319,7 @@ const DecisionQueueCards: React.FC<{ role: string | null, setError: (msg: string
                     disabled={role === null}
                     onClick={(e) => {
                       e.stopPropagation();
-                      navigateToPMDashboard();
+                      navigateToPaymentApplications();
                     }}
                   >
                     {role === null ? "Loading..." : "View All"}
