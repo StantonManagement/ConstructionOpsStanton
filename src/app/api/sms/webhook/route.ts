@@ -284,26 +284,26 @@ export async function POST(req: NextRequest) {
           
           if (index === 0) {
             // First item - start the summary
-            summary += `${desc} - (${totalPercent.toFixed(1)}%) = ¤${totalAmount.toFixed(0)} - ${previousPercent.toFixed(1)}% previous approved `;
+            summary += `${desc} - (${totalPercent.toFixed(1)}%) = ${totalAmount.toFixed(0)} - ${previousPercent.toFixed(1)}% previous approved `;
           } else {
             // Additional items - add to summary
-            summary += `${desc} - (${totalPercent.toFixed(1)}%) = ¤${totalAmount.toFixed(0)} - ${previousPercent.toFixed(1)}% previous approved `;
+            summary += `${desc} - (${totalPercent.toFixed(1)}%) = ${totalAmount.toFixed(0)} - ${previousPercent.toFixed(1)}% previous approved `;
           }
         });
         
         // Add total calculation
         const grandTotal = totalThisPeriod + totalPreviousAmount;
-        summary += `Total Requested = ¤${grandTotal.toFixed(0)} - ${totalPreviousAmount.toFixed(0)} = ${totalThisPeriod.toFixed(0)} `;
+        summary += `Total Requested = ${totalThisPeriod.toFixed(0)} `;
         summary += 'Please type "Yes" to submit or "No" to redo your answers.';
         
-        // Update conversation state first, then send summary immediately
-        await supabase
-          .from('payment_sms_conversations')
-          .update({ conversation_state: 'awaiting_confirmation' })
-          .eq('id', conv.id);
-        
-        // Send summary immediately after state update
-        twiml.message(summary);
+                 // Send summary immediately first
+         twiml.message(summary);
+         
+         // Then update conversation state in background (don't await)
+         void supabase
+           .from('payment_sms_conversations')
+           .update({ conversation_state: 'awaiting_confirmation' })
+           .eq('id', conv.id);
       } else {
         twiml.message(nextQuestion);
       }
@@ -322,7 +322,7 @@ export async function POST(req: NextRequest) {
           .eq('id', conv.id);
         twiml.message(nextQuestion);
       } else {
-        // All additional questions answered, show summary first, then move to confirmation
+        // All additional questions answered - send summary immediately, then update state
         const { data: progressRows } = await supabase
           .from('payment_line_item_progress')
           .select('line_item_id, this_period_percent')
@@ -355,26 +355,26 @@ export async function POST(req: NextRequest) {
           
           if (index === 0) {
             // First item - start the summary
-            summary += `${desc} - (${totalPercent.toFixed(1)}%) = ¤${totalAmount.toFixed(0)} - ${previousPercent.toFixed(1)}% previous approved `;
+            summary += `${desc} - (${totalPercent.toFixed(1)}%) = ${totalAmount.toFixed(0)} - ${previousPercent.toFixed(1)}% previous approved `;
           } else {
             // Additional items - add to summary
-            summary += `${desc} - (${totalPercent.toFixed(1)}%) = ¤${totalAmount.toFixed(0)} - ${previousPercent.toFixed(1)}% previous approved `;
+            summary += `${desc} - (${totalPercent.toFixed(1)}%) = ${totalAmount.toFixed(0)} - ${previousPercent.toFixed(1)}% previous approved `;
           }
         });
         
         // Add total calculation
         const grandTotal = totalThisPeriod + totalPreviousAmount;
-        summary += `Total Requested = ¤${grandTotal.toFixed(0)} - ${totalPreviousAmount.toFixed(0)} = ${totalThisPeriod.toFixed(0)} `;
+        summary += `Total Requested = ${grandTotal.toFixed(0)} - ${totalPreviousAmount.toFixed(0)} = ${totalThisPeriod.toFixed(0)} `;
         summary += 'Please type "Yes" to submit or "No" to redo your answers.';
         
-        // Update conversation state first, then send summary immediately
-        await supabase
+        // Send summary immediately first
+        twiml.message(summary);
+        
+        // Then update conversation state in background (don't await)
+        void supabase
           .from('payment_sms_conversations')
           .update({ conversation_state: 'awaiting_confirmation' })
           .eq('id', conv.id);
-        
-        // Send summary immediately after state update
-        twiml.message(summary);
       }
     }
   } else if (conv.conversation_state === 'awaiting_confirmation') {
