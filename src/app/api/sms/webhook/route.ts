@@ -321,19 +321,21 @@ export async function POST(req: NextRequest) {
       idx++;
       updateObj.current_question_index = idx;
 
-      // Save PM notes immediately when provided
-      if (idx - numLineItems === 0) {
-        // This is the PM notes question
-        const { error: pmNotesError } = await supabase
-          .from('payment_applications')
-          .update({ pm_notes: body })
-          .eq('id', conv.payment_app_id);
-        if (pmNotesError) {
-          console.error('Error saving pm_notes:', pmNotesError);
-        } else {
-          console.log('PM notes saved successfully:', body);
-        }
-      }
+             // Save PM notes immediately when provided
+       // The PM notes question is the first additional question (index 0 in ADDITIONAL_QUESTIONS)
+       if (idx - numLineItems === 0) {
+         // This is the PM notes question
+         console.log('Saving PM notes for payment_app_id:', conv.payment_app_id, 'Notes:', body);
+         const { error: pmNotesError } = await supabase
+           .from('payment_applications')
+           .update({ pm_notes: body })
+           .eq('id', conv.payment_app_id);
+         if (pmNotesError) {
+           console.error('Error saving pm_notes:', pmNotesError);
+         } else {
+           console.log('PM notes saved successfully:', body);
+         }
+       }
 
       if (idx - numLineItems < ADDITIONAL_QUESTIONS.length) {
         // Ask next additional question
@@ -419,7 +421,20 @@ export async function POST(req: NextRequest) {
       if (appUpdateError) {
         console.error('Error updating payment_applications status:', appUpdateError);
       }
-      // PM notes are already saved when provided, no need to save again here
+             // PM notes are already saved when provided, but let's add a fallback
+       if (responses && responses.length > numLineItems) {
+         const pmNotes = responses[numLineItems]; // PM notes should be at index numLineItems
+         console.log('Fallback: Saving PM notes from responses array:', pmNotes);
+         const { error: pmNotesError } = await supabase
+           .from('payment_applications')
+           .update({ pm_notes: pmNotes })
+           .eq('id', conv.payment_app_id);
+         if (pmNotesError) {
+           console.error('Error saving pm_notes (fallback):', pmNotesError);
+         } else {
+           console.log('PM notes saved successfully (fallback):', pmNotes);
+         }
+       }
       // Calculate total current payment
       const { data: progressRows, error: progressRowsError } = await supabase
         .from('payment_line_item_progress')
