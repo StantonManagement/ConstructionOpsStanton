@@ -300,7 +300,7 @@ const SubcontractorsView: React.FC<SubcontractorsViewProps> = ({ searchQuery = '
                 </div>
 
                 {/* Search and Filters */}
-                <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                     <div className="relative">
                         <Search className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-500" />
                         <input
@@ -353,8 +353,8 @@ const SubcontractorsView: React.FC<SubcontractorsViewProps> = ({ searchQuery = '
                 </div>
             </div>
 
-            {/* Table */}
-            <div className="overflow-x-auto">
+            {/* Desktop Table View */}
+            <div className="hidden lg:block overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                         <tr>
@@ -528,6 +528,144 @@ const SubcontractorsView: React.FC<SubcontractorsViewProps> = ({ searchQuery = '
                             Try adjusting your search or filter criteria
                         </div>
                     </div>
+                )}
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="lg:hidden space-y-4 p-4">
+                {filteredSubcontractors.length === 0 ? (
+                    <div className="text-center py-8">
+                        <div className="text-gray-500 text-base mb-2">No subcontractors found</div>
+                        <div className="text-gray-400 text-sm">
+                            Try adjusting your search or filter criteria
+                        </div>
+                    </div>
+                ) : (
+                    filteredSubcontractors.map((sub) => {
+                        const complianceScore = getComplianceScore(sub.compliance);
+                        
+                        return (
+                            <div 
+                                key={sub.id}
+                                className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-all cursor-pointer"
+                                onClick={() => handleView(sub)}
+                            >
+                                {/* Header */}
+                                <div className="flex items-center justify-between mb-3">
+                                    <div className="flex items-center gap-3">
+                                        <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
+                                            <span className="text-blue-800 font-medium text-sm">
+                                                {sub.name.split(' ').map(n => n[0]).join('').substring(0, 2)}
+                                            </span>
+                                        </div>
+                                        <div>
+                                            <h3 className="font-semibold text-gray-900 text-base">{sub.name}</h3>
+                                            <p className="text-sm text-gray-600">{sub.trade}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        {getStatusIcon(sub.status)}
+                                        <span className={`px-2 py-1 inline-flex text-xs font-semibold rounded-full ${
+                                            sub.status === 'active' 
+                                                ? 'bg-green-100 text-green-800' 
+                                                : sub.status === 'inactive'
+                                                ? 'bg-red-100 text-red-800'
+                                                : 'bg-yellow-100 text-yellow-800'
+                                        }`}>
+                                            {sub.status}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* Rating */}
+                                {(sub as any).performance_score && (
+                                    <div className="mb-3">
+                                        <div className="flex items-center gap-2">
+                                            <div className="flex items-center">
+                                                {[1, 2, 3, 4, 5].map((star) => (
+                                                    <svg
+                                                        key={star}
+                                                        className={`w-4 h-4 ${star <= (sub as any).performance_score ? 'text-yellow-400' : 'text-gray-300'}`}
+                                                        fill="currentColor"
+                                                        viewBox="0 0 20 20"
+                                                    >
+                                                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                                    </svg>
+                                                ))}
+                                            </div>
+                                            <span className="text-sm text-gray-600">({(sub as any).performance_score}/5)</span>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Compliance */}
+                                <div className="mb-3">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex flex-col space-y-1">
+                                            <div className="flex items-center text-xs">
+                                                <span className={`w-2 h-2 rounded-full mr-2 ${
+                                                    sub.compliance.insurance === 'valid' ? 'bg-green-500' : 'bg-red-500'
+                                                }`}></span>
+                                                <span className="text-gray-700">Insurance</span>
+                                            </div>
+                                            <div className="flex items-center text-xs">
+                                                <span className={`w-2 h-2 rounded-full mr-2 ${
+                                                    sub.compliance.license === 'valid' ? 'bg-green-500' : 'bg-red-500'
+                                                }`}></span>
+                                                <span className="text-gray-700">License</span>
+                                            </div>
+                                        </div>
+                                        <div className={`text-sm font-semibold ${
+                                            complianceScore >= 80 ? 'text-green-600' :
+                                            complianceScore >= 60 ? 'text-yellow-600' : 'text-red-600'
+                                        }`}>
+                                            {complianceScore}%
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Contact Info */}
+                                <div className="mb-4">
+                                    <div className="space-y-2">
+                                        {sub.phone && (
+                                            <div className="flex items-center text-sm text-gray-700">
+                                                <Phone className="w-4 h-4 mr-2 text-gray-500" />
+                                                <span>{sub.phone}</span>
+                                            </div>
+                                        )}
+                                        {sub.email && (
+                                            <div className="flex items-center text-sm text-gray-700">
+                                                <Mail className="w-4 h-4 mr-2 text-gray-500" />
+                                                <span className="truncate">{sub.email}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Actions */}
+                                <div className="flex gap-2">
+                                    <button 
+                                        className="flex-1 px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleView(sub);
+                                        }}
+                                    >
+                                        View Details
+                                    </button>
+                                    <button 
+                                        className="flex-1 px-3 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 transition-colors"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleContact(sub);
+                                        }}
+                                    >
+                                        Contact
+                                    </button>
+                                </div>
+                            </div>
+                        );
+                    })
                 )}
             </div>
             {/* Add/Edit Modal */}

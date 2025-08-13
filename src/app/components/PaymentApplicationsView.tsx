@@ -96,31 +96,9 @@ function CompactStats({ pendingSMS, reviewQueue, readyChecks, weeklyTotal, onSta
 
 // Payment Card Component
 function PaymentCard({ application, isSelected, onSelect, onVerify, getDocumentForApp, sendForSignature, onCardClick }: any) {
-  const [grandTotal, setGrandTotal] = useState(0);
   const [showDetails, setShowDetails] = useState(false);
 
   if (!application) return null;
-
-  useEffect(() => {
-    async function fetchGrandTotal() {
-      const lineItemIds = (application.line_item_progress || [])
-        .map((lip: any) => lip.line_item?.id)
-        .filter(Boolean);
-      if (!lineItemIds.length) return setGrandTotal(0);
-      const { data, error } = await supabase
-        .from("project_line_items")
-        .select("amount_for_this_period")
-        .in("id", lineItemIds);
-      if (!error && data) {
-        const total = data.reduce(
-          (sum: number, pli: any) => sum + (Number(pli.amount_for_this_period) || 0),
-          0
-        );
-        setGrandTotal(total);
-      }
-    }
-    fetchGrandTotal();
-  }, [application.line_item_progress]);
 
   const statusConfig: any = {
     submitted: { 
@@ -190,7 +168,7 @@ function PaymentCard({ application, isSelected, onSelect, onVerify, getDocumentF
           )}
         </div>
         <div className="text-left sm:text-right">
-          <p className="text-xs text-gray-500">Current Period Value</p>
+          <p className="text-xs text-gray-500">Current Value</p>
           <p className="text-base sm:text-lg font-bold text-green-600">{formatCurrency(application.current_period_value || 0)}</p>
         </div>
       </div>
@@ -234,28 +212,6 @@ function PaymentCard({ application, isSelected, onSelect, onVerify, getDocumentF
 
 // Payment Row Component (for table view)
 function PaymentRow({ application, isSelected, onSelect, onVerify, getDocumentForApp, sendForSignature, onCardClick }: any) {
-  const [grandTotal, setGrandTotal] = useState(0);
-
-  useEffect(() => {
-    async function fetchGrandTotal() {
-      const lineItemIds = (application.line_item_progress || [])
-        .map((lip: any) => lip.line_item?.id)
-        .filter(Boolean);
-      if (!lineItemIds.length) return setGrandTotal(0);
-      const { data, error } = await supabase
-        .from("project_line_items")
-        .select("amount_for_this_period")
-        .in("id", lineItemIds);
-      if (!error && data) {
-        const total = data.reduce(
-          (sum: number, pli: any) => sum + (Number(pli.amount_for_this_period) || 0),
-          0
-        );
-        setGrandTotal(total);
-      }
-    }
-    fetchGrandTotal();
-  }, [application.line_item_progress]);
 
   const statusConfig: any = {
     submitted: { 
@@ -293,7 +249,7 @@ function PaymentRow({ application, isSelected, onSelect, onVerify, getDocumentFo
       className={`border-b border-gray-200 hover:bg-gray-50 cursor-pointer ${isSelected ? 'bg-blue-50' : ''}`}
       onClick={() => onCardClick && onCardClick(application)}
     >
-      <td className="px-3 sm:px-4 py-3">
+      <td className="px-4 py-3">
         <input
           type="checkbox"
           checked={isSelected}
@@ -301,42 +257,36 @@ function PaymentRow({ application, isSelected, onSelect, onVerify, getDocumentFo
           className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
         />
       </td>
-      <td className="px-3 sm:px-4 py-3">
+      <td className="px-4 py-3">
         <div className="min-w-0">
           <p className="font-semibold text-gray-900 text-sm truncate">{application.project?.name}</p>
           <p className="text-xs text-gray-500">#{application.id}</p>
         </div>
       </td>
-      <td className="px-3 sm:px-4 py-3">
+      <td className="px-4 py-3">
         <div className="min-w-0">
           <p className="text-sm font-medium text-gray-900 truncate">{application.contractor?.name}</p>
           {application.contractor?.trade && (
-            <p className="text-xs text-gray-500 truncate">{application.contractor.trade}</p>
+            <p className="text-xs text-gray-500">{application.contractor.trade}</p>
           )}
         </div>
       </td>
-      <td className="px-3 sm:px-4 py-3">
-        <span className={`inline-flex items-center px-1.5 sm:px-2 py-1 rounded-full text-xs font-semibold border ${config.color}`}>
-          {config.icon}
-        </span>
+      <td className="px-4 py-3">
+        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold border ${config.color}`}>
+      {config.icon}
+    </span>
       </td>
-      <td className="px-3 sm:px-4 py-3 text-right">
+      <td className="px-4 py-3 text-right">
         <p className="text-sm font-bold text-green-600">{formatCurrency(application.current_period_value || 0)}</p>
       </td>
-      <td className="px-3 sm:px-4 py-3 text-right">
-        <p className="text-sm font-bold text-blue-600">{formatCurrency(grandTotal)}</p>
-      </td>
-      <td className="px-3 sm:px-4 py-3 text-sm text-gray-500">
+      <td className="px-4 py-3 text-sm text-gray-500">
         {application.created_at ? formatDate(application.created_at) : "-"}
       </td>
-      <td className="px-3 sm:px-4 py-3">
-        <div className="flex items-center gap-1 sm:gap-2">
+      <td className="px-4 py-3">
+        <div className="flex items-center gap-2">
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onVerify(application.id);
-            }}
-            className={`px-2 sm:px-3 py-1 rounded-md text-xs font-semibold transition-colors ${
+            onClick={() => onVerify(application.id)}
+            className={`px-3 py-1 rounded-md text-xs font-semibold transition-colors ${
               application.status === "approved"
                 ? "bg-green-600 text-white hover:bg-green-700"
                 : config.priority === "URGENT" 
@@ -348,11 +298,8 @@ function PaymentRow({ application, isSelected, onSelect, onVerify, getDocumentFo
           </button>
           {doc && (
             <button
-              onClick={(e) => {
-                e.stopPropagation();
-                sendForSignature(application.id);
-              }}
-              className="px-2 sm:px-3 py-1 bg-green-600 text-white rounded-md text-xs font-semibold hover:bg-green-700 transition-colors"
+              onClick={() => sendForSignature(application.id)}
+              className="px-3 py-1 bg-green-600 text-white rounded-md text-xs font-semibold hover:bg-green-700 transition-colors"
             >
               Sign
             </button>
@@ -477,10 +424,7 @@ function PaymentTable({ applications, onVerify, getDocumentForApp, sendForSignat
                 Status
               </th>
               <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Current Period Value
-              </th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Total Amount
+                Current Value
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Created
