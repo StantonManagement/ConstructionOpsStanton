@@ -2612,6 +2612,8 @@ export default function PMDashboard() {
   const [showProfile, setShowProfile] = useState(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
 
+
+
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -3194,6 +3196,8 @@ export default function PMDashboard() {
     setSelectedItems([]);
   };
 
+
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Header 
@@ -3585,6 +3589,8 @@ export default function PMDashboard() {
             </div>
           </div>
         )}
+
+
       </main>
 
       {/* User Profile Modal */}

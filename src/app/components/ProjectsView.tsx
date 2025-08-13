@@ -39,6 +39,12 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
   const [loadingModalData, setLoadingModalData] = useState(false);
   const [projectModalData, setProjectModalData] = useState<any>({});
   const [loadingProjectModal, setLoadingProjectModal] = useState(false);
+  
+  // Budget details modal state
+  const [showBudgetModal, setShowBudgetModal] = useState(false);
+  const [budgetModalData, setBudgetModalData] = useState<any>({});
+  const [budgetModalType, setBudgetModalType] = useState('');
+  const [loadingBudgetModal, setLoadingBudgetModal] = useState(false);
 
   // Fetch projects with stats
   const fetchProjects = useCallback(async () => {
@@ -137,6 +143,87 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
     setIsRefreshing(true);
     await fetchProjects();
     setIsRefreshing(false);
+  };
+
+  const handleBudgetClick = async (projectId: number, type: 'spent' | 'remaining') => {
+    setBudgetModalType(type);
+    setLoadingBudgetModal(true);
+    setShowBudgetModal(true);
+
+    try {
+      const project = projects.find(p => p.id === projectId);
+      if (!project) return;
+
+      let modalData: any = {};
+      let modalTitle = '';
+
+      switch (type) {
+        case 'spent':
+          modalTitle = `Spent Breakdown - ${project.name}`;
+          // Fetch approved payment applications for this project
+          const { data: approvedPaymentsData } = await supabase
+            .from('payment_applications')
+            .select(`
+              current_period_value,
+              created_at,
+              contractor:contractors(name, trade)
+            `)
+            .eq('project_id', projectId)
+            .eq('status', 'approved')
+            .order('created_at', { ascending: false });
+
+          modalData = {
+            projectName: project.name,
+            total: project.stats.totalSpent,
+            items: approvedPaymentsData?.map((payment: any) => ({
+              name: payment.contractor?.name || 'Unknown Contractor',
+              trade: payment.contractor?.trade || 'Unknown Trade',
+              amount: payment.current_period_value,
+              date: new Date(payment.created_at).toLocaleDateString(),
+              percentage: project.stats.totalSpent > 0 ? ((payment.current_period_value / project.stats.totalSpent) * 100).toFixed(1) : '0'
+            })) || []
+          };
+          break;
+
+        case 'remaining':
+          modalTitle = `Budget Overview - ${project.name}`;
+          // Fetch contract details for this project
+          const { data: contractsData } = await supabase
+            .from('project_contractors')
+            .select(`
+              contract_amount,
+              paid_to_date,
+              contractor:contractors(name, trade)
+            `)
+            .eq('project_id', projectId)
+            .eq('contract_status', 'active');
+
+          modalData = {
+            projectName: project.name,
+            totalBudget: project.stats.totalBudget,
+            totalSpent: project.stats.totalSpent,
+            remainingBudget: project.stats.totalBudget - project.stats.totalSpent,
+            utilizationRate: project.stats.completionPercentage,
+            items: contractsData?.map((contract: any) => ({
+              name: contract.contractor?.name || 'Unknown Contractor',
+              trade: contract.contractor?.trade || 'Unknown Trade',
+              contractAmount: contract.contract_amount,
+              paidToDate: contract.paid_to_date,
+              remaining: contract.contract_amount - contract.paid_to_date,
+              percentage: project.stats.totalBudget > 0 ? ((contract.contract_amount / project.stats.totalBudget) * 100).toFixed(1) : '0'
+            })) || []
+          };
+          break;
+      }
+
+      setBudgetModalData(modalData);
+      setModalTitle(modalTitle);
+    } catch (error) {
+      console.error('Error fetching budget details:', error);
+      setError('Failed to load budget details');
+    } finally {
+      setLoadingBudgetModal(false);
+    }
   };
 
   // Function to handle stat card clicks
@@ -536,10 +623,26 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
               {/* Budget Details */}
               <div className="flex justify-between items-center text-xs">
                 <span className="text-gray-600">
-                  Spent: <span className="font-medium text-gray-900">{formatCurrency(project.stats.totalSpent)}</span>
+                  Spent: <span 
+                    className="font-medium text-gray-900 cursor-pointer hover:text-blue-600 hover:underline"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleBudgetClick(project.id, 'spent');
+                    }}
+                  >
+                    {formatCurrency(project.stats.totalSpent)}
+                  </span>
                 </span>
                 <span className="text-gray-600">
-                  Remaining: <span className="font-medium text-gray-900">{formatCurrency(project.stats.totalBudget - project.stats.totalSpent)}</span>
+                  Remaining: <span 
+                    className="font-medium text-gray-900 cursor-pointer hover:text-green-600 hover:underline"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleBudgetClick(project.id, 'remaining');
+                    }}
+                  >
+                    {formatCurrency(project.stats.totalBudget - project.stats.totalSpent)}
+                  </span>
                 </span>
               </div>
               
@@ -969,6 +1072,131 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
               >
                 Create Payment Apps
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Budget Details Modal */}
+      {showBudgetModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {modalTitle}
+                </h3>
+                <button
+                  onClick={() => setShowBudgetModal(false)}
+                  className="text-gray-400 hover:text-gray-600 p-1"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+              {loadingBudgetModal ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                  <span className="ml-3 text-gray-600">Loading data...</span>
+                </div>
+              ) : budgetModalType === 'remaining' ? (
+                <div className="space-y-6">
+                  {/* Summary Cards */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div className="bg-blue-50 p-4 rounded-lg">
+                      <div className="text-sm text-blue-600 font-medium">Total Budget</div>
+                      <div className="text-2xl font-bold text-blue-900">{formatCurrency(budgetModalData.totalBudget)}</div>
+                    </div>
+                    <div className="bg-purple-50 p-4 rounded-lg">
+                      <div className="text-sm text-purple-600 font-medium">Total Spent</div>
+                      <div className="text-2xl font-bold text-purple-900">{formatCurrency(budgetModalData.totalSpent)}</div>
+                    </div>
+                    <div className="bg-green-50 p-4 rounded-lg">
+                      <div className="text-sm text-green-600 font-medium">Remaining</div>
+                      <div className="text-2xl font-bold text-green-900">{formatCurrency(budgetModalData.remainingBudget)}</div>
+                    </div>
+                  </div>
+                  
+                  {/* Contract Breakdown */}
+                  <div>
+                    <h4 className="text-lg font-semibold text-gray-900 mb-4">Contract Breakdown</h4>
+                    <div className="space-y-3">
+                      {budgetModalData.items?.map((contract: any, index: number) => (
+                        <div key={index} className="bg-gray-50 p-4 rounded-lg">
+                          <div className="flex justify-between items-start mb-2">
+                            <div>
+                              <div className="font-medium text-gray-900">{contract.name}</div>
+                              <div className="text-sm text-gray-600">{contract.trade}</div>
+                            </div>
+                            <span className="text-xs text-gray-500 bg-gray-200 px-2 py-1 rounded">
+                              {contract.percentage}% of total
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-3 gap-4 text-sm">
+                            <div>
+                              <div className="text-gray-600">Contract Amount</div>
+                              <div className="font-medium">{formatCurrency(contract.contractAmount)}</div>
+                            </div>
+                            <div>
+                              <div className="text-gray-600">Paid to Date</div>
+                              <div className="font-medium">{formatCurrency(contract.paidToDate)}</div>
+                            </div>
+                            <div>
+                              <div className="text-gray-600">Remaining</div>
+                              <div className="font-medium">{formatCurrency(contract.remaining)}</div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ) : budgetModalData.total ? (
+                <div className="space-y-4">
+                  {/* Summary */}
+                  <div className="bg-gray-50 p-4 rounded-lg mb-6">
+                    <div className="text-sm text-gray-600">Total Spent</div>
+                    <div className="text-2xl font-bold text-gray-900">{formatCurrency(budgetModalData.total)}</div>
+                  </div>
+                  
+                  {/* Payment Breakdown */}
+                  <div>
+                    <h4 className="text-lg font-semibold text-gray-900 mb-4">Payment Breakdown</h4>
+                    <div className="space-y-3">
+                      {budgetModalData.items?.map((payment: any, index: number) => (
+                        <div key={index} className="bg-white border border-gray-200 p-4 rounded-lg">
+                          <div className="flex justify-between items-start">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="font-medium text-gray-900">{payment.name}</span>
+                                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">{payment.trade}</span>
+                              </div>
+                              <div className="text-sm text-gray-600 mb-2">
+                                <div>Date: {payment.date}</div>
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {payment.percentage}% of total spent
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-lg font-bold text-gray-900">{formatCurrency(payment.amount)}</div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <div className="text-4xl mb-4">📊</div>
+                  <p className="text-gray-500 font-medium">No data available</p>
+                  <p className="text-sm text-gray-400">There are no items in this category</p>
+                </div>
+              )}
             </div>
           </div>
         </div>

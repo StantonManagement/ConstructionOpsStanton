@@ -472,6 +472,13 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
   const [enhancedProjects, setEnhancedProjects] = useState<any[]>([]);
   const [statsLoading, setStatsLoading] = useState(true);
 
+  // Budget details modal state
+  const [showBudgetModal, setShowBudgetModal] = useState(false);
+  const [budgetModalData, setBudgetModalData] = useState<any>({});
+  const [budgetModalType, setBudgetModalType] = useState<'budget' | 'spent' | 'progress'>('budget');
+  const [loadingBudgetModal, setLoadingBudgetModal] = useState(false);
+  const [statsModalTitle, setStatsModalTitle] = useState('');
+
   // Fetch enhanced project data with contractor stats and approved payments
   const fetchEnhancedProjectData = useCallback(async () => {
     if (projects.length === 0) return;
@@ -568,6 +575,117 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
       avgProjectBudget
     };
   }, [filteredEnhancedProjects]);
+
+  const handleBudgetCardClick = async (type: 'budget' | 'spent' | 'progress') => {
+    setBudgetModalType(type);
+    setLoadingBudgetModal(true);
+    setShowBudgetModal(true);
+
+    try {
+      let modalData: any = {};
+      let modalTitle = '';
+
+      switch (type) {
+        case 'budget':
+          modalTitle = 'Total Budget Breakdown';
+          // Fetch all active contracts with contractor details
+          const { data: contractsData } = await supabase
+            .from('project_contractors')
+            .select(`
+              contract_amount,
+              contractor:contractors(name, trade),
+              project:projects(name, client_name)
+            `)
+            .eq('contract_status', 'active')
+            .order('contract_amount', { ascending: false });
+
+          modalData = {
+            total: stats.totalBudget,
+            items: contractsData?.map((contract: any) => ({
+              name: contract.contractor?.name || 'Unknown Contractor',
+              trade: contract.contractor?.trade || 'Unknown Trade',
+              project: contract.project?.name || 'Unknown Project',
+              amount: contract.contract_amount,
+              percentage: stats.totalBudget > 0 ? ((contract.contract_amount / stats.totalBudget) * 100).toFixed(1) : '0'
+            })) || []
+          };
+          break;
+
+        case 'spent':
+          modalTitle = 'Total Spent Breakdown';
+          // Fetch all approved payment applications with details
+          const { data: approvedPaymentsData } = await supabase
+            .from('payment_applications')
+            .select(`
+              current_period_value,
+              created_at,
+              contractor:contractors(name, trade),
+              project:projects(name, client_name)
+            `)
+            .eq('status', 'approved')
+            .order('created_at', { ascending: false });
+
+          modalData = {
+            total: stats.totalSpent,
+            items: approvedPaymentsData?.map((payment: any) => ({
+              name: payment.contractor?.name || 'Unknown Contractor',
+              trade: payment.contractor?.trade || 'Unknown Trade',
+              project: payment.project?.name || 'Unknown Project',
+              amount: payment.current_period_value,
+              date: new Date(payment.created_at).toLocaleDateString(),
+              percentage: stats.totalSpent > 0 ? ((payment.current_period_value / stats.totalSpent) * 100).toFixed(1) : '0'
+            })) || []
+          };
+          break;
+
+        case 'progress':
+          modalTitle = 'Budget Utilization Details';
+          // Fetch project-level budget utilization
+          const { data: projectStatsData } = await supabase
+            .from('projects')
+            .select(`
+              name,
+              client_name,
+              budget,
+              spent
+            `)
+            .eq('status', 'active')
+            .order('spent', { ascending: false });
+
+          modalData = {
+            totalBudget: stats.totalBudget,
+            totalSpent: stats.totalSpent,
+            remainingBudget: stats.totalBudget - stats.totalSpent,
+            utilizationRate: stats.utilizationRate,
+            items: projectStatsData?.map((project: any) => {
+              const projectBudget = Number(project.budget) || 0;
+              const projectSpent = Number(project.spent) || 0;
+              const projectUtilization = projectBudget > 0 ? ((projectSpent / projectBudget) * 100) : 0;
+              return {
+                name: project.name,
+                client: project.client_name,
+                budget: projectBudget,
+                spent: projectSpent,
+                remaining: projectBudget - projectSpent,
+                utilization: projectUtilization,
+                status: projectUtilization > 90 ? 'Over Budget' : 
+                       projectUtilization > 75 ? 'Near Limit' : 
+                       projectUtilization > 50 ? 'High Usage' : 'On Track'
+              };
+            }) || []
+          };
+          break;
+      }
+
+      setBudgetModalData(modalData);
+      setStatsModalTitle(modalTitle);
+    } catch (error) {
+      console.error('Error fetching budget details:', error);
+      setError('Failed to load budget details');
+    } finally {
+      setLoadingBudgetModal(false);
+    }
+  };
 
   const StatCard: React.FC<{
     title: string;
@@ -680,6 +798,7 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
             subtitle={`Avg: $${stats.avgProjectBudget.toLocaleString()}`}
             colorClass="bg-gradient-to-br from-emerald-50 to-emerald-100"
             icon="💰"
+            onClick={() => handleBudgetCardClick('budget')}
           />
           <StatCard
             title="Total Spent"
@@ -689,6 +808,7 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
                        stats.utilizationRate > 75 ? "bg-gradient-to-br from-amber-50 to-amber-100" : 
                        "bg-gradient-to-br from-emerald-50 to-emerald-100"}
             icon="💸"
+            onClick={() => handleBudgetCardClick('spent')}
           />
           <StatCard
             title="Remaining Budget"
@@ -696,6 +816,7 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
             subtitle={stats.remainingBudget < 0 ? "Over budget!" : "Available"}
             colorClass={stats.remainingBudget >= 0 ? "bg-gradient-to-br from-emerald-50 to-emerald-100" : "bg-gradient-to-br from-red-50 to-red-100"}
             icon={stats.remainingBudget >= 0 ? "✅" : "⚠️"}
+            onClick={() => handleBudgetCardClick('progress')}
           />
         </div>
 
@@ -793,6 +914,152 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
           <DecisionQueueCards role={role} setError={setError} />
         </div>
       </div>
+
+      {/* Budget Details Modal */}
+      {showBudgetModal && (
+        <div className="fixed inset-0  bg-opacity-50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h2 className="text-xl font-semibold text-gray-900">{statsModalTitle}</h2>
+              <button
+                onClick={() => setShowBudgetModal(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+              {loadingBudgetModal ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                  <span className="ml-3 text-gray-600">Loading data...</span>
+                </div>
+              ) : budgetModalType === 'progress' ? (
+                <div className="space-y-6">
+                  {/* Summary Cards */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div className="bg-blue-50 p-4 rounded-lg">
+                      <div className="text-sm text-blue-600 font-medium">Total Budget</div>
+                      <div className="text-2xl font-bold text-blue-900">${budgetModalData.totalBudget?.toLocaleString()}</div>
+                    </div>
+                    <div className="bg-purple-50 p-4 rounded-lg">
+                      <div className="text-sm text-purple-600 font-medium">Total Spent</div>
+                      <div className="text-2xl font-bold text-purple-900">${budgetModalData.totalSpent?.toLocaleString()}</div>
+                    </div>
+                    <div className="bg-green-50 p-4 rounded-lg">
+                      <div className="text-sm text-green-600 font-medium">Remaining</div>
+                      <div className="text-2xl font-bold text-green-900">${budgetModalData.remainingBudget?.toLocaleString()}</div>
+                    </div>
+                  </div>
+                  
+                  {/* Project Breakdown */}
+                  <div>
+                    <h4 className="text-lg font-semibold text-gray-900 mb-4">Project Breakdown</h4>
+                    <div className="space-y-3">
+                      {budgetModalData.items?.map((project: any, index: number) => (
+                        <div key={index} className="bg-gray-50 p-4 rounded-lg">
+                          <div className="flex justify-between items-start mb-2">
+                            <div>
+                              <div className="font-medium text-gray-900">{project.name}</div>
+                              <div className="text-sm text-gray-600">{project.client}</div>
+                            </div>
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              project.status === 'Over Budget' ? 'bg-red-100 text-red-800' :
+                              project.status === 'Near Limit' ? 'bg-yellow-100 text-yellow-800' :
+                              project.status === 'High Usage' ? 'bg-orange-100 text-orange-800' :
+                              'bg-green-100 text-green-800'
+                            }`}>
+                              {project.status}
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-3 gap-4 text-sm">
+                            <div>
+                              <div className="text-gray-600">Budget</div>
+                              <div className="font-medium">${project.budget?.toLocaleString()}</div>
+                            </div>
+                            <div>
+                              <div className="text-gray-600">Spent</div>
+                              <div className="font-medium">${project.spent?.toLocaleString()}</div>
+                            </div>
+                            <div>
+                              <div className="text-gray-600">Remaining</div>
+                              <div className="font-medium">${project.remaining?.toLocaleString()}</div>
+                            </div>
+                          </div>
+                          <div className="mt-2">
+                            <div className="flex justify-between text-xs text-gray-600 mb-1">
+                              <span>Utilization</span>
+                              <span>{project.utilization?.toFixed(1)}%</span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div
+                                className={`h-2 rounded-full ${
+                                  project.utilization > 90 ? 'bg-red-500' :
+                                  project.utilization > 75 ? 'bg-yellow-500' :
+                                  project.utilization > 50 ? 'bg-orange-500' : 'bg-green-500'
+                                }`}
+                                style={{ width: `${Math.min(project.utilization, 100)}%` }}
+                              ></div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ) : budgetModalData.total ? (
+                <div className="space-y-4">
+                  {/* Summary */}
+                  <div className="bg-gray-50 p-4 rounded-lg mb-6">
+                    <div className="text-sm text-gray-600">Total Amount</div>
+                    <div className="text-2xl font-bold text-gray-900">${budgetModalData.total?.toLocaleString()}</div>
+                  </div>
+                  
+                  {/* Items List */}
+                  <div>
+                    <h4 className="text-lg font-semibold text-gray-900 mb-4">
+                      {budgetModalType === 'budget' ? 'Contract Breakdown' : 'Payment Breakdown'}
+                    </h4>
+                    <div className="space-y-3">
+                      {budgetModalData.items?.map((item: any, index: number) => (
+                        <div key={index} className="bg-white border border-gray-200 p-4 rounded-lg">
+                          <div className="flex justify-between items-start">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="font-medium text-gray-900">{item.name}</span>
+                                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">{item.trade}</span>
+                              </div>
+                              <div className="text-sm text-gray-600 mb-2">
+                                <div>Project: {item.project}</div>
+                                {item.date && <div>Date: {item.date}</div>}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {item.percentage}% of total
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-lg font-bold text-gray-900">${item.amount?.toLocaleString()}</div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <div className="text-4xl mb-4">📊</div>
+                  <p className="text-gray-500 font-medium">No data available</p>
+                  <p className="text-sm text-gray-400">There are no items in this category</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       <style jsx>{`
         .custom-scrollbar::-webkit-scrollbar {
