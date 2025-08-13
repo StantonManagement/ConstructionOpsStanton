@@ -27,7 +27,7 @@ const formatCurrency = (amount: number) => {
 function CompactStatCard({ icon, label, value, change, color, onClick, isActive }: any) {
   return (
     <div 
-      className={`bg-white border rounded-lg p-4 cursor-pointer transition-all hover:shadow-md ${
+      className={`bg-white border rounded-lg p-3 sm:p-4 cursor-pointer transition-all hover:shadow-md ${
         isActive 
           ? 'border-blue-500 bg-blue-50 shadow-md' 
           : 'border-gray-200 hover:border-blue-300'
@@ -35,17 +35,17 @@ function CompactStatCard({ icon, label, value, change, color, onClick, isActive 
       onClick={onClick}
     >
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className={`w-10 h-10 ${color} rounded-lg flex items-center justify-center text-white`}>
-            <span className="text-lg">{icon}</span>
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className={`w-8 h-8 sm:w-10 sm:h-10 ${color} rounded-lg flex items-center justify-center text-white`}>
+            <span className="text-sm sm:text-lg">{icon}</span>
           </div>
-          <div>
-            <p className="text-sm font-medium text-gray-600">{label}</p>
-            <p className="text-2xl font-bold text-gray-900">{value}</p>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">{label}</p>
+            <p className="text-lg sm:text-2xl font-bold text-gray-900 truncate">{value}</p>
           </div>
         </div>
         {change && (
-          <div className={`text-sm font-medium ${change > 0 ? 'text-green-600' : 'text-red-600'}`}>
+          <div className={`text-xs sm:text-sm font-medium ${change > 0 ? 'text-green-600' : 'text-red-600'}`}>
             {change > 0 ? '+' : ''}{change}%
           </div>
         )}
@@ -57,7 +57,7 @@ function CompactStatCard({ icon, label, value, change, color, onClick, isActive 
 // Compact Stats Component
 function CompactStats({ pendingSMS, reviewQueue, readyChecks, weeklyTotal, onStatClick, currentFilter }: any) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 mb-6">
       <CompactStatCard
         icon="📱"
         label="SMS Pending"
@@ -155,24 +155,24 @@ function PaymentCard({ application, isSelected, onSelect, onVerify, getDocumentF
 
   return (
     <div 
-      className={`bg-white border rounded-lg p-4 transition-all cursor-pointer ${isSelected ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300 hover:shadow-md'}`}
+      className={`bg-white border rounded-lg p-3 sm:p-4 transition-all cursor-pointer ${isSelected ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300 hover:shadow-md'}`}
       onClick={() => onCardClick && onCardClick(application)}
     >
       <div className="flex items-start justify-between mb-3">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
           <input
             type="checkbox"
             checked={isSelected}
             onChange={(e) => onSelect(application.id, e.target.checked)}
-            className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 mt-1"
+            className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 mt-1 flex-shrink-0"
           />
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <h3 className="font-semibold text-gray-900 text-sm truncate">{application.project?.name}</h3>
             <p className="text-xs text-gray-500">#{application.id}</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold border ${config.color}`}>
+        <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+          <span className={`inline-flex items-center px-1.5 sm:px-2 py-1 rounded-full text-xs font-semibold border ${config.color}`}>
             {config.icon}
           </span>
           {config.priority === "URGENT" && (
@@ -181,28 +181,31 @@ function PaymentCard({ application, isSelected, onSelect, onVerify, getDocumentF
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 mb-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 mb-3 sm:mb-4">
         <div>
           <p className="text-xs text-gray-500">Contractor</p>
           <p className="text-sm font-medium text-gray-900 truncate">{application.contractor?.name}</p>
           {application.contractor?.trade && (
-            <p className="text-xs text-gray-500">{application.contractor.trade}</p>
+            <p className="text-xs text-gray-500 truncate">{application.contractor.trade}</p>
           )}
         </div>
-        <div className="text-right">
-          <p className="text-xs text-gray-500">Amount</p>
-          <p className="text-lg font-bold text-green-600">{formatCurrency(grandTotal)}</p>
+        <div className="text-left sm:text-right">
+          <p className="text-xs text-gray-500">Current Period Value</p>
+          <p className="text-base sm:text-lg font-bold text-green-600">{formatCurrency(application.current_period_value || 0)}</p>
         </div>
       </div>
 
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
         <div className="text-xs text-gray-500">
           {application.created_at ? formatDate(application.created_at) : "-"}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2">
           <button
-            onClick={() => onVerify(application.id)}
-            className={`px-3 py-1 rounded-md text-xs font-semibold transition-colors ${
+            onClick={(e) => {
+              e.stopPropagation();
+              onVerify(application.id);
+            }}
+            className={`px-2 sm:px-3 py-1 rounded-md text-xs font-semibold transition-colors ${
               application.status === "approved"
                 ? "bg-green-600 text-white hover:bg-green-700"
                 : config.priority === "URGENT" 
@@ -214,8 +217,11 @@ function PaymentCard({ application, isSelected, onSelect, onVerify, getDocumentF
           </button>
           {doc && (
             <button
-              onClick={() => sendForSignature(application.id)}
-              className="px-3 py-1 bg-green-600 text-white rounded-md text-xs font-semibold hover:bg-green-700 transition-colors"
+              onClick={(e) => {
+                e.stopPropagation();
+                sendForSignature(application.id);
+              }}
+              className="px-2 sm:px-3 py-1 bg-green-600 text-white rounded-md text-xs font-semibold hover:bg-green-700 transition-colors"
             >
               Sign
             </button>
@@ -287,7 +293,7 @@ function PaymentRow({ application, isSelected, onSelect, onVerify, getDocumentFo
       className={`border-b border-gray-200 hover:bg-gray-50 cursor-pointer ${isSelected ? 'bg-blue-50' : ''}`}
       onClick={() => onCardClick && onCardClick(application)}
     >
-      <td className="px-4 py-3">
+      <td className="px-3 sm:px-4 py-3">
         <input
           type="checkbox"
           checked={isSelected}
@@ -295,36 +301,42 @@ function PaymentRow({ application, isSelected, onSelect, onVerify, getDocumentFo
           className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
         />
       </td>
-      <td className="px-4 py-3">
+      <td className="px-3 sm:px-4 py-3">
         <div className="min-w-0">
           <p className="font-semibold text-gray-900 text-sm truncate">{application.project?.name}</p>
           <p className="text-xs text-gray-500">#{application.id}</p>
         </div>
       </td>
-      <td className="px-4 py-3">
+      <td className="px-3 sm:px-4 py-3">
         <div className="min-w-0">
           <p className="text-sm font-medium text-gray-900 truncate">{application.contractor?.name}</p>
           {application.contractor?.trade && (
-            <p className="text-xs text-gray-500">{application.contractor.trade}</p>
+            <p className="text-xs text-gray-500 truncate">{application.contractor.trade}</p>
           )}
         </div>
       </td>
-      <td className="px-4 py-3">
-        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold border ${config.color}`}>
-      {config.icon}
-    </span>
+      <td className="px-3 sm:px-4 py-3">
+        <span className={`inline-flex items-center px-1.5 sm:px-2 py-1 rounded-full text-xs font-semibold border ${config.color}`}>
+          {config.icon}
+        </span>
       </td>
-      <td className="px-4 py-3 text-right">
-        <p className="text-sm font-bold text-green-600">{formatCurrency(grandTotal)}</p>
+      <td className="px-3 sm:px-4 py-3 text-right">
+        <p className="text-sm font-bold text-green-600">{formatCurrency(application.current_period_value || 0)}</p>
       </td>
-      <td className="px-4 py-3 text-sm text-gray-500">
+      <td className="px-3 sm:px-4 py-3 text-right">
+        <p className="text-sm font-bold text-blue-600">{formatCurrency(grandTotal)}</p>
+      </td>
+      <td className="px-3 sm:px-4 py-3 text-sm text-gray-500">
         {application.created_at ? formatDate(application.created_at) : "-"}
       </td>
-      <td className="px-4 py-3">
-        <div className="flex items-center gap-2">
+      <td className="px-3 sm:px-4 py-3">
+        <div className="flex items-center gap-1 sm:gap-2">
           <button
-            onClick={() => onVerify(application.id)}
-            className={`px-3 py-1 rounded-md text-xs font-semibold transition-colors ${
+            onClick={(e) => {
+              e.stopPropagation();
+              onVerify(application.id);
+            }}
+            className={`px-2 sm:px-3 py-1 rounded-md text-xs font-semibold transition-colors ${
               application.status === "approved"
                 ? "bg-green-600 text-white hover:bg-green-700"
                 : config.priority === "URGENT" 
@@ -336,8 +348,11 @@ function PaymentRow({ application, isSelected, onSelect, onVerify, getDocumentFo
           </button>
           {doc && (
             <button
-              onClick={() => sendForSignature(application.id)}
-              className="px-3 py-1 bg-green-600 text-white rounded-md text-xs font-semibold hover:bg-green-700 transition-colors"
+              onClick={(e) => {
+                e.stopPropagation();
+                sendForSignature(application.id);
+              }}
+              className="px-2 sm:px-3 py-1 bg-green-600 text-white rounded-md text-xs font-semibold hover:bg-green-700 transition-colors"
             >
               Sign
             </button>
@@ -352,7 +367,7 @@ function PaymentRow({ application, isSelected, onSelect, onVerify, getDocumentFo
 function Pagination({ currentPage, totalPages, onPageChange, totalItems, itemsPerPage }: any) {
   const getPageNumbers = () => {
     const pages = [];
-    const maxVisible = 5;
+    const maxVisible = window.innerWidth < 640 ? 3 : 5; // Show fewer pages on mobile
     let start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
     let end = Math.min(totalPages, start + maxVisible - 1);
 
@@ -371,27 +386,27 @@ function Pagination({ currentPage, totalPages, onPageChange, totalItems, itemsPe
   const endItem = Math.min(currentPage * itemsPerPage, totalItems);
 
   return (
-    <div className="flex items-center justify-between px-4 py-3 bg-white border-t border-gray-200">
-      <div className="flex items-center text-sm text-gray-700">
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-3 sm:px-4 py-3 bg-white border-t border-gray-200 gap-3 sm:gap-0">
+      <div className="flex items-center justify-center sm:justify-start text-xs sm:text-sm text-gray-700">
         <span>
           Showing {startItem} to {endItem} of {totalItems} results
         </span>
       </div>
 
-      <div className="flex items-center space-x-2">
+      <div className="flex items-center justify-center space-x-1 sm:space-x-2">
         <button
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
-          className="px-3 py-1 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-2 sm:px-3 py-1 text-xs sm:text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <ChevronLeft className="w-4 h-4" />
+          <ChevronLeft className="w-3 h-3 sm:w-4 sm:h-4" />
         </button>
 
         {pageNumbers.map((page) => (
           <button
             key={page}
             onClick={() => onPageChange(page)}
-            className={`px-3 py-1 text-sm font-medium rounded-md ${
+            className={`px-2 sm:px-3 py-1 text-xs sm:text-sm font-medium rounded-md ${
               page === currentPage
                 ? 'bg-blue-600 text-white'
                 : 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-50'
@@ -404,9 +419,9 @@ function Pagination({ currentPage, totalPages, onPageChange, totalItems, itemsPe
         <button
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
-          className="px-3 py-1 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-2 sm:px-3 py-1 text-xs sm:text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <ChevronRight className="w-4 h-4" />
+          <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4" />
         </button>
       </div>
     </div>
@@ -420,7 +435,24 @@ function PaymentTable({ applications, onVerify, getDocumentForApp, sendForSignat
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
-      <div className="overflow-x-auto">
+      {/* Mobile Card View */}
+      <div className="lg:hidden space-y-3 p-4">
+        {applications.map((application: any) => (
+          <PaymentCard
+            key={application.id}
+            application={application}
+            isSelected={selectedItems.includes(application.id)}
+            onSelect={onSelectItem}
+            onVerify={onVerify}
+            getDocumentForApp={getDocumentForApp}
+            sendForSignature={sendForSignature}
+            onCardClick={onCardClick}
+          />
+        ))}
+      </div>
+
+      {/* Desktop Table View */}
+      <div className="hidden lg:block overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
@@ -445,7 +477,10 @@ function PaymentTable({ applications, onVerify, getDocumentForApp, sendForSignat
                 Status
               </th>
               <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Amount
+                Current Period Value
+              </th>
+              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Total Amount
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Created
@@ -488,9 +523,9 @@ function BulkActionsBar({ selectedCount, onDeleteSelected, onApproveSelected, on
   if (selectedCount === 0) return null;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 z-40 lg:static lg:border-t-0 lg:p-0 lg:bg-transparent">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-3 sm:p-4 z-40 lg:static lg:border-t-0 lg:p-0 lg:bg-transparent">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
+        <div className="flex items-center justify-center sm:justify-start gap-2 sm:gap-4">
           <span className="text-sm font-medium text-gray-700">
             {selectedCount} item{selectedCount !== 1 ? 's' : ''} selected
           </span>
@@ -502,16 +537,16 @@ function BulkActionsBar({ selectedCount, onDeleteSelected, onApproveSelected, on
           </button>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-center sm:justify-end gap-2">
           <button
             onClick={onApproveSelected}
-            className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 transition-colors"
+            className="px-3 sm:px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 transition-colors"
           >
             Approve Selected
           </button>
           <button
             onClick={onDeleteSelected}
-            className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700 transition-colors"
+            className="px-3 sm:px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700 transition-colors"
           >
             Delete Selected
           </button>
@@ -524,11 +559,11 @@ function BulkActionsBar({ selectedCount, onDeleteSelected, onApproveSelected, on
 // Compact Filter Sidebar Component
 function FilterSidebar({ statusFilter, setStatusFilter, projectFilter, setProjectFilter, projects, sortBy, setSortBy, sortDir, setSortDir, onFilterChange }: any) {
   return (
-    <div className="w-48 bg-white border border-gray-200 rounded-lg p-4 h-fit">
-      <h3 className="text-sm font-semibold text-gray-900 mb-4">Quick Filters</h3>
+    <div className="w-full sm:w-48 bg-white border border-gray-200 rounded-lg p-3 sm:p-4 h-fit">
+      <h3 className="text-sm font-semibold text-gray-900 mb-3 sm:mb-4">Quick Filters</h3>
 
       {/* Status Filter */}
-      <div className="mb-4">
+      <div className="mb-3 sm:mb-4">
         <h4 className="text-xs font-medium text-gray-700 mb-2">Status</h4>
         <div className="space-y-1">
           {[
@@ -558,7 +593,7 @@ function FilterSidebar({ statusFilter, setStatusFilter, projectFilter, setProjec
       </div>
 
       {/* Project Filter */}
-      <div className="mb-4">
+      <div className="mb-3 sm:mb-4">
         <h4 className="text-xs font-medium text-gray-700 mb-2">Project</h4>
         <select
           value={projectFilter}
@@ -578,7 +613,7 @@ function FilterSidebar({ statusFilter, setStatusFilter, projectFilter, setProjec
       </div>
 
       {/* Sort Options */}
-      <div className="mb-4">
+      <div className="mb-3 sm:mb-4">
         <h4 className="text-xs font-medium text-gray-700 mb-2">Sort</h4>
         <div className="space-y-1">
           {[
@@ -628,7 +663,7 @@ function MobileFilterDrawer({ show, onClose, statusFilter, setStatusFilter, proj
 
   return (
     <div className="fixed inset-0 z-50 lg:hidden">
-      <div className="absolute inset-0  bg-opacity-50" onClick={onClose} />
+      <div className="absolute inset-0 bg-black bg-opacity-50" onClick={onClose} />
       <div className="absolute right-0 top-0 h-full w-80 bg-white shadow-xl">
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           <h3 className="text-lg font-semibold text-gray-900">Filters</h3>
@@ -683,9 +718,7 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
     weekly_total: 0,
   });
   const [paymentDocuments, setPaymentDocuments] = useState<any[]>([]);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [selectedPaymentApp, setSelectedPaymentApp] = useState<any>(null);
-  const [loadingPaymentDetails, setLoadingPaymentDetails] = useState(false);
+
 
   // Verification view state variables
   const [showVerificationView, setShowVerificationView] = useState(false);
@@ -738,6 +771,7 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
           id,
           status,
           current_payment,
+          current_period_value,
           created_at,
           project:projects(id, name, client_name),
           contractor:contractors(id, name, trade),
@@ -972,48 +1006,12 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
   };
 
   const handlePaymentCardClick = async (application: any) => {
-    setSelectedPaymentApp(application);
-    setLoadingPaymentDetails(true);
-    setShowPaymentModal(true);
-
-    try {
-      // Fetch detailed payment application data
-      const { data: paymentDetails, error } = await supabase
-        .from('payment_applications')
-        .select(`
-          *,
-          project:projects(id, name, client_name, budget, spent, start_date, target_completion_date),
-          contractor:contractors(id, name, trade, phone, email),
-          line_item_progress:payment_line_item_progress(
-            id,
-            submitted_percent,
-            pm_verified_percent,
-            line_item:project_line_items(
-              id,
-              item_no,
-              description_of_work,
-              scheduled_value,
-              percent_completed
-            )
-          )
-        `)
-        .eq('id', application.id)
-        .single();
-
-      if (error) throw error;
-
-      setSelectedPaymentApp(paymentDetails);
-    } catch (err) {
-      console.error('Error fetching payment details:', err);
-    } finally {
-      setLoadingPaymentDetails(false);
-    }
+    // Directly redirect to verify page with return parameter
+    const returnTo = `/?tab=payment-applications`;
+    window.location.href = `/payments/${application.id}/verify?returnTo=${encodeURIComponent(returnTo)}`;
   };
 
-  const handleClosePaymentModal = () => {
-    setShowPaymentModal(false);
-    setSelectedPaymentApp(null);
-  };
+
 
   // Verification view functions
   const handleVerificationClose = () => {
@@ -1156,7 +1154,7 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
         />
 
       {/* Main Content - Emphasized Table */}
-      <div className="flex gap-4">
+      <div className="flex flex-col lg:flex-row gap-4">
         {/* Compact Sidebar */}
         <div className="hidden lg:block">
           <FilterSidebar
@@ -1217,154 +1215,7 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
         onFilterChange={handleFilterChange}
       />
 
-      {/* Payment Application Modal */}
-      {showPaymentModal && (
-        <div className="fixed inset-0  bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
-            <div className="p-6 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  {loadingPaymentDetails ? 'Loading Payment Details...' : `Payment Application #${selectedPaymentApp?.id}`}
-                </h3>
-                <button
-                  onClick={handleClosePaymentModal}
-                  className="text-gray-400 hover:text-gray-600 p-1"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-            </div>
 
-            <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
-              {loadingPaymentDetails ? (
-                <div className="flex items-center justify-center py-12">
-                  <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                  <span className="ml-3 text-gray-600">Loading payment details...</span>
-                </div>
-              ) : selectedPaymentApp ? (
-                <div className="space-y-6">
-                  {/* Payment Overview */}
-                  <div className="bg-gray-50 rounded-lg p-6">
-                    <h4 className="text-lg font-semibold text-gray-900 mb-4">Payment Overview</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      <div>
-                        <label className="text-sm font-medium text-gray-600">Project</label>
-                        <p className="text-lg font-semibold text-gray-900">{selectedPaymentApp.project?.name}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-gray-600">Contractor</label>
-                        <p className="text-lg font-semibold text-gray-900">{selectedPaymentApp.contractor?.name}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-gray-600">Trade</label>
-                        <p className="text-lg font-semibold text-gray-900">{selectedPaymentApp.contractor?.trade || 'N/A'}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-gray-600">Status</label>
-                        <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                          selectedPaymentApp.status === 'approved' ? 'bg-green-100 text-green-800' :
-                          selectedPaymentApp.status === 'submitted' ? 'bg-red-100 text-red-800' :
-                          selectedPaymentApp.status === 'needs_review' ? 'bg-yellow-100 text-yellow-800' :
-                          selectedPaymentApp.status === 'check_ready' ? 'bg-purple-100 text-purple-800' :
-                          'bg-gray-100 text-gray-800'
-                        }`}>
-                          {selectedPaymentApp.status.replace('_', ' ').toUpperCase()}
-                        </span>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-gray-600">Current Payment</label>
-                        <p className="text-lg font-semibold text-gray-900">{formatCurrency(selectedPaymentApp.current_payment || 0)}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-gray-600">Created</label>
-                        <p className="text-lg font-semibold text-gray-900">{formatDate(selectedPaymentApp.created_at)}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Line Items */}
-                  <div>
-                    <h4 className="text-lg font-semibold text-gray-900 mb-4">Line Items ({selectedPaymentApp.line_item_progress?.length || 0})</h4>
-                    {selectedPaymentApp.line_item_progress?.length > 0 ? (
-                      <div className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-gray-200">
-                          <thead className="bg-gray-50">
-                            <tr>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Item No</th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Scheduled Value</th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Submitted %</th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">PM Verified %</th>
-                            </tr>
-                          </thead>
-                          <tbody className="bg-white divide-y divide-gray-200">
-                            {selectedPaymentApp.line_item_progress.map((lip: any) => (
-                              <tr key={lip.id} className="hover:bg-gray-50">
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                  {lip.line_item?.item_no}
-                                </td>
-                                <td className="px-6 py-4 text-sm text-gray-900">
-                                  {lip.line_item?.description_of_work}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                  {formatCurrency(lip.line_item?.scheduled_value || 0)}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                  {lip.submitted_percent || 0}%
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                  {lip.pm_verified_percent || 0}%
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    ) : (
-                      <p className="text-gray-500 text-center py-4">No line items found for this payment application</p>
-                    )}
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-                    <div className="text-sm text-gray-600">
-                      Payment Application #{selectedPaymentApp.id}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => {
-                          handleVerifyPayment(selectedPaymentApp.id);
-                          handleClosePaymentModal();
-                        }}
-                        className={`px-4 py-2 rounded-md text-sm font-semibold transition-colors ${
-                          selectedPaymentApp.status === "approved"
-                            ? "bg-green-600 text-white hover:bg-green-700"
-                            : "bg-blue-600 text-white hover:bg-blue-700"
-                        }`}
-                      >
-                        {selectedPaymentApp.status === "approved" ? "View Details" : "Verify Payment"}
-                      </button>
-                      <button
-                        onClick={handleClosePaymentModal}
-                        className="px-4 py-2 bg-gray-600 text-white rounded-md text-sm font-semibold hover:bg-gray-700 transition-colors"
-                      >
-                        Close
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <div className="text-4xl mb-4">📋</div>
-                  <p className="text-gray-500 font-medium">No payment details found</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Payment Verification View */}
       {showVerificationView && selectedPaymentForVerification && (

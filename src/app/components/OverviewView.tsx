@@ -10,6 +10,7 @@ interface PaymentApplication {
   id: string;
   status: 'needs_review' | 'submitted';
   current_payment: number;
+  current_period_value: number;
   created_at: string;
   project: { id: string, name: string } | null;
   contractor: { id: string, name: string } | null;
@@ -53,7 +54,7 @@ const QueueCard: React.FC<{
   onReview: (id: string) => void
 }> = ({ app, status, onReview }) => (
   <div
-    className="group relative bg-white hover:bg-gradient-to-br hover:from-blue-50 hover:to-indigo-50 rounded-2xl p-6 border border-gray-200 hover:border-blue-300 shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:scale-[1.02]"
+    className="group relative bg-white hover:bg-gradient-to-br hover:from-blue-50 hover:to-indigo-50 rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-gray-200 hover:border-blue-300 shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:scale-[1.02]"
     tabIndex={0}
     aria-label={`Review application for ${app.project?.name}`}
     onClick={() => onReview(app.id)}
@@ -65,41 +66,41 @@ const QueueCard: React.FC<{
     }}
   >
     {/* Status badge */}
-    <div className="flex items-center justify-between mb-4">
-      <span className={`inline-flex items-center px-3 py-1.5 rounded-xl text-sm font-semibold ${status.color} backdrop-blur-sm`}>
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 sm:mb-4 gap-2 sm:gap-0">
+      <span className={`inline-flex items-center px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold ${status.color} backdrop-blur-sm`}>
         <span className="mr-1">{status.icon}</span>
         {status.label}
       </span>
-      <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-lg">
+      <span className="text-xs sm:text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-lg">
         {app.created_at ? new Date(app.created_at).toLocaleDateString() : '-'}
       </span>
     </div>
 
     {/* Project info */}
-    <div className="space-y-3 mb-6">
-      <div className="flex items-center gap-3 font-bold text-lg text-gray-900">
-        <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center text-white">
+    <div className="space-y-2 sm:space-y-3 mb-4 sm:mb-6">
+      <div className="flex items-center gap-2 sm:gap-3 font-bold text-base sm:text-lg text-gray-900">
+        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg sm:rounded-xl flex items-center justify-center text-white">
           🏗️
         </div>
-        <span className="group-hover:text-blue-700 transition-colors">
+        <span className="group-hover:text-blue-700 transition-colors truncate">
           {app.project?.name || 'Unknown Project'}
         </span>
       </div>
       
-      <div className="flex items-center gap-3 text-gray-700">
-        <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center text-white text-sm">
+      <div className="flex items-center gap-2 sm:gap-3 text-gray-700">
+        <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center text-white text-xs sm:text-sm">
           👷
         </div>
-        <span>Contractor: <span className="font-medium">{app.contractor?.name || 'Unknown'}</span></span>
+        <span className="text-sm sm:text-base">Contractor: <span className="font-medium truncate">{app.contractor?.name || 'Unknown'}</span></span>
       </div>
       
-      <div className="flex items-center gap-3 text-gray-700">
-        <div className="w-8 h-8 bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-lg flex items-center justify-center text-white text-sm">
+      <div className="flex items-center gap-2 sm:gap-3 text-gray-700">
+        <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-lg flex items-center justify-center text-white text-xs sm:text-sm">
           💲
         </div>
-        <span>Amount: 
-          <span className="ml-2 font-bold text-lg text-green-700 bg-green-50 px-3 py-1 rounded-lg">
-            ${(app.current_payment || app.grand_total || 0).toLocaleString()}
+        <span className="text-sm sm:text-base">Current Period Value: 
+          <span className="ml-2 font-bold text-base sm:text-lg text-green-700 bg-green-50 px-2 sm:px-3 py-1 rounded-lg">
+            ${(app.current_period_value || 0).toLocaleString()}
           </span>
         </span>
       </div>
@@ -111,7 +112,7 @@ const QueueCard: React.FC<{
         e.stopPropagation();
         onReview(app.id);
       }}
-      className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl px-6 py-3 font-semibold transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-[1.02] focus:outline-none focus:ring-4 focus:ring-blue-300"
+      className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg sm:rounded-xl px-4 sm:px-6 py-2 sm:py-3 font-semibold transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-[1.02] focus:outline-none focus:ring-4 focus:ring-blue-300 text-sm sm:text-base"
       aria-label={`Go to review for ${app.project?.name}`}
     >
       <span className="flex items-center justify-center gap-2">
@@ -128,7 +129,8 @@ const DecisionQueueCards: React.FC<{ role: string | null, setError: (msg: string
   const [error, setLocalError] = useState<string | null>(null);
 
   const navigateToPaymentApp = (paymentAppId: string) => {
-    window.location.href = `/payments/${paymentAppId}/verify`;
+    // Navigate to verify page with return parameter to go back to construction dashboard
+    window.location.href = `/payments/${paymentAppId}/verify?returnTo=/`;
   };
 
   const navigateToPMDashboard = () => {
@@ -150,6 +152,7 @@ const DecisionQueueCards: React.FC<{ role: string | null, setError: (msg: string
           id,
           status,
           current_payment,
+          current_period_value,
           created_at,
           project_id,
           contractor_id,
@@ -169,6 +172,7 @@ const DecisionQueueCards: React.FC<{ role: string | null, setError: (msg: string
         id: item.id,
         status: item.status,
         current_payment: Number(item.current_payment) || 0,
+        current_period_value: Number(item.current_period_value) || 0,
         created_at: item.created_at,
         project: item.project || { id: null, name: 'Unknown Project' },
         contractor: item.contractor || { id: null, name: 'Unknown Contractor' },
@@ -200,7 +204,7 @@ const DecisionQueueCards: React.FC<{ role: string | null, setError: (msg: string
         map[projectName] = { projectName, count: 0, total: 0, highestPriority: priority };
       }
       map[projectName].count += 1;
-      map[projectName].total += app.current_payment || 0;
+      map[projectName].total += app.current_period_value || 0;
       if (priorityOrder.indexOf(priority) < priorityOrder.indexOf(map[projectName].highestPriority)) {
         map[projectName].highestPriority = priority;
       }
@@ -251,9 +255,9 @@ const DecisionQueueCards: React.FC<{ role: string | null, setError: (msg: string
   }
 
   return (
-    <div className="bg-white rounded-2xl border-2 border-gray-300 shadow-xl p-6 hover:shadow-2xl hover:border-purple-400 transition-all duration-300">
-      <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-3">
-        <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center text-white">
+    <div className="bg-white rounded-xl sm:rounded-2xl border-2 border-gray-300 shadow-xl p-4 sm:p-6 hover:shadow-2xl hover:border-purple-400 transition-all duration-300">
+      <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-6 flex items-center gap-2 sm:gap-3">
+        <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg sm:rounded-xl flex items-center justify-center text-white">
           📋
         </div>
         Decisions Queue
@@ -376,7 +380,7 @@ const DecisionQueueCards: React.FC<{ role: string | null, setError: (msg: string
                             Contractor: {app.contractor?.name || 'Unknown'}
                           </div>
                           <div className="text-sm font-bold text-green-700 bg-green-50 inline-block px-2 py-1 rounded-lg">
-                            ${(app.current_payment || app.grand_total || 0).toLocaleString()}
+                            ${(app.current_period_value || 0).toLocaleString()}
                           </div>
                         </div>
                         <div className="text-blue-600 text-sm font-medium group-hover:text-blue-700">
@@ -574,7 +578,7 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
     onClick?: () => void;
   }> = ({ title, value, subtitle, colorClass, icon, onClick }) => (
     <div
-      className={`group ${colorClass} rounded-2xl p-4 text-center transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-[1.02] ${
+      className={`group ${colorClass} rounded-xl sm:rounded-2xl p-3 sm:p-4 text-center transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-[1.02] ${
         onClick ? 'cursor-pointer border border-gray-200 hover:border-blue-300' : 'border border-gray-200'
       } relative overflow-hidden`}
       onClick={onClick}
@@ -583,15 +587,15 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
     >
       {/* Decorative background pattern */}
       <div className="absolute inset-0 opacity-5">
-        <div className="absolute top-0 right-0 w-20 h-20 bg-white rounded-full -translate-y-10 translate-x-10"></div>
-        <div className="absolute bottom-0 left-0 w-16 h-16 bg-white rounded-full translate-y-8 -translate-x-8"></div>
+        <div className="absolute top-0 right-0 w-16 sm:w-20 h-16 sm:h-20 bg-white rounded-full -translate-y-8 sm:-translate-y-10 translate-x-8 sm:translate-x-10"></div>
+        <div className="absolute bottom-0 left-0 w-12 sm:w-16 h-12 sm:h-16 bg-white rounded-full translate-y-6 sm:translate-y-8 -translate-x-6 sm:-translate-x-8"></div>
       </div>
 
       <div className="relative z-10">
         {/* Icon and Value Row */}
-        <div className="flex flex-col items-center mb-3">
+        <div className="flex flex-col items-center mb-2 sm:mb-3">
           {icon && (
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl mb-2 shadow-md ${
+            <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center text-lg sm:text-xl mb-1 sm:mb-2 shadow-md ${
               colorClass.includes('blue') ? 'bg-blue-500 text-white' :
               colorClass.includes('emerald') ? 'bg-emerald-500 text-white' :
               colorClass.includes('amber') ? 'bg-amber-500 text-white' :
@@ -601,7 +605,7 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
               {icon}
             </div>
           )}
-          <div className={`text-2xl font-bold ${
+          <div className={`text-lg sm:text-2xl font-bold ${
             colorClass.includes('blue') ? 'text-blue-700' :
             colorClass.includes('emerald') ? 'text-emerald-700' :
             colorClass.includes('amber') ? 'text-amber-700' :
@@ -613,7 +617,7 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
         </div>
 
         {/* Title */}
-        <div className={`text-sm font-bold mb-2 ${
+        <div className={`text-xs sm:text-sm font-bold mb-1 sm:mb-2 ${
           colorClass.includes('blue') ? 'text-blue-800' :
           colorClass.includes('emerald') ? 'text-emerald-800' :
           colorClass.includes('amber') ? 'text-amber-800' :
@@ -625,7 +629,7 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
 
         {/* Subtitle */}
         {subtitle && (
-          <div className={`text-xs font-medium mb-2 ${
+          <div className={`text-xs font-medium mb-1 sm:mb-2 ${
             colorClass.includes('blue') ? 'text-blue-600' :
             colorClass.includes('emerald') ? 'text-emerald-600' :
             colorClass.includes('amber') ? 'text-amber-600' :
@@ -654,9 +658,9 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
-      <div className="space-y-10 p-8">
+      <div className="space-y-6 sm:space-y-10 p-4 sm:p-8">
         {/* Enhanced Dashboard Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <StatCard
             title="Total Projects"
             value={stats.totalProjects}
@@ -695,12 +699,12 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
           />
         </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-10">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 sm:gap-10">
           {/* Enhanced Projects List */}
-          <div className="bg-white/80 backdrop-blur-sm rounded-3xl border border-gray-200 shadow-2xl p-8 hover:shadow-3xl hover:border-blue-300 transition-all duration-300">
-            <div className="flex items-center justify-between mb-8">
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl sm:rounded-3xl border border-gray-200 shadow-2xl p-4 sm:p-8 hover:shadow-3xl hover:border-blue-300 transition-all duration-300">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 sm:mb-8 gap-4 sm:gap-0">
               <h3
-                className="text-2xl font-bold text-gray-900 cursor-pointer hover:text-blue-600 transition-colors flex items-center gap-4"
+                className="text-xl sm:text-2xl font-bold text-gray-900 cursor-pointer hover:text-blue-600 transition-colors flex items-center gap-3 sm:gap-4"
                 onClick={() => {
                   const params = new URLSearchParams(window.location.search);
                   params.set('tab', 'projects');
@@ -719,22 +723,22 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
                   }
                 }}
               >
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-2xl flex items-center justify-center text-white shadow-lg">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-xl sm:rounded-2xl flex items-center justify-center text-white shadow-lg">
                   🏗️
                 </div>
                 <div className="flex flex-col">
                   <span>Active Projects</span>
-                  <span className="text-sm text-blue-600 font-medium">
+                  <span className="text-xs sm:text-sm text-blue-600 font-medium">
                     {enhancedProjects.length} total projects
                   </span>
                 </div>
-                <span className="text-sm text-blue-600 font-semibold bg-blue-50 px-4 py-2 rounded-xl border border-blue-200 hover:bg-blue-100 transition-colors">
+                <span className="text-xs sm:text-sm text-blue-600 font-semibold bg-blue-50 px-2 sm:px-4 py-1 sm:py-2 rounded-lg sm:rounded-xl border border-blue-200 hover:bg-blue-100 transition-colors">
                   View All →
                 </span>
               </h3>
               {projects.length > 5 && (
                 <button 
-                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-4 py-2 rounded-xl font-semibold text-sm transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105" 
+                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-3 sm:px-4 py-2 rounded-lg sm:rounded-xl font-semibold text-xs sm:text-sm transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105" 
                   onClick={() => {
                     if (role === "admin") {
                       window.location.href = "/pm-dashboard";
@@ -752,7 +756,7 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
                 <div className="text-red-700 font-medium">{error}</div>
               </div>
             )}
-            <div className="space-y-4 max-h-96 overflow-y-auto custom-scrollbar">
+            <div className="space-y-3 sm:space-y-4 max-h-80 sm:max-h-96 overflow-y-auto custom-scrollbar">
               {statsLoading ? (
                 <div className="flex items-center justify-center py-12">
                   <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>

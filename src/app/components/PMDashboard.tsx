@@ -2666,6 +2666,7 @@ export default function PMDashboard() {
           id,
           status,
           current_payment,
+          current_period_value,
           created_at,
           project:projects(id, name, client_name),
           contractor:contractors(id, name, trade),

@@ -383,9 +383,16 @@ export async function POST(req: NextRequest) {
         
         return sum + (scheduled * (thisPeriodPercent / 100));
       }, 0);
+      
+      // Calculate current period value (this period - previous)
+      const currentPeriodValue = totalCurrentPayment;
+      
       const { error: paymentAppUpdateError } = await supabase
         .from('payment_applications')
-        .update({ current_payment: totalCurrentPayment })
+        .update({ 
+          current_payment: totalCurrentPayment,
+          current_period_value: currentPeriodValue
+        })
         .eq('id', conv.payment_app_id);
       if (paymentAppUpdateError) {
         console.error('Error updating current_payment in payment_applications:', paymentAppUpdateError);

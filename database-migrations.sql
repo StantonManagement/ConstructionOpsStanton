@@ -36,7 +36,20 @@ CREATE INDEX IF NOT EXISTS idx_payment_applications_approved_by ON payment_appli
 CREATE INDEX IF NOT EXISTS idx_payment_applications_rejected_by ON payment_applications(rejected_by);
 CREATE INDEX IF NOT EXISTS idx_payment_applications_status ON payment_applications(status);
 CREATE INDEX IF NOT EXISTS idx_payment_approval_logs_payment_app_id ON payment_approval_logs(payment_app_id);
-CREATE INDEX IF NOT EXISTS idx_payment_approval_logs_performed_by ON payment_approval_logs(performed_by);
+
+-- 6. Add current_period_value column to payment_applications table
+-- This column stores the calculated current period value (this period - previous) for easy UI access
+ALTER TABLE payment_applications 
+ADD COLUMN IF NOT EXISTS current_period_value NUMERIC DEFAULT 0;
+
+-- 7. Create index for current_period_value for better query performance
+CREATE INDEX IF NOT EXISTS idx_payment_applications_current_period_value ON payment_applications(current_period_value);
+
+-- 8. Update existing payment applications to populate current_period_value
+-- This calculates the current period value for all existing payment applications
+UPDATE payment_applications 
+SET current_period_value = current_payment 
+WHERE current_period_value IS NULL OR current_period_value = 0;
 
 -- 6. Add RLS policies if needed (uncomment and adjust as needed)
 -- Enable RLS
