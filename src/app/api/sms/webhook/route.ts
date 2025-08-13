@@ -250,16 +250,16 @@ export async function POST(req: NextRequest) {
         console.log('Updated payment_sms_conversations with:', updateObj);
       }
 
-             if (updateObj.conversation_state === 'awaiting_confirmation') {
-         // Show summary after all questions (including additional)
-         const { data: progressRows } = await supabase
-           .from('payment_line_item_progress')
-           .select('line_item_id, this_period_percent')
-           .eq('payment_app_id', conv.payment_app_id);
-         const { data: lineItemsData } = await supabase
-           .from('project_line_items')
-           .select('id, scheduled_value, description_of_work, from_previous_application')
-           .in('id', (progressRows || []).map(r => r.line_item_id));
+      if (updateObj.conversation_state === 'awaiting_confirmation') {
+        // Show summary after all questions (including additional)
+        const { data: progressRows } = await supabase
+          .from('payment_line_item_progress')
+          .select('line_item_id, this_period_percent')
+          .eq('payment_app_id', conv.payment_app_id);
+        const { data: lineItemsData } = await supabase
+          .from('project_line_items')
+          .select('id, scheduled_value, description_of_work, from_previous_application')
+          .in('id', (progressRows || []).map(r => r.line_item_id));
         
         // Build summary in the requested format
         let summary = 'Summary of your application: ';
@@ -321,15 +321,16 @@ export async function POST(req: NextRequest) {
           .from('payment_sms_conversations')
           .update(updateObj)
           .eq('id', conv.id);
-                 // Show summary
-         const { data: progressRows } = await supabase
-           .from('payment_line_item_progress')
-           .select('line_item_id, this_period_percent')
-           .eq('payment_app_id', conv.payment_app_id);
-         const { data: lineItemsData } = await supabase
-           .from('project_line_items')
-           .select('id, scheduled_value, description_of_work, from_previous_application')
-           .in('id', (progressRows || []).map(r => r.line_item_id));
+        
+        // Show summary
+        const { data: progressRows } = await supabase
+          .from('payment_line_item_progress')
+          .select('line_item_id, this_period_percent')
+          .eq('payment_app_id', conv.payment_app_id);
+        const { data: lineItemsData } = await supabase
+          .from('project_line_items')
+          .select('id, scheduled_value, description_of_work, from_previous_application')
+          .in('id', (progressRows || []).map(r => r.line_item_id));
         
         // Build summary in the requested format
         let summary = 'Summary of your application: ';
