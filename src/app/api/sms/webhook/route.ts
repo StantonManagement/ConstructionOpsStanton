@@ -225,26 +225,28 @@ export async function POST(req: NextRequest) {
 
       idx++;
       updateObj.current_question_index = idx;
-      console.log('Advancing to next question. New idx:', idx, 'numLineItems:', numLineItems);
+      console.log('Advancing to next question. New idx:', idx, 'numLineItems:', numLineItems, 'ADDITIONAL_QUESTIONS.length:', ADDITIONAL_QUESTIONS.length);
 
-             if (idx < numLineItems) {
-         // Get the ACTUAL previous completed percentage from prior payment applications
-         const nextLineItemId = lineItems[idx].id;
-         const { data: allPrevProgress } = await supabase
-           .from('payment_line_item_progress')
-           .select('submitted_percent, payment_app_id')
-           .eq('line_item_id', nextLineItemId)
-           .gt('submitted_percent', 0)
-           .neq('payment_app_id', conv.payment_app_id) // Exclude current application
-           .order('payment_app_id', { ascending: false })
-           .limit(1);
-         
-         const prevPercent = allPrevProgress && allPrevProgress.length > 0 ? Number(allPrevProgress[0].submitted_percent) : 0;
-         nextQuestion = `What percent complete is your work for: ${lineItems[idx].description_of_work}? (Previous: ${prevPercent}%)`;
+      if (idx < numLineItems) {
+        // Get the ACTUAL previous completed percentage from prior payment applications
+        const nextLineItemId = lineItems[idx].id;
+        const { data: allPrevProgress } = await supabase
+          .from('payment_line_item_progress')
+          .select('submitted_percent, payment_app_id')
+          .eq('line_item_id', nextLineItemId)
+          .gt('submitted_percent', 0)
+          .neq('payment_app_id', conv.payment_app_id) // Exclude current application
+          .order('payment_app_id', { ascending: false })
+          .limit(1);
+        
+        const prevPercent = allPrevProgress && allPrevProgress.length > 0 ? Number(allPrevProgress[0].submitted_percent) : 0;
+        nextQuestion = `What percent complete is your work for: ${lineItems[idx].description_of_work}? (Previous: ${prevPercent}%)`;
       } else if (idx - numLineItems < ADDITIONAL_QUESTIONS.length) {
+        console.log('Asking additional question:', ADDITIONAL_QUESTIONS[idx - numLineItems]);
         nextQuestion = ADDITIONAL_QUESTIONS[idx - numLineItems];
       } else {
         // All questions answered, show summary and move to confirmation
+        console.log('All questions answered, moving to confirmation');
         updateObj.conversation_state = 'awaiting_confirmation';
       }
 
@@ -317,25 +319,26 @@ export async function POST(req: NextRequest) {
       }
     } else if (idx - numLineItems < ADDITIONAL_QUESTIONS.length) {
       // Handle additional questions (e.g., notes for PM)
+      console.log('Processing additional question. idx:', idx, 'numLineItems:', numLineItems, 'body:', body);
       responses[idx] = body;
       idx++;
       updateObj.current_question_index = idx;
 
-             // Save PM notes immediately when provided
-       // The PM notes question is the first additional question (index 0 in ADDITIONAL_QUESTIONS)
-       if (idx - numLineItems === 0) {
-         // This is the PM notes question
-         console.log('Saving PM notes for payment_app_id:', conv.payment_app_id, 'Notes:', body);
-         const { error: pmNotesError } = await supabase
-           .from('payment_applications')
-           .update({ pm_notes: body })
-           .eq('id', conv.payment_app_id);
-         if (pmNotesError) {
-           console.error('Error saving pm_notes:', pmNotesError);
-         } else {
-           console.log('PM notes saved successfully:', body);
-         }
-       }
+      // Save PM notes immediately when provided
+      // The PM notes question is the first additional question (index 0 in ADDITIONAL_QUESTIONS)
+      if (idx - numLineItems === 0) {
+        // This is the PM notes question
+        console.log('Saving PM notes for payment_app_id:', conv.payment_app_id, 'Notes:', body);
+        const { error: pmNotesError } = await supabase
+          .from('payment_applications')
+          .update({ pm_notes: body })
+          .eq('id', conv.payment_app_id);
+        if (pmNotesError) {
+          console.error('Error saving pm_notes:', pmNotesError);
+        } else {
+          console.log('PM notes saved successfully:', body);
+        }
+      }
 
       if (idx - numLineItems < ADDITIONAL_QUESTIONS.length) {
         // Ask next additional question
@@ -422,6 +425,7 @@ export async function POST(req: NextRequest) {
         console.error('Error updating payment_applications status:', appUpdateError);
       }
              // PM notes are already saved when provided, but let's add a fallback
+       console.log('Checking fallback PM notes logic. Responses:', responses, 'numLineItems:', numLineItems);
        if (responses && responses.length > numLineItems) {
          const pmNotes = responses[numLineItems]; // PM notes should be at index numLineItems
          console.log('Fallback: Saving PM notes from responses array:', pmNotes);
@@ -434,6 +438,8 @@ export async function POST(req: NextRequest) {
          } else {
            console.log('PM notes saved successfully (fallback):', pmNotes);
          }
+       } else {
+         console.log('No PM notes found in responses array. Responses:', responses, 'numLineItems:', numLineItems);
        }
       // Calculate total current payment
       const { data: progressRows, error: progressRowsError } = await supabase
