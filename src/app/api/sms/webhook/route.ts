@@ -260,24 +260,42 @@ export async function POST(req: NextRequest) {
            .from('project_line_items')
            .select('id, scheduled_value, description_of_work, from_previous_application')
            .in('id', (progressRows || []).map(r => r.line_item_id));
-        let summary = 'Summary of your application:\n';
+        
+        // Build summary in the requested format
+        let summary = 'Summary of your application: ';
         let totalThisPeriod = 0;
-        (progressRows || []).forEach((row) => {
+        let totalPreviousAmount = 0;
+        
+        (progressRows || []).forEach((row, index) => {
           const item = (lineItemsData || []).find(li => li.id === row.line_item_id);
           const totalPercent = Number(row.this_period_percent) || 0; // This is the total percentage
           const scheduled = Number(item?.scheduled_value) || 0;
-          
-          // Calculate the difference for this period
           const previousPercent = Number(item?.from_previous_application) || 0;
-          const thisPeriodPercent = Math.max(0, totalPercent - previousPercent);
-          const thisPeriodDollar = scheduled * (thisPeriodPercent / 100);
           
-          totalThisPeriod += thisPeriodDollar;
+          // Calculate amounts
+          const totalAmount = scheduled * (totalPercent / 100);
+          const previousAmount = scheduled * (previousPercent / 100);
+          const thisPeriodAmount = totalAmount - previousAmount;
+          
+          totalThisPeriod += thisPeriodAmount;
+          totalPreviousAmount += previousAmount;
+          
           const desc = item?.description_of_work || 'Item';
-          summary += `${desc} - (${thisPeriodPercent.toFixed(1)}% this period) = $${thisPeriodDollar.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}\n`;
+          
+          if (index === 0) {
+            // First item - start the summary
+            summary += `${desc} - (${totalPercent.toFixed(1)}%) = ¤${totalAmount.toFixed(0)} - ${previousPercent.toFixed(1)}% previous approved `;
+          } else {
+            // Additional items - add to summary
+            summary += `${desc} - (${totalPercent.toFixed(1)}%) = ¤${totalAmount.toFixed(0)} - ${previousPercent.toFixed(1)}% previous approved `;
+          }
         });
-        summary += `Total Requested = $${totalThisPeriod.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}\n`;
+        
+        // Add total calculation
+        const grandTotal = totalThisPeriod + totalPreviousAmount;
+        summary += `Total Requested = ¤${grandTotal.toFixed(0)} - ${totalPreviousAmount.toFixed(0)} = ${totalThisPeriod.toFixed(0)} `;
         summary += 'Please type "Yes" to submit or "No" to redo your answers.';
+        
         twiml.message(summary);
       } else {
         twiml.message(nextQuestion);
@@ -312,19 +330,42 @@ export async function POST(req: NextRequest) {
            .from('project_line_items')
            .select('id, scheduled_value, description_of_work, from_previous_application')
            .in('id', (progressRows || []).map(r => r.line_item_id));
-        let summary = 'Summary of your application:\n';
+        
+        // Build summary in the requested format
+        let summary = 'Summary of your application: ';
         let totalThisPeriod = 0;
-        (progressRows || []).forEach((row) => {
+        let totalPreviousAmount = 0;
+        
+        (progressRows || []).forEach((row, index) => {
           const item = (lineItemsData || []).find(li => li.id === row.line_item_id);
-          const thisPeriodPercent = Number(row.this_period_percent) || 0;
+          const totalPercent = Number(row.this_period_percent) || 0; // This is the total percentage
           const scheduled = Number(item?.scheduled_value) || 0;
-          const thisPeriodDollar = scheduled * (thisPeriodPercent / 100);
-          totalThisPeriod += thisPeriodDollar;
+          const previousPercent = Number(item?.from_previous_application) || 0;
+          
+          // Calculate amounts
+          const totalAmount = scheduled * (totalPercent / 100);
+          const previousAmount = scheduled * (previousPercent / 100);
+          const thisPeriodAmount = totalAmount - previousAmount;
+          
+          totalThisPeriod += thisPeriodAmount;
+          totalPreviousAmount += previousAmount;
+          
           const desc = item?.description_of_work || 'Item';
-          summary += `${desc} - (${thisPeriodPercent.toFixed(1)}%) = $${thisPeriodDollar.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}\n`;
+          
+          if (index === 0) {
+            // First item - start the summary
+            summary += `${desc} - (${totalPercent.toFixed(1)}%) = ¤${totalAmount.toFixed(0)} - ${previousPercent.toFixed(1)}% previous approved `;
+          } else {
+            // Additional items - add to summary
+            summary += `${desc} - (${totalPercent.toFixed(1)}%) = ¤${totalAmount.toFixed(0)} - ${previousPercent.toFixed(1)}% previous approved `;
+          }
         });
-        summary += `Total Requested = $${totalThisPeriod.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}\n`;
+        
+        // Add total calculation
+        const grandTotal = totalThisPeriod + totalPreviousAmount;
+        summary += `Total Requested = ¤${grandTotal.toFixed(0)} - ${totalPreviousAmount.toFixed(0)} = ${totalThisPeriod.toFixed(0)} `;
         summary += 'Please type "Yes" to submit or "No" to redo your answers.';
+        
         twiml.message(summary);
       }
     }

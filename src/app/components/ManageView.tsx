@@ -1760,7 +1760,8 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
 
         if (error) throw error;
 
-        dispatch({ type: 'ADD_SUBCONTRACTOR', payload: data });
+        // Refresh subcontractors data
+        await refreshSubcontractors();
         addNotification('success', 'Vendor added successfully!');
         setOpenForm(null);
       }
@@ -2120,7 +2121,10 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
           <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full">
             <AddContractForm
               onClose={() => setOpenForm(null)}
-              onSuccess={() => addNotification('success', 'Contract added successfully!')}
+              onSuccess={async () => {
+                addNotification('success', 'Contract added successfully!');
+                await refreshContracts();
+              }}
               onError={(message) => addNotification('error', message)}
               setDirty={setFormDirty}
             />

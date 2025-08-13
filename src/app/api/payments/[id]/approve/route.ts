@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { generateG703Pdf } from '@/lib/g703Pdf';
-import { writeFileSync, mkdirSync } from 'fs';
-import { join } from 'path';
 
 export const runtime = 'nodejs';
 
@@ -14,21 +12,28 @@ const CORS_HEADERS = {
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
-// Helper function to save PDF file
-async function savePdfFile(pdfBytes: Uint8Array, filename: string): Promise<string> {
+// Helper function to save PDF file (only works in development)
+async function savePdfFile(pdfBytes: Uint8Array, filename: string): Promise<string | null> {
   try {
-    // Create invoices directory if it doesn't exist
-    const invoicesDir = join(process.cwd(), 'public', 'invoices');
-    mkdirSync(invoicesDir, { recursive: true });
-    
-    // Save file to public/invoices
-    const filepath = join(invoicesDir, filename);
-    writeFileSync(filepath, pdfBytes);
-    
-    return `/invoices/${filename}`;
+    // Only attempt file system operations in development
+    if (process.env.NODE_ENV === 'development') {
+      const { writeFileSync, mkdirSync } = await import('fs');
+      const { join } = await import('path');
+      
+      // Create invoices directory if it doesn't exist
+      const invoicesDir = join(process.cwd(), 'public', 'invoices');
+      mkdirSync(invoicesDir, { recursive: true });
+      
+      // Save file to public/invoices
+      const filepath = join(invoicesDir, filename);
+      writeFileSync(filepath, pdfBytes);
+      
+      return `/invoices/${filename}`;
+    }
+    return null;
   } catch (error) {
     console.error('Error saving PDF file:', error);
-    throw error;
+    return null;
   }
 }
 
@@ -87,18 +92,18 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
 
     // Update project budget - add current payment to spent amount
-    if (updatedApp.current_payment) {
+    if (updatedApp.current_period_value) {
       // Calculate total spent from all approved payment applications for this project
       const { data: approvedPayments, error: paymentsFetchError } = await supabase
         .from('payment_applications')
-        .select('current_payment')
+        .select('current_period_value')
         .eq('project_id', updatedApp.project_id)
         .eq('status', 'approved');
 
       if (paymentsFetchError) {
         console.error('Error fetching approved payments:', paymentsFetchError);
       } else {
-        const totalSpent = approvedPayments.reduce((sum, payment) => sum + (payment.current_payment || 0), 0);
+        const totalSpent = approvedPayments.reduce((sum, payment) => sum + (payment.current_period_value || 0), 0);
         
         const { error: budgetUpdateError } = await supabase
           .from('projects')
@@ -118,13 +123,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       // Also update the contractor's paid_to_date
       const { data: contractorPayments, error: contractorPaymentsError } = await supabase
         .from('payment_applications')
-        .select('current_payment')
+        .select('current_period_value')
         .eq('project_id', updatedApp.project_id)
         .eq('contractor_id', updatedApp.contractor_id)
         .eq('status', 'approved');
 
       if (!contractorPaymentsError && contractorPayments) {
-        const contractorTotalPaid = contractorPayments.reduce((sum, payment) => sum + (payment.current_payment || 0), 0);
+        const contractorTotalPaid = contractorPayments.reduce((sum, payment) => sum + (payment.current_period_value || 0), 0);
         
         // Update the project_contractors table with the new paid_to_date
         const { error: contractorUpdateError } = await supabase
@@ -198,9 +203,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
       const { pdfBytes, filename } = await generateG703Pdf(invoiceData);
 
-      // Save the PDF file to public/invoices directory
+      // Try to save the PDF file (only works in development)
       const filePath = await savePdfFile(pdfBytes, filename);
-      console.log(`Invoice generated and saved: ${filename} at ${filePath} for payment application ${paymentAppId}`);
+      
+      if (filePath) {
+        console.log(`Invoice generated and saved: ${filename} at ${filePath} for payment application ${paymentAppId}`);
+      } else {
+        console.log(`Invoice generated: ${filename} for payment application ${paymentAppId} (file not saved in production)`);
+      }
 
       // Save invoice record to database
       try {
@@ -209,7 +219,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           .insert({
             payment_app_id: paymentAppId,
             filename: filename,
-            file_path: filePath,
+            file_path: filePath || `/invoices/${filename}`,
             generated_at: new Date().toISOString(),
             generated_by: userData.id,
             file_size: pdfBytes.length,

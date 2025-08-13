@@ -244,7 +244,7 @@ export default function PaymentVerificationPage() {
         contractorEmail: contractor.email,
         projectName: project.name,
         paymentAppId: paymentApp.id,
-        approvedAmount: paymentApp.current_payment || 0,
+        approvedAmount: paymentApp.current_period_value || 0,
         approvalNotes: approvalNotes.trim() || null,
         type: 'approval'
       };
@@ -665,17 +665,17 @@ const lineItemsForTable = lineItems.map((li, idx) => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between py-4 sm:py-6 gap-4">
             <div className="flex items-center gap-4">
-              <button
-                type="button"
-                onClick={handleBackNavigation}
+            <button
+              type="button"
+              onClick={handleBackNavigation}
                 className="group flex items-center gap-3 px-4 py-2.5 text-slate-600 hover:text-slate-900 hover:bg-white/80 rounded-xl transition-all duration-200 border border-slate-200 hover:border-slate-300 hover:shadow-md"
-              >
+            >
                 <svg className="w-5 h-5 transition-transform group-hover:-translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
                 <span className="hidden sm:inline font-medium">Back to Dashboard</span>
                 <span className="sm:hidden font-medium">Back</span>
-              </button>
+            </button>
               <div className="hidden sm:block h-8 w-px bg-gradient-to-b from-slate-200 to-slate-400"></div>
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-lg">
@@ -695,8 +695,8 @@ const lineItemsForTable = lineItems.map((li, idx) => {
                 <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Status</p>
                 <span className={`inline-flex items-center px-4 py-2 rounded-xl text-sm font-semibold border ${getStatusColor(paymentApp?.status || '')}`}>
                   <span className="mr-2">{getStatusIcon(paymentApp?.status || '')}</span>
-                  {paymentApp?.status?.toUpperCase() || 'PENDING'}
-                </span>
+                {paymentApp?.status?.toUpperCase() || 'PENDING'}
+              </span>
               </div>
             </div>
           </div>
@@ -711,7 +711,7 @@ const lineItemsForTable = lineItems.map((li, idx) => {
               <div>
                 <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Payment Application Review</h1>
                 <p className="text-blue-100 text-lg">Detailed verification and approval process</p>
-              </div>
+          </div>
               <div className="text-right">
                 <p className="text-blue-200 text-sm font-semibold uppercase tracking-wide mb-2">Total Amount</p>
                 <p className="text-4xl sm:text-5xl font-bold text-white">
@@ -741,10 +741,10 @@ const lineItemsForTable = lineItems.map((li, idx) => {
                   <div>
                     <label className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Contractor</label>
                     <p className="text-xl font-bold text-gray-900 mt-1">{contractor?.name}</p>
-                    {contractor?.trade && (
+                {contractor?.trade && (
                       <p className="text-sm text-gray-600 mt-1 px-2 py-1 bg-gray-200 rounded-full inline-block">{contractor.trade}</p>
-                    )}
-                  </div>
+                )}
+              </div>
                 </div>
               </div>
               <div className="group p-6 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl border border-gray-200 hover:shadow-lg transition-all duration-300 md:col-span-2 xl:col-span-1">
@@ -755,9 +755,9 @@ const lineItemsForTable = lineItems.map((li, idx) => {
                   <div>
                     <label className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Submitted</label>
                     <p className="text-xl font-bold text-gray-900 mt-1">
-                      {paymentApp?.created_at ? new Date(paymentApp.created_at).toLocaleDateString() : "-"}
-                    </p>
-                  </div>
+                  {paymentApp?.created_at ? new Date(paymentApp.created_at).toLocaleDateString() : "-"}
+                </p>
+              </div>
                 </div>
               </div>
             </div>
@@ -771,9 +771,9 @@ const lineItemsForTable = lineItems.map((li, idx) => {
               <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
                 <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
+            </svg>
               </div>
-              <div>
+            <div>
                 <h3 className="text-xl font-bold text-white">PM Notes & Comments</h3>
                 <p className="text-gray-300">Review existing notes and add your comments</p>
               </div>
@@ -797,11 +797,11 @@ const lineItemsForTable = lineItems.map((li, idx) => {
                     ) : (
                       <span className="text-gray-500 italic">No existing notes available.</span>
                     )}
-                  </div>
-                </div>
               </div>
             </div>
-            
+          </div>
+        </div>
+
             <div className="bg-white rounded-xl p-6 border-2 border-dashed border-gray-300 hover:border-gray-400 transition-colors">
               <label className="block text-sm font-bold text-gray-800 mb-4 uppercase tracking-wide">Add Your Notes</label>
               <textarea
@@ -833,21 +833,21 @@ const lineItemsForTable = lineItems.map((li, idx) => {
                     <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
-                  </div>
+            </div>
                   <h2 className="text-xl font-bold text-white">Supporting Documents</h2>
                 </div>
-                <a
-                  href={document?.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                  <a
+                    href={document?.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur text-white rounded-lg hover:bg-white/30 transition-all duration-200 font-medium"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                  </svg>
-                  Open in New Tab
-                </a>
-              </div>
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                    Open in New Tab
+                  </a>
+                </div>
             </div>
             <div className="p-6">
               <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
@@ -923,7 +923,7 @@ const lineItemsForTable = lineItems.map((li, idx) => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2h2a2 2 0 002-2z" />
                   </svg>
                 </div>
-                <div>
+              <div>
                   <h2 className="text-xl font-bold text-white">Line Items Breakdown</h2>
                   <p className="text-indigo-100 mt-1">Detailed work completion and payment analysis</p>
                 </div>
@@ -989,23 +989,23 @@ const lineItemsForTable = lineItems.map((li, idx) => {
                       <td className="px-4 py-4">
                         <div className="max-w-xs">
                           <div className="text-sm font-semibold text-gray-900 truncate" title={li.description_of_work}>
-                            {li.description_of_work}
+                          {li.description_of_work}
                           </div>
                         </div>
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-right">
                         <span className="text-sm font-bold text-gray-900">
-                          {li.scheduled_value.toLocaleString(undefined, { style: 'currency', currency: 'USD', minimumFractionDigits: 0 })}
+                        {li.scheduled_value.toLocaleString(undefined, { style: 'currency', currency: 'USD', minimumFractionDigits: 0 })}
                         </span>
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-right">
                         <span className="text-sm text-gray-700 bg-gray-100 px-2 py-1 rounded-md">
-                          {li.previous_percent.toFixed(1)}%
+                        {li.previous_percent.toFixed(1)}%
                         </span>
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-right">
                         <span className="text-sm text-gray-700 bg-blue-100 px-2 py-1 rounded-md font-medium">
-                          {li.this_period_percent.toFixed(1)}%
+                        {li.this_period_percent.toFixed(1)}%
                         </span>
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-right">
@@ -1054,28 +1054,28 @@ const lineItemsForTable = lineItems.map((li, idx) => {
                             </div>
                           </div>
                         ) : (
-                          <button
-                            onClick={() => startEditingLineItem(li.line_item_id, li.submitted_percent, li.pm_verified_percent)}
+                            <button
+                              onClick={() => startEditingLineItem(li.line_item_id, li.submitted_percent, li.pm_verified_percent)}
                             className="group flex items-center justify-end gap-2 w-full hover:bg-blue-50 rounded-lg p-2 transition-all"
                             title="Click to edit percentage"
-                          >
+                            >
                             <span className="text-sm font-bold text-indigo-700 bg-indigo-100 px-3 py-1 rounded-lg">
                               {li.pm_verified_percent.toFixed(1)}%
                             </span>
                             <svg className="w-4 h-4 text-gray-400 group-hover:text-blue-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                            </svg>
-                          </button>
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
+                            </button>
                         )}
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-right text-sm text-gray-700">
                         <span className="bg-purple-100 px-2 py-1 rounded-md">
-                          {li.material_presently_stored.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                        {li.material_presently_stored.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                         </span>
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-right">
                         <span className="text-sm font-bold text-gray-900">
-                          {li.total_completed.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                        {li.total_completed.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                         </span>
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-right">
@@ -1093,12 +1093,12 @@ const lineItemsForTable = lineItems.map((li, idx) => {
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-right text-sm text-gray-700">
                         <span className="bg-orange-100 px-2 py-1 rounded-md">
-                          {li.balance_to_finish.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                        {li.balance_to_finish.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                         </span>
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-right">
                         <span className="text-base font-bold text-green-600 bg-green-50 px-3 py-2 rounded-lg border border-green-200">
-                          {li.current_payment.toLocaleString(undefined, { style: 'currency', currency: 'USD', minimumFractionDigits: 0 })}
+                        {li.current_payment.toLocaleString(undefined, { style: 'currency', currency: 'USD', minimumFractionDigits: 0 })}
                         </span>
                       </td>
                     </tr>
@@ -1119,7 +1119,7 @@ const lineItemsForTable = lineItems.map((li, idx) => {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
                         </svg>
                         <span className="text-2xl font-bold text-green-700">
-                          {grandTotal.toLocaleString(undefined, { style: 'currency', currency: 'USD', minimumFractionDigits: 0 })}
+                      {grandTotal.toLocaleString(undefined, { style: 'currency', currency: 'USD', minimumFractionDigits: 0 })}
                         </span>
                       </div>
                     </td>
@@ -1279,8 +1279,8 @@ const lineItemsForTable = lineItems.map((li, idx) => {
               >
                 <div className="flex items-center justify-center gap-3">
                   <svg className="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
-                  </svg>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                </svg>
                   <span>Recall Application</span>
                 </div>
               </button>
@@ -1293,8 +1293,8 @@ const lineItemsForTable = lineItems.map((li, idx) => {
               >
                 <div className="flex items-center justify-center gap-3">
                   <svg className="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
                   <span>Re-approve Application</span>
                 </div>
               </button>
@@ -1308,8 +1308,8 @@ const lineItemsForTable = lineItems.map((li, idx) => {
                 >
                   <div className="flex items-center justify-center gap-3">
                     <svg className="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
                     <span>Reject Application</span>
                   </div>
                 </button>
@@ -1320,8 +1320,8 @@ const lineItemsForTable = lineItems.map((li, idx) => {
                 >
                   <div className="flex items-center justify-center gap-3">
                     <svg className="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
                     <span>Approve Application</span>
                   </div>
                 </button>
@@ -1515,18 +1515,18 @@ const lineItemsForTable = lineItems.map((li, idx) => {
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <span className="text-gray-500">$</span>
                       </div>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={newChangeOrder.amount || ''}
-                        onChange={(e) => setNewChangeOrder(prev => ({ 
-                          ...prev, 
-                          amount: parseFloat(e.target.value) || 0 
-                        }))}
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={newChangeOrder.amount || ''}
+                      onChange={(e) => setNewChangeOrder(prev => ({ 
+                        ...prev, 
+                        amount: parseFloat(e.target.value) || 0 
+                      }))}
                         className="w-full pl-8 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-700 transition-all"
-                        placeholder="0.00"
-                      />
+                      placeholder="0.00"
+                    />
                     </div>
                   </div>
 
@@ -1535,19 +1535,19 @@ const lineItemsForTable = lineItems.map((li, idx) => {
                       Percentage (%)
                     </label>
                     <div className="relative">
-                      <input
-                        type="number"
-                        min="0"
-                        max="100"
-                        step="0.1"
-                        value={newChangeOrder.percentage || ''}
-                        onChange={(e) => setNewChangeOrder(prev => ({ 
-                          ...prev, 
-                          percentage: parseFloat(e.target.value) || 0 
-                        }))}
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.1"
+                      value={newChangeOrder.percentage || ''}
+                      onChange={(e) => setNewChangeOrder(prev => ({ 
+                        ...prev, 
+                        percentage: parseFloat(e.target.value) || 0 
+                      }))}
                         className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-700 transition-all"
-                        placeholder="0.0"
-                      />
+                      placeholder="0.0"
+                    />
                       <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
                         <span className="text-gray-500">%</span>
                       </div>

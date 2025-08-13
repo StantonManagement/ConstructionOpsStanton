@@ -301,12 +301,12 @@ function ProjectOverview({ project, onCreatePaymentApps, onStatsPaymentAppClick 
           // Calculate actual spent from approved payment applications
           const { data: approvedPayments } = await supabase
             .from('payment_applications')
-            .select('current_payment')
+            .select('current_period_value')
             .eq('project_id', project.id)
             .eq('status', 'approved');
 
           const totalSpent = approvedPayments?.reduce((sum: number, payment: any) => 
-            sum + (Number(payment.current_payment) || 0), 0
+            sum + (Number(payment.current_period_value) || 0), 0
           ) || 0;
 
           setProjectStats({
@@ -743,7 +743,7 @@ function ProjectOverview({ project, onCreatePaymentApps, onStatsPaymentAppClick 
                                     </span>
                                   </div>
                                   <div className="text-sm text-gray-600">
-                                    Amount: {formatCurrency(app.current_payment || 0)} • Created: {formatDate(app.created_at)}
+                                    Amount: {formatCurrency(app.current_period_value || 0)} • Created: {formatDate(app.created_at)}
                                   </div>
                                 </div>
                                 <div className="text-right">
@@ -2706,7 +2706,7 @@ export default function PMDashboard() {
       
       const { data: approvedPayments } = await supabase
         .from("payment_applications")
-        .select("current_payment")
+        .select("current_period_value")
         .eq("status", "approved");
 
       // Calculate totals
@@ -2714,7 +2714,7 @@ export default function PMDashboard() {
       const activeProjects = (projectStats || []).filter((p: any) => p.status === "active").length;
       const atRiskProjects = (projectStats || []).filter((p: any) => p.at_risk).length;
       const totalBudget = (contractorStats || []).reduce((sum: number, c: any) => sum + (Number(c.contract_amount) || 0), 0);
-      const totalSpent = (approvedPayments || []).reduce((sum: number, p: any) => sum + (Number(p.current_payment) || 0), 0);
+      const totalSpent = (approvedPayments || []).reduce((sum: number, p: any) => sum + (Number(p.current_period_value) || 0), 0);
       const completionPercentage = totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0;
 
       const { data: smsConvos } = await supabase
@@ -2733,7 +2733,7 @@ export default function PMDashboard() {
       const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
       const weeklyTotal = (appsRaw || [])
         .filter((a: any) => a.created_at && new Date(a.created_at) >= weekAgo && a.status === 'approved')
-        .reduce((sum: number, a: any) => sum + (a.current_payment || 0), 0);
+        .reduce((sum: number, a: any) => sum + (a.current_period_value || 0), 0);
       
       setStats({
         pending_sms: pendingSMS,
@@ -3168,8 +3168,8 @@ export default function PMDashboard() {
       }
       if (sortBy === "amount") {
         return sortDir === "asc"
-          ? a.current_payment - b.current_payment
-          : b.current_payment - a.current_payment;
+          ? a.current_period_value - b.current_period_value
+          : b.current_period_value - a.current_period_value;
       }
       const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
       const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
@@ -3518,7 +3518,7 @@ export default function PMDashboard() {
                                   </span>
                                 </div>
                                 <div className="text-sm text-gray-600">
-                                  Status: {app.status} • Amount: {formatCurrency(app.current_payment || 0)}
+                                  Status: {app.status} • Amount: {formatCurrency(app.current_period_value || 0)}
                                 </div>
                                 <div className="text-xs text-gray-500 mt-1">
                                   Created: {formatDate(app.created_at)}
@@ -3554,7 +3554,7 @@ export default function PMDashboard() {
                                   </span>
                                 </div>
                                 <div className="text-sm text-gray-600">
-                                  Status: {item.status} • Amount: {formatCurrency(item.current_payment || 0)}
+                                  Status: {item.status} • Amount: {formatCurrency(item.current_period_value || 0)}
                                 </div>
                                 <div className="text-xs text-gray-500 mt-1">
                                   Created: {formatDate(item.created_at)}
