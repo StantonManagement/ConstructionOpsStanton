@@ -340,6 +340,18 @@ export async function POST(req: NextRequest) {
         }
       }
 
+      // Save the updated responses immediately to ensure PM notes are stored
+      console.log('Saving updated responses to conversation:', responses);
+      const { error: responsesUpdateError } = await supabase
+        .from('payment_sms_conversations')
+        .update({ responses: responses })
+        .eq('id', conv.id);
+      if (responsesUpdateError) {
+        console.error('Error updating responses:', responsesUpdateError);
+      } else {
+        console.log('Responses updated successfully:', responses);
+      }
+
       if (idx - numLineItems < ADDITIONAL_QUESTIONS.length) {
         // Ask next additional question
         nextQuestion = ADDITIONAL_QUESTIONS[idx - numLineItems];
