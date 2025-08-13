@@ -115,17 +115,21 @@ const AddForm = ({ title, icon, fields, onSubmit, onClose, isLoading = false, in
 
 const validators = {
   required: (value: string) => value.trim() !== '' || 'This field is required',
-  email: (value: string) => 
-    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) || 'Please enter a valid email address',
-  phone: (value: string) => 
-    /^[\+]?[-\s\-\(\)]?[\d\s\-\(\)]{10,}$/.test(value) || 'Please enter a valid phone number',
+  email: (value: string) => {
+    if (!value.trim()) return true; // Allow empty email
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) || 'Please enter a valid email address';
+  },
+  phone: (value: string) => {
+    if (!value.trim()) return true; // Allow empty phone
+    return /^[\+]?[-\s\-\(\)]?[\d\s\-\(\)]{10,}$/.test(value) || 'Please enter a valid phone number';
+  },
 };
 
 const vendorFields: AddFormField[] = [
   { name: 'name', placeholder: 'Vendor Name', required: true, validators: [validators.required] },
   { name: 'trade', placeholder: 'Trade', required: true, validators: [validators.required] },
   { name: 'phone', placeholder: 'Phone', type: 'tel', validators: [validators.phone], defaultValue: '+1' },
-  { name: 'email', placeholder: 'Email', type: 'email', validators: [validators.email] },
+  { name: 'email', placeholder: 'Email (optional)', type: 'email', validators: [validators.email] },
 ];
 
 interface SubcontractorsViewProps {
@@ -230,7 +234,13 @@ const SubcontractorsView: React.FC<SubcontractorsViewProps> = ({ searchQuery = '
       setLoading(true);
       try {
         const { name, trade, phone, email } = formData;
-        const { data, error } = await supabase.from('contractors').insert([{ name, trade, phone, email }]).select().single();
+        const contractorData = {
+          name: name.trim(),
+          trade: trade.trim(),
+          phone: phone.trim() || null,
+          email: email.trim() || null
+        };
+        const { data, error } = await supabase.from('contractors').insert([contractorData]).select().single();
         if (error) throw error;
         dispatch({ type: 'ADD_SUBCONTRACTOR', payload: data });
         setModal(null);
@@ -246,7 +256,13 @@ const SubcontractorsView: React.FC<SubcontractorsViewProps> = ({ searchQuery = '
       setLoading(true);
       try {
         const { name, trade, phone, email } = formData;
-        const { data, error } = await supabase.from('contractors').update({ name, trade, phone, email }).eq('id', selectedSub.id).select().single();
+        const contractorData = {
+          name: name.trim(),
+          trade: trade.trim(),
+          phone: phone.trim() || null,
+          email: email.trim() || null
+        };
+        const { data, error } = await supabase.from('contractors').update(contractorData).eq('id', selectedSub.id).select().single();
         if (error) throw error;
         dispatch({ type: 'UPDATE_SUBCONTRACTOR', payload: data });
         setModal(null);

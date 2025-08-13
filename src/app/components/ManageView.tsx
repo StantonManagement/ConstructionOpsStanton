@@ -19,10 +19,14 @@ interface NotificationData {
 // Form validation utilities
 const validators = {
   required: (value: string) => value.trim() !== '' || 'This field is required',
-  email: (value: string) => 
-    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) || 'Please enter a valid email address',
-  phone: (value: string) => 
-    /^[\+]?[\s\-\(\)]?[\d\s\-\(\)]{10,}$/.test(value) || 'Please enter a valid phone number',
+  email: (value: string) => {
+    if (!value.trim()) return true; // Allow empty email
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) || 'Please enter a valid email address';
+  },
+  phone: (value: string) => {
+    if (!value.trim()) return true; // Allow empty phone
+    return /^[\+]?[\s\-\(\)]?[\d\s\-\(\)]{10,}$/.test(value) || 'Please enter a valid phone number';
+  },
   number: (value: string) => 
     !isNaN(Number(value)) && Number(value) >= 0 || 'Please enter a valid positive number',
   date: (value: string) => 
@@ -1727,17 +1731,18 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
 
     try {
       const { name, trade, phone, email } = formData;
+      const contractorData = {
+        name: name.trim(),
+        trade: trade.trim(),
+        phone: phone.trim() || null,
+        email: email.trim() || null
+      };
       
       if (editModal === 'vendor' && selectedItem) {
         // Update existing vendor
         const { data, error } = await supabase
           .from('contractors')
-          .update({
-            name,
-            trade,
-            phone,
-            email,
-          })
+          .update(contractorData)
           .eq('id', selectedItem.id)
           .select()
           .single();
@@ -1751,12 +1756,7 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
         setSelectedItem(null);
       } else {
         // Add new vendor
-        const { data, error } = await supabase.from('contractors').insert([{
-          name,
-          trade,
-          phone,
-          email,
-        }]).select().single();
+        const { data, error } = await supabase.from('contractors').insert([contractorData]).select().single();
 
         if (error) throw error;
 
@@ -1787,7 +1787,7 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
     { name: 'name', placeholder: 'Vendor Name', required: true, validators: [validators.required] },
     { name: 'trade', placeholder: 'Trade', required: true, validators: [validators.required] },
     { name: 'phone', placeholder: 'Phone', type: 'tel', validators: [validators.phone], defaultValue: '+1' },
-    { name: 'email', placeholder: 'Email', type: 'email', validators: [validators.email] },
+    { name: 'email', placeholder: 'Email (optional)', type: 'email', validators: [validators.email] },
   ];
 
   const handleOpenForm = (form: 'project' | 'vendor' | 'contract') => {
