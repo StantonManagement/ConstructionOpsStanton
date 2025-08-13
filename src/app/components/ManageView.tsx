@@ -924,6 +924,38 @@ const AddContractForm: React.FC<{
         contractId = data.id;
       }
 
+      // Create corresponding entry in project_contractors table
+      if (!isEdit) {
+        // Check if project_contractors entry already exists
+        const { data: existingProjectContractor } = await supabase
+          .from('project_contractors')
+          .select('id')
+          .eq('project_id', Number(formData.projectId))
+          .eq('contractor_id', Number(formData.subcontractorId))
+          .single();
+
+        if (!existingProjectContractor) {
+          // Create new project_contractors entry
+          const { error: projectContractorError } = await supabase
+            .from('project_contractors')
+            .insert({
+              project_id: Number(formData.projectId),
+              contractor_id: Number(formData.subcontractorId),
+              contract_amount: Number(formData.contractAmount),
+              paid_to_date: 0,
+              contract_status: 'active'
+            });
+
+          if (projectContractorError) {
+            // If project_contractors creation fails, delete the contract
+            if (!isEdit) {
+              await supabase.from('contracts').delete().eq('id', contractId);
+            }
+            throw new Error(`Failed to create project contractor relationship: ${projectContractorError.message}`);
+          }
+        }
+      }
+
       if (lineItems.length > 0) {
         const itemsToInsert = lineItems.map(item => ({
           contract_id: contractId,

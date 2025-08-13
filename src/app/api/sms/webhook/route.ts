@@ -94,16 +94,20 @@ export async function POST(req: NextRequest) {
         .from('payment_sms_conversations')
         .update({ conversation_state: 'in_progress', current_question_index: 0 })
         .eq('id', conv.id);
-      if (numLineItems > 0) {
-        // Fetch this_period for first line item from project_line_items
-        const firstLineItemId = lineItems[0].id;
-        const { data: pliRow } = await supabase
-          .from('project_line_items')
-          .select('this_period')
-          .eq('id', firstLineItemId)
-          .single();
-        const prevPercent = pliRow?.this_period ?? 0;
-        twiml.message(`What percent complete is your work for: ${lineItems[0].description_of_work}? (Previous: ${prevPercent}%)`);
+             if (numLineItems > 0) {
+         // Get the ACTUAL previous completed percentage from prior payment applications
+         const firstLineItemId = lineItems[0].id;
+         const { data: allPrevProgress } = await supabase
+           .from('payment_line_item_progress')
+           .select('submitted_percent, payment_app_id')
+           .eq('line_item_id', firstLineItemId)
+           .gt('submitted_percent', 0)
+           .neq('payment_app_id', conv.payment_app_id) // Exclude current application
+           .order('payment_app_id', { ascending: false })
+           .limit(1);
+         
+         const prevPercent = allPrevProgress && allPrevProgress.length > 0 ? Number(allPrevProgress[0].submitted_percent) : 0;
+         twiml.message(`What percent complete is your work for: ${lineItems[0].description_of_work}? (Previous: ${prevPercent}%)`);
       } else {
         // If no line items, skip to additional questions
         twiml.message(ADDITIONAL_QUESTIONS[0]);
@@ -223,16 +227,20 @@ export async function POST(req: NextRequest) {
       updateObj.current_question_index = idx;
       console.log('Advancing to next question. New idx:', idx, 'numLineItems:', numLineItems);
 
-      if (idx < numLineItems) {
-        // Fetch this_period for next line item from project_line_items
-        const nextLineItemId = lineItems[idx].id;
-        const { data: pliRow } = await supabase
-          .from('project_line_items')
-          .select('this_period')
-          .eq('id', nextLineItemId)
-          .single();
-        const prevPercent = pliRow?.this_period ?? 0;
-        nextQuestion = `What percent complete is your work for: ${lineItems[idx].description_of_work}? (Previous: ${prevPercent}%)`;
+             if (idx < numLineItems) {
+         // Get the ACTUAL previous completed percentage from prior payment applications
+         const nextLineItemId = lineItems[idx].id;
+         const { data: allPrevProgress } = await supabase
+           .from('payment_line_item_progress')
+           .select('submitted_percent, payment_app_id')
+           .eq('line_item_id', nextLineItemId)
+           .gt('submitted_percent', 0)
+           .neq('payment_app_id', conv.payment_app_id) // Exclude current application
+           .order('payment_app_id', { ascending: false })
+           .limit(1);
+         
+         const prevPercent = allPrevProgress && allPrevProgress.length > 0 ? Number(allPrevProgress[0].submitted_percent) : 0;
+         nextQuestion = `What percent complete is your work for: ${lineItems[idx].description_of_work}? (Previous: ${prevPercent}%)`;
       } else if (idx - numLineItems < ADDITIONAL_QUESTIONS.length) {
         nextQuestion = ADDITIONAL_QUESTIONS[idx - numLineItems];
       } else {

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { generateG703Pdf } from '@/lib/g703Pdf';
+// import { generateG703Pdf } from '../../../../../lib/g703Pdf';
 
 export const runtime = 'nodejs';
 
@@ -44,11 +44,11 @@ export async function OPTIONS() {
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const paymentAppId = id;
+    const paymentAppId = parseInt(id);
     const { approvalNotes } = await req.json();
 
-    if (!paymentAppId) {
-      return NextResponse.json({ error: 'Payment application ID is required' }, { status: 400, headers: CORS_HEADERS });
+    if (!paymentAppId || isNaN(paymentAppId)) {
+      return NextResponse.json({ error: 'Valid payment application ID is required' }, { status: 400, headers: CORS_HEADERS });
     }
 
     // Get current user for approval tracking
@@ -165,7 +165,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     console.log(`Payment application ${paymentAppId} approved by ${userData.name}`);
 
-    // Generate invoice (G703 PDF) after approval
+    // TEMPORARILY COMMENTED OUT: Generate invoice (G703 PDF) after approval
+    // This is to isolate the 405 error issue on Vercel
+    /*
     try {
       // Fetch additional data needed for invoice generation
       const { data: lineItems } = await supabase
@@ -234,9 +236,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       console.error('Error generating invoice:', invoiceError);
       // Don't fail the approval if invoice generation fails
     }
+    */
 
     return NextResponse.json({
-      message: 'Payment application approved successfully and invoice generated',
+      message: 'Payment application approved successfully',
       paymentApp: updatedApp
     }, { headers: CORS_HEADERS });
 

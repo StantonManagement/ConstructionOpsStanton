@@ -749,7 +749,7 @@ export async function generateG703Pdf({
   // Add change order page if requested
   if (includeChangeOrderPage && changeOrders.length > 0) {
     // Function to add a change order page with the same format as the continuation sheet
-    function addChangeOrderPage(
+    const addChangeOrderPage = (
       pdfDoc: PDFDocument, 
       font: any, 
       fontBold: any, 
@@ -757,7 +757,7 @@ export async function generateG703Pdf({
       project: { name?: string; address?: string }, 
       contractor: { name?: string }, 
       changeOrders: ChangeOrder[]
-    ) {
+    ) => {
       // Add a new page (same size as continuation sheet)
       const page = pdfDoc.addPage([842, 595]); // Landscape A4
       const width = 842;
