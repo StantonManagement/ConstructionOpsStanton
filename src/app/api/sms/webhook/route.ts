@@ -296,14 +296,14 @@ export async function POST(req: NextRequest) {
         summary += `Total Requested = ${totalThisPeriod.toFixed(0)} `;
         summary += 'Please type "Yes" to submit or "No" to redo your answers.';
         
-                 // Send summary immediately first
-         twiml.message(summary);
-         
-         // Then update conversation state in background (don't await)
-         void supabase
+                 // Update conversation state first, then send summary
+         await supabase
            .from('payment_sms_conversations')
            .update({ conversation_state: 'awaiting_confirmation' })
            .eq('id', conv.id);
+         
+         // Send summary after state is updated
+         twiml.message(summary);
       } else {
         twiml.message(nextQuestion);
       }
@@ -367,14 +367,14 @@ export async function POST(req: NextRequest) {
         summary += `Total Requested = ${grandTotal.toFixed(0)} - ${totalPreviousAmount.toFixed(0)} = ${totalThisPeriod.toFixed(0)} `;
         summary += 'Please type "Yes" to submit or "No" to redo your answers.';
         
-        // Send summary immediately first
-        twiml.message(summary);
-        
-        // Then update conversation state in background (don't await)
-        void supabase
-          .from('payment_sms_conversations')
-          .update({ conversation_state: 'awaiting_confirmation' })
-          .eq('id', conv.id);
+                 // Update conversation state first, then send summary
+         await supabase
+           .from('payment_sms_conversations')
+           .update({ conversation_state: 'awaiting_confirmation' })
+           .eq('id', conv.id);
+         
+         // Send summary after state is updated
+         twiml.message(summary);
       }
     }
   } else if (conv.conversation_state === 'awaiting_confirmation') {
