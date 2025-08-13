@@ -180,7 +180,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
               trade: payment.contractor?.trade || 'Unknown Trade',
               amount: payment.current_period_value,
               date: new Date(payment.created_at).toLocaleDateString(),
-              percentage: project.stats.totalSpent > 0 ? ((payment.current_period_value / project.stats.totalSpent) * 100).toFixed(1) : '0'
+                             percentage: project.stats.totalSpent > 0 ? ((payment.current_period_value / project.stats.totalSpent) * 100).toFixed(2) : '0'
             })) || []
           };
           break;
@@ -210,7 +210,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
               contractAmount: contract.contract_amount,
               paidToDate: contract.paid_to_date,
               remaining: contract.contract_amount - contract.paid_to_date,
-              percentage: project.stats.totalBudget > 0 ? ((contract.contract_amount / project.stats.totalBudget) * 100).toFixed(1) : '0'
+                             percentage: project.stats.totalBudget > 0 ? ((contract.contract_amount / project.stats.totalBudget) * 100).toFixed(2) : '0'
             })) || []
           };
           break;
@@ -459,21 +459,22 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Projects</h1>
-          <p className="text-sm text-gray-600 mt-1">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Projects</h1>
+          <p className="text-xs sm:text-sm text-gray-600 mt-1">
             {filteredProjects.length} projects • Updated {new Date().toLocaleTimeString()}
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <button
             onClick={handleRefresh}
             disabled={isRefreshing}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+            className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg text-xs sm:text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
           >
-            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-            Refresh
+            <RefreshCw className={`w-3 h-3 sm:w-4 sm:h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">Refresh</span>
+            <span className="sm:hidden">↻</span>
           </button>
         </div>
       </div>
@@ -498,106 +499,110 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
       )}
 
       {/* Projects Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         {filteredProjects.map((project) => (
           <div
             key={project.id}
-            className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-lg transition-shadow cursor-pointer"
+            className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6 hover:shadow-lg transition-shadow cursor-pointer"
             onClick={() => handleProjectClick(project)}
           >
             {/* Project Header */}
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold text-gray-900 mb-1">{project.name}</h3>
-                <p className="text-sm text-gray-600">{project.client_name}</p>
+            <div className="flex items-start justify-between mb-3 sm:mb-4">
+              <div className="flex-1 min-w-0">
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-1 truncate">{project.name}</h3>
+                <p className="text-xs sm:text-sm text-gray-600 truncate">{project.client_name}</p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col sm:flex-row items-end sm:items-center gap-1 sm:gap-2 ml-2">
                 {project.atRisk && (
-                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                    <AlertCircle className="w-3 h-3 mr-1" />
-                    At Risk
+                  <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                    <AlertCircle className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-0.5 sm:mr-1" />
+                    <span className="hidden sm:inline">At Risk</span>
+                    <span className="sm:hidden">⚠️</span>
                   </span>
                 )}
-                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                  project.stats.completionPercentage >= 80 
-                    ? 'bg-green-100 text-green-800' 
-                    : project.stats.completionPercentage >= 50 
-                    ? 'bg-yellow-100 text-yellow-800'
-                    : 'bg-blue-100 text-blue-800'
-                }`}>
-                  {project.stats.completionPercentage}% Complete
-                </span>
+                                 <span className={`inline-flex items-center px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-xs font-medium ${
+                   project.stats.completionPercentage >= 80 
+                     ? 'bg-green-100 text-green-800' 
+                     : project.stats.completionPercentage >= 50 
+                     ? 'bg-yellow-100 text-yellow-800'
+                     : 'bg-blue-100 text-blue-800'
+                 }`}>
+                   {project.stats.completionPercentage.toFixed(2)}%
+                 </span>
               </div>
             </div>
 
             {/* Interactive Stat Cards */}
-            <div className="grid grid-cols-3 gap-3 mb-4">
+            <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-3 sm:mb-4">
               <div 
-                className="bg-blue-50 p-3 rounded-lg cursor-pointer hover:shadow-md transition-all duration-200"
+                className="bg-blue-50 p-2 sm:p-3 rounded-lg cursor-pointer hover:shadow-md transition-all duration-200"
                 onClick={(e) => {
                   e.stopPropagation();
                   handleStatCardClick(project, 'contractors');
                 }}
               >
-                <div className="flex items-center gap-2 mb-1">
-                  <Users className="w-4 h-4 text-blue-600" />
-                  <h4 className="font-medium text-gray-900 text-sm">Contractors</h4>
+                <div className="flex items-center gap-1 sm:gap-2 mb-1">
+                  <Users className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600" />
+                  <h4 className="font-medium text-gray-900 text-xs sm:text-sm">Contractors</h4>
                 </div>
-                <p className="text-xl font-bold text-blue-600">{project.stats.totalContractors}</p>
+                <p className="text-lg sm:text-xl font-bold text-blue-600">{project.stats.totalContractors}</p>
                 <p className="text-xs text-gray-600">Active</p>
                 <div className="mt-1 text-xs text-blue-600 font-medium">
-                  Click to view
+                  <span className="hidden sm:inline">Click to view</span>
+                  <span className="sm:hidden">View</span>
                 </div>
               </div>
 
               <div 
-                className="bg-yellow-50 p-3 rounded-lg cursor-pointer hover:shadow-md transition-all duration-200"
+                className="bg-yellow-50 p-2 sm:p-3 rounded-lg cursor-pointer hover:shadow-md transition-all duration-200"
                 onClick={(e) => {
                   e.stopPropagation();
                   handleStatCardClick(project, 'payment_apps');
                 }}
               >
-                <div className="flex items-center gap-2 mb-1">
-                  <DollarSign className="w-4 h-4 text-yellow-600" />
-                  <h4 className="font-medium text-gray-900 text-sm">Payment Apps</h4>
+                <div className="flex items-center gap-1 sm:gap-2 mb-1">
+                  <DollarSign className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-600" />
+                  <h4 className="font-medium text-gray-900 text-xs sm:text-sm">Payment Apps</h4>
                 </div>
-                <p className="text-xl font-bold text-yellow-600">{project.stats.activePaymentApps}</p>
+                <p className="text-lg sm:text-xl font-bold text-yellow-600">{project.stats.activePaymentApps}</p>
                 <p className="text-xs text-gray-600">Pending</p>
                 <div className="mt-1 text-xs text-yellow-600 font-medium">
-                  Click to view
+                  <span className="hidden sm:inline">Click to view</span>
+                  <span className="sm:hidden">View</span>
                 </div>
               </div>
 
               <div 
-                className="bg-green-50 p-3 rounded-lg cursor-pointer hover:shadow-md transition-all duration-200"
+                className="bg-green-50 p-2 sm:p-3 rounded-lg cursor-pointer hover:shadow-md transition-all duration-200"
                 onClick={(e) => {
                   e.stopPropagation();
                   handleStatCardClick(project, 'completed');
                 }}
               >
-                <div className="flex items-center gap-2 mb-1">
-                  <CheckCircle className="w-4 h-4 text-green-600" />
-                  <h4 className="font-medium text-gray-900 text-sm">Completed</h4>
+                <div className="flex items-center gap-1 sm:gap-2 mb-1">
+                  <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 text-green-600" />
+                  <h4 className="font-medium text-gray-900 text-xs sm:text-sm">Completed</h4>
                 </div>
-                <p className="text-xl font-bold text-green-600">{project.stats.completedPaymentApps}</p>
+                <p className="text-lg sm:text-xl font-bold text-green-600">{project.stats.completedPaymentApps}</p>
                 <p className="text-xs text-gray-600">Approved</p>
                 <div className="mt-1 text-xs text-green-600 font-medium">
-                  Click to view
+                  <span className="hidden sm:inline">Click to view</span>
+                  <span className="sm:hidden">View</span>
                 </div>
               </div>
             </div>
 
             {/* Budget Progress */}
-            <div className="mb-4">
-              <div className="flex items-center justify-between text-sm mb-2">
+            <div className="mb-3 sm:mb-4">
+              <div className="flex items-center justify-between text-xs sm:text-sm mb-2">
                 <span className="text-gray-600 font-medium">Budget Progress</span>
                 <span className="text-gray-900 font-semibold">{formatCurrency(project.stats.totalBudget)}</span>
               </div>
               
               {/* Progress Bar */}
-              <div className="w-full bg-gray-200 rounded-full h-3 mb-2 relative overflow-hidden">
+              <div className="w-full bg-gray-200 rounded-full h-2 sm:h-3 mb-2 relative overflow-hidden">
                 <div
-                  className={`h-3 rounded-full transition-all duration-500 ease-out ${
+                  className={`h-2 sm:h-3 rounded-full transition-all duration-500 ease-out ${
                     project.stats.completionPercentage > 95 ? 'bg-gradient-to-r from-red-500 to-red-600' :
                     project.stats.completionPercentage > 90 ? 'bg-gradient-to-r from-orange-500 to-orange-600' :
                     project.stats.completionPercentage > 75 ? 'bg-gradient-to-r from-yellow-500 to-yellow-600' :
@@ -621,7 +626,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
               </div>
 
               {/* Budget Details */}
-              <div className="flex justify-between items-center text-xs">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 text-xs">
                 <span className="text-gray-600">
                   Spent: <span 
                     className="font-medium text-gray-900 cursor-pointer hover:text-blue-600 hover:underline"
@@ -646,9 +651,9 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
                 </span>
               </div>
               
-              <div className="flex justify-between items-center text-xs mt-1">
-                                 <span className="text-gray-600 font-medium">
-                   {project.stats.completionPercentage < 0.01 ? '<0.01%' : project.stats.completionPercentage.toFixed(3)}% utilized
+                             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 text-xs mt-1">
+                 <span className="text-gray-600 font-medium">
+                   {project.stats.completionPercentage < 0.01 ? '<0.01%' : project.stats.completionPercentage.toFixed(2)}% utilized
                  </span>
                 <span className={`font-semibold ${
                   project.stats.completionPercentage > 95 ? 'text-red-600' :
@@ -665,15 +670,15 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
             </div>
 
             {/* Project Details */}
-            <div className="space-y-2 text-sm">
-              <div className="flex items-center gap-2">
-                <Building className="w-4 h-4 text-gray-400" />
+            <div className="space-y-1 sm:space-y-2 text-xs sm:text-sm">
+              <div className="flex items-center gap-1 sm:gap-2">
+                <Building className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" />
                 <span className="text-gray-600">Phase:</span>
-                <span className="font-medium text-gray-900">{project.current_phase}</span>
+                <span className="font-medium text-gray-900 truncate">{project.current_phase}</span>
               </div>
               {project.daysToInspection > 0 && (
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-gray-400" />
+                <div className="flex items-center gap-1 sm:gap-2">
+                  <Calendar className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" />
                   <span className="text-gray-600">Inspection:</span>
                   <span className={`font-medium ${project.daysToInspection <= 3 ? 'text-red-600' : 'text-gray-900'}`}>
                     {project.daysToInspection} days
@@ -683,7 +688,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
             </div>
 
             {/* Action Button */}
-            <div className="mt-4 pt-4 border-t border-gray-100">
+            <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-100">
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -693,10 +698,11 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
                   params.set('project', project.id.toString());
                   router.replace(`/?${params.toString()}`, { scroll: false });
                 }}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                className="w-full flex items-center justify-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-xs sm:text-sm font-medium"
               >
-                <Plus className="w-4 h-4" />
-                Create Payment App
+                <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">Create Payment App</span>
+                <span className="sm:hidden">Create App</span>
               </button>
             </div>
           </div>
@@ -716,25 +722,25 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
 
       {/* Data Modal */}
       {showDataModal && (
-        <div className="fixed inset-0  bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
-            <div className="p-6 border-b border-gray-200">
+        <div className="fixed inset-0  bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden">
+            <div className="p-4 sm:p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900">
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900 truncate pr-2">
                   {modalTitle}
                 </h3>
                 <button
                   onClick={handleCloseDataModal}
-                  className="text-gray-400 hover:text-gray-600 p-1"
+                  className="text-gray-400 hover:text-gray-600 p-1 flex-shrink-0"
                 >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
               </div>
             </div>
 
-            <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+            <div className="p-4 sm:p-6 overflow-y-auto max-h-[calc(95vh-120px)] sm:max-h-[calc(90vh-120px)]">
               {loadingModalData ? (
                 <div className="flex items-center justify-center py-12">
                   <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
@@ -754,45 +760,39 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
                   </div>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-3 sm:space-y-4">
                   {modalData.map((item: any) => (
-                    <div key={item.id} className="bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition-colors">
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <span className="text-sm font-medium text-gray-900">
+                    <div key={item.id} className="bg-gray-50 rounded-lg p-3 sm:p-4 hover:bg-gray-100 transition-colors">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1 sm:gap-2 mb-1 sm:mb-2">
+                            <span className="text-sm font-medium text-gray-900 truncate">
                               {item.name || item.contractor_name || 'Unknown'}
                             </span>
                             {item.trade && (
-                              <span className="text-xs text-gray-500">
+                              <span className="text-xs text-gray-500 bg-gray-200 px-1.5 py-0.5 rounded">
                                 {item.trade}
                               </span>
                             )}
                           </div>
-                          {item.email && (
-                            <div className="text-sm text-gray-600">
-                              {item.email}
-                            </div>
-                          )}
-                          {item.phone && (
-                            <div className="text-sm text-gray-600">
-                              {item.phone}
-                            </div>
-                          )}
-                          {item.created_at && (
-                            <div className="text-sm text-gray-600">
-                              Created: {formatDate(item.created_at)}
-                            </div>
-                          )}
-                          {item.grand_total && (
-                            <div className="text-sm text-gray-600">
-                              Amount: {formatCurrency(item.grand_total)}
-                            </div>
-                          )}
+                          <div className="space-y-0.5 text-xs sm:text-sm text-gray-600">
+                            {item.email && (
+                              <div className="truncate">{item.email}</div>
+                            )}
+                            {item.phone && (
+                              <div>{item.phone}</div>
+                            )}
+                            {item.created_at && (
+                              <div>Created: {formatDate(item.created_at)}</div>
+                            )}
+                            {item.grand_total && (
+                              <div>Amount: {formatCurrency(item.grand_total)}</div>
+                            )}
+                          </div>
                         </div>
-                        <div className="text-right">
+                        <div className="text-left sm:text-right">
                           {item.status && (
-                            <div className={`text-sm font-medium ${
+                            <div className={`text-xs sm:text-sm font-medium ${
                               item.status === 'approved' ? 'text-green-600' :
                               item.status === 'submitted' ? 'text-red-600' :
                               item.status === 'needs_review' ? 'text-yellow-600' :
@@ -803,16 +803,14 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
                               {item.status.replace('_', ' ').toUpperCase()}
                             </div>
                           )}
-                          {item.contract_amount && (
-                            <div className="text-sm text-gray-600">
-                              Contract: {formatCurrency(item.contract_amount)}
-                            </div>
-                          )}
-                          {item.paid_to_date && (
-                            <div className="text-sm text-gray-600">
-                              Paid: {formatCurrency(item.paid_to_date)}
-                            </div>
-                          )}
+                          <div className="space-y-0.5 text-xs sm:text-sm text-gray-600">
+                            {item.contract_amount && (
+                              <div>Contract: {formatCurrency(item.contract_amount)}</div>
+                            )}
+                            {item.paid_to_date && (
+                              <div>Paid: {formatCurrency(item.paid_to_date)}</div>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -824,27 +822,27 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
         </div>
       )}
 
-      {/* Project Detail Modal */}
-      {showProjectModal && selectedProject && (
-        <div className="fixed inset-0  bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl max-h-[95vh] overflow-hidden">
-            <div className="p-6 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xl font-semibold text-gray-900">
-                  {loadingProjectModal ? 'Loading Project Details...' : `${projectModalData.project?.name || 'Project Details'}`}
-                </h3>
-                <button
-                  onClick={handleCloseModal}
-                  className="text-gray-400 hover:text-gray-600 p-1"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-            </div>
+             {/* Project Detail Modal */}
+       {showProjectModal && selectedProject && (
+         <div className="fixed inset-0  bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
+           <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] sm:max-h-[95vh] overflow-hidden flex flex-col">
+             <div className="p-4 sm:p-6 border-b border-gray-200 flex-shrink-0">
+               <div className="flex items-center justify-between">
+                 <h3 className="text-lg sm:text-xl font-semibold text-gray-900 truncate pr-2">
+                   {loadingProjectModal ? 'Loading Project Details...' : `${projectModalData.project?.name || 'Project Details'}`}
+                 </h3>
+                 <button
+                   onClick={handleCloseModal}
+                   className="text-gray-400 hover:text-gray-600 p-1 flex-shrink-0"
+                 >
+                   <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                   </svg>
+                 </button>
+               </div>
+             </div>
 
-            <div className="p-6 overflow-y-auto max-h-[calc(95vh-120px)]">
+             <div className="p-4 sm:p-6 overflow-y-auto flex-1">
               {loadingProjectModal ? (
                 <div className="flex items-center justify-center py-12">
                   <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
@@ -1051,35 +1049,35 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
                   </div>
                 </div>
               )}
-            </div>
+                         </div>
 
-            <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200">
-              <button
-                onClick={handleCloseModal}
-                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
-              >
-                Close
-              </button>
-              <button
-                onClick={() => {
-                  const params = new URLSearchParams(searchParams.toString());
-                  params.set('tab', 'payment');
-                  params.set('subtab', 'processing');
-                  params.set('project', selectedProject.id.toString());
-                  router.replace(`/?${params.toString()}`, { scroll: false });
-                }}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                Create Payment Apps
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+             <div className="flex items-center justify-end gap-3 p-4 sm:p-6 border-t border-gray-200 flex-shrink-0">
+               <button
+                 onClick={handleCloseModal}
+                 className="px-3 sm:px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 text-sm sm:text-base"
+               >
+                 Close
+               </button>
+               <button
+                 onClick={() => {
+                   const params = new URLSearchParams(searchParams.toString());
+                   params.set('tab', 'payment');
+                   params.set('subtab', 'processing');
+                   params.set('project', selectedProject.id.toString());
+                   router.replace(`/?${params.toString()}`, { scroll: false });
+                 }}
+                 className="px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm sm:text-base"
+               >
+                 Create Payment Apps
+               </button>
+             </div>
+           </div>
+         </div>
+       )}
 
       {/* Budget Details Modal */}
       {showBudgetModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0  bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">
