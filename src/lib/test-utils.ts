@@ -1,34 +1,35 @@
-import React, { ReactElement } from 'react'
-import { render, RenderOptions } from '@testing-library/react'
-import { DataContext } from '@/context/DataContext'
+// Test utilities for the application
+// This file provides mock data and helper functions for testing
 
 // Mock data for testing
 export const mockProjects = [
   {
-    id: '1',
+    id: 1,
     name: 'Downtown Office Building Renovation',
-    address: '123 Main St, Downtown, DC',
-    start_date: '2024-01-15',
-    end_date: '2024-12-31',
-    status: 'active',
+    client_name: 'Downtown Corp',
+    current_phase: 'Construction',
+    daysToInspection: 15,
+    atRisk: false,
     budget: 2500000,
-    created_at: '2024-01-01T00:00:00Z',
+    spent: 1250000,
+    permits: { building: 'BP-2024-001', electrical: 'EP-2024-002' },
   },
   {
-    id: '2',
+    id: 2,
     name: 'Uptown Project Sample',
-    address: '456 Oak Ave, Uptown, DC',
-    start_date: '2024-02-01',
-    end_date: '2024-11-30',
-    status: 'active',
+    client_name: 'Uptown LLC',
+    current_phase: 'Planning',
+    daysToInspection: 30,
+    atRisk: true,
     budget: 1800000,
-    created_at: '2024-01-15T00:00:00Z',
+    spent: 450000,
+    permits: { building: 'BP-2024-003' },
   },
 ]
 
 export const mockContractors = [
   {
-    id: '1',
+    id: 1,
     name: 'Elite Electrical Services',
     email: 'contact@eliteelectrical.com',
     phone: '+1-555-0101',
@@ -38,7 +39,7 @@ export const mockContractors = [
     created_at: '2024-01-01T00:00:00Z',
   },
   {
-    id: '2',
+    id: 2,
     name: 'Drywall Pro',
     email: 'info@drywallpro.com',
     phone: '+1-555-0102',
@@ -51,9 +52,9 @@ export const mockContractors = [
 
 export const mockPaymentApplications = [
   {
-    id: '1',
-    project_id: '1',
-    contractor_id: '1',
+    id: 1,
+    project_id: 1,
+    contractor_id: 1,
     application_number: 'App 124',
     period_from: '2024-08-01',
     period_to: '2024-08-31',
@@ -63,9 +64,9 @@ export const mockPaymentApplications = [
     created_at: '2024-08-12T10:00:00Z',
   },
   {
-    id: '2',
-    project_id: '1',
-    contractor_id: '2',
+    id: 2,
+    project_id: 1,
+    contractor_id: 2,
     application_number: 'App 102',
     period_from: '2024-08-01',
     period_to: '2024-08-31',
@@ -78,8 +79,8 @@ export const mockPaymentApplications = [
 
 export const mockDailyLogs = [
   {
-    id: '1',
-    project_id: '1',
+    id: 1,
+    project_id: 1,
     date: '2024-08-15',
     weather: 'Sunny',
     temperature: 75,
@@ -115,31 +116,21 @@ export const mockDataContextValue = {
   deleteDailyLog: jest.fn(),
 }
 
-// Custom render function that includes providers
-interface CustomRenderOptions extends Omit<RenderOptions, 'wrapper'> {
-  dataContextValue?: typeof mockDataContextValue
+// Helper function to format currency for testing
+export const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount);
 }
 
-export function customRender(
-  ui: ReactElement,
-  options: CustomRenderOptions = {}
-) {
-  const { dataContextValue = mockDataContextValue, ...renderOptions } = options
-
-  function Wrapper({ children }: { children: React.ReactNode }) {
-    return (
-      <DataContext.Provider value={dataContextValue}>
-        {children}
-      </DataContext.Provider>
-    )
-  }
-
-  return render(ui, { wrapper: Wrapper, ...renderOptions })
+// Helper function to format dates for testing
+export const formatDate = (dateString: string) => {
+  return new Date(dateString).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 }
-
-// Re-export everything from testing library
-export * from '@testing-library/react'
-export { customRender as render }
-
-// Also export jest functions for convenience
-export { describe, it, expect, jest, beforeEach, afterEach } from '@jest/globals'
