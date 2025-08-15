@@ -1,83 +1,54 @@
+'use client';
+
 import React, { useState } from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
+import { SYSTEM_CONFIGS } from '@/lib/auth';
 
-const roleRedirectMap: Record<string, string> = {
-  admin: '/',
-  pm: '/',
-  contractor: '/',
-  viewer: '/viewer',
-};
-
-const AuthScreen: React.FC = () => {
+const MultiSystemAuthScreen: React.FC = () => {
+  const { signIn, signUp, loading, error } = useAuth();
+  const router = useRouter();
+  
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [showReset, setShowReset] = useState(false);
   const [resetSent, setResetSent] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
   const [resetError, setResetError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
-  const router = useRouter();
+  const [selectedSystems, setSelectedSystems] = useState<string[]>(['construction']);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setError(null);
+    
     if (!email || !password || (isSignUp && !name)) {
-      setError('All fields are required.');
-      setLoading(false);
       return;
     }
+
     try {
       let result;
       if (isSignUp) {
-        result = await supabase.auth.signUp({ email, password });
-        if (result.data?.user) {
-          // Update user metadata with profile information
-          await supabase.auth.updateUser({
-            data: {
-              name,
-            }
-          });
-
-          // Insert role into user_role table
-          await supabase
-            .from('user_role')
-            .insert([{
-              user_id: result.data.user.id,
-              role: 'staff'
-            }]);
-        }
+        result = await signUp(email, password, name, selectedSystems);
       } else {
-        result = await supabase.auth.signInWithPassword({ email, password });
+        result = await signIn(email, password);
       }
-      if (result.error) {
-        setError(result.error.message);
-      } else {
-        // Fetch user role and redirect
-        const user = result.data?.user;
-        if (user) {
-          // Get role from user_role table
-          const { data: roleData } = await supabase
-            .from('user_role')
-            .select('role')
-            .eq('user_id', user.id)
-            .single();
-          
-          const role = roleData?.role || 'staff';
-          router.push(roleRedirectMap[role] || '/');
+
+      if (result.success) {
+        // Redirect based on available systems
+        const availableSystems = Object.values(SYSTEM_CONFIGS)
+          .filter(system => selectedSystems.includes(system.id));
+        
+        if (availableSystems.length > 0) {
+          const defaultSystem = availableSystems[0];
+          router.push(defaultSystem.base_url);
         } else {
-          window.location.reload();
+          router.push('/');
         }
       }
     } catch (err: any) {
-      setError(err.message || 'Authentication failed.');
-    } finally {
-      setLoading(false);
+      console.error('Authentication error:', err);
     }
   };
 
@@ -86,13 +57,18 @@ const AuthScreen: React.FC = () => {
     setResetLoading(true);
     setResetError(null);
     setResetSent(false);
+    
     if (!email) {
       setResetError('Please enter your email.');
       setResetLoading(false);
       return;
     }
+
     try {
+      // Use Supabase directly for password reset
+      const { supabase } = await import('@/lib/supabaseClient');
       const { error } = await supabase.auth.resetPasswordForEmail(email);
+      
       if (error) {
         setResetError(error.message);
       } else {
@@ -103,6 +79,14 @@ const AuthScreen: React.FC = () => {
     } finally {
       setResetLoading(false);
     }
+  };
+
+  const toggleSystem = (systemId: string) => {
+    setSelectedSystems(prev => 
+      prev.includes(systemId)
+        ? prev.filter(id => id !== systemId)
+        : [...prev, systemId]
+    );
   };
 
   return (
@@ -122,8 +106,8 @@ const AuthScreen: React.FC = () => {
             {showReset 
               ? 'Enter your email to receive a password reset link' 
               : isSignUp 
-              ? 'Sign up to get started with Construction Management' 
-              : 'Sign in to your Construction Management account'
+              ? 'Sign up to access your systems' 
+              : 'Sign in to your account'
             }
           </p>
         </div>
@@ -153,6 +137,31 @@ const AuthScreen: React.FC = () => {
                     required
                     autoComplete="name"
                   />
+                </div>
+              </div>
+            )}
+
+            {/* System Selection for sign up */}
+            {isSignUp && !showReset && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  Select Systems to Access
+                </label>
+                <div className="space-y-3">
+                  {Object.values(SYSTEM_CONFIGS).map((system) => (
+                    <label key={system.id} className="flex items-center space-x-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedSystems.includes(system.id)}
+                        onChange={() => toggleSystem(system.id)}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                      <div className="flex-1">
+                        <div className="text-sm font-medium text-gray-900">{system.display_name}</div>
+                        <div className="text-xs text-gray-500">{system.description}</div>
+                      </div>
+                    </label>
+                  ))}
                 </div>
               </div>
             )}
@@ -305,7 +314,6 @@ const AuthScreen: React.FC = () => {
                   className="text-blue-600 hover:text-blue-800 text-sm font-medium transition-colors"
                   onClick={() => {
                     setIsSignUp(!isSignUp);
-                    setError(null);
                   }}
                   disabled={loading}
                 >
@@ -320,7 +328,6 @@ const AuthScreen: React.FC = () => {
                     className="text-gray-600 hover:text-gray-800 text-sm transition-colors"
                     onClick={() => {
                       setShowReset(true);
-                      setError(null);
                     }}
                     disabled={loading}
                   >
@@ -358,4 +365,4 @@ const AuthScreen: React.FC = () => {
   );
 };
 
-export default AuthScreen; 
+export default MultiSystemAuthScreen;

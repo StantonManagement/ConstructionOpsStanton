@@ -69,28 +69,12 @@ type InitialDataType = {
 
 const initialData: InitialDataType = {
   paymentApplications: {
-    awaitingSMS: [
-      { id: 1, contractor: 'ABC Electric', project: 'Highland Plaza Renovation', daysOverdue: 2, amount: 12500 },
-      { id: 2, contractor: 'Metro Plumbing', project: 'Oak Street Apartments', daysOverdue: 0, amount: 8900 },
-    ],
-    pmReview: [
-      { id: 4, contractor: 'Drywall Pro', project: 'Highland Plaza Renovation', submittedAmount: 8500, photosNeeded: true },
-      { id: 5, contractor: 'Paint Company', project: 'Oak Street Apartments', submittedAmount: 6200, photosSubmitted: true }
-    ],
-    checkReady: [
-      { id: 6, contractor: 'Flooring Plus', project: 'Highland Plaza Renovation', amount: 4200, lienWaiverNeeded: false },
-      { id: 7, contractor: 'HVAC Services', project: 'Oak Street Apartments', amount: 12800, lienWaiverNeeded: true, lienWaiverSigned: true }
-    ]
+    awaitingSMS: [],
+    pmReview: [],
+    checkReady: []
   },
-  subcontractors: [
-    { id: 1, name: 'ABC Electric', trade: 'Electrical', contractAmount: 125000, paidToDate: 87500, lastPayment: '2025-02-15', status: 'active', changeOrdersPending: true, lineItemCount: 4, phone: '(555) 123-4567', hasOpenPaymentApp: false, compliance: { insurance: 'valid', license: 'valid'} },
-    { id: 2, name: 'Metro Plumbing', trade: 'Plumbing', contractAmount: 98000, paidToDate: 65000, lastPayment: '2025-02-10', status: 'active', changeOrdersPending: false, lineItemCount: 3, phone: '(555) 234-5678', hasOpenPaymentApp: true, compliance: { insurance: 'expiring', license: 'valid'} },
-    { id: 3, name: 'Drywall Pro', trade: 'Drywall', contractAmount: 45000, paidToDate: 36000, lastPayment: '2025-01-28', status: 'nearing_completion', changeOrdersPending: false, lineItemCount: 2, phone: '(555) 345-6789', hasOpenPaymentApp: false, compliance: { insurance: 'valid', license: 'invalid'} },
-  ],
-  projects: [
-    { id: 1, name: 'Highland Plaza Renovation', client_name: 'Metro Development', current_phase: 'Electrical Rough-in', daysToInspection: 3, atRisk: true, budget: 500000, spent: 375000, permits: { electrical: 'approved', plumbing: 'pending' } },
-    { id: 2, name: 'Oak Street Apartments', client_name: 'City Housing', current_phase: 'Finish Work', daysToInspection: 7, atRisk: false, budget: 1200000, spent: 950000, permits: { electrical: 'approved', plumbing: 'approved' } },
-  ],
+  subcontractors: [],
+  projects: [],
   contracts: []
 };
 
@@ -109,6 +93,7 @@ type ContractorDB = {
   has_open_payment_app?: boolean;
   insurance_status?: string;
   license_status?: string;
+  performance_score?: number;
 };
 
 function dataReducer(state: InitialDataType, action: { type: string; payload?: unknown }) {
@@ -244,25 +229,36 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     const fetchSubcontractors = async () => {
-      const { data } = await supabase.from('contractors').select('*');
-      if (data) {
-        // Map DB fields to Subcontractor interface as needed
-        const mapped = data.map((c: ContractorDB) => ({
-          id: c.id,
-          name: c.name,
-          trade: c.trade,
-          contractAmount: c.contract_amount ?? 0,
-          paidToDate: c.paid_to_date ?? 0,
-          lastPayment: c.last_payment ?? '',
-          status: c.status ?? 'active',
-          changeOrdersPending: c.change_orders_pending ?? false,
-          lineItemCount: c.line_item_count ?? 0,
-          phone: c.phone ?? '',
-          email: c.email ?? '',
-          hasOpenPaymentApp: c.has_open_payment_app ?? false,
-          compliance: { insurance: c.insurance_status ?? 'valid', license: c.license_status ?? 'valid' },
-        }));
-        dispatch({ type: 'SET_SUBCONTRACTORS', payload: mapped });
+      try {
+        const { data, error } = await supabase.from('contractors').select('*');
+        if (error) {
+          console.error('Error fetching contractors:', error);
+          return;
+        }
+        if (data) {
+                     // Map DB fields to Subcontractor interface as needed
+           const mapped = data.map((c: ContractorDB) => ({
+             id: c.id,
+             name: c.name,
+             trade: c.trade,
+             contractAmount: c.contract_amount ?? 0,
+             paidToDate: c.paid_to_date ?? 0,
+             lastPayment: c.last_payment ?? '',
+             status: c.status ?? 'active',
+             changeOrdersPending: c.change_orders_pending ?? false,
+             lineItemCount: c.line_item_count ?? 0,
+             phone: c.phone ?? '',
+             email: c.email ?? '',
+             hasOpenPaymentApp: c.has_open_payment_app ?? false,
+             compliance: { 
+               insurance: c.insurance_status ?? 'valid', 
+               license: c.license_status ?? 'valid' 
+             },
+           }));
+          dispatch({ type: 'SET_SUBCONTRACTORS', payload: mapped });
+        }
+      } catch (error) {
+        console.error('Error in fetchSubcontractors:', error);
       }
     };
     fetchSubcontractors();
@@ -270,27 +266,35 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     const fetchContracts = async () => {
-      const { data } = await supabase
-        .from('contracts')
-        .select(`
-          *,
-          projects (id, name, client_name),
-          contractors (id, name, trade)
-        `);
-      if (data) {
-        const mapped = data.map((c: any) => ({
-          id: c.id,
-          project_id: c.project_id,
-          subcontractor_id: c.subcontractor_id,
-          contract_amount: c.contract_amount,
-          contract_nickname: c.contract_nickname,
-          start_date: c.start_date,
-          end_date: c.end_date,
-          status: c.status ?? 'active',
-          project: c.projects,
-          subcontractor: c.contractors,
-        }));
-        dispatch({ type: 'SET_CONTRACTS', payload: mapped });
+      try {
+        const { data, error } = await supabase
+          .from('contracts')
+          .select(`
+            *,
+            projects (id, name, client_name),
+            contractors (id, name, trade)
+          `);
+        if (error) {
+          console.error('Error fetching contracts:', error);
+          return;
+        }
+        if (data) {
+          const mapped = data.map((c: any) => ({
+            id: c.id,
+            project_id: c.project_id,
+            subcontractor_id: c.subcontractor_id,
+            contract_amount: c.contract_amount,
+            contract_nickname: c.contract_nickname,
+            start_date: c.start_date,
+            end_date: c.end_date,
+            status: c.status ?? 'active',
+            project: c.projects,
+            subcontractor: c.contractors,
+          }));
+          dispatch({ type: 'SET_CONTRACTS', payload: mapped });
+        }
+      } catch (error) {
+        console.error('Error in fetchContracts:', error);
       }
     };
     fetchContracts();

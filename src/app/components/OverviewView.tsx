@@ -432,9 +432,9 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
 
         if (session?.user) {
           const { data, error } = await supabase
-            .from("users")
+            .from("user_role")
             .select("role")
-            .eq("uuid", session.user.id)
+            .eq("user_id", session.user.id)
             .single();
 
           if (error) {
@@ -523,7 +523,7 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
     } finally {
       setStatsLoading(false);
     }
-  }, [projects]);
+  }, [projects.length]); // Changed from [projects] to [projects.length] to prevent infinite loops
 
   useEffect(() => {
     fetchEnhancedProjectData();
@@ -886,7 +886,7 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
                     📋
                   </div>
                   <span className="text-gray-600 font-medium">
-                    {searchQuery ? 'No projects match your search' : 'No active projects'}
+                    {searchQuery ? 'No projects match your search' : 'No projects'}
                   </span>
                 </div>
               ) : (

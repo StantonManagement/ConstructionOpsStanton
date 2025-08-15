@@ -1,5 +1,8 @@
+"use client";
+
 import React, { ReactNode, useEffect, useState } from 'react';
-import { DollarSign, Users, Settings, Building, BarChart2, ShieldCheck, ChevronDown, Folder, Home, Menu, X, FileText } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { DollarSign, Users, Settings, Building, BarChart2, ShieldCheck, ChevronDown, Folder, Home, Menu, X, FileText, UserCog } from 'lucide-react';
 import { Project } from '../context/DataContext';
 import { supabase } from '@/lib/supabaseClient';
 
@@ -17,15 +20,27 @@ type NavButtonProps = {
   icon: ReactNode;
   children: ReactNode;
   onClick?: () => void;
+  roles?: string[];
+  href?: string;
 };
 
-const NavButton: React.FC<NavButtonProps> = ({ id, activeTab, setActiveTab, icon, children }) => {
+const NavButton: React.FC<NavButtonProps> = ({ id, activeTab, setActiveTab, icon, children, href }) => {
   const isActive = activeTab === id;
+  const router = useRouter();
   
   return (
     <button
       onClick={() => {
         setActiveTab(id);
+        if (href) {
+          // For main dashboard tabs with href, use router.push
+          router.push(href);
+        } else {
+          // For main dashboard tabs without href (like user-management), update URL parameters
+          const params = new URLSearchParams(window.location.search);
+          params.set('tab', id);
+          router.replace(`/?${params.toString()}`, { scroll: false });
+        }
       }}
       className={`
         w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-200
@@ -83,9 +98,9 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab, setSel
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
           const { data, error } = await supabase
-            .from("users")
+            .from("user_role")
             .select("role")
-            .eq("uuid", session.user.id)
+            .eq("user_id", session.user.id)
             .single();
           
           if (error) {
@@ -104,37 +119,15 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab, setSel
   // Fetch notification counts for badges with better error handling
   const fetchNotificationCounts = async () => {
     try {
-      const results = await Promise.allSettled([
-        supabase.from('payment_applications').select('id').eq('status', 'pending'),
-        supabase.from('subcontractors').select('id').eq('status', 'pending'),
-        supabase.from('compliance_checks').select('id').eq('status', 'pending')
-      ]);
+      // Only fetch payment applications count for now
+      const { data: paymentData } = await supabase
+        .from('payment_applications')
+        .select('id')
+        .eq('status', 'pending');
 
-      const newCounts: Record<string, number> = {};
-
-      // Payment applications count
-      if (results[0].status === 'fulfilled') {
-        const paymentsResult = results[0];
-        if (paymentsResult.value.data) {
-          newCounts.payment = Array.isArray(paymentsResult.value.data) ? paymentsResult.value.data.length : 0;
-        }
-      }
-
-      // Subcontractors count
-      if (results[1].status === 'fulfilled') {
-        const subcontractorsResult = results[1];
-        if (subcontractorsResult.value.data) {
-          newCounts.subcontractors = Array.isArray(subcontractorsResult.value.data) ? subcontractorsResult.value.data.length : 0;
-        }
-      }
-
-      // Compliance count
-      if (results[2].status === 'fulfilled') {
-        const complianceResult = results[2];
-        if (complianceResult.value.data) {
-          newCounts.compliance = Array.isArray(complianceResult.value.data) ? complianceResult.value.data.length : 0;
-        }
-      }
+      const newCounts: Record<string, number> = {
+        payment: Array.isArray(paymentData) ? paymentData.length : 0
+      };
 
       setNotificationCounts(newCounts);
     } catch (error) {
@@ -150,44 +143,62 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab, setSel
     {
       id: 'overview',
       icon: <Home className="w-5 h-5"/>,
-      label: 'Overview'
+      label: 'Overview',
+      href: '/?tab=overview'
     },
     {
       id: 'projects',
       icon: <Building className="w-5 h-5"/>,
-      label: 'Projects'
+      label: 'Projects',
+      href: '/?tab=projects'
     },
+    // {
+    //   id: 'payment',
+    //   icon: <DollarSign className="w-5 h-5"/>,
+    //   label: 'Payments',
+    //   href: '/?tab=payment'
+    // },
     {
       id: 'payment-applications',
       icon: <DollarSign className="w-5 h-5"/>,
-      label: 'Payments Apps'
+      label: 'Payments Apps',
+      href: '/?tab=payment-applications'
     },
-    
-   
     {
       id: 'subcontractors',
       icon: <Users className="w-5 h-5"/>,
-      label: 'Contractors'
+      label: 'Contractors',
+      href: '/?tab=subcontractors'
     },
     {
       id: 'daily-logs',
       icon: <FileText className="w-5 h-5"/>,
-      label: 'Daily Logs'
+      label: 'Daily Logs',
+      href: '/?tab=daily-logs'
     },
     // {
     //   id: 'compliance',
     //   icon: <ShieldCheck className="w-5 h-5"/>,
-    //   label: 'Compliance'
+    //   label: 'Compliance',
+    //   href: '/?tab=compliance'
     // },
     {
       id: 'metrics',
       icon: <BarChart2 className="w-5 h-5"/>,
-      label: 'Reports'
+      label: 'Reports',
+      href: '/?tab=metrics'
     },
     {
       id: 'manage',
       icon: <Settings className="w-5 h-5"/>,
-      label: 'Manage'
+      label: 'Manage',
+      href: '/?tab=manage'
+    },
+    {
+      id: 'user-management',
+      icon: <UserCog className="w-5 h-5"/>,
+      label: 'User Management',
+      roles: ['admin', 'pm']
     }
   ];
 
@@ -235,7 +246,9 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab, setSel
           {/* Navigation items */}
           <div className="flex-1 overflow-y-auto py-4">
             <div className="space-y-2 px-4">
-              {navigationItems.map((item) => (
+              {navigationItems
+                .filter(item => !item.roles || (userRole && item.roles.map(r => r.toLowerCase()).includes(userRole.toLowerCase())))
+                .map((item) => (
                 <NavButton
                   key={item.id}
                   id={item.id}
@@ -245,6 +258,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab, setSel
                     setIsMobileMenuOpen(false);
                   }}
                   icon={item.icon}
+                  href={item.href}
                 >
                   {item.label}
                 </NavButton>

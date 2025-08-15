@@ -2629,25 +2629,30 @@ export default function PMDashboard() {
         setUserData(null);
         return null;
       }
-      const { data, error: userError } = await supabase
-        .from("users")
-        .select("id, name, role, email, uuid, avatar_url")
-        .eq("uuid", user.id)
+
+      // Get user metadata from auth.users
+      const userMetadata = user.user_metadata || {};
+      
+      // Get user role from user_role table
+      const { data: roleData, error: roleError } = await supabase
+        .from('user_role')
+        .select('role')
+        .eq('user_id', user.id)
         .single();
-      if (userError) {
-        setUserData(null);
-        return null;
+
+      if (roleError) {
+        console.error('Error fetching user role:', roleError);
       }
 
       const userDataObj = {
-        name: data.name || '',
-        email: data.email || user.email || '',
-        avatar_url: data.avatar_url || '',
-        role: data.role || ''
+        name: userMetadata.name || user.email?.split('@')[0] || 'User',
+        email: user.email || '',
+        avatar_url: userMetadata.avatar_url || '',
+        role: roleData?.role || 'staff'
       };
 
       setUserData(userDataObj);
-      return data;
+      return userDataObj;
     } catch (error) {
       setUserData(null);
       return null;

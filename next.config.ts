@@ -2,18 +2,30 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   serverExternalPackages: ['pdf-lib'],
-  webpack: (config, { buildId, dev, isServer, defaultLoaders, webpack }) => {
-    // Only apply fallbacks for client-side builds
-    if (!isServer) {
-      config.resolve.fallback = {
-        ...config.resolve.fallback,
-        fs: false,
-        path: false,
-        crypto: false,
-      };
-    }
 
-    return config;
+  // Use webpack configuration only when Turbopack is NOT used
+  ...(process.env.TURBOPACK ? {} : {
+    webpack: (config, { isServer }) => {
+      if (!isServer) {
+        config.resolve.fallback = {
+          ...config.resolve.fallback,
+          fs: false,
+          path: false,
+          crypto: false,
+        };
+      }
+      return config;
+    },
+  }),
+
+  // Stable Turbopack config
+  turbopack: {
+    rules: {
+      '*.svg': {
+        loaders: ['@svgr/webpack'],
+        as: '*.js',
+      },
+    },
   },
 };
 

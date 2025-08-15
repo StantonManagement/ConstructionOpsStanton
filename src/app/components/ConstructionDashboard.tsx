@@ -14,6 +14,7 @@ import MetricsView from './MetricsView';
 import ManageView from './ManageView';
 import SubcontractorSelectionView from './SubcontractorSelectionView';
 import UserProfile from './UserProfile';
+import UserManagementView from './UserManagementView';
 import { Project } from '../context/DataContext';
 import { supabase } from '@/lib/supabaseClient';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -40,7 +41,7 @@ const ConstructionDashboard: React.FC = () => {
     const projectFromUrl = searchParams.get('project');
     const subtabFromUrl = searchParams.get('subtab');
     
-    if (tabFromUrl && ['overview', 'payment', 'payment-applications', 'projects', 'daily-logs', 'subcontractors', 'compliance', 'metrics', 'manage'].includes(tabFromUrl)) {
+    if (tabFromUrl && ['overview', 'payment', 'payment-applications', 'projects', 'daily-logs', 'subcontractors', 'compliance', 'metrics', 'manage', 'user-management'].includes(tabFromUrl)) {
       setActiveTab(tabFromUrl);
     }
     
@@ -95,20 +96,26 @@ const ConstructionDashboard: React.FC = () => {
         const { data: { user }, error: userError } = await supabase.auth.getUser();
         if (userError || !user) return;
 
-        const { data, error } = await supabase
-          .from('users')
-          .select('name, email, avatar_url, role')
-          .eq('uuid', user.id)
+        // Get user metadata from auth.users
+        const userMetadata = user.user_metadata || {};
+        
+        // Get user role from user_role table
+        const { data: roleData, error: roleError } = await supabase
+          .from('user_role')
+          .select('role')
+          .eq('user_id', user.id)
           .single();
 
-        if (!error && data) {
-          setUserData({
-            name: data.name || '',
-            email: data.email || user.email || '',
-            avatar_url: data.avatar_url || '',
-            role: data.role || ''
-          });
+        if (roleError) {
+          console.error('Error fetching user role:', roleError);
         }
+
+        setUserData({
+          name: userMetadata.name || user.email?.split('@')[0] || 'User',
+          email: user.email || '',
+          avatar_url: userMetadata.avatar_url || '',
+          role: roleData?.role || 'staff'
+        });
       } catch (err) {
         console.error('Error fetching user data:', err);
       }
@@ -160,9 +167,7 @@ const ConstructionDashboard: React.FC = () => {
     // For other tabs, we can implement specific search logic as needed
   };
 
-  const handleNavigateToPM = () => {
-    window.location.href = '/pm-dashboard';
-  };
+
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans">
@@ -173,19 +178,7 @@ const ConstructionDashboard: React.FC = () => {
         onSearch={handleSearch}
         searchQuery={searchQuery}
       />
-      {userData?.role === 'pm' && (
-        <div className="fixed bottom-4 right-4 z-50">
-          <button
-            onClick={handleNavigateToPM}
-            className="bg-green-600 hover:bg-green-700 text-white p-3 rounded-full shadow-lg transition-colors"
-            title="Go to PM Dashboard"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-            </svg>
-          </button>
-        </div>
-      )}
+
       <Navigation activeTab={activeTab} setActiveTab={handleTabChange} setSelectedProject={setSelectedProject} selectedProject={selectedProject} />
       <main className="lg:ml-64 transition-all duration-300 pt-20 lg:pt-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -198,6 +191,7 @@ const ConstructionDashboard: React.FC = () => {
           {activeTab === 'compliance' && <ComplianceView />}
           {activeTab === 'metrics' && <MetricsView />}
           {activeTab === 'manage' && <ManageView searchQuery={searchQuery} />}
+          {activeTab === 'user-management' && <UserManagementView />}
         </div>
       </main>
       <UserProfile 
