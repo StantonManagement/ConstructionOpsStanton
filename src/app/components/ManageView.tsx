@@ -108,17 +108,25 @@ const QuickActions: React.FC<{
   return (
     <div className="flex flex-wrap items-center gap-2 sm:gap-3">
       {selectedCount > 0 && (
-        <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
-          <span className="text-sm font-medium text-blue-700">
-            {selectedCount} selected
-          </span>
-          <button
-            onClick={onBulkDelete}
-            className="flex items-center gap-1 px-2 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
-          >
-            <Trash2 className="w-3 h-3" />
-            Delete
-          </button>
+        <div className="flex items-center gap-3 px-4 py-3 bg-red-50 border-2 border-red-200 rounded-lg shadow-sm">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-5 h-5 text-red-600" />
+            <span className="text-sm font-semibold text-red-700">
+              {selectedCount} item{selectedCount > 1 ? 's' : ''} selected
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onBulkDelete}
+              className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all duration-200 font-medium shadow-sm hover:shadow-md transform hover:scale-105"
+            >
+              <Trash2 className="w-4 h-4" />
+              Delete {selectedCount > 1 ? `${selectedCount} Items` : 'Item'}
+            </button>
+            <span className="text-xs text-red-600 bg-red-100 px-2 py-1 rounded-full">
+              ⚠️ Permanent
+            </span>
+          </div>
         </div>
       )}
 
@@ -368,7 +376,8 @@ const ItemCard: React.FC<{
   onSelect: (id: number) => void;
   onView: (item: any) => void;
   onEdit: (item: any) => void;
-}> = ({ item, type, selected, onSelect, onView, onEdit }) => {
+  onDelete: (item: any) => void;
+}> = ({ item, type, selected, onSelect, onView, onEdit, onDelete }) => {
   const getCardIcon = () => {
     switch (type) {
       case 'project': return <Building className="w-5 h-5 text-blue-600" />;
@@ -575,6 +584,13 @@ const ItemCard: React.FC<{
         >
           <Edit3 className="w-3 h-3" />
           Edit
+        </button>
+        <button
+          onClick={() => onDelete(item)}
+          className="flex items-center justify-center gap-1 px-2 sm:px-3 py-1.5 text-red-600 hover:text-red-700 text-xs sm:text-sm font-medium border border-red-300 rounded-lg hover:bg-red-50 transition-all duration-200 hover:shadow-sm"
+        >
+          <Trash2 className="w-3 h-3" />
+          Delete
         </button>
       </div>
     </div>
@@ -1819,7 +1835,7 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
   const vendorFields: FieldConfig[] = [
     { name: 'name', placeholder: 'Vendor Name', required: true, validators: [validators.required] },
     { name: 'trade', placeholder: 'Trade', required: true, validators: [validators.required] },
-    { name: 'phone', placeholder: 'Phone', type: 'tel', validators: [validators.phone], defaultValue: '+1' },
+    { name: 'phone', placeholder: 'Phone', type: 'tel', required: true, validators: [validators.required, validators.phone], defaultValue: '+1' },
     { name: 'email', placeholder: 'Email (optional)', type: 'email', validators: [validators.email] },
   ];
 
@@ -2075,6 +2091,21 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
           />
         </div>
 
+        {/* Help Text for New Users */}
+        {currentData.length > 0 && (
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-center gap-2 text-sm text-blue-700">
+              <div className="w-5 h-5 rounded-full bg-blue-200 flex items-center justify-center flex-shrink-0">
+                <span className="text-blue-600 text-xs font-bold">?</span>
+              </div>
+              <span>
+                <strong>Quick Actions:</strong> Select items using checkboxes, or use individual action buttons on each card. 
+                Delete actions are clearly marked and require confirmation for safety.
+              </span>
+            </div>
+          </div>
+        )}
+
         {/* Content Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {currentData.map((item) => (
@@ -2086,6 +2117,10 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
               onSelect={handleItemSelect}
               onView={handleViewItem}
               onEdit={handleEditItem}
+              onDelete={() => {
+                setSelectedItems(new Set([item.id]));
+                setShowDeleteConfirmation(true);
+              }}
             />
           ))}
         </div>
@@ -2294,45 +2329,70 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
       {/* Delete Confirmation Modal */}
       {showDeleteConfirmation && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
-                <Trash2 className="w-6 h-6 text-red-600" />
+          <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full p-6">
+            {/* Header with Warning Icon */}
+            <div className="flex items-center gap-4 mb-6">
+              <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                <AlertCircle className="w-8 h-8 text-red-600" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-gray-800">Confirm Deletion</h3>
-                <p className="text-sm text-gray-600">This action cannot be undone</p>
+                <h3 className="text-xl font-bold text-gray-900">Delete Confirmation</h3>
+                <p className="text-sm text-gray-600 mt-1">This action cannot be undone</p>
               </div>
             </div>
-            <p className="text-gray-600 mb-6">
-              Are you sure you want to delete {selectedItems.size} {activeTab === 'projects' ? 'project' : activeTab === 'vendors' ? 'vendor' : 'contract'}{selectedItems.size > 1 ? 's' : ''}? 
-              This will permanently remove {selectedItems.size > 1 ? 'them' : 'it'} from your system.
-            </p>
-            <div className="flex justify-end gap-3">
+
+            {/* Warning Message */}
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+              <div className="flex items-start gap-3">
+                <div className="w-6 h-6 rounded-full bg-red-200 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-red-600 text-sm font-bold">!</span>
+                </div>
+                <div>
+                  <p className="text-red-800 font-medium mb-2">
+                    Are you sure you want to delete {selectedItems.size} {activeTab === 'projects' ? 'project' : activeTab === 'vendors' ? 'vendor' : 'contract'}{selectedItems.size > 1 ? 's' : ''}?
+                  </p>
+                  <ul className="text-red-700 text-sm space-y-1">
+                    <li>• This will permanently remove {selectedItems.size > 1 ? 'them' : 'it'} from your system</li>
+                    <li>• All associated data will be lost</li>
+                    <li>• This action cannot be reversed</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-3 sm:justify-end">
               <button 
                 onClick={() => setShowDeleteConfirmation(false)} 
-                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+                className="flex-1 sm:flex-none px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium border border-gray-300"
                 disabled={deleteLoading}
               >
                 Cancel
               </button>
               <button 
                 onClick={confirmBulkDelete} 
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:bg-red-400 flex items-center gap-2"
+                className="flex-1 sm:flex-none px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:bg-red-400 font-medium flex items-center justify-center gap-2 shadow-sm"
                 disabled={deleteLoading}
               >
                 {deleteLoading ? (
                   <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     Deleting...
                   </>
                 ) : (
                   <>
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="w-5 h-5" />
                     Delete {selectedItems.size > 1 ? `${selectedItems.size} Items` : '1 Item'}
                   </>
                 )}
               </button>
+            </div>
+
+            {/* Additional Safety Note */}
+            <div className="mt-4 text-center">
+              <p className="text-xs text-gray-500">
+                💡 Tip: You can always recreate items if needed, but historical data will be lost.
+              </p>
             </div>
           </div>
         </div>
