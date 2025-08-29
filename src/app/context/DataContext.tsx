@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useReducer, Dispatch, useEffect } from 'react';
+import React, { createContext, useContext, useReducer, Dispatch, useEffect, useMemo } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 
 export interface Project {
@@ -217,69 +217,54 @@ function dataReducer(state: InitialDataType, action: { type: string; payload?: u
 export const DataProvider = ({ children }: { children: React.ReactNode }) => {
   const [state, dispatch] = useReducer(dataReducer, initialData);
 
+  // Combine all data fetching in a single useEffect to reduce API calls
   useEffect(() => {
-    const fetchProjects = async () => {
-      const { data } = await supabase.from('projects').select('*');
-      if (data) {
-        dispatch({ type: 'SET_PROJECTS', payload: data });
-      }
-    };
-    fetchProjects();
-  }, []);
-
-  useEffect(() => {
-    const fetchSubcontractors = async () => {
+    const fetchAllData = async () => {
       try {
-        const { data, error } = await supabase.from('contractors').select('*');
-        if (error) {
-          console.error('Error fetching contractors:', error);
-          return;
+        // Use Promise.all to fetch data concurrently instead of sequentially
+        const [projectsResponse, contractorsResponse, contractsResponse] = await Promise.all([
+          supabase.from('projects').select('*'),
+          supabase.from('contractors').select('*'),
+          supabase
+            .from('contracts')
+            .select(`
+              *,
+              projects (id, name, client_name),
+              contractors (id, name, trade)
+            `)
+        ]);
+
+        // Handle projects
+        if (projectsResponse.data) {
+          dispatch({ type: 'SET_PROJECTS', payload: projectsResponse.data });
         }
-        if (data) {
-                     // Map DB fields to Subcontractor interface as needed
-           const mapped = data.map((c: ContractorDB) => ({
-             id: c.id,
-             name: c.name,
-             trade: c.trade,
-             contractAmount: c.contract_amount ?? 0,
-             paidToDate: c.paid_to_date ?? 0,
-             lastPayment: c.last_payment ?? '',
-             status: c.status ?? 'active',
-             changeOrdersPending: c.change_orders_pending ?? false,
-             lineItemCount: c.line_item_count ?? 0,
-             phone: c.phone ?? '',
-             email: c.email ?? '',
-             hasOpenPaymentApp: c.has_open_payment_app ?? false,
-             compliance: { 
-               insurance: c.insurance_status ?? 'valid', 
-               license: c.license_status ?? 'valid' 
-             },
-           }));
+
+        // Handle contractors
+        if (contractorsResponse.data && !contractorsResponse.error) {
+          const mapped = contractorsResponse.data.map((c: ContractorDB) => ({
+            id: c.id,
+            name: c.name,
+            trade: c.trade,
+            contractAmount: c.contract_amount ?? 0,
+            paidToDate: c.paid_to_date ?? 0,
+            lastPayment: c.last_payment ?? '',
+            status: c.status ?? 'active',
+            changeOrdersPending: c.change_orders_pending ?? false,
+            lineItemCount: c.line_item_count ?? 0,
+            phone: c.phone ?? '',
+            email: c.email ?? '',
+            hasOpenPaymentApp: c.has_open_payment_app ?? false,
+            compliance: { 
+              insurance: c.insurance_status ?? 'valid', 
+              license: c.license_status ?? 'valid' 
+            },
+          }));
           dispatch({ type: 'SET_SUBCONTRACTORS', payload: mapped });
         }
-      } catch (error) {
-        console.error('Error in fetchSubcontractors:', error);
-      }
-    };
-    fetchSubcontractors();
-  }, []);
 
-  useEffect(() => {
-    const fetchContracts = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('contracts')
-          .select(`
-            *,
-            projects (id, name, client_name),
-            contractors (id, name, trade)
-          `);
-        if (error) {
-          console.error('Error fetching contracts:', error);
-          return;
-        }
-        if (data) {
-          const mapped = data.map((c: any) => ({
+        // Handle contracts
+        if (contractsResponse.data && !contractsResponse.error) {
+          const mapped = contractsResponse.data.map((c: any) => ({
             id: c.id,
             project_id: c.project_id,
             subcontractor_id: c.subcontractor_id,
@@ -293,17 +278,28 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
           }));
           dispatch({ type: 'SET_CONTRACTS', payload: mapped });
         }
+
+        // Log any errors
+        if (contractorsResponse.error) {
+          console.error('Error fetching contractors:', contractorsResponse.error);
+        }
+        if (contractsResponse.error) {
+          console.error('Error fetching contracts:', contractsResponse.error);
+        }
+
       } catch (error) {
-        console.error('Error in fetchContracts:', error);
+        console.error('Error fetching data:', error);
       }
     };
-    fetchContracts();
+
+    fetchAllData();
   }, []);
 
-  const value: DataContextType = {
+  // Memoize context value to prevent unnecessary re-renders
+  const value: DataContextType = useMemo(() => ({
     ...state,
     dispatch,
-  };
+  }), [state]);
 
   return (
     <DataContext.Provider value={value}>

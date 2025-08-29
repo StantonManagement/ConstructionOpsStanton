@@ -41,6 +41,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser(currentUser);
       
       if (currentUser) {
+        // Use Promise.all to fetch systems concurrently if needed
         const systems = await auth.getAvailableSystems();
         setAvailableSystems(systems);
         

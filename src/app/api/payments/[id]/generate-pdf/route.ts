@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import Mustache from 'mustache';
-import puppeteer from 'puppeteer';
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
@@ -74,8 +73,9 @@ export async function POST(req: NextRequest, { params }) {
     totalCurrentPayment: grandTotal,
   });
 
-  // 4. Generate PDF
-  const browser = await puppeteer.launch({ headless: true });
+  // 4. Generate PDF with dynamic import
+  const puppeteer = await import('puppeteer');
+  const browser = await puppeteer.default.launch({ headless: true });
   const page = await browser.newPage();
   await page.setContent(html, { waitUntil: 'networkidle0' });
   const pdfBuffer = await page.pdf({ format: 'A4' });

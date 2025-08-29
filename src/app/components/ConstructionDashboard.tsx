@@ -1,20 +1,23 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy, memo, useCallback } from 'react';
 import Header from './Header';
 import Navigation from './Navigation';
-import OverviewView from './OverviewView';
-import PaymentProcessingView from './PaymentProcessingView';
-import PaymentApplicationsView from './PaymentApplicationsView';
-import ProjectsView from './ProjectsView';
-import DailyLogsView from './DailyLogsView';
-import SubcontractorsView from './SubcontractorsView';
-import ComplianceView from './ComplianceView';
-import MetricsView from './MetricsView';
-import ManageView from './ManageView';
-import SubcontractorSelectionView from './SubcontractorSelectionView';
-import UserProfile from './UserProfile';
-import UserManagementView from './UserManagementView';
+import { LoadingStates } from './LoadingStates';
+
+// Lazy load components to reduce initial bundle size
+const OverviewView = lazy(() => import('./OverviewView'));
+const PaymentProcessingView = lazy(() => import('./PaymentProcessingView'));
+const PaymentApplicationsView = lazy(() => import('./PaymentApplicationsView'));
+const ProjectsView = lazy(() => import('./ProjectsView'));
+const DailyLogsView = lazy(() => import('./DailyLogsView'));
+const SubcontractorsView = lazy(() => import('./SubcontractorsView'));
+const ComplianceView = lazy(() => import('./ComplianceView'));
+const MetricsView = lazy(() => import('./MetricsView'));
+const ManageView = lazy(() => import('./ManageView'));
+const SubcontractorSelectionView = lazy(() => import('./SubcontractorSelectionView'));
+const UserProfile = lazy(() => import('./UserProfile'));
+const UserManagementView = lazy(() => import('./UserManagementView'));
 import { Project } from '../context/DataContext';
 import { supabase } from '@/lib/supabaseClient';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -74,7 +77,7 @@ const ConstructionDashboard: React.FC = () => {
     }
   }, [searchParams]);
 
-  const handleTabChange = (tab: string) => {
+  const handleTabChange = useCallback((tab: string) => {
     setActiveTab(tab);
     // Update URL without page reload
     const params = new URLSearchParams(searchParams.toString());
@@ -87,7 +90,7 @@ const ConstructionDashboard: React.FC = () => {
     }
     
     router.replace(`/?${params.toString()}`, { scroll: false });
-  };
+  }, [searchParams, router]);
 
   // Fetch user data on component mount
   useEffect(() => {
@@ -125,7 +128,7 @@ const ConstructionDashboard: React.FC = () => {
   }, []);
 
   // Handle project selection and redirect to payments tab
-  const handleProjectSelect = (project: Project) => {
+  const handleProjectSelect = useCallback((project: Project) => {
     setSelectedProject(project);
     setActiveTab('payment');
     // Update URL with project parameter
@@ -133,10 +136,10 @@ const ConstructionDashboard: React.FC = () => {
     params.set('tab', 'payment');
     params.set('project', project.id.toString());
     router.replace(`/?${params.toString()}`, { scroll: false });
-  };
+  }, [router]);
 
   // Handle switching to payments tab without selecting a specific project
-  const handleSwitchToPayments = () => {
+  const handleSwitchToPayments = useCallback(() => {
     setSelectedProject(null);
     setActiveTab('payment');
     // Update URL without project parameter
@@ -144,9 +147,9 @@ const ConstructionDashboard: React.FC = () => {
     params.set('tab', 'payment');
     params.delete('project');
     router.replace(`/?${params.toString()}`, { scroll: false });
-  };
+  }, [searchParams, router]);
 
-  const handleProfileUpdate = (profileData: any) => {
+  const handleProfileUpdate = useCallback((profileData: any) => {
     // Update local user data when profile is updated
     setUserData({
       name: profileData.name,
@@ -154,18 +157,18 @@ const ConstructionDashboard: React.FC = () => {
       avatar_url: profileData.avatar_url,
       role: profileData.role
     });
-  };
+  }, []);
 
-  const handleLogout = async () => {
+  const handleLogout = useCallback(async () => {
     await import('@/lib/supabaseClient').then(({ supabase }) => supabase.auth.signOut());
     window.location.href = "/";
-  };
+  }, []);
 
-  const handleSearch = (query: string) => {
+  const handleSearch = useCallback((query: string) => {
     setSearchQuery(query);
     // If we're on the manage tab, we'll pass this search query to ManageView
     // For other tabs, we can implement specific search logic as needed
-  };
+  }, []);
 
 
 
@@ -182,25 +185,29 @@ const ConstructionDashboard: React.FC = () => {
       <Navigation activeTab={activeTab} setActiveTab={handleTabChange} setSelectedProject={setSelectedProject} selectedProject={selectedProject} />
       <main className="lg:ml-64 transition-all duration-300 pt-20 lg:pt-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          {activeTab === 'overview' && <OverviewView onProjectSelect={handleProjectSelect} onSwitchToPayments={handleSwitchToPayments} searchQuery={searchQuery} />}
-          {activeTab === 'payment' && (selectedProject ? <SubcontractorSelectionView selectedProject={selectedProject} setSelectedProject={setSelectedProject} /> : <PaymentProcessingView setSelectedProject={setSelectedProject} searchQuery={searchQuery} />)}
-          {activeTab === 'payment-applications' && <PaymentApplicationsView searchQuery={searchQuery} />}
-          {activeTab === 'projects' && <ProjectsView searchQuery={searchQuery} />}
-          {activeTab === 'daily-logs' && <DailyLogsView searchQuery={searchQuery} />}
-          {activeTab === 'subcontractors' && <SubcontractorsView searchQuery={searchQuery} />}
-          {activeTab === 'compliance' && <ComplianceView />}
-          {activeTab === 'metrics' && <MetricsView />}
-          {activeTab === 'manage' && <ManageView searchQuery={searchQuery} />}
-          {activeTab === 'user-management' && <UserManagementView />}
+          <Suspense fallback={<LoadingStates.TabContent />}>
+            {activeTab === 'overview' && <OverviewView onProjectSelect={handleProjectSelect} onSwitchToPayments={handleSwitchToPayments} searchQuery={searchQuery} />}
+            {activeTab === 'payment' && (selectedProject ? <SubcontractorSelectionView selectedProject={selectedProject} setSelectedProject={setSelectedProject} /> : <PaymentProcessingView setSelectedProject={setSelectedProject} searchQuery={searchQuery} />)}
+            {activeTab === 'payment-applications' && <PaymentApplicationsView searchQuery={searchQuery} />}
+            {activeTab === 'projects' && <ProjectsView searchQuery={searchQuery} />}
+            {activeTab === 'daily-logs' && <DailyLogsView searchQuery={searchQuery} />}
+            {activeTab === 'subcontractors' && <SubcontractorsView searchQuery={searchQuery} />}
+            {activeTab === 'compliance' && <ComplianceView />}
+            {activeTab === 'metrics' && <MetricsView />}
+            {activeTab === 'manage' && <ManageView searchQuery={searchQuery} />}
+            {activeTab === 'user-management' && <UserManagementView />}
+          </Suspense>
         </div>
       </main>
-      <UserProfile 
-        isOpen={showProfile} 
-        onClose={() => setShowProfile(false)}
-        onProfileUpdate={handleProfileUpdate}
-      />
+      <Suspense fallback={null}>
+        <UserProfile 
+          isOpen={showProfile} 
+          onClose={() => setShowProfile(false)}
+          onProfileUpdate={handleProfileUpdate}
+        />
+      </Suspense>
     </div>
   );
 };
 
-export default ConstructionDashboard; 
+export default memo(ConstructionDashboard); 

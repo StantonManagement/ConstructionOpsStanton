@@ -14,7 +14,15 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: " Construction Ops - Stanton",
+  title: "Construction Ops - Stanton",
+  description: "Professional construction operations management platform",
+  keywords: "construction, project management, payment processing",
+  robots: "index, follow",
+  openGraph: {
+    title: "Construction Ops - Stanton",
+    description: "Professional construction operations management platform",
+    type: "website",
+  },
 };
 
 export default function RootLayout({
