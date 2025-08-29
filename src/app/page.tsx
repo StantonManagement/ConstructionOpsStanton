@@ -1,13 +1,11 @@
 "use client";
 
-import { useEffect, useState, Suspense, lazy } from 'react';
+import { useEffect, useState } from 'react';
 import { DataProvider } from './context/DataContext';
 import { supabase } from '@/lib/supabaseClient';
-
-// Lazy load heavy components
-const ConstructionDashboard = lazy(() => import('./components/ConstructionDashboard'));
-const PMDashboard = lazy(() => import('./components/PMDashboard'));
-const AuthScreen = lazy(() => import('./components/AuthScreen'));
+import ConstructionDashboard from './components/ConstructionDashboard';
+import PMDashboard from './components/PMDashboard';
+import AuthScreen from './components/AuthScreen';
 
 // Construction-themed loading component
 const ConstructionLoader = () => {
@@ -177,18 +175,14 @@ export default function Page() {
   }, []);
 
   if (loading) return <ConstructionLoader />;
-  
+  if (!session) return <AuthScreen />;
+
+  if (role === "pm") {
+    return <PMDashboard />;
+  }
   return (
-    <Suspense fallback={<ConstructionLoader />}>
-      {!session ? (
-        <AuthScreen />
-      ) : role === "pm" ? (
-        <PMDashboard />
-      ) : (
-        <DataProvider>
-          <ConstructionDashboard />
-        </DataProvider>
-      )}
-    </Suspense>
+    <DataProvider>
+      <ConstructionDashboard />
+    </DataProvider>
   );
 }
