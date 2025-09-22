@@ -7,7 +7,7 @@ import { LoadingSpinner } from './LoadingStates';
 import { Project } from '../context/DataContext';
 import { supabase } from '@/lib/supabaseClient';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useProgressiveLoading } from '@/hooks/useProgressiveLoading';
+// Removed progressive loading hook to fix refresh issues
 
 // Lazy load heavy components
 const OverviewView = lazy(() => import('./OverviewView'));
@@ -39,13 +39,7 @@ const ConstructionDashboard: React.FC = () => {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
 
-  // Progressive loading for tabs
-  const tabOrder = ['overview', 'payment', 'payment-applications', 'projects', 'daily-logs', 'subcontractors', 'compliance', 'metrics', 'manage', 'user-management'];
-  const { isTabLoaded, isTabLoading } = useProgressiveLoading(activeTab, {
-    delay: 150,
-    staggerDelay: 100,
-    enabledTabs: tabOrder
-  });
+  // Removed progressive loading to fix refresh issues
 
   // URL-based tab management
   useEffect(() => {
@@ -101,26 +95,12 @@ const ConstructionDashboard: React.FC = () => {
     router.replace(`/?${params.toString()}`, { scroll: false });
   }, [searchParams, router]);
 
-  // Fetch user data on component mount with caching
+  // Simple user data fetch
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        // Add timeout to prevent hanging
-        const userPromise = supabase.auth.getUser();
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('User fetch timeout')), 5000)
-        );
-
-        const userResult = await Promise.race([
-          userPromise,
-          timeoutPromise
-        ]) as any;
-
-        const user = userResult?.data?.user;
-        const userError = userResult?.error;
-
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
         if (userError || !user) {
-          // Set default user data to prevent loading indefinitely
           setUserData({
             name: 'User',
             email: '',
@@ -130,27 +110,15 @@ const ConstructionDashboard: React.FC = () => {
           return;
         }
 
-        // Get user metadata from auth.users
         const userMetadata = user.user_metadata || {};
 
-        // Get user role with timeout
+        // Simple role fetch
         try {
-          const rolePromise = supabase
+          const { data: roleData, error: roleError } = await supabase
             .from('user_role')
             .select('role')
             .eq('user_id', user.id)
             .single();
-          const roleTimeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Role fetch timeout')), 3000)
-          );
-
-          const roleResult = await Promise.race([
-            rolePromise,
-            roleTimeoutPromise
-          ]) as any;
-
-          const roleData = roleResult?.data;
-          const roleError = roleResult?.error;
 
           setUserData({
             name: userMetadata.name || user.email?.split('@')[0] || 'User',
@@ -159,7 +127,7 @@ const ConstructionDashboard: React.FC = () => {
             role: roleData?.role || 'staff'
           });
         } catch (roleErr) {
-          console.warn('Role fetch failed, using default role:', roleErr);
+          console.warn('Role fetch failed, using default role');
           setUserData({
             name: userMetadata.name || user.email?.split('@')[0] || 'User',
             email: user.email || '',
@@ -169,7 +137,6 @@ const ConstructionDashboard: React.FC = () => {
         }
       } catch (err) {
         console.error('Error fetching user data:', err);
-        // Set fallback data to prevent infinite loading
         setUserData({
           name: 'User',
           email: '',
