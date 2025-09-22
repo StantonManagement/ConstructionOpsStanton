@@ -111,10 +111,13 @@ const ConstructionDashboard: React.FC = () => {
           setTimeout(() => reject(new Error('User fetch timeout')), 5000)
         );
 
-        const { data: { user }, error: userError } = await Promise.race([
+        const userResult = await Promise.race([
           userPromise,
           timeoutPromise
-        ]);
+        ]) as any;
+
+        const user = userResult?.data?.user;
+        const userError = userResult?.error;
 
         if (userError || !user) {
           // Set default user data to prevent loading indefinitely
@@ -141,10 +144,13 @@ const ConstructionDashboard: React.FC = () => {
             setTimeout(() => reject(new Error('Role fetch timeout')), 3000)
           );
 
-          const { data: roleData, error: roleError } = await Promise.race([
+          const roleResult = await Promise.race([
             rolePromise,
             roleTimeoutPromise
-          ]);
+          ]) as any;
+
+          const roleData = roleResult?.data;
+          const roleError = roleResult?.error;
 
           setUserData({
             name: userMetadata.name || user.email?.split('@')[0] || 'User',

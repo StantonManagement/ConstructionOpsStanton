@@ -76,11 +76,11 @@ export default function Page() {
         if (session?.user) {
           // Quick role fetch with shorter timeout
           try {
-            const { data, error } = await Promise.race([
+            const result = await Promise.race([
               supabase.from("users").select("role").eq("uuid", session.user.id).single(),
               new Promise((_, reject) => setTimeout(() => reject(new Error('Role timeout')), 2000))
-            ]);
-            setRole(data?.role || null);
+            ]) as any;
+            setRole(result?.data?.role || null);
           } catch {
             setRole(null); // Default role on timeout
           }

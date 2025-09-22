@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { LoadingSpinner, LoadingSkeleton } from '../LoadingStates';
+import { LoadingSpinner, LoadingSkeleton } from '../../app/components/LoadingStates';
 
 interface LazySectionProps {
   children: React.ReactNode;
