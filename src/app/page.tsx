@@ -65,19 +65,22 @@ export default function Page() {
       setSession(session);
       if (session?.user) {
         // Quick role update
-        supabase
-          .from("users")
-          .select("role")
-          .eq("uuid", session.user.id)
-          .single()
-          .then(({ data, error }) => {
+        (async () => {
+          try {
+            const { data, error } = await supabase
+              .from("users")
+              .select("role")
+              .eq("uuid", session.user.id)
+              .single();
             if (!error && data?.role) {
               setRole(data.role);
             } else {
               setRole(null);
             }
-          })
-          .catch(() => setRole(null));
+          } catch {
+            setRole(null);
+          }
+        })();
       } else {
         setRole(null);
       }
