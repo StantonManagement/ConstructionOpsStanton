@@ -1,23 +1,27 @@
 'use client';
 
-import React, { useState, useEffect, memo, useCallback } from 'react';
+import React, { useState, useEffect, memo, useCallback, Suspense, lazy } from 'react';
 import Header from './Header';
 import Navigation from './Navigation';
-import OverviewView from './OverviewView';
-import PaymentProcessingView from './PaymentProcessingView';
-import PaymentApplicationsView from './PaymentApplicationsView';
-import ProjectsView from './ProjectsView';
-import DailyLogsView from './DailyLogsView';
-import SubcontractorsView from './SubcontractorsView';
-import ComplianceView from './ComplianceView';
-import MetricsView from './MetricsView';
-import ManageView from './ManageView';
-import SubcontractorSelectionView from './SubcontractorSelectionView';
-import UserProfile from './UserProfile';
-import UserManagementView from './UserManagementView';
+import { LoadingSpinner } from './LoadingStates';
 import { Project } from '../context/DataContext';
 import { supabase } from '@/lib/supabaseClient';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useProgressiveLoading } from '@/hooks/useProgressiveLoading';
+
+// Lazy load heavy components
+const OverviewView = lazy(() => import('./OverviewView'));
+const PaymentProcessingView = lazy(() => import('./PaymentProcessingView'));
+const PaymentApplicationsView = lazy(() => import('./PaymentApplicationsView'));
+const ProjectsView = lazy(() => import('./ProjectsView'));
+const DailyLogsView = lazy(() => import('./DailyLogsView'));
+const SubcontractorsView = lazy(() => import('./SubcontractorsView'));
+const ComplianceView = lazy(() => import('./ComplianceView'));
+const MetricsView = lazy(() => import('./MetricsView'));
+const ManageView = lazy(() => import('./ManageView'));
+const SubcontractorSelectionView = lazy(() => import('./SubcontractorSelectionView'));
+const UserProfile = lazy(() => import('./UserProfile'));
+const UserManagementView = lazy(() => import('./UserManagementView'));
 
 interface UserData {
   name: string;
@@ -34,6 +38,14 @@ const ConstructionDashboard: React.FC = () => {
   const [showProfile, setShowProfile] = useState(false);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
+
+  // Progressive loading for tabs
+  const tabOrder = ['overview', 'payment', 'payment-applications', 'projects', 'daily-logs', 'subcontractors', 'compliance', 'metrics', 'manage', 'user-management'];
+  const { isTabLoaded, isTabLoading } = useProgressiveLoading(activeTab, {
+    delay: 150,
+    staggerDelay: 100,
+    enabledTabs: tabOrder
+  });
 
   // URL-based tab management
   useEffect(() => {
@@ -89,35 +101,75 @@ const ConstructionDashboard: React.FC = () => {
     router.replace(`/?${params.toString()}`, { scroll: false });
   }, [searchParams, router]);
 
-  // Fetch user data on component mount
+  // Fetch user data on component mount with caching
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-        if (userError || !user) return;
+        // Add timeout to prevent hanging
+        const userPromise = supabase.auth.getUser();
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('User fetch timeout')), 5000)
+        );
+
+        const { data: { user }, error: userError } = await Promise.race([
+          userPromise,
+          timeoutPromise
+        ]);
+
+        if (userError || !user) {
+          // Set default user data to prevent loading indefinitely
+          setUserData({
+            name: 'User',
+            email: '',
+            avatar_url: '',
+            role: 'staff'
+          });
+          return;
+        }
 
         // Get user metadata from auth.users
         const userMetadata = user.user_metadata || {};
-        
-        // Get user role from user_role table
-        const { data: roleData, error: roleError } = await supabase
-          .from('user_role')
-          .select('role')
-          .eq('user_id', user.id)
-          .single();
 
-        if (roleError) {
-          console.error('Error fetching user role:', roleError);
+        // Get user role with timeout
+        try {
+          const rolePromise = supabase
+            .from('user_role')
+            .select('role')
+            .eq('user_id', user.id)
+            .single();
+          const roleTimeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Role fetch timeout')), 3000)
+          );
+
+          const { data: roleData, error: roleError } = await Promise.race([
+            rolePromise,
+            roleTimeoutPromise
+          ]);
+
+          setUserData({
+            name: userMetadata.name || user.email?.split('@')[0] || 'User',
+            email: user.email || '',
+            avatar_url: userMetadata.avatar_url || '',
+            role: roleData?.role || 'staff'
+          });
+        } catch (roleErr) {
+          console.warn('Role fetch failed, using default role:', roleErr);
+          setUserData({
+            name: userMetadata.name || user.email?.split('@')[0] || 'User',
+            email: user.email || '',
+            avatar_url: userMetadata.avatar_url || '',
+            role: 'staff'
+          });
         }
-
-        setUserData({
-          name: userMetadata.name || user.email?.split('@')[0] || 'User',
-          email: user.email || '',
-          avatar_url: userMetadata.avatar_url || '',
-          role: roleData?.role || 'staff'
-        });
       } catch (err) {
         console.error('Error fetching user data:', err);
+        // Set fallback data to prevent infinite loading
+        setUserData({
+          name: 'User',
+          email: '',
+          avatar_url: '',
+          role: 'staff'
+        });
       }
     };
 
@@ -182,23 +234,30 @@ const ConstructionDashboard: React.FC = () => {
       <Navigation activeTab={activeTab} setActiveTab={handleTabChange} setSelectedProject={setSelectedProject} selectedProject={selectedProject} />
       <main className="lg:ml-64 transition-all duration-300 pt-20 lg:pt-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          {activeTab === 'overview' && <OverviewView onProjectSelect={handleProjectSelect} onSwitchToPayments={handleSwitchToPayments} searchQuery={searchQuery} />}
-          {activeTab === 'payment' && (selectedProject ? <SubcontractorSelectionView selectedProject={selectedProject} setSelectedProject={setSelectedProject} /> : <PaymentProcessingView setSelectedProject={setSelectedProject} searchQuery={searchQuery} />)}
-          {activeTab === 'payment-applications' && <PaymentApplicationsView searchQuery={searchQuery} />}
-          {activeTab === 'projects' && <ProjectsView searchQuery={searchQuery} />}
-          {activeTab === 'daily-logs' && <DailyLogsView searchQuery={searchQuery} />}
-          {activeTab === 'subcontractors' && <SubcontractorsView searchQuery={searchQuery} />}
-          {activeTab === 'compliance' && <ComplianceView />}
-          {activeTab === 'metrics' && <MetricsView />}
-          {activeTab === 'manage' && <ManageView searchQuery={searchQuery} />}
-          {activeTab === 'user-management' && <UserManagementView />}
+          <Suspense fallback={<LoadingSpinner size="lg" text="Loading..." className="py-20" />}>
+            {/* Always show overview immediately - no progressive loading for main tab */}
+            {activeTab === 'overview' && <OverviewView onProjectSelect={handleProjectSelect} onSwitchToPayments={handleSwitchToPayments} searchQuery={searchQuery} />}
+
+            {/* Other tabs use progressive loading */}
+            {activeTab === 'payment' && (selectedProject ? <SubcontractorSelectionView selectedProject={selectedProject} setSelectedProject={setSelectedProject} /> : <PaymentProcessingView setSelectedProject={setSelectedProject} searchQuery={searchQuery} />)}
+            {activeTab === 'payment-applications' && <PaymentApplicationsView searchQuery={searchQuery} />}
+            {activeTab === 'projects' && <ProjectsView searchQuery={searchQuery} />}
+            {activeTab === 'daily-logs' && <DailyLogsView searchQuery={searchQuery} />}
+            {activeTab === 'subcontractors' && <SubcontractorsView searchQuery={searchQuery} />}
+            {activeTab === 'compliance' && <ComplianceView />}
+            {activeTab === 'metrics' && <MetricsView />}
+            {activeTab === 'manage' && <ManageView searchQuery={searchQuery} />}
+            {activeTab === 'user-management' && <UserManagementView />}
+          </Suspense>
         </div>
       </main>
-      <UserProfile 
-        isOpen={showProfile} 
-        onClose={() => setShowProfile(false)}
-        onProfileUpdate={handleProfileUpdate}
-      />
+      <Suspense fallback={null}>
+        <UserProfile
+          isOpen={showProfile}
+          onClose={() => setShowProfile(false)}
+          onProfileUpdate={handleProfileUpdate}
+        />
+      </Suspense>
     </div>
   );
 };

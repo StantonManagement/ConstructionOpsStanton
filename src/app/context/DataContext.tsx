@@ -2,6 +2,8 @@
 
 import React, { createContext, useContext, useReducer, Dispatch, useEffect, useMemo } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { appCache } from '@/lib/cache';
+import { perf } from '@/lib/performance';
 
 export interface Project {
   id: number;
@@ -221,7 +223,26 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     const fetchAllData = async () => {
       try {
-        // Use Promise.all to fetch data concurrently instead of sequentially
+        // Check cache first
+        const cachedProjects = appCache.get<Project[]>('projects');
+        const cachedContractors = appCache.get<Subcontractor[]>('contractors');
+        const cachedContracts = appCache.get<Contract[]>('contracts');
+
+        if (cachedProjects && cachedContractors && cachedContracts) {
+          dispatch({ type: 'SET_PROJECTS', payload: cachedProjects });
+          dispatch({ type: 'SET_SUBCONTRACTORS', payload: cachedContractors });
+          dispatch({ type: 'SET_CONTRACTS', payload: cachedContracts });
+          return;
+        }
+
+        // Simplified data fetch with shorter timeout
+        const dataFetchTimeout = setTimeout(() => {
+          console.warn('Data fetch timeout, proceeding with empty data');
+          dispatch({ type: 'SET_PROJECTS', payload: [] });
+          dispatch({ type: 'SET_SUBCONTRACTORS', payload: [] });
+          dispatch({ type: 'SET_CONTRACTS', payload: [] });
+        }, 5000); // 5 second timeout
+
         const [projectsResponse, contractorsResponse, contractsResponse] = await Promise.all([
           supabase.from('projects').select('*'),
           supabase.from('contractors').select('*'),
@@ -234,9 +255,12 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
             `)
         ]);
 
+        clearTimeout(dataFetchTimeout);
+
         // Handle projects
         if (projectsResponse.data) {
           dispatch({ type: 'SET_PROJECTS', payload: projectsResponse.data });
+          appCache.set('projects', projectsResponse.data, 2 * 60 * 1000); // Cache for 2 minutes
         }
 
         // Handle contractors
@@ -260,6 +284,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
             },
           }));
           dispatch({ type: 'SET_SUBCONTRACTORS', payload: mapped });
+          appCache.set('contractors', mapped, 2 * 60 * 1000); // Cache for 2 minutes
         }
 
         // Handle contracts
@@ -277,6 +302,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
             subcontractor: c.contractors,
           }));
           dispatch({ type: 'SET_CONTRACTS', payload: mapped });
+          appCache.set('contracts', mapped, 2 * 60 * 1000); // Cache for 2 minutes
         }
 
         // Log any errors
@@ -289,6 +315,10 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
 
       } catch (error) {
         console.error('Error fetching data:', error);
+        // Set empty arrays to prevent app from being stuck in loading state
+        dispatch({ type: 'SET_PROJECTS', payload: [] });
+        dispatch({ type: 'SET_SUBCONTRACTORS', payload: [] });
+        dispatch({ type: 'SET_CONTRACTS', payload: [] });
       }
     };
 

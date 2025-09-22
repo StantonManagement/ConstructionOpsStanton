@@ -9,6 +9,9 @@ interface OptimizedImageProps {
   loading?: 'lazy' | 'eager';
   onError?: () => void;
   onLoad?: () => void;
+  placeholder?: string; // Base64 or low-res placeholder
+  sizes?: string; // Responsive sizes
+  priority?: boolean; // For above-fold images
 }
 
 const OptimizedImage: React.FC<OptimizedImageProps> = ({
@@ -18,7 +21,10 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
   fallbackIcon = <User className="w-full h-full" />,
   loading = 'lazy',
   onError,
-  onLoad
+  onLoad,
+  placeholder,
+  sizes,
+  priority = false
 }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
@@ -26,9 +32,9 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
   const imgRef = useRef<HTMLImageElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Intersection Observer for lazy loading
+  // Intersection Observer for lazy loading (skip if priority)
   useEffect(() => {
-    if (loading !== 'lazy' || !containerRef.current) {
+    if (loading !== 'lazy' || priority || !containerRef.current) {
       setIsInView(true);
       return;
     }
@@ -75,11 +81,20 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
 
   return (
     <div ref={containerRef} className={`relative ${className}`}>
-      {/* Loading skeleton */}
+      {/* Placeholder/skeleton */}
       {isLoading && (
-        <div className="absolute inset-0 bg-gray-200 animate-pulse rounded-full" />
+        <div className="absolute inset-0 bg-gray-200 animate-pulse rounded-full">
+          {placeholder && (
+            <img
+              src={placeholder}
+              alt=""
+              className="w-full h-full object-cover rounded-full opacity-60 blur-sm"
+              aria-hidden="true"
+            />
+          )}
+        </div>
       )}
-      
+
       {/* Actual image */}
       {isInView && (
         <img
@@ -89,7 +104,8 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
           className={`w-full h-full object-cover rounded-full transition-opacity duration-300 ${
             isLoading ? 'opacity-0' : 'opacity-100'
           }`}
-          loading={loading}
+          loading={priority ? 'eager' : loading}
+          sizes={sizes}
           onLoad={handleLoad}
           onError={handleError}
         />

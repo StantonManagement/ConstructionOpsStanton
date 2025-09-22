@@ -7,32 +7,27 @@ import ConstructionDashboard from './components/ConstructionDashboard';
 import PMDashboard from './components/PMDashboard';
 import AuthScreen from './components/AuthScreen';
 
-// Fast, simple loading component with progress
+// Optimized loading component - less resource intensive
 const ConstructionLoader = () => {
   const [progress, setProgress] = useState(0);
-  const [loadingText, setLoadingText] = useState('Initializing...');
+  const [loadingText, setLoadingText] = useState('Loading...');
 
   useEffect(() => {
-    const steps = [
-      { progress: 20, text: 'Loading authentication...' },
-      { progress: 40, text: 'Connecting to database...' },
-      { progress: 60, text: 'Fetching user data...' },
-      { progress: 80, text: 'Loading dashboard...' },
-      { progress: 95, text: 'Almost ready...' }
-    ];
+    // Simplified progress - just show loading without complex animations
+    const timer = setTimeout(() => {
+      setProgress(30);
+      setLoadingText('Connecting...');
+    }, 300);
 
-    let currentStep = 0;
-    const interval = setInterval(() => {
-      if (currentStep < steps.length) {
-        setProgress(steps[currentStep].progress);
-        setLoadingText(steps[currentStep].text);
-        currentStep++;
-      } else {
-        clearInterval(interval);
-      }
-    }, 500); // Update every 500ms
+    const timer2 = setTimeout(() => {
+      setProgress(70);
+      setLoadingText('Almost ready...');
+    }, 1000);
 
-    return () => clearInterval(interval);
+    return () => {
+      clearTimeout(timer);
+      clearTimeout(timer2);
+    };
   }, []);
 
   return (
@@ -65,49 +60,55 @@ export default function Page() {
   const [role, setRole] = useState<string | null>(null);
 
   useEffect(() => {
-    const getSessionAndRole = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setSession(session);
-      if (session?.user) {
-        // Fetch user role from users table
-        const { data, error } = await supabase
-          .from("users")
-          .select("role")
-          .eq("uuid", session.user.id)
-          .single();
-        if (!error && data?.role) {
-          setRole(data.role);
+    const initAuth = async () => {
+      try {
+        // Set a hard timeout for the entire auth process
+        const authTimeout = setTimeout(() => {
+          console.warn('Auth process taking too long, proceeding with defaults');
+          setSession(null);
+          setRole(null);
+          setLoading(false);
+        }, 8000); // 8 second max timeout
+
+        const { data: { session } } = await supabase.auth.getSession();
+        setSession(session);
+
+        if (session?.user) {
+          // Quick role fetch with shorter timeout
+          try {
+            const { data, error } = await Promise.race([
+              supabase.from("users").select("role").eq("uuid", session.user.id).single(),
+              new Promise((_, reject) => setTimeout(() => reject(new Error('Role timeout')), 2000))
+            ]);
+            setRole(data?.role || null);
+          } catch {
+            setRole(null); // Default role on timeout
+          }
         } else {
           setRole(null);
         }
-      } else {
+
+        clearTimeout(authTimeout);
+        setLoading(false);
+      } catch (error) {
+        console.error('Auth initialization failed:', error);
+        setSession(null);
         setRole(null);
+        setLoading(false);
       }
-      setLoading(false);
     };
-    getSessionAndRole();
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+
+    initAuth();
+
+    // Simplified auth state listener
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
-      if (session?.user) {
-        supabase
-          .from("users")
-          .select("role")
-          .eq("uuid", session.user.id)
-          .single()
-          .then(({ data, error }) => {
-            if (!error && data?.role) {
-              setRole(data.role);
-            } else {
-              setRole(null);
-            }
-          });
-      } else {
+      if (!session) {
         setRole(null);
       }
     });
-    return () => {
-      listener.subscription.unsubscribe();
-    };
+
+    return () => listener.subscription.unsubscribe();
   }, []);
 
   if (loading) return <ConstructionLoader />;
