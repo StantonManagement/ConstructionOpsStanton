@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useReducer, Dispatch, useEffect, useMemo } from 'react';
+import React, { createContext, useContext, useReducer, Dispatch, useEffect, useMemo, useCallback, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 // Removed caching imports to fix refresh issues
 
@@ -57,6 +57,8 @@ export interface DataContextType {
   contracts: Contract[];
   paymentApplications: PaymentApplications;
   dispatch: Dispatch<{ type: string; payload?: unknown }>;
+  refreshData: () => Promise<void>;
+  loading: boolean;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -100,22 +102,14 @@ type ContractorDB = {
 function dataReducer(state: InitialDataType, action: { type: string; payload?: unknown }) {
   switch (action.type) {
     case 'ADD_PROJECT': {
-      const payload = action.payload as {
-        name: string;
-        client_name: string;
-        current_phase: string;
-        daysToInspection?: number;
-        atRisk?: boolean;
-        budget?: number;
-        spent?: number;
-        permits?: { [key: string]: string };
-      };
+      const payload = action.payload as Project;
+      // Use the actual project data from database (with real ID)
       return {
         ...state,
         projects: [
           ...state.projects,
           {
-            id: state.projects.length + 1,
+            id: payload.id, // Use real DB ID
             name: payload.name,
             client_name: payload.client_name,
             current_phase: payload.current_phase,
@@ -149,25 +143,14 @@ function dataReducer(state: InitialDataType, action: { type: string; payload?: u
       };
     }
     case 'ADD_SUBCONTRACTOR': {
-      const payload = action.payload as {
-        name: string;
-        trade: string;
-        phone: string;
-        contractAmount?: number;
-        paidToDate?: number;
-        lastPayment?: string;
-        status?: string;
-        changeOrdersPending?: boolean;
-        lineItemCount?: number;
-        hasOpenPaymentApp?: boolean;
-        compliance?: { insurance: string; license: string };
-      };
+      const payload = action.payload as Subcontractor;
+      // Use the actual subcontractor data from database (with real ID)
       return {
         ...state,
         subcontractors: [
           ...state.subcontractors,
           {
-            id: state.subcontractors.length + 1,
+            id: payload.id, // Use real DB ID
             name: payload.name,
             trade: payload.trade,
             phone: payload.phone,
@@ -206,10 +189,13 @@ function dataReducer(state: InitialDataType, action: { type: string; payload?: u
       };
     }
     case 'DELETE_CONTRACT':
-      return { 
-        ...state, 
-        contracts: state.contracts.filter(contract => contract.id !== action.payload) 
+      return {
+        ...state,
+        contracts: state.contracts.filter(contract => contract.id !== action.payload)
       };
+    case 'REFRESH_DATA':
+      // This will trigger a re-fetch via useEffect
+      return state;
     default:
       return state;
   }
@@ -217,23 +203,26 @@ function dataReducer(state: InitialDataType, action: { type: string; payload?: u
 
 export const DataProvider = ({ children }: { children: React.ReactNode }) => {
   const [state, dispatch] = useReducer(dataReducer, initialData);
+  const [loading, setLoading] = useState(true);
 
-  // Simple data fetching without caching or complex timeouts
-  useEffect(() => {
-    const fetchAllData = async () => {
-      try {
-        // Simple Promise.all without timeouts that cause issues
-        const [projectsResponse, contractorsResponse, contractsResponse] = await Promise.all([
-          supabase.from('projects').select('*'),
-          supabase.from('contractors').select('*'),
-          supabase
-            .from('contracts')
-            .select(`
-              *,
-              projects (id, name, client_name),
-              contractors (id, name, trade)
-            `)
-        ]);
+  // Internal data fetching function
+  const performDataFetch = async (shouldSetLoading = true) => {
+    if (shouldSetLoading) {
+      setLoading(true);
+    }
+    try {
+      // Simple Promise.all without timeouts that cause issues
+      const [projectsResponse, contractorsResponse, contractsResponse] = await Promise.all([
+        supabase.from('projects').select('*'),
+        supabase.from('contractors').select('*'),
+        supabase
+          .from('contracts')
+          .select(`
+            *,
+            projects (id, name, client_name),
+            contractors (id, name, trade)
+          `)
+      ]);
 
         // Handle projects
         if (projectsResponse.data) {
@@ -255,9 +244,9 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
             phone: c.phone ?? '',
             email: c.email ?? '',
             hasOpenPaymentApp: c.has_open_payment_app ?? false,
-            compliance: { 
-              insurance: c.insurance_status ?? 'valid', 
-              license: c.license_status ?? 'valid' 
+            compliance: {
+              insurance: c.insurance_status ?? 'valid',
+              license: c.license_status ?? 'valid'
             },
           }));
           dispatch({ type: 'SET_SUBCONTRACTORS', payload: mapped });
@@ -288,23 +277,41 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
           console.error('Error fetching contracts:', contractsResponse.error);
         }
 
-      } catch (error) {
-        console.error('Error fetching data:', error);
-        // Set empty arrays on error
-        dispatch({ type: 'SET_PROJECTS', payload: [] });
-        dispatch({ type: 'SET_SUBCONTRACTORS', payload: [] });
-        dispatch({ type: 'SET_CONTRACTS', payload: [] });
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      // Set empty arrays on error
+      dispatch({ type: 'SET_PROJECTS', payload: [] });
+      dispatch({ type: 'SET_SUBCONTRACTORS', payload: [] });
+      dispatch({ type: 'SET_CONTRACTS', payload: [] });
+    } finally {
+      if (shouldSetLoading) {
+        setLoading(false);
       }
-    };
+    }
+  };
 
-    fetchAllData();
+  // Initial data fetch with loading state
+  const fetchAllData = useCallback(async () => {
+    await performDataFetch(true);
   }, []);
+
+  // Refresh data without showing loading state
+  const refreshData = useCallback(async () => {
+    await performDataFetch(false);
+  }, []);
+
+  // Initialize data on mount - only once
+  useEffect(() => {
+    fetchAllData();
+  }, []); // Run only on mount, not when fetchAllData changes
 
   // Memoize context value to prevent unnecessary re-renders
   const value: DataContextType = useMemo(() => ({
     ...state,
     dispatch,
-  }), [state]);
+    refreshData,
+    loading,
+  }), [state, refreshData, loading]);
 
   return (
     <DataContext.Provider value={value}>

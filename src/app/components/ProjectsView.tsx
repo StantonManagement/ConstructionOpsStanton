@@ -59,61 +59,81 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
 
       if (projectsError) throw projectsError;
 
-      // Enrich projects with stats
-      const enrichedProjects = await Promise.all((projectsData || []).map(async (project: any) => {
-        // Get contractors count
-        const { data: contractorsData } = await supabase
+      // Get all project IDs for batch queries to avoid N+1 problem
+      const projectIds = (projectsData || []).map(p => p.id);
+
+      // Batch fetch all data to prevent N+1 queries
+      const [contractorsData, paymentAppsData, budgetData, approvedPayments] = await Promise.all([
+        supabase
           .from('project_contractors')
-          .select('id')
-          .eq('project_id', project.id)
-          .eq('contract_status', 'active');
-
-        // Get payment applications count
-        const { data: paymentAppsData } = await supabase
+          .select('id, project_id')
+          .in('project_id', projectIds)
+          .eq('contract_status', 'active'),
+        supabase
           .from('payment_applications')
-          .select('id, status')
-          .eq('project_id', project.id);
-
-        // Get total budget from active contracts
-        const { data: budgetData } = await supabase
+          .select('id, status, project_id')
+          .in('project_id', projectIds),
+        supabase
           .from('project_contractors')
-          .select('contract_amount, paid_to_date')
-          .eq('project_id', project.id)
-          .eq('contract_status', 'active');
-
-        const totalBudget = budgetData?.reduce((sum: number, contract: any) => 
-          sum + (Number(contract.contract_amount) || 0), 0) || 0;
-        
-        // Calculate actual spent from approved payment applications only
-        const { data: approvedPayments } = await supabase
+          .select('contract_amount, paid_to_date, project_id')
+          .in('project_id', projectIds)
+          .eq('contract_status', 'active'),
+        supabase
           .from('payment_applications')
-          .select('current_payment')
-          .eq('project_id', project.id)
-          .eq('status', 'approved');
+          .select('current_payment, project_id')
+          .in('project_id', projectIds)
+          .eq('status', 'approved')
+      ]);
 
-        const totalSpent = approvedPayments?.reduce((sum: number, payment: any) => 
-          sum + (Number(payment.current_payment) || 0), 0) || 0;
+      // Group data by project_id for efficient lookup
+      const contractorsByProject = (contractorsData.data || []).reduce((acc: any, item) => {
+        acc[item.project_id] = (acc[item.project_id] || 0) + 1;
+        return acc;
+      }, {});
 
-        const activePaymentApps = paymentAppsData?.filter((app: any) => 
-          ['submitted', 'needs_review'].includes(app.status)).length || 0;
+      const paymentAppsByProject = (paymentAppsData.data || []).reduce((acc: any, item) => {
+        if (!acc[item.project_id]) acc[item.project_id] = { active: 0, completed: 0 };
+        if (['submitted', 'needs_review'].includes(item.status)) {
+          acc[item.project_id].active++;
+        } else if (item.status === 'approved') {
+          acc[item.project_id].completed++;
+        }
+        return acc;
+      }, {});
 
-        const completedPaymentApps = paymentAppsData?.filter((app: any) => 
-          ['approved'].includes(app.status)).length || 0;
+      const budgetByProject = (budgetData.data || []).reduce((acc: any, item) => {
+        if (!acc[item.project_id]) acc[item.project_id] = 0;
+        acc[item.project_id] += Number(item.contract_amount) || 0;
+        return acc;
+      }, {});
 
-                 const completionPercentage = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0;
+      const spentByProject = (approvedPayments.data || []).reduce((acc: any, item) => {
+        if (!acc[item.project_id]) acc[item.project_id] = 0;
+        acc[item.project_id] += Number(item.current_payment) || 0;
+        return acc;
+      }, {});
+
+      // Enrich projects with pre-calculated stats
+      const enrichedProjects = (projectsData || []).map((project: any) => {
+        const totalContractors = contractorsByProject[project.id] || 0;
+        const paymentApps = paymentAppsByProject[project.id] || { active: 0, completed: 0 };
+        const totalBudget = budgetByProject[project.id] || 0;
+        const totalSpent = spentByProject[project.id] || 0;
+
+        const completionPercentage = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0;
 
         return {
           ...project,
           stats: {
-            totalContractors: contractorsData?.length || 0,
-            activePaymentApps,
-            completedPaymentApps,
+            totalContractors,
+            activePaymentApps: paymentApps.active,
+            completedPaymentApps: paymentApps.completed,
             totalBudget,
             totalSpent,
             completionPercentage
           }
         };
-      }));
+      });
 
       setProjects(enrichedProjects);
     } catch (err) {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { DataProvider } from './context/DataContext';
+import { DataProvider, useData } from './context/DataContext';
 import { supabase } from '@/lib/supabaseClient';
 import ConstructionDashboard from './components/ConstructionDashboard';
 import PMDashboard from './components/PMDashboard';
@@ -18,6 +18,17 @@ const ConstructionLoader = () => {
       </div>
     </div>
   );
+};
+
+// Component that waits for DataContext to load
+const DashboardWithLoading = () => {
+  const { loading } = useData();
+
+  if (loading) {
+    return <ConstructionLoader />;
+  }
+
+  return <ConstructionDashboard />;
 };
 
 export default function Page() {
@@ -99,7 +110,7 @@ export default function Page() {
   }
   return (
     <DataProvider>
-      <ConstructionDashboard />
+      <DashboardWithLoading />
     </DataProvider>
   );
 }

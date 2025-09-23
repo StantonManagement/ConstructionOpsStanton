@@ -1645,9 +1645,17 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
 
   // Enhanced project data with calculated spent amounts
   const [enhancedProjects, setEnhancedProjects] = useState<any[]>([]);
+  const [projectsLastFetch, setProjectsLastFetch] = useState<number>(0);
 
   // Fetch enhanced project data with spent calculations
-  const fetchEnhancedProjects = useCallback(async () => {
+  const fetchEnhancedProjects = useCallback(async (force = false) => {
+    // Simple caching - only refetch if more than 30 seconds old or forced
+    const now = Date.now();
+    if (!force && enhancedProjects.length > 0 && (now - projectsLastFetch) < 30000) {
+      return;
+    }
+
+    setProjectsLastFetch(now);
     try {
       // Fetch fresh project data from database
       const { data: freshProjects, error: projectsError } = await supabase
@@ -1680,17 +1688,30 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
         return acc;
       }, {});
 
-      const enrichedProjects = await Promise.all(freshProjects.map(async (project: any) => {
-        // Get contract data for this project
-        const { data: contractorData } = await supabase
-          .from('project_contractors')
-          .select('contract_amount, paid_to_date')
-          .eq('project_id', project.id)
-          .eq('contract_status', 'active');
+      // Batch fetch contractor data for all projects to avoid N+1 queries
+      const projectIds = freshProjects.map(p => p.id);
+      const { data: allContractorData } = await supabase
+        .from('project_contractors')
+        .select('contract_amount, paid_to_date, project_id')
+        .in('project_id', projectIds)
+        .eq('contract_status', 'active');
 
-        const calculatedBudget = contractorData?.reduce((sum: number, contract: any) => 
-          sum + (Number(contract.contract_amount) || 0), 0) || 0;
-        
+      // Group contractor data by project_id
+      const contractorDataByProject = (allContractorData || []).reduce((acc: any, contract) => {
+        if (!acc[contract.project_id]) {
+          acc[contract.project_id] = [];
+        }
+        acc[contract.project_id].push(contract);
+        return acc;
+      }, {});
+
+      // Enrich projects with calculated data (no more async map!)
+      const enrichedProjects = freshProjects.map((project: any) => {
+        const contractorData = contractorDataByProject[project.id] || [];
+
+        const calculatedBudget = contractorData.reduce((sum: number, contract: any) =>
+          sum + (Number(contract.contract_amount) || 0), 0);
+
         // Use approved payments for spent calculation instead of paid_to_date
         const calculatedSpent = approvedPaymentsByProject[project.id] || 0;
 
@@ -1700,7 +1721,7 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
           calculatedSpent,
           spent: calculatedSpent // Add spent property for compatibility
         };
-      }));
+      });
 
       setEnhancedProjects(enrichedProjects);
     } catch (error) {
@@ -1708,7 +1729,7 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
       // Fallback to existing projects if available
       setEnhancedProjects(projects.map(p => ({ ...p, calculatedBudget: p.budget || 0, calculatedSpent: p.spent || 0 })));
     }
-  }, [dispatch, projects]);
+  }, []);
 
   // Update enhanced projects when component mounts and when explicitly refreshed
   useEffect(() => {
@@ -1761,8 +1782,12 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
         dispatch({ type: 'ADD_PROJECT', payload: data });
         addNotification('success', 'Project added successfully!');
         setOpenForm(null);
-        // Refresh enhanced projects data
-        fetchEnhancedProjects();
+        // Use optimistic update instead of full refresh
+        setEnhancedProjects(prev => [...prev, {
+          ...data,
+          calculatedBudget: data.budget || 0,
+          calculatedSpent: 0 // New project starts with 0 spent
+        }]);
       }
 
     } catch (error) {
