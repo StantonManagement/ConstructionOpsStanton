@@ -1,7 +1,8 @@
 'use client';
 
 import React, { memo, useMemo } from 'react';
-import { FixedSizeList as List } from 'react-window';
+import * as ReactWindow from 'react-window';
+const List = (ReactWindow as any).FixedSizeList;
 import OptimizedContractorCard from './OptimizedContractorCard';
 import type { Subcontractor } from '@/app/context/DataContext';
 

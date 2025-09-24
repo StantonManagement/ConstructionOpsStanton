@@ -16,7 +16,10 @@ const LazyLoadingExample = memo(() => {
     budget: 2500000,
     spent: 750000,
     start_date: '2024-01-15',
-    status: 'active'
+    status: 'active',
+    daysToInspection: 30,
+    atRisk: false,
+    permits: { building: 'approved', electrical: 'pending' }
   };
 
   const sampleContractor = {
