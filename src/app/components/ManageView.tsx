@@ -1733,8 +1733,11 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
 
   // Update enhanced projects when component mounts and when explicitly refreshed
   useEffect(() => {
-    fetchEnhancedProjects();
-  }, []); // Only run on mount, fetchEnhancedProjects will handle refreshing projects
+    // Only fetch if we don't have projects yet or if activeTab is projects
+    if (activeTab === 'projects' || enhancedProjects.length === 0) {
+      fetchEnhancedProjects();
+    }
+  }, [activeTab]); // Fetch only when needed
 
   const addProject = async (formData: Record<string, string>) => {
     setIsLoading(prev => ({ ...prev, project: true }));
@@ -1822,8 +1825,9 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
 
         if (error) throw error;
 
-        // Refresh subcontractors data
-        await refreshSubcontractors();
+        // Use optimistic update instead of refresh
+        const updatedData = { ...selectedItem, ...contractorData };
+        dispatch({ type: 'SET_SUBCONTRACTORS', payload: subcontractors.map(s => s.id === selectedItem.id ? updatedData : s) });
         addNotification('success', 'Vendor updated successfully!');
         setEditModal(null);
         setSelectedItem(null);
@@ -1833,8 +1837,8 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
 
         if (error) throw error;
 
-        // Refresh subcontractors data
-        await refreshSubcontractors();
+        // Use optimistic update instead of refresh
+        dispatch({ type: 'ADD_SUBCONTRACTOR', payload: data });
         addNotification('success', 'Vendor added successfully!');
         setOpenForm(null);
       }
@@ -1996,16 +2000,14 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
 
       if (error) throw error;
 
-      // Update local state and refresh data
+      // Update local state with optimistic updates
       if (activeTab === 'projects') {
-        // Refresh enhanced projects data
-        await fetchEnhancedProjects();
+        setEnhancedProjects(prev => prev.filter(p => !selectedItems.has(p.id)));
+        dispatch({ type: 'SET_PROJECTS', payload: projects.filter(p => !selectedItems.has(p.id)) });
       } else if (activeTab === 'vendors') {
-        // Refresh subcontractors data
-        await refreshSubcontractors();
+        dispatch({ type: 'SET_SUBCONTRACTORS', payload: subcontractors.filter(s => !selectedItems.has(s.id)) });
       } else if (activeTab === 'contracts') {
-        // Refresh contracts data
-        await refreshContracts();
+        dispatch({ type: 'SET_CONTRACTS', payload: contracts.filter(c => !selectedItems.has(c.id)) });
       }
 
       addNotification('success', `Successfully deleted ${selectedItems.size} item(s)`);
@@ -2213,9 +2215,9 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
           <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full">
             <AddContractForm
               onClose={() => setOpenForm(null)}
-              onSuccess={async () => {
+              onSuccess={async (newContract: any) => {
                 addNotification('success', 'Contract added successfully!');
-                await refreshContracts();
+                dispatch({ type: 'SET_CONTRACTS', payload: [...contracts, newContract] });
               }}
               onError={(message) => addNotification('error', message)}
               setDirty={setFormDirty}
@@ -2338,9 +2340,9 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
           <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full">
             <AddContractForm
               onClose={handleCloseEditModal}
-              onSuccess={async () => {
+              onSuccess={async (updatedContract: any) => {
                 addNotification('success', 'Contract updated successfully!');
-                await refreshContracts();
+                dispatch({ type: 'SET_CONTRACTS', payload: contracts.map(c => c.id === updatedContract.id ? updatedContract : c) });
               }}
               onError={(message) => addNotification('error', message)}
               setDirty={setFormDirty}
