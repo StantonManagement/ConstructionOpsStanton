@@ -1518,7 +1518,7 @@ interface ManageViewProps {
 }
 
 const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
-  const { dispatch, projects, subcontractors, contracts = [] } = useData();
+  const { dispatch, projects, subcontractors, contracts = [], refreshData } = useData();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [notifications, setNotifications] = useState<NotificationData[]>([]);
@@ -2215,9 +2215,10 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
           <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full">
             <AddContractForm
               onClose={() => setOpenForm(null)}
-              onSuccess={async (newContract: any) => {
+              onSuccess={async () => {
                 addNotification('success', 'Contract added successfully!');
-                dispatch({ type: 'SET_CONTRACTS', payload: [...contracts, newContract] });
+                // Refresh contracts data
+                refreshData();
               }}
               onError={(message) => addNotification('error', message)}
               setDirty={setFormDirty}
@@ -2340,9 +2341,10 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
           <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full">
             <AddContractForm
               onClose={handleCloseEditModal}
-              onSuccess={async (updatedContract: any) => {
+              onSuccess={async () => {
                 addNotification('success', 'Contract updated successfully!');
-                dispatch({ type: 'SET_CONTRACTS', payload: contracts.map(c => c.id === updatedContract.id ? updatedContract : c) });
+                // Refresh contracts data
+                refreshData();
               }}
               onError={(message) => addNotification('error', message)}
               setDirty={setFormDirty}

@@ -1,7 +1,6 @@
 'use client';
 
-import { getCLS, getFID, getFCP, getLCP, getTTFB } from 'web-vitals';
-
+// Import web-vitals dynamically to handle different versions
 export function trackWebVitals() {
   // Only track in production
   if (process.env.NODE_ENV !== 'production') {
@@ -21,12 +20,17 @@ export function trackWebVitals() {
     // Example: analytics.track('Performance Metric', { name, value, delta, id });
   };
 
-  // Track Core Web Vitals
-  getCLS(reportWebVital);
-  getFID(reportWebVital);
-  getFCP(reportWebVital);
-  getLCP(reportWebVital);
-  getTTFB(reportWebVital);
+  // Dynamically import and use web-vitals
+  import('web-vitals').then(({ onCLS, onINP, onFCP, onLCP, onTTFB }) => {
+    // Track Core Web Vitals (FID replaced with INP in web-vitals v5)
+    onCLS(reportWebVital);
+    onINP?.(reportWebVital); // INP replaces FID in v5
+    onFCP(reportWebVital);
+    onLCP(reportWebVital);
+    onTTFB(reportWebVital);
+  }).catch(error => {
+    console.warn('[Performance] Failed to load web-vitals:', error);
+  });
 }
 
 export class PerformanceMonitor {
