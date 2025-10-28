@@ -189,10 +189,10 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab, setSel
       href: '/?tab=metrics'
     },
     {
-      id: 'manage',
+      id: 'contracts',
       icon: <Settings className="w-5 h-5"/>,
-      label: 'Manage',
-      href: '/?tab=manage'
+      label: 'Contracts',
+      href: '/?tab=contracts'
     },
     {
       id: 'user-management',

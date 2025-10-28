@@ -88,21 +88,11 @@ const QuickActions: React.FC<{
   totalCount: number;
 }> = ({ activeTab, onAddNew, selectedCount, onBulkDelete, onExport, onSelectAll, totalCount }) => {
   const getAddLabel = () => {
-    switch (activeTab) {
-      case 'projects': return 'New Project';
-      case 'vendors': return 'New Vendor';
-      case 'contracts': return 'New Contract';
-      default: return 'Add New';
-    }
+    return 'New Contract';
   };
 
   const getIcon = () => {
-    switch (activeTab) {
-      case 'projects': return <Building className="w-4 h-4" />;
-      case 'vendors': return <UserPlus className="w-4 h-4" />;
-      case 'contracts': return <FilePlus className="w-4 h-4" />;
-      default: return <Plus className="w-4 h-4" />;
-    }
+    return <FilePlus className="w-4 h-4" />;
   };
 
   return (
@@ -296,12 +286,10 @@ const SearchFilterBar: React.FC<{
 // Enhanced Tab Navigation
 const TabNavigation: React.FC<{
   activeTab: string;
-  onTabChange: (tab: 'projects' | 'vendors' | 'contracts') => void;
-  counts: { projects: number; vendors: number; contracts: number };
+  onTabChange: (tab: 'contracts') => void;
+  counts: { contracts: number };
 }> = ({ activeTab, onTabChange, counts }) => {
   const tabs = [
-    { id: 'projects' as const, label: 'Projects', icon: Building, color: 'blue', count: counts.projects },
-    { id: 'vendors' as const, label: 'Vendors', icon: UserPlus, color: 'green', count: counts.vendors },
     { id: 'contracts' as const, label: 'Contracts', icon: FilePlus, color: 'purple', count: counts.contracts },
   ];
 
@@ -1522,13 +1510,13 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [notifications, setNotifications] = useState<NotificationData[]>([]);
-  const [openForm, setOpenForm] = useState<'project' | 'vendor' | 'contract' | null>(null);
-  const [pendingForm, setPendingForm] = useState<'project' | 'vendor' | 'contract' | null>(null);
+  const [openForm, setOpenForm] = useState<'contract' | null>(null);
+  const [pendingForm, setPendingForm] = useState<'contract' | null>(null);
   const [formDirty, setFormDirty] = useState(false);
   const [showUnsavedWarning, setShowUnsavedWarning] = useState(false);
   const [isLoading, setIsLoading] = useState<Record<string, boolean>>({});
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState<'projects' | 'vendors' | 'contracts'>('projects');
+  const [activeTab, setActiveTab] = useState<'contracts'>('contracts');
   const [filters, setFilters] = useState({
     status: 'all',
     trade: 'all',
@@ -1537,8 +1525,8 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
     expiry: 'all'
   });
   const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
-  const [viewModal, setViewModal] = useState<'project' | 'vendor' | 'contract' | null>(null);
-  const [editModal, setEditModal] = useState<'project' | 'vendor' | 'contract' | null>(null);
+  const [viewModal, setViewModal] = useState<'contract' | null>(null);
+  const [editModal, setEditModal] = useState<'contract' | null>(null);
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
@@ -1552,13 +1540,13 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
 
   // URL-based subtab management
   useEffect(() => {
-    const subtab = searchParams.get('subtab') as 'projects' | 'vendors' | 'contracts' | null;
-    if (subtab && ['projects', 'vendors', 'contracts'].includes(subtab)) {
+    const subtab = searchParams.get('subtab') as 'contracts' | null;
+    if (subtab && ['contracts'].includes(subtab)) {
       setActiveTab(subtab);
     }
   }, [searchParams]);
 
-  const handleSubtabChange = (subtab: 'projects' | 'vendors' | 'contracts') => {
+  const handleSubtabChange = (subtab: 'contracts') => {
     setActiveTab(subtab);
     const params = new URLSearchParams(searchParams.toString());
     params.set('subtab', subtab);
@@ -1643,232 +1631,11 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
     }
   }, [dispatch, addNotification]);
 
-  // Enhanced project data with calculated spent amounts
-  const [enhancedProjects, setEnhancedProjects] = useState<any[]>([]);
-  const [projectsLastFetch, setProjectsLastFetch] = useState<number>(0);
 
-  // Fetch enhanced project data with spent calculations
-  const fetchEnhancedProjects = useCallback(async (force = false) => {
-    // Simple caching - only refetch if more than 30 seconds old or forced
-    const now = Date.now();
-    if (!force && enhancedProjects.length > 0 && (now - projectsLastFetch) < 30000) {
-      return;
-    }
 
-    setProjectsLastFetch(now);
-    try {
-      // Fetch fresh project data from database
-      const { data: freshProjects, error: projectsError } = await supabase
-        .from('projects')
-        .select('*');
 
-      if (projectsError) {
-        throw projectsError;
-      }
 
-      if (!freshProjects) {
-        setEnhancedProjects([]);
-        return;
-      }
-
-      // Update the projects in the context
-      dispatch({ type: 'SET_PROJECTS', payload: freshProjects });
-
-      // Fetch approved payments for spent calculation
-      const { data: approvedPayments } = await supabase
-        .from('payment_applications')
-        .select('current_payment, project_id')
-        .eq('status', 'approved');
-
-      const approvedPaymentsByProject = (approvedPayments || []).reduce((acc: any, payment) => {
-        if (!acc[payment.project_id]) {
-          acc[payment.project_id] = 0;
-        }
-        acc[payment.project_id] += Number(payment.current_payment) || 0;
-        return acc;
-      }, {});
-
-      // Batch fetch contractor data for all projects to avoid N+1 queries
-      const projectIds = freshProjects.map(p => p.id);
-      const { data: allContractorData } = await supabase
-        .from('project_contractors')
-        .select('contract_amount, paid_to_date, project_id')
-        .in('project_id', projectIds)
-        .eq('contract_status', 'active');
-
-      // Group contractor data by project_id
-      const contractorDataByProject = (allContractorData || []).reduce((acc: any, contract) => {
-        if (!acc[contract.project_id]) {
-          acc[contract.project_id] = [];
-        }
-        acc[contract.project_id].push(contract);
-        return acc;
-      }, {});
-
-      // Enrich projects with calculated data (no more async map!)
-      const enrichedProjects = freshProjects.map((project: any) => {
-        const contractorData = contractorDataByProject[project.id] || [];
-
-        const calculatedBudget = contractorData.reduce((sum: number, contract: any) =>
-          sum + (Number(contract.contract_amount) || 0), 0);
-
-        // Use approved payments for spent calculation instead of paid_to_date
-        const calculatedSpent = approvedPaymentsByProject[project.id] || 0;
-
-        return {
-          ...project,
-          calculatedBudget,
-          calculatedSpent,
-          spent: calculatedSpent // Add spent property for compatibility
-        };
-      });
-
-      setEnhancedProjects(enrichedProjects);
-    } catch (error) {
-      console.error('Error fetching enhanced project data:', error);
-      // Fallback to existing projects if available
-      setEnhancedProjects(projects.map(p => ({ ...p, calculatedBudget: p.budget || 0, calculatedSpent: p.spent || 0 })));
-    }
-  }, []);
-
-  // Update enhanced projects when component mounts and when explicitly refreshed
-  useEffect(() => {
-    // Only fetch if we don't have projects yet or if activeTab is projects
-    if (activeTab === 'projects' || enhancedProjects.length === 0) {
-      fetchEnhancedProjects();
-    }
-  }, [activeTab]); // Fetch only when needed
-
-  const addProject = async (formData: Record<string, string>) => {
-    setIsLoading(prev => ({ ...prev, project: true }));
-
-    try {
-      const { name, client_name, current_phase, budget, start_date, target_completion_date } = formData;
-      
-      if (editModal === 'project' && selectedItem) {
-        // Update existing project
-        const { data, error } = await supabase
-          .from('projects')
-          .update({
-            name,
-            client_name,
-            current_phase,
-            budget: budget ? Number(budget) : null,
-            start_date,
-            target_completion_date,
-          })
-          .eq('id', selectedItem.id)
-          .select()
-          .single();
-
-        if (error) throw error;
-
-        dispatch({ type: 'UPDATE_PROJECT', payload: data });
-        addNotification('success', 'Project updated successfully!');
-        setEditModal(null);
-        setSelectedItem(null);
-        // Refresh enhanced projects data
-        fetchEnhancedProjects();
-      } else {
-        // Add new project
-        const { data, error } = await supabase.from('projects').insert([{
-          name,
-          client_name,
-          current_phase,
-          budget: budget ? Number(budget) : null,
-          start_date,
-          target_completion_date,
-        }]).select().single();
-
-        if (error) throw error;
-
-        dispatch({ type: 'ADD_PROJECT', payload: data });
-        addNotification('success', 'Project added successfully!');
-        setOpenForm(null);
-        // Use optimistic update instead of full refresh
-        setEnhancedProjects(prev => [...prev, {
-          ...data,
-          calculatedBudget: data.budget || 0,
-          calculatedSpent: 0 // New project starts with 0 spent
-        }]);
-      }
-
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to save project';
-      addNotification('error', message);
-      throw error;
-    } finally {
-      setIsLoading(prev => ({ ...prev, project: false }));
-    }
-  };
-
-  const addSubcontractor = async (formData: Record<string, string>) => {
-    setIsLoading(prev => ({ ...prev, vendor: true }));
-
-    try {
-      const { name, trade, phone, email } = formData;
-      const contractorData = {
-        name: name.trim(),
-        trade: trade.trim(),
-        phone: phone.trim() || null,
-        email: email.trim() || null
-      };
-      
-      if (editModal === 'vendor' && selectedItem) {
-        // Update existing vendor
-        const { data, error } = await supabase
-          .from('contractors')
-          .update(contractorData)
-          .eq('id', selectedItem.id)
-          .select()
-          .single();
-
-        if (error) throw error;
-
-        // Use optimistic update instead of refresh
-        const updatedData = { ...selectedItem, ...contractorData };
-        dispatch({ type: 'SET_SUBCONTRACTORS', payload: subcontractors.map(s => s.id === selectedItem.id ? updatedData : s) });
-        addNotification('success', 'Vendor updated successfully!');
-        setEditModal(null);
-        setSelectedItem(null);
-      } else {
-        // Add new vendor
-        const { data, error } = await supabase.from('contractors').insert([contractorData]).select().single();
-
-        if (error) throw error;
-
-        // Use optimistic update instead of refresh
-        dispatch({ type: 'ADD_SUBCONTRACTOR', payload: data });
-        addNotification('success', 'Vendor added successfully!');
-        setOpenForm(null);
-      }
-
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to save vendor';
-      addNotification('error', message);
-      throw error;
-    } finally {
-      setIsLoading(prev => ({ ...prev, vendor: false }));
-    }
-  };
-
-  const projectFields: FieldConfig[] = [
-    { name: 'name', placeholder: 'Project Name', required: true, validators: [validators.required] },
-    { name: 'client_name', placeholder: 'Client Name', required: true, validators: [validators.required] },
-    { name: 'current_phase', placeholder: 'Current Phase' },
-    { name: 'budget', placeholder: 'Budget (USD)', type: 'number', validators: [validators.number] },
-    { name: 'start_date', placeholder: 'Start Date', type: 'date', validators: [validators.date] },
-    { name: 'target_completion_date', placeholder: 'Target Completion Date', type: 'date', validators: [validators.date] },
-  ];
-
-  const vendorFields: FieldConfig[] = [
-    { name: 'name', placeholder: 'Vendor Name', required: true, validators: [validators.required] },
-    { name: 'trade', placeholder: 'Trade', required: true, validators: [validators.required] },
-    { name: 'phone', placeholder: 'Phone', type: 'tel', required: true, validators: [validators.required, validators.phone], defaultValue: '+1' },
-    { name: 'email', placeholder: 'Email (optional)', type: 'email', validators: [validators.email] },
-  ];
-
-  const handleOpenForm = (form: 'project' | 'vendor' | 'contract') => {
+  const handleOpenForm = (form: 'contract') => {
     if (formDirty && openForm !== form) {
       setPendingForm(form);
       setShowUnsavedWarning(true);
@@ -1905,26 +1672,6 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
   };
 
   // Search and filter functions
-  const filteredProjects = useMemo(() => {
-    return enhancedProjects.filter(project => {
-      const matchesSearch = project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           project.client_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           project.current_phase?.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesFilter = filters.status === 'all' || (project as any).status === filters.status;
-      return matchesSearch && matchesFilter;
-    });
-  }, [enhancedProjects, searchTerm, filters.status]);
-
-  const filteredVendors = useMemo(() => {
-    return subcontractors.filter(vendor => {
-      const matchesSearch = vendor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           vendor.trade.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           (vendor as any).email?.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesStatus = filters.status === 'all' || vendor.status === filters.status;
-      const matchesTrade = filters.trade === 'all' || vendor.trade.toLowerCase() === filters.trade.toLowerCase();
-      return matchesSearch && matchesStatus && matchesTrade;
-    });
-  }, [subcontractors, searchTerm, filters]);
 
   const filteredContracts = useMemo(() => {
     return contracts.filter(contract => {
@@ -1990,25 +1737,15 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
     setDeleteLoading(true);
 
     try {
-      const tableName = activeTab === 'projects' ? 'projects' :
-                       activeTab === 'vendors' ? 'contractors' : 'contracts';
-
       const { error } = await supabase
-        .from(tableName)
+        .from('contracts')
         .delete()
         .in('id', Array.from(selectedItems));
 
       if (error) throw error;
 
       // Update local state with optimistic updates
-      if (activeTab === 'projects') {
-        setEnhancedProjects(prev => prev.filter(p => !selectedItems.has(p.id)));
-        dispatch({ type: 'SET_PROJECTS', payload: projects.filter(p => !selectedItems.has(p.id)) });
-      } else if (activeTab === 'vendors') {
-        dispatch({ type: 'SET_SUBCONTRACTORS', payload: subcontractors.filter(s => !selectedItems.has(s.id)) });
-      } else if (activeTab === 'contracts') {
-        dispatch({ type: 'SET_CONTRACTS', payload: contracts.filter(c => !selectedItems.has(c.id)) });
-      }
+      dispatch({ type: 'SET_CONTRACTS', payload: contracts.filter(c => !selectedItems.has(c.id)) });
 
       addNotification('success', `Successfully deleted ${selectedItems.size} item(s)`);
       setSelectedItems(new Set());
@@ -2023,12 +1760,12 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
 
   const handleViewItem = (item: any) => {
     setSelectedItem(item);
-    setViewModal(activeTab === 'projects' ? 'project' : activeTab === 'vendors' ? 'vendor' : 'contract');
+    setViewModal('contract');
   };
 
   const handleEditItem = (item: any) => {
     setSelectedItem(item);
-    setEditModal(activeTab === 'projects' ? 'project' : activeTab === 'vendors' ? 'vendor' : 'contract');
+    setEditModal('contract');
   };
 
   const handleCloseViewModal = () => {
@@ -2044,8 +1781,6 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
   // Get current filtered data
   const getCurrentData = () => {
     switch (activeTab) {
-      case 'projects': return filteredProjects;
-      case 'vendors': return filteredVendors;
       case 'contracts': return filteredContracts;
       default: return [];
     }
@@ -2079,8 +1814,6 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
             activeTab={activeTab}
             onTabChange={handleSubtabChange}
             counts={{
-              projects: filteredProjects.length,
-              vendors: filteredVendors.length,
               contracts: filteredContracts.length
             }}
           />
@@ -2109,7 +1842,7 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
           </div>
           <QuickActions
             activeTab={activeTab}
-            onAddNew={() => handleOpenForm(activeTab === 'projects' ? 'project' : activeTab === 'vendors' ? 'vendor' : 'contract')}
+            onAddNew={() => handleOpenForm('contract')}
             selectedCount={selectedItems.size}
             onBulkDelete={handleBulkDelete}
             onExport={() => addNotification('info', 'Export feature coming soon!')}
@@ -2139,7 +1872,7 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
             <ItemCard
               key={item.id}
               item={item}
-              type={activeTab === 'projects' ? 'project' : activeTab === 'vendors' ? 'vendor' : 'contract'}
+              type="contract"
               selected={selectedItems.has(item.id)}
               onSelect={handleItemSelect}
               onView={handleViewItem}
@@ -2156,60 +1889,26 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
         {currentData.length === 0 && (
           <div className="text-center py-12">
             <div className="text-gray-400 mb-4">
-              {activeTab === 'projects' && <Building className="w-16 h-16 mx-auto" />}
-              {activeTab === 'vendors' && <UserPlus className="w-16 h-16 mx-auto" />}
-              {activeTab === 'contracts' && <FilePlus className="w-16 h-16 mx-auto" />}
+              <FilePlus className="w-16 h-16 mx-auto" />
             </div>
             <h3 className="text-lg font-medium text-gray-900 mb-2">
-              No {activeTab} found
+              No contracts found
             </h3>
             <p className="text-gray-500 mb-6">
-              {searchTerm ? `No ${activeTab} match your search criteria.` : `Get started by creating your first ${activeTab.slice(0, -1)}.`}
+              {searchTerm ? 'No contracts match your search criteria.' : 'Get started by creating your first contract.'}
             </p>
             <button
-              onClick={() => handleOpenForm(activeTab === 'projects' ? 'project' : activeTab === 'vendors' ? 'vendor' : 'contract')}
+              onClick={() => handleOpenForm('contract')}
               className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
             >
-              <Plus className="w-5 h-5" />
-              Add {activeTab === 'projects' ? 'Project' : activeTab === 'vendors' ? 'Vendor' : 'Contract'}
+              <FilePlus className="w-4 h-4" />
+              Add Contract
             </button>
           </div>
         )}
       </div>
 
       {/* Modal Forms */}
-      {openForm === 'project' && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full">
-            <AddForm
-              title="Add New Project"
-              icon={<Building className="w-6 h-6 text-blue-600" />}
-              fields={projectFields}
-              onSubmit={addProject}
-              onClose={() => setOpenForm(null)}
-              isLoading={isLoading.project}
-              setDirty={setFormDirty}
-            />
-          </div>
-        </div>
-      )}
-
-      {openForm === 'vendor' && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full">
-            <AddForm
-              title="Add New Vendor"
-              icon={<UserPlus className="w-6 h-6 text-blue-600" />}
-              fields={vendorFields}
-              onSubmit={addSubcontractor}
-              onClose={() => setOpenForm(null)}
-              isLoading={isLoading.vendor}
-              setDirty={setFormDirty}
-            />
-          </div>
-        </div>
-      )}
-
       {openForm === 'contract' && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full">
@@ -2233,56 +1932,29 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
           <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full p-6">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-xl font-semibold text-gray-800">
-                {viewModal === 'project' ? 'Project' : viewModal === 'vendor' ? 'Vendor' : 'Contract'} Details
+                Contract Details
               </h3>
               <button onClick={handleCloseViewModal} className="text-gray-400 hover:text-gray-700">
                 <X className="w-6 h-6" />
               </button>
             </div>
             <div className="space-y-4">
-              {viewModal === 'project' && (
-                <>
-                  <div><span className="font-semibold">Name:</span> {selectedItem.name}</div>
-                  <div><span className="font-semibold">Client:</span> {selectedItem.client_name || 'Not specified'}</div>
-                  <div><span className="font-semibold">Phase:</span> {selectedItem.current_phase || 'Not set'}</div>
-                  <div><span className="font-semibold">Budget:</span> ${(selectedItem.calculatedBudget || selectedItem.budget || 0).toLocaleString()}</div>
-                  <div><span className="font-semibold">Spent:</span> ${(selectedItem.calculatedSpent || selectedItem.spent || 0).toLocaleString()}</div>
-                  <div><span className="font-semibold">Remaining:</span> ${Math.max(0, (selectedItem.calculatedBudget || selectedItem.budget || 0) - (selectedItem.calculatedSpent || selectedItem.spent || 0)).toLocaleString()}</div>
-                  <div><span className="font-semibold">Utilization:</span> {((selectedItem.calculatedBudget || selectedItem.budget) > 0) ? Math.round(((selectedItem.calculatedSpent || selectedItem.spent || 0) / (selectedItem.calculatedBudget || selectedItem.budget)) * 100) : 0}%</div>
-                  <div><span className="font-semibold">Status:</span> {(selectedItem as any).status || 'Active'}</div>
-                  <div><span className="font-semibold">Start Date:</span> {(selectedItem as any).start_date || 'Not set'}</div>
-                </>
+              <div><span className="font-semibold">Project:</span> {selectedItem.project?.name || 'Unknown Project'}</div>
+              <div><span className="font-semibold">Vendor:</span> {selectedItem.subcontractor?.name || 'Unknown Vendor'}</div>
+              {selectedItem.contract_nickname && (
+                <div><span className="font-semibold">Contract Nickname:</span> {selectedItem.contract_nickname}</div>
               )}
-              {viewModal === 'vendor' && (
-                <>
-                  <div><span className="font-semibold">Name:</span> {selectedItem.name}</div>
-                  <div><span className="font-semibold">Trade:</span> {selectedItem.trade}</div>
-                  <div><span className="font-semibold">Phone:</span> {selectedItem.phone || 'Not provided'}</div>
-                  <div><span className="font-semibold">Email:</span> {(selectedItem as any).email || 'Not provided'}</div>
-                  <div><span className="font-semibold">Status:</span> {selectedItem.status || 'Active'}</div>
-                  <div><span className="font-semibold">Performance Score:</span> {(selectedItem as any).performance_score || 'Not rated'}/5</div>
-                </>
-              )}
-              {viewModal === 'contract' && (
-                <>
-                  <div><span className="font-semibold">Project:</span> {selectedItem.project?.name || 'Unknown Project'}</div>
-                  <div><span className="font-semibold">Vendor:</span> {selectedItem.subcontractor?.name || 'Unknown Vendor'}</div>
-                  {selectedItem.contract_nickname && (
-                    <div><span className="font-semibold">Contract Nickname:</span> {selectedItem.contract_nickname}</div>
-                  )}
-                  <div><span className="font-semibold">Contract Amount:</span> ${(selectedItem.contract_amount || 0).toLocaleString()}</div>
-                  <div><span className="font-semibold">Start Date:</span> {selectedItem.start_date || 'Not set'}</div>
-                  <div><span className="font-semibold">End Date:</span> {selectedItem.end_date || 'Ongoing'}</div>
-                  <div><span className="font-semibold">Status:</span> {selectedItem.status || 'Active'}</div>
-                </>
-              )}
+              <div><span className="font-semibold">Contract Amount:</span> ${(selectedItem.contract_amount || 0).toLocaleString()}</div>
+              <div><span className="font-semibold">Start Date:</span> {selectedItem.start_date || 'Not set'}</div>
+              <div><span className="font-semibold">End Date:</span> {selectedItem.end_date || 'Ongoing'}</div>
+              <div><span className="font-semibold">Status:</span> {selectedItem.status || 'Active'}</div>
             </div>
             <div className="mt-6 flex justify-end">
               <button
                 onClick={() => handleEditItem(selectedItem)}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
-                Edit {viewModal === 'project' ? 'Project' : viewModal === 'vendor' ? 'Vendor' : 'Contract'}
+                Edit Contract
               </button>
             </div>
           </div>
@@ -2290,51 +1962,6 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
       )}
 
       {/* Edit Modals */}
-      {editModal === 'project' && selectedItem && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full">
-            <AddForm
-              title="Edit Project"
-              icon={<Building className="w-6 h-6 text-blue-600" />}
-              fields={projectFields}
-              onSubmit={addProject}
-              onClose={handleCloseEditModal}
-              isLoading={isLoading.project}
-              setDirty={setFormDirty}
-              initialData={{
-                name: selectedItem.name || '',
-                client_name: selectedItem.client_name || '',
-                current_phase: selectedItem.current_phase || '',
-                budget: (selectedItem.calculatedBudget || selectedItem.budget || '').toString(),
-                start_date: selectedItem.start_date || '',
-                target_completion_date: selectedItem.target_completion_date || '',
-              }}
-            />
-          </div>
-        </div>
-      )}
-
-      {editModal === 'vendor' && selectedItem && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full">
-            <AddForm
-              title="Edit Vendor"
-              icon={<UserPlus className="w-6 h-6 text-blue-600" />}
-              fields={vendorFields}
-              onSubmit={addSubcontractor}
-              onClose={handleCloseEditModal}
-              isLoading={isLoading.vendor}
-              setDirty={setFormDirty}
-              initialData={{
-                name: selectedItem.name || '',
-                trade: selectedItem.trade || '',
-                phone: selectedItem.phone || '',
-                email: (selectedItem as any).email || '',
-              }}
-            />
-          </div>
-        </div>
-      )}
 
       {editModal === 'contract' && selectedItem && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -2378,7 +2005,7 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
                 </div>
                 <div>
                   <p className="text-red-800 font-medium mb-2">
-                    Are you sure you want to delete {selectedItems.size} {activeTab === 'projects' ? 'project' : activeTab === 'vendors' ? 'vendor' : 'contract'}{selectedItems.size > 1 ? 's' : ''}?
+                    Are you sure you want to delete {selectedItems.size} contract{selectedItems.size > 1 ? 's' : ''}?
                   </p>
                   <ul className="text-red-700 text-sm space-y-1">
                     <li>• This will permanently remove {selectedItems.size > 1 ? 'them' : 'it'} from your system</li>

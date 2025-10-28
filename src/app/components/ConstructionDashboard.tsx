@@ -47,7 +47,7 @@ const ConstructionDashboard: React.FC = () => {
     const projectFromUrl = searchParams.get('project');
     const subtabFromUrl = searchParams.get('subtab');
     
-    if (tabFromUrl && ['overview', 'payment', 'payment-applications', 'projects', 'daily-logs', 'subcontractors', 'compliance', 'metrics', 'manage', 'user-management'].includes(tabFromUrl)) {
+    if (tabFromUrl && ['overview', 'payment', 'payment-applications', 'projects', 'daily-logs', 'subcontractors', 'compliance', 'metrics', 'contracts', 'user-management'].includes(tabFromUrl)) {
       setActiveTab(tabFromUrl);
     }
     
@@ -219,7 +219,7 @@ const ConstructionDashboard: React.FC = () => {
             {activeTab === 'subcontractors' && <SubcontractorsView searchQuery={searchQuery} />}
             {activeTab === 'compliance' && <ComplianceView />}
             {activeTab === 'metrics' && <MetricsView />}
-            {activeTab === 'manage' && <ManageView searchQuery={searchQuery} />}
+            {activeTab === 'contracts' && <ManageView searchQuery={searchQuery} />}
             {activeTab === 'user-management' && <UserManagementView />}
           </Suspense>
         </div>

@@ -303,7 +303,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
   // Initialize data on mount - only once
   useEffect(() => {
     fetchAllData();
-  }, []); // Run only on mount, not when fetchAllData changes
+  }, [fetchAllData]); // Run only on mount, not when fetchAllData changes
 
   // Memoize context value to prevent unnecessary re-renders
   const value: DataContextType = useMemo(() => ({

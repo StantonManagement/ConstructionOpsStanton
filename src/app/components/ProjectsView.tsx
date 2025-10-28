@@ -1,9 +1,187 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, ChangeEvent } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { Building, Users, DollarSign, Calendar, AlertCircle, CheckCircle, Clock, RefreshCw, Eye, Plus } from 'lucide-react';
+import { Building, Users, DollarSign, Calendar, AlertCircle, CheckCircle, Clock, RefreshCw, Eye, Plus, X } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
+
+// Form validation utilities
+const validators = {
+  required: (value: string) => value.trim() !== '' || 'This field is required',
+  email: (value: string) => {
+    if (!value.trim()) return true; // Allow empty email
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) || 'Please enter a valid email address';
+  },
+  phone: (value: string) => {
+    if (!value.trim()) return true; // Allow empty phone
+    return /^[\+]?[\s\-\(\)]?[\d\s\-\(\)]{10,}$/.test(value) || 'Please enter a valid phone number';
+  },
+  number: (value: string) => 
+    !isNaN(Number(value)) && Number(value) >= 0 || 'Please enter a valid positive number',
+  date: (value: string) => 
+    !isNaN(Date.parse(value)) || 'Please enter a valid date'
+};
+
+interface FieldConfig {
+  name: string;
+  placeholder: string;
+  type?: string;
+  validators?: ((value: string) => string | true)[];
+  required?: boolean;
+  defaultValue?: string;
+}
+
+// AddForm component for creating new projects
+type AddFormProps = {
+  title: string;
+  icon: React.ReactNode;
+  fields: FieldConfig[];
+  onSubmit: (formData: Record<string, string>) => Promise<void>;
+  onClose: () => void;
+  isLoading?: boolean;
+};
+
+const AddForm: React.FC<AddFormProps> = ({ 
+  title, 
+  icon, 
+  fields, 
+  onSubmit, 
+  onClose,
+  isLoading = false
+}) => {
+  const [formData, setFormData] = useState<Record<string, string>>(
+    () => {
+      const defaultData = fields.reduce((acc, field) => {
+        acc[field.name] = field.defaultValue || '';
+        return acc;
+      }, {} as Record<string, string>);
+      return defaultData;
+    }
+  );
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+
+  const validateField = useCallback((name: string, value: string) => {
+    const field = fields.find(f => f.name === name);
+    if (!field) return '';
+
+    if (field.required && !value.trim()) {
+      return 'This field is required';
+    }
+
+    if (field.validators) {
+      for (const validator of field.validators) {
+        const result = validator(value);
+        if (result !== true) {
+          return result;
+        }
+      }
+    }
+
+    return '';
+  }, [fields]);
+
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    if (errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: '' }));
+    }
+  };
+
+  const handleBlur = (e: ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setTouched(prev => ({ ...prev, [name]: true }));
+
+    const error = validateField(name, value);
+    setErrors(prev => ({ ...prev, [name]: error }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const newErrors: Record<string, string> = {};
+    const newTouched: Record<string, boolean> = {};
+
+    fields.forEach(field => {
+      newTouched[field.name] = true;
+      const error = validateField(field.name, formData[field.name] || '');
+      if (error) newErrors[field.name] = error;
+    });
+
+    setTouched(newTouched);
+    setErrors(newErrors);
+
+    if (Object.values(newErrors).some(error => error !== '')) return;
+
+    await onSubmit(formData);
+  };
+
+  const labelize = (str: string) => str.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl">
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
+            {icon}{title}
+          </h3>
+          <button 
+            onClick={onClose} 
+            className="text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-100"
+          >
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+        
+        <form onSubmit={handleSubmit} className="space-y-5">
+          {fields.map(field => (
+            <div key={field.name}>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                {labelize(field.name)}
+                {field.required && <span className="text-red-500 ml-1">*</span>}
+              </label>
+              <input
+                type={field.type || 'text'}
+                name={field.name}
+                value={formData[field.name] !== undefined ? formData[field.name] : (field.defaultValue || '')}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                className={`w-full px-4 py-3 text-base border rounded-lg focus:ring-2 focus:ring-blue-500 transition-all duration-200 bg-gray-50 text-gray-900 placeholder-gray-400 ${
+                  errors[field.name] && touched[field.name] 
+                    ? 'border-red-300 focus:border-red-500 focus:ring-red-500' 
+                    : 'border-gray-200 focus:border-blue-500'
+                }`}
+                placeholder={field.placeholder}
+                disabled={isLoading}
+              />
+              {errors[field.name] && touched[field.name] && (
+                <p className="mt-1 text-sm text-red-600">{errors[field.name]}</p>
+              )}
+            </div>
+          ))}
+          
+          <div className="flex gap-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-3 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors font-medium"
+              disabled={isLoading}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50"
+              disabled={isLoading}
+            >
+              {isLoading ? 'Creating...' : 'Create Project'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
 
 // Utility functions
 const formatCurrency = (amount: number | null | undefined): string => {
@@ -45,6 +223,10 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
   const [budgetModalData, setBudgetModalData] = useState<any>({});
   const [budgetModalType, setBudgetModalType] = useState('');
   const [loadingBudgetModal, setLoadingBudgetModal] = useState(false);
+
+  // New project form state
+  const [showNewProjectForm, setShowNewProjectForm] = useState(false);
+  const [isCreatingProject, setIsCreatingProject] = useState(false);
 
   // Fetch projects with stats
   const fetchProjects = useCallback(async () => {
@@ -163,6 +345,45 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
     setIsRefreshing(true);
     await fetchProjects();
     setIsRefreshing(false);
+  };
+
+  // Handle creating a new project
+  const handleCreateProject = async (formData: Record<string, string>) => {
+    setIsCreatingProject(true);
+    try {
+      const projectData = {
+        name: formData.name,
+        address: formData.address,
+        client_name: formData.client_name,
+        budget: formData.budget ? parseFloat(formData.budget) : null,
+        start_date: formData.start_date || null,
+        end_date: formData.end_date || null,
+        status: formData.status || 'active',
+        current_phase: formData.current_phase || 'Planning',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      const { data, error } = await supabase
+        .from('projects')
+        .insert([projectData])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Refresh the projects list
+      await fetchProjects();
+      
+      // Close the form
+      setShowNewProjectForm(false);
+      
+    } catch (err) {
+      console.error('Error creating project:', err);
+      setError('Failed to create project');
+    } finally {
+      setIsCreatingProject(false);
+    }
   };
 
   const handleBudgetClick = async (projectId: number, type: 'spent' | 'remaining') => {
@@ -487,6 +708,14 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowNewProjectForm(true)}
+            className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-green-600 text-white rounded-lg text-xs sm:text-sm font-medium hover:bg-green-700"
+          >
+            <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
+            <span className="hidden sm:inline">New Project</span>
+            <span className="sm:hidden">+</span>
+          </button>
           <button
             onClick={handleRefresh}
             disabled={isRefreshing}
@@ -1218,6 +1447,65 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* New Project Form Modal */}
+      {showNewProjectForm && (
+        <AddForm
+          title="New Project"
+          icon={<Building className="w-5 h-5 text-blue-600" />}
+          fields={[
+            {
+              name: 'name',
+              placeholder: 'Enter project name',
+              required: true,
+              validators: [validators.required]
+            },
+            {
+              name: 'address',
+              placeholder: 'Enter project address',
+              required: true,
+              validators: [validators.required]
+            },
+            {
+              name: 'client_name',
+              placeholder: 'Enter client name',
+              required: true,
+              validators: [validators.required]
+            },
+            {
+              name: 'budget',
+              placeholder: 'Enter project budget',
+              type: 'number',
+              validators: [validators.number]
+            },
+            {
+              name: 'start_date',
+              placeholder: 'Enter start date',
+              type: 'date',
+              validators: [validators.date]
+            },
+            {
+              name: 'end_date',
+              placeholder: 'Enter end date',
+              type: 'date',
+              validators: [validators.date]
+            },
+            {
+              name: 'status',
+              placeholder: 'Enter status',
+              defaultValue: 'active'
+            },
+            {
+              name: 'current_phase',
+              placeholder: 'Enter current phase',
+              defaultValue: 'Planning'
+            }
+          ]}
+          onSubmit={handleCreateProject}
+          onClose={() => setShowNewProjectForm(false)}
+          isLoading={isCreatingProject}
+        />
       )}
     </div>
   );
