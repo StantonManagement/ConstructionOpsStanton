@@ -442,6 +442,7 @@ const Header: React.FC<HeaderProps> = ({ onShowProfile, onLogout, userData, onSe
                 <div className="px-4 py-3 border-b border-gray-100">
                   <p className="text-sm font-medium text-gray-900">{userData?.name || 'User'}</p>
                   <p className="text-xs text-gray-500">{userData?.email}</p>
+                  <p className="text-xs text-blue-600 font-medium mt-1">Version 0.01</p>
                 </div>
                 <div className="py-1">
                   <button
@@ -599,6 +600,7 @@ const Header: React.FC<HeaderProps> = ({ onShowProfile, onLogout, userData, onSe
                 <div className="flex-1">
                   <p className="font-medium text-gray-900">{userData?.name || 'User'}</p>
                   <p className="text-sm text-gray-500 capitalize">{userData?.role || 'User'}</p>
+                  <p className="text-xs text-blue-600 font-medium">Version 0.01</p>
                 </div>
               </div>
               <div className="space-y-2">
