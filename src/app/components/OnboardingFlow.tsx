@@ -28,22 +28,22 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
       id: 'welcome',
       title: 'Welcome to Construction Ops',
       description: 'Get started with your construction management dashboard',
-      icon: <Building className="w-8 h-8 text-blue-600" />,
+      icon: <Building className="w-8 h-8 text-primary" />,
       content: (
         <div className="space-y-4">
           <div className="text-center">
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">
+            <h3 className="text-xl font-semibold text-foreground mb-2">
               Welcome to Construction Ops Stanton
             </h3>
-            <p className="text-gray-600">
+            <p className="text-muted-foreground">
               Your comprehensive construction management platform designed for field workers and project managers.
             </p>
           </div>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <h4 className="font-medium text-blue-900 mb-2">For Field Workers</h4>
-              <ul className="text-sm text-blue-800 space-y-1">
+            <div className="bg-primary/10 p-4 rounded-lg">
+              <h4 className="font-medium text-primary mb-2">For Field Workers</h4>
+              <ul className="text-sm text-primary space-y-1">
                 <li>• Simple mobile-friendly interface</li>
                 <li>• Quick payment submissions</li>
                 <li>• Photo documentation</li>
@@ -71,26 +71,26 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
       icon: <Building className="w-8 h-8 text-green-600" />,
       content: (
         <div className="space-y-4">
-          <div className="bg-white border border-gray-200 rounded-lg p-4">
-            <h4 className="font-medium text-gray-900 mb-3">Project Overview</h4>
+          <div className="bg-card border border-border rounded-lg p-4">
+            <h4 className="font-medium text-foreground mb-3">Project Overview</h4>
             <div className="space-y-3">
               <div className="flex items-center gap-3">
                 <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span className="text-sm text-gray-600">View all active projects</span>
+                <span className="text-sm text-muted-foreground">View all active projects</span>
               </div>
               <div className="flex items-center gap-3">
                 <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                <span className="text-sm text-gray-600">Track project progress</span>
+                <span className="text-sm text-muted-foreground">Track project progress</span>
               </div>
               <div className="flex items-center gap-3">
                 <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                <span className="text-sm text-gray-600">Monitor budgets and timelines</span>
+                <span className="text-sm text-muted-foreground">Monitor budgets and timelines</span>
               </div>
             </div>
           </div>
           
-          <div className="bg-blue-50 p-4 rounded-lg">
-            <h4 className="font-medium text-blue-900 mb-2">Quick Actions</h4>
+          <div className="bg-primary/10 p-4 rounded-lg">
+            <h4 className="font-medium text-primary mb-2">Quick Actions</h4>
             <div className="grid grid-cols-2 gap-2 text-sm">
               <button className="bg-blue-600 text-white px-3 py-2 rounded text-xs">
                 Create Payment App
@@ -110,32 +110,32 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
       icon: <DollarSign className="w-8 h-8 text-yellow-600" />,
       content: (
         <div className="space-y-4">
-          <div className="bg-white border border-gray-200 rounded-lg p-4">
-            <h4 className="font-medium text-gray-900 mb-3">Payment Workflow</h4>
+          <div className="bg-card border border-border rounded-lg p-4">
+            <h4 className="font-medium text-foreground mb-3">Payment Workflow</h4>
             <div className="space-y-3">
               <div className="flex items-center gap-3">
                 <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
                   <span className="text-xs font-medium text-blue-600">1</span>
                 </div>
-                <span className="text-sm text-gray-600">Select project and contractor</span>
+                <span className="text-sm text-muted-foreground">Select project and contractor</span>
               </div>
               <div className="flex items-center gap-3">
                 <div className="w-6 h-6 bg-yellow-100 rounded-full flex items-center justify-center">
                   <span className="text-xs font-medium text-yellow-600">2</span>
                 </div>
-                <span className="text-sm text-gray-600">Submit progress via SMS</span>
+                <span className="text-sm text-muted-foreground">Submit progress via SMS</span>
               </div>
               <div className="flex items-center gap-3">
                 <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center">
                   <span className="text-xs font-medium text-green-600">3</span>
                 </div>
-                <span className="text-sm text-gray-600">Upload photos for verification</span>
+                <span className="text-sm text-muted-foreground">Upload photos for verification</span>
               </div>
               <div className="flex items-center gap-3">
                 <div className="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center">
                   <span className="text-xs font-medium text-purple-600">4</span>
                 </div>
-                <span className="text-sm text-gray-600">PM reviews and approves</span>
+                <span className="text-sm text-muted-foreground">PM reviews and approves</span>
               </div>
             </div>
           </div>
@@ -149,24 +149,24 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
       icon: <Bell className="w-8 h-8 text-red-600" />,
       content: (
         <div className="space-y-4">
-          <div className="bg-white border border-gray-200 rounded-lg p-4">
-            <h4 className="font-medium text-gray-900 mb-3">Notification Types</h4>
+          <div className="bg-card border border-border rounded-lg p-4">
+            <h4 className="font-medium text-foreground mb-3">Notification Types</h4>
             <div className="space-y-3">
               <div className="flex items-center gap-3">
                 <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                <span className="text-sm text-gray-600">Payment approvals/rejections</span>
+                <span className="text-sm text-muted-foreground">Payment approvals/rejections</span>
               </div>
               <div className="flex items-center gap-3">
                 <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                <span className="text-sm text-gray-600">Contractor submissions</span>
+                <span className="text-sm text-muted-foreground">Contractor submissions</span>
               </div>
               <div className="flex items-center gap-3">
                 <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                <span className="text-sm text-gray-600">Project updates</span>
+                <span className="text-sm text-muted-foreground">Project updates</span>
               </div>
               <div className="flex items-center gap-3">
                 <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                <span className="text-sm text-gray-600">System alerts</span>
+                <span className="text-sm text-muted-foreground">System alerts</span>
               </div>
             </div>
           </div>
@@ -195,13 +195,13 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
             Welcome to Construction Ops!
           </h3>
           
-          <p className="text-gray-600">
+          <p className="text-muted-foreground">
             You're now ready to manage your construction projects efficiently. 
             The interface is designed to be simple and mobile-friendly for field workers.
           </p>
           
-          <div className="bg-blue-50 p-4 rounded-lg mt-6">
-            <h4 className="font-medium text-blue-900 mb-2">Need Help?</h4>
+          <div className="bg-primary/10 p-4 rounded-lg mt-6">
+            <h4 className="font-medium text-primary mb-2">Need Help?</h4>
             <p className="text-sm text-blue-800">
               • Use the help icon (?) in the top right for quick tips<br/>
               • Contact support for technical issues<br/>
@@ -250,7 +250,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
               <h2 className="text-lg font-semibold text-gray-900">
                 {currentStepData.title}
               </h2>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-muted-foreground">
                 {currentStepData.description}
               </p>
             </div>
@@ -258,7 +258,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
           
           <button
             onClick={handleSkip}
-            className="text-gray-400 hover:text-gray-600"
+            className="text-gray-400 hover:text-muted-foreground"
           >
             <X className="w-5 h-5" />
           </button>
@@ -289,7 +289,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
             {currentStep > 0 && (
               <button
                 onClick={handlePrevious}
-                className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                className="flex items-center gap-2 px-4 py-2 text-muted-foreground hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
               >
                 <ArrowLeft className="w-4 h-4" />
                 Previous

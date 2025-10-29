@@ -13,34 +13,34 @@ interface LazyContractCardProps {
 }
 
 const ContractCardPlaceholder = memo(() => (
-  <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 animate-pulse">
+  <div className="bg-card rounded-lg shadow-sm border border-border p-6 animate-pulse">
     {/* Header */}
     <div className="flex items-start justify-between mb-4">
       <div className="flex items-center space-x-3">
-        <div className="p-2 bg-gray-200 rounded-lg w-10 h-10"></div>
+        <div className="p-2 bg-secondary/80 rounded-lg w-10 h-10"></div>
         <div>
-          <div className="h-5 bg-gray-200 rounded w-40 mb-2"></div>
-          <div className="h-3 bg-gray-200 rounded w-32"></div>
+          <div className="h-5 bg-secondary/80 rounded w-40 mb-2"></div>
+          <div className="h-3 bg-secondary/80 rounded w-32"></div>
         </div>
       </div>
-      <div className="h-6 bg-gray-200 rounded-full w-16"></div>
+      <div className="h-6 bg-secondary/80 rounded-full w-16"></div>
     </div>
 
     {/* Contract details */}
     <div className="space-y-3 mb-4">
       {Array.from({ length: 4 }).map((_, i) => (
         <div key={i} className="flex items-center space-x-2">
-          <div className="h-4 w-4 bg-gray-200 rounded"></div>
-          <div className="h-3 bg-gray-200 rounded w-24"></div>
-          <div className="h-3 bg-gray-200 rounded w-32"></div>
+          <div className="h-4 w-4 bg-secondary/80 rounded"></div>
+          <div className="h-3 bg-secondary/80 rounded w-24"></div>
+          <div className="h-3 bg-secondary/80 rounded w-32"></div>
         </div>
       ))}
     </div>
 
     {/* Actions */}
-    <div className="flex justify-end space-x-2 pt-4 border-t border-gray-200">
-      <div className="h-8 bg-gray-200 rounded w-16"></div>
-      <div className="h-8 bg-gray-200 rounded w-16"></div>
+    <div className="flex justify-end space-x-2 pt-4 border-t border-border">
+      <div className="h-8 bg-secondary/80 rounded w-16"></div>
+      <div className="h-8 bg-secondary/80 rounded w-16"></div>
     </div>
   </div>
 ));
@@ -69,25 +69,25 @@ const OptimizedContractCard = memo<{
   const getStatusIcon = (status?: string) => {
     switch (status?.toLowerCase()) {
       case 'active':
-        return <CheckCircle className="h-5 w-5 text-green-500" />;
+        return <CheckCircle className="h-5 w-5 text-[var(--status-success-text)]" />;
       case 'completed':
-        return <CheckCircle className="h-5 w-5 text-blue-500" />;
+        return <CheckCircle className="h-5 w-5 text-primary" />;
       case 'suspended':
-        return <AlertCircle className="h-5 w-5 text-yellow-500" />;
+        return <AlertCircle className="h-5 w-5 text-[var(--status-warning-text)]" />;
       case 'terminated':
-        return <XCircle className="h-5 w-5 text-red-500" />;
+        return <XCircle className="h-5 w-5 text-[var(--status-critical-text)]" />;
       default:
-        return <AlertCircle className="h-5 w-5 text-gray-500" />;
+        return <AlertCircle className="h-5 w-5 text-muted-foreground" />;
     }
   };
 
   const getStatusColor = (status?: string) => {
     switch (status?.toLowerCase()) {
-      case 'active': return 'text-green-600 bg-green-100';
-      case 'completed': return 'text-blue-600 bg-blue-100';
-      case 'suspended': return 'text-yellow-600 bg-yellow-100';
-      case 'terminated': return 'text-red-600 bg-red-100';
-      default: return 'text-gray-600 bg-gray-100';
+      case 'active': return 'text-[var(--status-success-text)] bg-[var(--status-success-bg)]';
+      case 'completed': return 'text-primary bg-primary/10';
+      case 'suspended': return 'text-[var(--status-warning-text)] bg-[var(--status-warning-bg)]';
+      case 'terminated': return 'text-[var(--status-critical-text)] bg-[var(--status-critical-bg)]';
+      default: return 'text-muted-foreground bg-secondary';
     }
   };
 
@@ -99,20 +99,20 @@ const OptimizedContractCard = memo<{
 
   return (
     <div
-      className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow cursor-pointer"
+      className="bg-card rounded-lg shadow-sm border border-border p-6 hover:shadow-md transition-shadow cursor-pointer"
       onClick={handleClick}
     >
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center space-x-3">
-          <div className="p-2 bg-blue-50 rounded-lg">
-            <FileText className="h-6 w-6 text-blue-600" />
+          <div className="p-2 bg-primary/10 rounded-lg">
+            <FileText className="h-6 w-6 text-primary" />
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">
+            <h3 className="text-lg font-semibold text-foreground">
               {contract.contract_nickname || `Contract #${contract.id}`}
             </h3>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-muted-foreground">
               {contract.project?.name} - {contract.subcontractor?.name}
             </p>
           </div>
@@ -131,39 +131,39 @@ const OptimizedContractCard = memo<{
       {/* Contract Details */}
       <div className="space-y-3 text-sm">
         <div className="flex items-center space-x-2">
-          <Building className="h-4 w-4 text-gray-400" />
-          <span className="text-gray-500">Project:</span>
+          <Building className="h-4 w-4 text-muted-foreground" />
+          <span className="text-muted-foreground">Project:</span>
           <span className="font-medium">{contract.project?.name || 'N/A'}</span>
         </div>
 
         <div className="flex items-center space-x-2">
-          <User className="h-4 w-4 text-gray-400" />
-          <span className="text-gray-500">Contractor:</span>
+          <User className="h-4 w-4 text-muted-foreground" />
+          <span className="text-muted-foreground">Contractor:</span>
           <span className="font-medium">{contract.subcontractor?.name || 'N/A'}</span>
           {contract.subcontractor?.trade && (
-            <span className="text-gray-400">({contract.subcontractor.trade})</span>
+            <span className="text-muted-foreground">({contract.subcontractor.trade})</span>
           )}
         </div>
 
         <div className="flex items-center space-x-2">
-          <DollarSign className="h-4 w-4 text-gray-400" />
-          <span className="text-gray-500">Amount:</span>
+          <DollarSign className="h-4 w-4 text-muted-foreground" />
+          <span className="text-muted-foreground">Amount:</span>
           <span className="font-medium">{formatCurrency(contract.contract_amount)}</span>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div className="flex items-center space-x-2">
-            <Calendar className="h-4 w-4 text-gray-400" />
+            <Calendar className="h-4 w-4 text-muted-foreground" />
             <div>
-              <span className="text-gray-500">Start:</span>
+              <span className="text-muted-foreground">Start:</span>
               <span className="ml-1 font-medium">{formatDate(contract.start_date)}</span>
             </div>
           </div>
 
           <div className="flex items-center space-x-2">
-            <Calendar className="h-4 w-4 text-gray-400" />
+            <Calendar className="h-4 w-4 text-muted-foreground" />
             <div>
-              <span className="text-gray-500">End:</span>
+              <span className="text-muted-foreground">End:</span>
               <span className="ml-1 font-medium">{formatDate(contract.end_date)}</span>
             </div>
           </div>
@@ -171,18 +171,18 @@ const OptimizedContractCard = memo<{
       </div>
 
       {/* Actions */}
-      <div className="flex justify-end space-x-2 pt-4 mt-4 border-t border-gray-200">
+      <div className="flex justify-end space-x-2 pt-4 mt-4 border-t border-border">
         {onEdit && (
           <button
             onClick={handleEdit}
-            className="px-3 py-1 text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors"
+            className="px-3 py-1 text-sm font-medium text-primary hover:text-primary transition-colors"
           >
             Edit
           </button>
         )}
         <button
           onClick={handleClick}
-          className="px-3 py-1 text-sm font-medium text-gray-600 hover:text-gray-800 transition-colors"
+          className="px-3 py-1 text-sm font-medium text-muted-foreground hover:text-gray-800 transition-colors"
         >
           View
         </button>

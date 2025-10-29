@@ -82,12 +82,12 @@ const ComplianceView: React.FC = () => {
         icon: string;
     }> = ({ title, value, subtitle, color, icon }) => {
         const colorClasses = {
-            blue: 'bg-blue-50 border-blue-200 text-blue-900',
+            blue: 'bg-primary/10 border-primary/20 text-primary',
             green: 'bg-green-50 border-green-200 text-green-900',
             yellow: 'bg-yellow-50 border-yellow-200 text-yellow-900',
             red: 'bg-red-50 border-red-200 text-red-900',
             purple: 'bg-purple-50 border-purple-200 text-purple-900',
-            gray: 'bg-gray-50 border-gray-200 text-gray-900'
+            gray: 'bg-muted border-border text-foreground'
         };
 
         return (
@@ -115,14 +115,14 @@ const ComplianceView: React.FC = () => {
         };
 
         const colorClasses = {
-            blue: 'bg-blue-500',
+            blue: 'bg-primary',
             green: 'bg-green-500',
             yellow: 'bg-yellow-500',
             red: 'bg-red-500'
         };
 
         return (
-            <div className={`w-full bg-gray-200 rounded-full ${heightClasses[height]} overflow-hidden`}>
+            <div className={`w-full bg-muted rounded-full ${heightClasses[height]} overflow-hidden`}>
                 <div 
                     className={`${colorClasses[color]} ${heightClasses[height]} rounded-full transition-all duration-500 ease-out`}
                     style={{ width: `${Math.min(percentage, 100)}%` }}
@@ -143,7 +143,7 @@ const ComplianceView: React.FC = () => {
                 case 'pending':
                     return 'bg-yellow-100 text-yellow-800 border-yellow-200';
                 default:
-                    return 'bg-gray-100 text-gray-800 border-gray-200';
+                    return 'bg-secondary text-secondary-foreground border-border';
             }
         };
 
@@ -173,8 +173,8 @@ const ComplianceView: React.FC = () => {
         <div className="space-y-6">
             {/* Header */}
             <div className="text-center">
-                <h2 className="text-3xl font-bold text-gray-900 mb-2">🛡️ Permit & Compliance Dashboard</h2>
-                <p className="text-gray-600">Monitor project compliance status and permit requirements</p>
+                <h2 className="text-3xl font-bold text-foreground mb-2">🛡️ Permit & Compliance Dashboard</h2>
+                <p className="text-muted-foreground">Monitor project compliance status and permit requirements</p>
             </div>
 
             {/* Key Metrics Grid */}
@@ -212,8 +212,8 @@ const ComplianceView: React.FC = () => {
             {/* Compliance Overview */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Permit Type Breakdown */}
-                <div className="bg-white rounded-lg border shadow-sm p-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <div className="bg-card rounded-lg border shadow-sm p-6">
+                    <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
                         📋 Permit Types Overview
                     </h3>
                     {complianceMetrics.permitTypes.length === 0 ? (
@@ -237,7 +237,7 @@ const ComplianceView: React.FC = () => {
                                     <div key={permitType} className="space-y-2">
                                         <div className="flex items-center justify-between">
                                             <span className="text-sm font-medium text-gray-700 capitalize">{permitType}</span>
-                                            <span className="text-sm text-gray-600">{validCount}/{typeCount}</span>
+                                            <span className="text-sm text-muted-foreground">{validCount}/{typeCount}</span>
                                         </div>
                                         <ProgressBar 
                                             percentage={percentage} 
@@ -251,8 +251,8 @@ const ComplianceView: React.FC = () => {
                 </div>
 
                 {/* Compliance Status Distribution */}
-                <div className="bg-white rounded-lg border shadow-sm p-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <div className="bg-card rounded-lg border shadow-sm p-6">
+                    <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
                         🎯 Project Compliance Status
                     </h3>
                     <div className="space-y-4">
@@ -290,8 +290,8 @@ const ComplianceView: React.FC = () => {
             </div>
 
             {/* Individual Project Compliance */}
-            <div className="bg-white rounded-lg border shadow-sm p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2">
+            <div className="bg-card rounded-lg border shadow-sm p-6">
+                <h3 className="text-lg font-semibold text-foreground mb-6 flex items-center gap-2">
                     🏗️ Project-by-Project Compliance
                 </h3>
                 {complianceMetrics.projectCompliance.length === 0 ? (
@@ -325,12 +325,12 @@ const ComplianceView: React.FC = () => {
                             return (
                                 <div key={project.id} className={`border rounded-lg p-4 hover:shadow-md transition-all ${getProjectStatusColor()}`}>
                                     <div className="flex items-start justify-between mb-3">
-                                        <h4 className="font-semibold text-gray-900 flex-1">{project.name}</h4>
+                                        <h4 className="font-semibold text-foreground flex-1">{project.name}</h4>
                                         <span className="text-lg ml-2">{getProjectStatusIcon()}</span>
                                     </div>
 
                                     <div className="mb-4">
-                                        <div className="flex justify-between text-xs text-gray-600 mb-1">
+                                        <div className="flex justify-between text-xs text-muted-foreground mb-1">
                                             <span>Compliance Score</span>
                                             <span>{project.complianceScore.toFixed(1)}%</span>
                                         </div>
@@ -365,8 +365,8 @@ const ComplianceView: React.FC = () => {
 
             {/* Action Items */}
             {(complianceMetrics.expiredItems > 0 || complianceMetrics.pendingItems > 0) && (
-                <div className="bg-white rounded-lg border shadow-sm p-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <div className="bg-card rounded-lg border shadow-sm p-6">
+                    <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
                         📋 Action Items Required
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

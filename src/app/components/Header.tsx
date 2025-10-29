@@ -267,7 +267,7 @@ const Header: React.FC<HeaderProps> = ({ onShowProfile, onLogout, userData, onSe
   };
 
   return (
-    <div className="bg-white shadow-sm border-b fixed top-0 left-0 right-0 z-40 lg:left-64 transition-all duration-300 h-16">
+    <div className="bg-card shadow-sm border-b border-border fixed top-0 left-0 right-0 z-40 lg:left-64 transition-all duration-300 h-16">
       <div className="h-full flex items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Logo and Title - Hidden on desktop since sidebar has it */}
         <div className="flex items-center gap-3 flex-1 min-w-0 lg:hidden">
@@ -275,11 +275,11 @@ const Header: React.FC<HeaderProps> = ({ onShowProfile, onLogout, userData, onSe
             <span className="text-white font-bold text-sm">COC</span>
           </div>
           <div className="flex flex-col min-w-0">
-            <h1 className="text-lg font-bold text-gray-900 truncate">
+            <h1 className="text-lg font-bold text-foreground truncate">
               <span className="hidden sm:inline">Construction Operations</span>
               <span className="sm:hidden">COC</span>
           </h1>
-            <p className="text-xs text-gray-500 hidden sm:block">Stanton Management</p>
+            <p className="text-xs text-muted-foreground hidden sm:block">Stanton Management</p>
           </div>
         </div>
 

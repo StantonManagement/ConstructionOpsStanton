@@ -42,26 +42,26 @@ class ErrorBoundary extends Component<Props, State> {
       }
 
       return (
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-          <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-6 text-center">
-            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <AlertTriangle className="w-8 h-8 text-red-600" />
+        <div className="min-h-screen bg-muted flex items-center justify-center p-4">
+          <div className="max-w-md w-full bg-card rounded-lg shadow-lg p-6 text-center">
+            <div className="w-16 h-16 bg-[var(--status-critical-bg)] rounded-full flex items-center justify-center mx-auto mb-4">
+              <AlertTriangle className="w-8 h-8 text-[var(--status-critical-text)]" />
             </div>
             
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">
+            <h2 className="text-xl font-semibold text-foreground mb-2">
               Something went wrong
             </h2>
             
-            <p className="text-gray-600 mb-6">
+            <p className="text-muted-foreground mb-6">
               We encountered an unexpected error. Please try again or contact support if the problem persists.
             </p>
 
             {process.env.NODE_ENV === 'development' && this.state.error && (
               <details className="mb-6 text-left">
-                <summary className="cursor-pointer text-sm text-gray-500 hover:text-gray-700 mb-2">
+                <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground mb-2">
                   Error Details (Development)
                 </summary>
-                <pre className="text-xs bg-gray-100 p-3 rounded overflow-auto max-h-32">
+                <pre className="text-xs bg-muted p-3 rounded overflow-auto max-h-32">
                   {this.state.error.toString()}
                 </pre>
               </details>
@@ -70,7 +70,7 @@ class ErrorBoundary extends Component<Props, State> {
             <div className="flex flex-col sm:flex-row gap-3">
               <button
                 onClick={this.handleRetry}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
               >
                 <RefreshCw className="w-4 h-4" />
                 Try Again
@@ -78,7 +78,7 @@ class ErrorBoundary extends Component<Props, State> {
               
               <button
                 onClick={this.handleGoHome}
-                className="flex-1 bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                className="flex-1 bg-secondary hover:bg-secondary/80 text-secondary-foreground px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
               >
                 <Home className="w-4 h-4" />
                 Go Home

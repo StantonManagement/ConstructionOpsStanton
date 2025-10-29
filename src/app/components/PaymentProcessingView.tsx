@@ -133,32 +133,32 @@ const StatCard: React.FC<{
 }> = ({ title, value, icon, variant, trend }) => {
   const variants = {
     danger: {
-      bg: 'bg-gradient-to-br from-red-50 to-red-100/50',
-      border: 'border-red-200',
-      text: 'text-red-900',
-      subtext: 'text-red-700',
-      accent: 'text-red-600'
+      bg: 'bg-[var(--status-critical-bg)]',
+      border: 'border-[var(--status-critical-border)]',
+      text: 'text-[var(--status-critical-text)]',
+      subtext: 'text-[var(--status-critical-text)]',
+      accent: 'text-[var(--status-critical-icon)]'
     },
     warning: {
-      bg: 'bg-gradient-to-br from-amber-50 to-amber-100/50',
-      border: 'border-amber-200',
-      text: 'text-amber-900',
-      subtext: 'text-amber-700',
-      accent: 'text-amber-600'
+      bg: 'bg-[var(--status-warning-bg)]',
+      border: 'border-[var(--status-warning-border)]',
+      text: 'text-[var(--status-warning-text)]',
+      subtext: 'text-[var(--status-warning-text)]',
+      accent: 'text-[var(--status-warning-icon)]'
     },
     info: {
-      bg: 'bg-gradient-to-br from-blue-50 to-blue-100/50',
-      border: 'border-blue-200',
-      text: 'text-blue-900',
-      subtext: 'text-blue-700',
-      accent: 'text-blue-600'
+      bg: 'bg-primary/10',
+      border: 'border-primary/20',
+      text: 'text-primary',
+      subtext: 'text-primary',
+      accent: 'text-primary'
     },
     success: {
-      bg: 'bg-gradient-to-br from-emerald-50 to-emerald-100/50',
-      border: 'border-emerald-200',
-      text: 'text-emerald-900',
-      subtext: 'text-emerald-700',
-      accent: 'text-emerald-600'
+      bg: 'bg-[var(--status-success-bg)]',
+      border: 'border-[var(--status-success-border)]',
+      text: 'text-[var(--status-success-text)]',
+      subtext: 'text-[var(--status-success-text)]',
+      accent: 'text-[var(--status-success-icon)]'
     }
   };
 
@@ -167,11 +167,11 @@ const StatCard: React.FC<{
   return (
     <div className={`${v.bg} ${v.border} border rounded-xl p-5 shadow-sm hover:shadow-md transition-all duration-200 transform hover:-translate-y-0.5`}>
       <div className="flex items-start justify-between mb-3">
-        <div className={`w-10 h-10 ${v.accent} flex items-center justify-center text-xl bg-white/60 rounded-lg`}>
+        <div className={`w-10 h-10 ${v.accent} flex items-center justify-center text-xl bg-card/60 rounded-lg`}>
           {icon}
         </div>
         {trend && (
-          <span className={`text-xs ${v.subtext} px-2 py-1 bg-white/50 rounded-full`}>
+          <span className={`text-xs ${v.subtext} px-2 py-1 bg-card/50 rounded-full`}>
             {trend}
           </span>
         )}

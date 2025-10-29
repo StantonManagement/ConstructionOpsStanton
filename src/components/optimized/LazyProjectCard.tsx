@@ -24,19 +24,19 @@ interface LazyProjectCardProps {
 }
 
 const ProjectCardPlaceholder = memo(() => (
-  <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 animate-pulse">
+  <div className="bg-white rounded-lg shadow-sm border border-border p-6 animate-pulse">
     {/* Header */}
     <div className="flex items-start justify-between mb-4">
       <div className="flex items-center space-x-3">
-        <div className="p-2 bg-gray-200 rounded-lg w-10 h-10"></div>
+        <div className="p-2 bg-secondary/80 rounded-lg w-10 h-10"></div>
         <div>
-          <div className="h-5 bg-gray-200 rounded w-32 mb-2"></div>
-          <div className="h-3 bg-gray-200 rounded w-24"></div>
+          <div className="h-5 bg-secondary/80 rounded w-32 mb-2"></div>
+          <div className="h-3 bg-secondary/80 rounded w-24"></div>
         </div>
       </div>
       <div className="flex items-center space-x-2">
-        <div className="h-6 bg-gray-200 rounded-full w-16"></div>
-        <div className="h-6 bg-gray-200 rounded w-6"></div>
+        <div className="h-6 bg-secondary/80 rounded-full w-16"></div>
+        <div className="h-6 bg-secondary/80 rounded w-6"></div>
       </div>
     </div>
 
@@ -44,10 +44,10 @@ const ProjectCardPlaceholder = memo(() => (
     <div className="grid grid-cols-2 gap-4 text-sm mb-4">
       {Array.from({ length: 4 }).map((_, i) => (
         <div key={i} className="flex items-center space-x-2">
-          <div className="h-4 w-4 bg-gray-200 rounded"></div>
+          <div className="h-4 w-4 bg-secondary/80 rounded"></div>
           <div>
-            <div className="h-3 bg-gray-200 rounded w-12 mb-1"></div>
-            <div className="h-3 bg-gray-200 rounded w-16"></div>
+            <div className="h-3 bg-secondary/80 rounded w-12 mb-1"></div>
+            <div className="h-3 bg-secondary/80 rounded w-16"></div>
           </div>
         </div>
       ))}
@@ -56,10 +56,10 @@ const ProjectCardPlaceholder = memo(() => (
     {/* Progress bar */}
     <div className="space-y-2">
       <div className="flex justify-between">
-        <div className="h-3 bg-gray-200 rounded w-16"></div>
-        <div className="h-3 bg-gray-200 rounded w-8"></div>
+        <div className="h-3 bg-secondary/80 rounded w-16"></div>
+        <div className="h-3 bg-secondary/80 rounded w-8"></div>
       </div>
-      <div className="w-full bg-gray-200 rounded-full h-2"></div>
+      <div className="w-full bg-secondary/80 rounded-full h-2"></div>
     </div>
   </div>
 ));

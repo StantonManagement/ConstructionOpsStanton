@@ -45,8 +45,8 @@ const NavButton: React.FC<NavButtonProps> = ({ id, activeTab, setActiveTab, icon
       className={`
         w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-200
         ${isActive 
-          ? 'bg-blue-100 text-blue-700 border-r-2 border-blue-500' 
-          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+          ? 'bg-primary/10 text-primary border-r-2 border-primary' 
+          : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
         }
       `}
     >
@@ -225,7 +225,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab, setSel
 
       {/* Navigation sidebar */}
       <nav className={`
-        fixed top-0 left-0 h-full w-64 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out z-40
+        fixed top-0 left-0 h-full w-64 bg-sidebar border-r border-sidebar-border transform transition-transform duration-300 ease-in-out z-40
         ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
         <div className="flex flex-col h-full">

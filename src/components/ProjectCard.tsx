@@ -41,8 +41,8 @@ const ProjectCard: React.FC<Props> = ({ project, onSelect, isLoading = false }) 
 
   return (
     <div 
-      className={`border rounded-lg p-4 bg-white shadow hover:shadow-md transition-all duration-200 ${
-        onSelect ? 'cursor-pointer hover:shadow-lg hover:border-blue-300 focus:ring-2 focus:ring-blue-400' : ''
+      className={`border border-border rounded-lg p-4 bg-card shadow-sm hover:shadow-md transition-all duration-200 ${
+        onSelect ? 'cursor-pointer hover:shadow-lg hover:border-primary/50 focus:ring-2 focus:ring-primary/20' : ''
       }`}
       onClick={onSelect ? handleClick : undefined}
       onKeyDown={onSelect ? handleKeyDown : undefined}

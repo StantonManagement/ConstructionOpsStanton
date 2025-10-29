@@ -108,16 +108,16 @@ const SMSErrorRecovery: React.FC<SMSErrorRecoveryProps> = ({
   };
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-4">
+    <div className="bg-card border border-border rounded-lg p-4">
       <div className="flex items-start gap-3">
         {getStatusIcon()}
         
         <div className="flex-1">
-          <h4 className="font-medium text-gray-900 mb-1">
+          <h4 className="font-medium text-foreground mb-1">
             SMS Recovery
           </h4>
           
-          <p className="text-sm text-gray-600 mb-3">
+          <p className="text-sm text-muted-foreground mb-3">
             {getStatusMessage()}
           </p>
 
@@ -132,7 +132,7 @@ const SMSErrorRecovery: React.FC<SMSErrorRecoveryProps> = ({
               <button
                 onClick={attemptRecovery}
                 disabled={isRecovering}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {isRecovering ? (
                   <RefreshCw className="w-4 h-4 animate-spin" />
@@ -144,7 +144,7 @@ const SMSErrorRecovery: React.FC<SMSErrorRecoveryProps> = ({
               
               <button
                 onClick={handleManualOverride}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors"
               >
                 <Phone className="w-4 h-4" />
                 Manual Override
@@ -165,7 +165,7 @@ const SMSErrorRecovery: React.FC<SMSErrorRecoveryProps> = ({
               
               <button
                 onClick={handleManualOverride}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors"
               >
                 <Phone className="w-4 h-4" />
                 Manual Override
@@ -181,7 +181,7 @@ const SMSErrorRecovery: React.FC<SMSErrorRecoveryProps> = ({
             </div>
           )}
 
-          <div className="mt-3 text-xs text-gray-500">
+          <div className="mt-3 text-xs text-muted-foreground">
             <p>Contractor Phone: {contractorPhone}</p>
             <p>Payment App ID: #{paymentAppId}</p>
             {retryCount > 0 && (

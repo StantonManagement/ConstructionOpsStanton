@@ -28,7 +28,7 @@ const getStatusBadge = (status: string) => {
       label: "PENDING"
     },
     sent: { 
-      color: "bg-blue-100 text-blue-800 border-blue-200", 
+      color: "bg-primary/10 text-primary border-primary/20", 
       icon: <MessageSquare className="w-4 h-4" />,
       label: "SENT"
     },
@@ -245,7 +245,7 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
     return (
       <div className="flex items-center justify-center py-12">
         <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-        <span className="ml-3 text-gray-600">Loading daily log requests...</span>
+        <span className="ml-3 text-muted-foreground">Loading daily log requests...</span>
       </div>
     );
   }
@@ -255,15 +255,15 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Daily Log Requests</h1>
-          <p className="text-sm text-gray-600 mt-1">
+          <h1 className="text-2xl font-bold text-foreground">Daily Log Requests</h1>
+          <p className="text-sm text-muted-foreground mt-1">
             {filteredRequests.length} requests • Updated {new Date().toLocaleTimeString()}
           </p>
         </div>
         <div className="flex items-center gap-3">
           <button
             onClick={() => setShowAddModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90"
           >
             <Plus className="w-4 h-4" />
             📝 Add Request
@@ -271,7 +271,7 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
           <button
             onClick={handleRefresh}
             disabled={isRefreshing}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg text-sm font-medium hover:bg-gray-700 disabled:opacity-50"
+            className="flex items-center gap-2 px-4 py-2 bg-secondary text-secondary-foreground rounded-lg text-sm font-medium hover:bg-secondary/80 disabled:opacity-50"
           >
             <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
             Refresh
@@ -300,19 +300,19 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
               {filteredRequests.map((request) => (
           <div 
             key={request.id} 
-            className="bg-white border border-gray-200 rounded-lg p-4 cursor-pointer hover:shadow-md transition-all duration-200"
+            className="bg-card border border-border rounded-lg p-4 cursor-pointer hover:shadow-md transition-all duration-200"
             onClick={() => handleViewRequest(request)}
           >
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="text-sm font-medium text-gray-900">
+                  <span className="text-sm font-medium text-foreground">
                     {request.project?.name} - {request.project?.client_name}
                   </span>
                   {getStatusBadge(request.request_status)}
                     </div>
                 
-                <div className="text-sm text-gray-600 mb-2">
+                <div className="text-sm text-muted-foreground mb-2">
                   <div>PM Phone: {request.pm_phone_number}</div>
                   <div>Request Date: {request.request_date}</div>
                   <div>Request Time: {request.request_time || '18:00'} EST</div>
@@ -369,10 +369,10 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
         <div className="fixed inset-0  bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg max-w-md w-full">
             <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-900">Add Daily Log Request</h2>
+              <h2 className="text-xl font-semibold text-foreground">Add Daily Log Request</h2>
               <button
                 onClick={() => setShowAddModal(false)}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-400 hover:text-muted-foreground"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -465,12 +465,12 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
           <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden">
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900">
+                <h3 className="text-lg font-semibold text-foreground">
                   Daily Logs - {selectedRequest.project?.name}
                 </h3>
               <button
                 onClick={handleCloseViewModal}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-400 hover:text-muted-foreground"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -478,7 +478,7 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
               </button>
             </div>
             
-              <div className="mt-2 text-sm text-gray-600">
+              <div className="mt-2 text-sm text-muted-foreground">
                 <div>Project: {selectedRequest.project?.name} - {selectedRequest.project?.client_name}</div>
                 <div>PM Phone: {selectedRequest.pm_phone_number}</div>
                 <div>Request Status: {selectedRequest.request_status}</div>
@@ -490,17 +490,17 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
               {loadingNotes ? (
                 <div className="flex items-center justify-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                  <span className="ml-2 text-gray-600">Loading PM notes...</span>
+                  <span className="ml-2 text-muted-foreground">Loading PM notes...</span>
                 </div>
               ) : pmNotes.length > 0 ? (
                   <div className="space-y-4">
-                  <h4 className="text-md font-semibold text-gray-900 mb-4">
+                  <h4 className="text-md font-semibold text-foreground mb-4">
                     PM Notes from Payment Applications ({pmNotes.length})
                   </h4>
                   {pmNotes.map((note, index) => (
                     <div key={note.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium text-gray-900">
+                        <span className="text-sm font-medium text-foreground">
                           Payment App #{note.id}
                         </span>
                         <span className={`text-xs px-2 py-1 rounded-full ${
@@ -513,12 +513,12 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
                         </span>
                       </div>
                       
-                      <div className="text-sm text-gray-600 mb-2">
+                      <div className="text-sm text-muted-foreground mb-2">
                         <div>Created: {formatDate(note.created_at)}</div>
                       </div>
                       
                       <div className="bg-white rounded p-3 border border-gray-200">
-                        <div className="text-sm text-gray-900 font-medium mb-1">PM Notes:</div>
+                        <div className="text-sm text-foreground font-medium mb-1">PM Notes:</div>
                         <div className="text-sm text-gray-700 whitespace-pre-wrap">
                           {note.pm_notes}
                     </div>
@@ -539,7 +539,7 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
 
             <div className="p-6 border-t border-gray-200 bg-gray-50">
               <div className="flex justify-between items-center">
-                <div className="text-sm text-gray-600">
+                <div className="text-sm text-muted-foreground">
                   {pmNotes.length > 0 ? (
                     <span>Found {pmNotes.length} PM note{pmNotes.length !== 1 ? 's' : ''} from payment applications</span>
                   ) : (

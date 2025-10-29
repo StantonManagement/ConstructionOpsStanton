@@ -50,7 +50,7 @@ const MetricsView: React.FC = () => {
     trend?: { value: number; isPositive: boolean };
     color: string;
   }> = ({ title, value, icon, trend, color }) => (
-    <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+    <div className="bg-card rounded-xl p-6 shadow-sm border border-border hover:shadow-md transition-shadow">
       <div className="flex items-center justify-between mb-4">
         <div className={`p-3 rounded-lg ${color}`}>
           {icon}
@@ -62,16 +62,16 @@ const MetricsView: React.FC = () => {
           </div>
         )}
       </div>
-      <h3 className="text-2xl font-bold text-gray-900 mb-1">{value}</h3>
-      <p className="text-gray-600 text-sm">{title}</p>
+      <h3 className="text-2xl font-bold text-foreground mb-1">{value}</h3>
+      <p className="text-muted-foreground text-sm">{title}</p>
     </div>
   );
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900">📊 Metrics & Analytics</h2>
-        <div className="flex items-center gap-2 text-sm text-gray-600">
+        <h2 className="text-2xl font-bold text-foreground">📊 Metrics & Analytics</h2>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Calendar className="w-4 h-4" />
           Last updated  {new Date().toLocaleDateString()}
         </div>
@@ -83,7 +83,7 @@ const MetricsView: React.FC = () => {
           title="Total Projects"
           value={metrics.totalProjects}
           icon={<Building className="w-6 h-6 text-white" />}
-          color="bg-blue-500"
+          color="bg-primary"
           trend={{ value: 12, isPositive: true }}
         />
         <MetricCard
@@ -108,14 +108,14 @@ const MetricsView: React.FC = () => {
       </div>
 
       {/* Financial Metrics */}
-      <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-        <h3 className="text-lg font-semibold text-gray-900 mb-6">💰 Financial Overview</h3>
+      <div className="bg-card rounded-xl p-6 shadow-sm border border-border">
+        <h3 className="text-lg font-semibold text-foreground mb-6">💰 Financial Overview</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="text-center">
-            <div className="text-3xl font-bold text-blue-600 mb-2">
+            <div className="text-3xl font-bold text-primary mb-2">
               ${metrics.totalSpent.toLocaleString()}
             </div>
-            <div className="text-gray-600">Total Spent</div>
+            <div className="text-muted-foreground">Total Spent</div>
             <div className="text-sm text-gray-500 mt-1">
               {metrics.budgetUtilization.toFixed(1)}% of budget
             </div>
@@ -124,7 +124,7 @@ const MetricsView: React.FC = () => {
             <div className="text-3xl font-bold text-green-600 mb-2">
               ${metrics.remainingBudget.toLocaleString()}
             </div>
-            <div className="text-gray-600">Remaining Budget</div>
+            <div className="text-muted-foreground">Remaining Budget</div>
             <div className="text-sm text-gray-500 mt-1">
               Available funds
             </div>
@@ -133,7 +133,7 @@ const MetricsView: React.FC = () => {
             <div className="text-3xl font-bold text-purple-600 mb-2">
               ${metrics.contractValue.toLocaleString()}
             </div>
-            <div className="text-gray-600">Contract Value</div>
+            <div className="text-muted-foreground">Contract Value</div>
             <div className="text-sm text-gray-500 mt-1">
               {metrics.totalContracts} contracts
             </div>
@@ -144,7 +144,7 @@ const MetricsView: React.FC = () => {
         <div className="mt-6">
           <div className="flex justify-between items-center mb-2">
             <span className="text-sm font-medium text-gray-700">Budget Utilization</span>
-            <span className="text-sm text-gray-600">{metrics.budgetUtilization.toFixed(1)}%</span>
+            <span className="text-sm text-muted-foreground">{metrics.budgetUtilization.toFixed(1)}%</span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-3">
             <div 
@@ -160,31 +160,31 @@ const MetricsView: React.FC = () => {
 
       {/* Performance Metrics */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">🎯 Performance Metrics</h3>
+        <div className="bg-card rounded-xl p-6 shadow-sm border border-border">
+          <h3 className="text-lg font-semibold text-foreground mb-4">🎯 Performance Metrics</h3>
           <div className="space-y-4">
             <div className="flex justify-between items-center">
-              <span className="text-gray-600">Project Completion Rate</span>
-              <span className="font-semibold text-gray-900">{metrics.completionRate.toFixed(1)}%</span>
+              <span className="text-muted-foreground">Project Completion Rate</span>
+              <span className="font-semibold text-foreground">{metrics.completionRate.toFixed(1)}%</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-gray-600">Average Project Budget</span>
-              <span className="font-semibold text-gray-900">${metrics.avgProjectBudget.toLocaleString()}</span>
+              <span className="text-muted-foreground">Average Project Budget</span>
+              <span className="font-semibold text-foreground">${metrics.avgProjectBudget.toLocaleString()}</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-gray-600">Vendor Utilization</span>
-              <span className="font-semibold text-gray-900">
+              <span className="text-muted-foreground">Vendor Utilization</span>
+              <span className="font-semibold text-foreground">
                 {metrics.totalVendors > 0 ? ((metrics.activeVendors / metrics.totalVendors) * 100).toFixed(1) : 0}%
               </span>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">📈 Recent Activity</h3>
+        <div className="bg-card rounded-xl p-6 shadow-sm border border-border">
+          <h3 className="text-lg font-semibold text-foreground mb-4">📈 Recent Activity</h3>
           <div className="space-y-3">
             <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
-              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+              <div className="w-2 h-2 bg-primary rounded-full"></div>
               <span className="text-sm text-gray-700">New project started this week</span>
             </div>
             <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
@@ -200,11 +200,11 @@ const MetricsView: React.FC = () => {
       </div>
 
       {/* Project Status Distribution */}
-      <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-        <h3 className="text-lg font-semibold text-gray-900 mb-6">📋 Project Status Distribution</h3>
+      <div className="bg-card rounded-xl p-6 shadow-sm border border-border">
+        <h3 className="text-lg font-semibold text-foreground mb-6">📋 Project Status Distribution</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="text-center p-4 bg-blue-50 rounded-lg">
-            <div className="text-2xl font-bold text-blue-600 mb-1">{metrics.activeProjects}</div>
+            <div className="text-2xl font-bold text-primary mb-1">{metrics.activeProjects}</div>
             <div className="text-sm text-blue-700">Active Projects</div>
           </div>
           <div className="text-center p-4 bg-green-50 rounded-lg">
@@ -212,7 +212,7 @@ const MetricsView: React.FC = () => {
             <div className="text-sm text-green-700">Completed Projects</div>
           </div>
           <div className="text-center p-4 bg-gray-50 rounded-lg">
-            <div className="text-2xl font-bold text-gray-600 mb-1">
+            <div className="text-2xl font-bold text-muted-foreground mb-1">
               {metrics.totalProjects - metrics.activeProjects - metrics.completedProjects}
             </div>
             <div className="text-sm text-gray-700">Other Status</div>

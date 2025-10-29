@@ -3,8 +3,8 @@ import { cn } from '../utils'
 describe('utils', () => {
   describe('cn function', () => {
     it('combines class names correctly', () => {
-      const result = cn('text-red-500', 'bg-blue-500')
-      expect(result).toBe('text-red-500 bg-blue-500')
+      const result = cn('text-[var(--status-critical-text)]', 'bg-primary')
+      expect(result).toBe('text-[var(--status-critical-text)] bg-primary')
     })
 
     it('handles conditional classes', () => {
@@ -38,8 +38,8 @@ describe('utils', () => {
     })
 
     it('merges conflicting Tailwind classes', () => {
-      const result = cn('text-red-500', 'text-blue-500')
-      expect(result).toBe('text-blue-500')
+      const result = cn('text-[var(--status-critical-text)]', 'text-primary')
+      expect(result).toBe('text-primary')
     })
 
     it('handles empty inputs', () => {

@@ -4,6 +4,8 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { DollarSign, Filter, Search, RefreshCw, CheckCircle, XCircle, Clock, AlertCircle, ChevronLeft, ChevronRight, Eye, Trash2 } from 'lucide-react';
 import { generateG703Pdf } from '@/lib/g703Pdf';
+import { Badge } from '@/components/ui/badge';
+import { getPaymentStatusBadge, getStatusLabel, getStatusIconColor, PaymentStatus } from '@/lib/statusColors';
 
 // Utility functions
 const formatDate = (dateString: string) => {
@@ -27,11 +29,11 @@ const formatCurrency = (amount: number) => {
 function CompactStatCard({ icon, label, value, change, color, onClick, isActive }: any) {
   return (
     <div 
-      className={`bg-white border rounded-lg p-3 sm:p-4 cursor-pointer transition-all hover:shadow-md ${
+      className={`bg-card border rounded-lg p-3 sm:p-4 cursor-pointer transition-all duration-200 hover:shadow-md ${
         isActive 
-          ? 'border-blue-500 bg-blue-50 shadow-md' 
-          : 'border-gray-200 hover:border-blue-300'
-      } ${onClick ? 'hover:border-blue-300' : ''}`}
+          ? 'border-primary bg-primary/5 shadow-md' 
+          : 'border-border hover:border-primary/50'
+      } ${onClick ? 'hover:border-primary/50' : ''}`}
       onClick={onClick}
     >
       <div className="flex items-center justify-between">
@@ -40,8 +42,8 @@ function CompactStatCard({ icon, label, value, change, color, onClick, isActive 
             <span className="text-sm sm:text-lg">{icon}</span>
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">{label}</p>
-            <p className="text-lg sm:text-2xl font-bold text-gray-900 truncate">{value}</p>
+            <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">{label}</p>
+            <p className="text-lg sm:text-2xl font-bold text-foreground truncate">{value}</p>
           </div>
         </div>
         {change && (
@@ -1289,14 +1291,9 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
                   Back to Payment Applications
                 </button>
                 <div className="flex items-center gap-3">
-                  <span className={`px-3 py-1 text-sm font-medium rounded-full border ${
-                    selectedPaymentForVerification?.status === 'approved' ? 'bg-green-100 text-green-800 border-green-200' :
-                    selectedPaymentForVerification?.status === 'rejected' ? 'bg-red-100 text-red-800 border-red-200' :
-                    selectedPaymentForVerification?.status === 'pending' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
-                    'bg-gray-100 text-gray-800 border-gray-200'
-                  }`}>
-                    {selectedPaymentForVerification?.status?.toUpperCase() || 'PENDING'}
-                  </span>
+                  <Badge variant={getPaymentStatusBadge(selectedPaymentForVerification?.status as PaymentStatus) as any}>
+                    {getStatusLabel(selectedPaymentForVerification?.status as PaymentStatus)}
+                  </Badge>
                 </div>
               </div>
             </div>

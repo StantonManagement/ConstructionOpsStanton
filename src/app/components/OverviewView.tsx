@@ -35,11 +35,11 @@ const LoadingSkeleton: React.FC = () => (
     {[1, 2, 3].map((i) => (
       <div key={i} className="bg-gradient-to-r from-gray-100 via-gray-50 to-gray-100 rounded-2xl p-6 animate-pulse">
         <div className="flex items-center space-x-4">
-          <div className="w-12 h-12 bg-gray-300 rounded-xl"></div>
+          <div className="w-12 h-12 bg-muted rounded-xl"></div>
           <div className="flex-1 space-y-3">
-            <div className="h-4 bg-gray-300 rounded-lg w-3/4"></div>
-            <div className="h-3 bg-gray-300 rounded-lg w-1/2"></div>
-            <div className="h-3 bg-gray-300 rounded-lg w-1/4"></div>
+            <div className="h-4 bg-muted rounded-lg w-3/4"></div>
+            <div className="h-3 bg-muted rounded-lg w-1/2"></div>
+            <div className="h-3 bg-muted rounded-lg w-1/4"></div>
           </div>
         </div>
       </div>
@@ -54,7 +54,7 @@ const QueueCard: React.FC<{
   onReview: (id: string) => void
 }> = ({ app, status, onReview }) => (
   <div
-    className="group relative bg-white hover:bg-gradient-to-br hover:from-blue-50 hover:to-indigo-50 rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-gray-200 hover:border-blue-300 shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:scale-[1.02]"
+    className="group relative bg-card hover:bg-gradient-to-br hover:from-primary/5 hover:to-primary/10 rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-border hover:border-primary/50 shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:scale-[1.02]"
     tabIndex={0}
     aria-label={`Review application for ${app.project?.name}`}
     onClick={() => onReview(app.id)}
@@ -71,30 +71,30 @@ const QueueCard: React.FC<{
         <span className="mr-1">{status.icon}</span>
         {status.label}
       </span>
-      <span className="text-xs sm:text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-lg">
+      <span className="text-xs sm:text-sm text-muted-foreground bg-secondary px-2 py-1 rounded-lg">
         {app.created_at ? new Date(app.created_at).toLocaleDateString() : '-'}
       </span>
     </div>
 
     {/* Project info */}
     <div className="space-y-2 sm:space-y-3 mb-4 sm:mb-6">
-      <div className="flex items-center gap-2 sm:gap-3 font-bold text-base sm:text-lg text-gray-900">
+      <div className="flex items-center gap-2 sm:gap-3 font-bold text-base sm:text-lg text-foreground">
         <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg sm:rounded-xl flex items-center justify-center text-white">
           🏗️
         </div>
-        <span className="group-hover:text-blue-700 transition-colors truncate">
+        <span className="group-hover:text-primary transition-colors truncate">
           {app.project?.name || 'Unknown Project'}
         </span>
       </div>
       
-      <div className="flex items-center gap-2 sm:gap-3 text-gray-700">
+      <div className="flex items-center gap-2 sm:gap-3 text-muted-foreground">
         <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center text-white text-xs sm:text-sm">
           👷
         </div>
         <span className="text-sm sm:text-base">Contractor: <span className="font-medium truncate">{app.contractor?.name || 'Unknown'}</span></span>
       </div>
       
-      <div className="flex items-center gap-2 sm:gap-3 text-gray-700">
+      <div className="flex items-center gap-2 sm:gap-3 text-muted-foreground">
         <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-lg flex items-center justify-center text-white text-xs sm:text-sm">
           💲
         </div>
@@ -220,7 +220,7 @@ const DecisionQueueCards: React.FC<{ role: string | null, setError: (msg: string
   if (error) {
     return (
       <div className="bg-white rounded-2xl border border-gray-200 shadow-lg p-6">
-        <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-3">
+        <h3 className="text-xl font-bold text-foreground mb-6 flex items-center gap-3">
           <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
             📋
           </div>
@@ -240,7 +240,7 @@ const DecisionQueueCards: React.FC<{ role: string | null, setError: (msg: string
               </button>
               <button
                 onClick={() => setLocalError(null)}
-                className="px-6 py-3 bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300 font-medium transition-colors"
+                className="px-6 py-3 bg-gray-200 text-muted-foreground rounded-xl hover:bg-muted font-medium transition-colors"
               >
                 Dismiss
               </button>
@@ -253,7 +253,7 @@ const DecisionQueueCards: React.FC<{ role: string | null, setError: (msg: string
 
   return (
     <div className="bg-white rounded-xl sm:rounded-2xl border-2 border-gray-300 shadow-xl p-4 sm:p-6 hover:shadow-2xl hover:border-purple-400 transition-all duration-300">
-      <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-6 flex items-center gap-2 sm:gap-3">
+      <h3 className="text-lg sm:text-xl font-bold text-foreground mb-4 sm:mb-6 flex items-center gap-2 sm:gap-3">
         <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg sm:rounded-xl flex items-center justify-center text-white">
           📋
         </div>
@@ -295,7 +295,7 @@ const DecisionQueueCards: React.FC<{ role: string | null, setError: (msg: string
               >
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
-                    <div className="flex items-center gap-3 font-bold text-lg text-gray-900 mb-2">
+                    <div className="flex items-center gap-3 font-bold text-lg text-foreground mb-2">
                       <span>{proj.projectName}</span>
                       <span
                         className={`px-3 py-1 rounded-xl text-xs font-semibold border ${badge.color}`}
@@ -304,7 +304,7 @@ const DecisionQueueCards: React.FC<{ role: string | null, setError: (msg: string
                         {badge.icon} {badge.label}
                       </span>
                     </div>
-                    <div className="text-sm text-gray-700 mb-1 font-medium">
+                    <div className="text-sm text-muted-foreground mb-1 font-medium">
                       {proj.count} payment{proj.count > 1 ? 's' : ''} need review
                     </div>
                     <div className="text-sm text-green-700 font-semibold bg-green-50 inline-block px-2 py-1 rounded-lg">
@@ -332,7 +332,7 @@ const DecisionQueueCards: React.FC<{ role: string | null, setError: (msg: string
           {/* Individual Payment Applications */}
           {queue.length > 0 && (
             <div className="mt-8">
-              <h4 className="text-sm font-bold text-gray-700 mb-4 flex items-center gap-2">
+              <h4 className="text-sm font-bold text-muted-foreground mb-4 flex items-center gap-2">
                 <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-lg flex items-center justify-center text-white text-xs">
                   📄
                 </div>
@@ -366,11 +366,11 @@ const DecisionQueueCards: React.FC<{ role: string | null, setError: (msg: string
                             <span className={`px-2 py-1 rounded-lg text-xs font-semibold ${status.color}`}>
                               {status.icon} {status.label}
                             </span>
-                            <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-lg">
+                            <span className="text-xs text-muted-foreground bg-secondary px-2 py-1 rounded-lg">
                               {app.created_at ? new Date(app.created_at).toLocaleDateString() : '-'}
                             </span>
                           </div>
-                          <div className="font-semibold text-gray-900 group-hover:text-blue-700">
+                          <div className="font-semibold text-foreground group-hover:text-blue-700">
                             {app.project?.name || 'Unknown Project'}
                           </div>
                           <div className="text-sm text-gray-600">
@@ -389,7 +389,7 @@ const DecisionQueueCards: React.FC<{ role: string | null, setError: (msg: string
                 })}
                 {queue.length > 3 && (
                   <div className="text-center py-3">
-                    <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-lg">
+                    <span className="text-sm text-muted-foreground bg-secondary px-3 py-1 rounded-lg">
                       +{queue.length - 3} more applications
                     </span>
                   </div>
@@ -725,7 +725,7 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
             colorClass.includes('emerald') ? 'text-emerald-700' :
             colorClass.includes('amber') ? 'text-amber-700' :
             colorClass.includes('red') ? 'text-red-700' :
-            'text-gray-700'
+            'text-muted-foreground'
           }`}>
             {value}
           </div>
@@ -762,7 +762,7 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
             colorClass.includes('emerald') ? 'text-emerald-700 bg-emerald-200/50 group-hover:bg-emerald-200' :
             colorClass.includes('amber') ? 'text-amber-700 bg-amber-200/50 group-hover:bg-amber-200' :
             colorClass.includes('red') ? 'text-red-700 bg-red-200/50 group-hover:bg-red-200' :
-            'text-gray-700 bg-gray-200/50 group-hover:bg-gray-200'
+            'text-muted-foreground bg-gray-200/50 group-hover:bg-gray-200'
           }`}>
             View Details →
           </div>
@@ -822,7 +822,7 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
           <div className="bg-white/80 backdrop-blur-sm rounded-2xl sm:rounded-3xl border border-gray-200 shadow-2xl p-4 sm:p-8 hover:shadow-3xl hover:border-blue-300 transition-all duration-300">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 sm:mb-8 gap-4 sm:gap-0">
               <h3
-                className="text-xl sm:text-2xl font-bold text-gray-900 cursor-pointer hover:text-blue-600 transition-colors flex items-center gap-3 sm:gap-4"
+                className="text-xl sm:text-2xl font-bold text-foreground cursor-pointer hover:text-blue-600 transition-colors flex items-center gap-3 sm:gap-4"
                 onClick={() => {
                   const params = new URLSearchParams(window.location.search);
                   params.set('tab', 'projects');
@@ -917,7 +917,7 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
         <div className="fixed inset-0  bg-opacity-50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
             <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-900">{statsModalTitle}</h2>
+              <h2 className="text-xl font-semibold text-foreground">{statsModalTitle}</h2>
               <button
                 onClick={() => setShowBudgetModal(false)}
                 className="text-gray-400 hover:text-gray-600 transition-colors"
@@ -954,13 +954,13 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
                   
                   {/* Project Breakdown */}
                   <div>
-                    <h4 className="text-lg font-semibold text-gray-900 mb-4">Project Breakdown</h4>
+                    <h4 className="text-lg font-semibold text-foreground mb-4">Project Breakdown</h4>
                     <div className="space-y-3">
                       {budgetModalData.items?.map((project: any, index: number) => (
                         <div key={index} className="bg-gray-50 p-4 rounded-lg">
                           <div className="flex justify-between items-start mb-2">
                             <div>
-                              <div className="font-medium text-gray-900">{project.name}</div>
+                              <div className="font-medium text-foreground">{project.name}</div>
                               <div className="text-sm text-gray-600">{project.client}</div>
                             </div>
                             <span className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -1012,12 +1012,12 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
                   {/* Summary */}
                   <div className="bg-gray-50 p-4 rounded-lg mb-6">
                     <div className="text-sm text-gray-600">Total Amount</div>
-                    <div className="text-2xl font-bold text-gray-900">${budgetModalData.total?.toLocaleString()}</div>
+                    <div className="text-2xl font-bold text-foreground">${budgetModalData.total?.toLocaleString()}</div>
                   </div>
                   
                   {/* Items List */}
                   <div>
-                    <h4 className="text-lg font-semibold text-gray-900 mb-4">
+                    <h4 className="text-lg font-semibold text-foreground mb-4">
                       {budgetModalType === 'budget' ? 'Contract Breakdown' : 'Payment Breakdown'}
                     </h4>
                     <div className="space-y-3">
@@ -1026,8 +1026,8 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
                           <div className="flex justify-between items-start">
                             <div className="flex-1">
                               <div className="flex items-center gap-2 mb-1">
-                                <span className="font-medium text-gray-900">{item.name}</span>
-                                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">{item.trade}</span>
+                                <span className="font-medium text-foreground">{item.name}</span>
+                                <span className="text-xs text-muted-foreground bg-secondary px-2 py-1 rounded">{item.trade}</span>
                               </div>
                               <div className="text-sm text-gray-600 mb-2">
                                 <div>Project: {item.project}</div>
@@ -1038,7 +1038,7 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
                               </div>
                             </div>
                             <div className="text-right">
-                              <div className="text-lg font-bold text-gray-900">${item.amount?.toLocaleString()}</div>
+                              <div className="text-lg font-bold text-foreground">${item.amount?.toLocaleString()}</div>
                             </div>
                           </div>
                         </div>

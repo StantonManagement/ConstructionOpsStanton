@@ -4,6 +4,8 @@ import React, { useState, useEffect, useCallback, ChangeEvent } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { Building, Users, DollarSign, Calendar, AlertCircle, CheckCircle, Clock, RefreshCw, Eye, Plus, X } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { Badge } from '@/components/ui/badge';
+import { getProjectStatusBadge, getStatusLabel } from '@/lib/statusColors';
 
 // Form validation utilities
 const validators = {
@@ -120,14 +122,14 @@ const AddForm: React.FC<AddFormProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl">
+      <div className="bg-card rounded-xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl">
         <div className="flex justify-between items-center mb-6">
-          <h3 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
+          <h3 className="text-xl font-semibold text-foreground flex items-center gap-2">
             {icon}{title}
           </h3>
           <button 
             onClick={onClose} 
-            className="text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-100"
+            className="text-muted-foreground hover:text-foreground p-1 rounded-full hover:bg-secondary"
           >
             <X className="w-6 h-6" />
           </button>
@@ -136,9 +138,9 @@ const AddForm: React.FC<AddFormProps> = ({
         <form onSubmit={handleSubmit} className="space-y-5">
           {fields.map(field => (
             <div key={field.name}>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label className="block text-sm font-medium text-foreground mb-1.5">
                 {labelize(field.name)}
-                {field.required && <span className="text-red-500 ml-1">*</span>}
+                {field.required && <span className="text-[var(--status-critical-text)] ml-1">*</span>}
               </label>
               <input
                 type={field.type || 'text'}
@@ -146,16 +148,16 @@ const AddForm: React.FC<AddFormProps> = ({
                 value={formData[field.name] !== undefined ? formData[field.name] : (field.defaultValue || '')}
                 onChange={handleChange}
                 onBlur={handleBlur}
-                className={`w-full px-4 py-3 text-base border rounded-lg focus:ring-2 focus:ring-blue-500 transition-all duration-200 bg-gray-50 text-gray-900 placeholder-gray-400 ${
+                className={`w-full px-4 py-3 text-base border rounded-lg focus:ring-2 focus:ring-primary transition-all duration-200 bg-secondary text-foreground placeholder-gray-400 ${
                   errors[field.name] && touched[field.name] 
-                    ? 'border-red-300 focus:border-red-500 focus:ring-red-500' 
-                    : 'border-gray-200 focus:border-blue-500'
+                    ? 'border-[var(--status-critical-border)] focus:border-[var(--status-critical-border)] focus:ring-[var(--status-critical-border)]' 
+                    : 'border-border focus:border-primary'
                 }`}
                 placeholder={field.placeholder}
                 disabled={isLoading}
               />
               {errors[field.name] && touched[field.name] && (
-                <p className="mt-1 text-sm text-red-600">{errors[field.name]}</p>
+                <p className="mt-1 text-sm text-[var(--status-critical-text)]">{errors[field.name]}</p>
               )}
             </div>
           ))}
@@ -164,14 +166,14 @@ const AddForm: React.FC<AddFormProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-3 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors font-medium"
+              className="flex-1 px-4 py-3 text-foreground bg-secondary rounded-lg hover:bg-secondary/80 transition-colors font-medium"
               disabled={isLoading}
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50"
+              className="flex-1 px-4 py-3 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors font-medium disabled:opacity-50"
               disabled={isLoading}
             >
               {isLoading ? 'Creating...' : 'Create Project'}
@@ -692,7 +694,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
     return (
       <div className="flex items-center justify-center py-12">
         <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-        <span className="ml-3 text-gray-600">Loading projects...</span>
+        <span className="ml-3 text-muted-foreground">Loading projects...</span>
       </div>
     );
   }
@@ -702,8 +704,8 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Projects</h1>
-          <p className="text-xs sm:text-sm text-gray-600 mt-1">
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground">Projects</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
             {filteredProjects.length} projects • Updated {new Date().toLocaleTimeString()}
           </p>
         </div>
@@ -719,7 +721,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
           <button
             onClick={handleRefresh}
             disabled={isRefreshing}
-            className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg text-xs sm:text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+            className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-primary text-white rounded-lg text-xs sm:text-sm font-medium hover:bg-primary/90 disabled:opacity-50"
           >
             <RefreshCw className={`w-3 h-3 sm:w-4 sm:h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
             <span className="hidden sm:inline">Refresh</span>
@@ -730,10 +732,10 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
 
       {/* Error Display */}
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <div className="bg-[var(--status-critical-bg)] border border-[var(--status-critical-border)] rounded-lg p-4">
           <div className="flex items-center gap-2">
-            <AlertCircle className="w-5 h-5 text-red-600" />
-            <span className="text-red-800">{error}</span>
+            <AlertCircle className="w-5 h-5 text-[var(--status-critical-text)]" />
+            <span className="text-[var(--status-critical-text)]">{error}</span>
             <button
               onClick={() => {
                 setError(null);
@@ -752,18 +754,18 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
         {filteredProjects.map((project) => (
           <div
             key={project.id}
-            className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6 hover:shadow-lg transition-shadow cursor-pointer"
+            className="bg-card rounded-lg border border-border p-4 sm:p-6 hover:shadow-lg transition-shadow duration-200 cursor-pointer"
             onClick={() => handleProjectClick(project)}
           >
             {/* Project Header */}
             <div className="flex items-start justify-between mb-3 sm:mb-4">
               <div className="flex-1 min-w-0">
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-1 truncate">{project.name}</h3>
-                <p className="text-xs sm:text-sm text-gray-600 truncate">{project.client_name}</p>
+                <h3 className="text-base sm:text-lg font-semibold text-foreground mb-1 truncate">{project.name}</h3>
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">{project.client_name}</p>
               </div>
               <div className="flex flex-col sm:flex-row items-end sm:items-center gap-1 sm:gap-2 ml-2">
                 {project.atRisk && (
-                  <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                  <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-xs font-medium bg-[var(--status-critical-bg)] text-[var(--status-critical-text)]">
                     <AlertCircle className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-0.5 sm:mr-1" />
                     <span className="hidden sm:inline">At Risk</span>
                     <span className="sm:hidden">⚠️</span>
@@ -771,10 +773,10 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
                 )}
                                  <span className={`inline-flex items-center px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-xs font-medium ${
                    project.stats.completionPercentage >= 80 
-                     ? 'bg-green-100 text-green-800' 
+                     ? 'bg-[var(--status-success-bg)] text-[var(--status-success-text)]' 
                      : project.stats.completionPercentage >= 50 
-                     ? 'bg-yellow-100 text-yellow-800'
-                     : 'bg-blue-100 text-blue-800'
+                     ? 'bg-[var(--status-warning-bg)] text-[var(--status-warning-text)]'
+                     : 'bg-blue-100 text-primary'
                  }`}>
                    {project.stats.completionPercentage.toFixed(2)}%
                  </span>
@@ -791,50 +793,50 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
                 }}
               >
                 <div className="flex items-center gap-1 sm:gap-2 mb-1">
-                  <Users className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600" />
-                  <h4 className="font-medium text-gray-900 text-xs sm:text-sm">Contractors</h4>
+                  <Users className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
+                  <h4 className="font-medium text-foreground text-xs sm:text-sm">Contractors</h4>
                 </div>
-                <p className="text-lg sm:text-xl font-bold text-blue-600">{project.stats.totalContractors}</p>
-                <p className="text-xs text-gray-600">Active</p>
-                <div className="mt-1 text-xs text-blue-600 font-medium">
+                <p className="text-lg sm:text-xl font-bold text-primary">{project.stats.totalContractors}</p>
+                <p className="text-xs text-muted-foreground">Active</p>
+                <div className="mt-1 text-xs text-primary font-medium">
                   <span className="hidden sm:inline">Click to view</span>
                   <span className="sm:hidden">View</span>
                 </div>
               </div>
 
               <div 
-                className="bg-yellow-50 p-2 sm:p-3 rounded-lg cursor-pointer hover:shadow-md transition-all duration-200"
+                className="bg-[var(--status-warning-bg)] p-2 sm:p-3 rounded-lg cursor-pointer hover:shadow-md transition-all duration-200"
                 onClick={(e) => {
                   e.stopPropagation();
                   handleStatCardClick(project, 'payment_apps');
                 }}
               >
                 <div className="flex items-center gap-1 sm:gap-2 mb-1">
-                  <DollarSign className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-600" />
-                  <h4 className="font-medium text-gray-900 text-xs sm:text-sm">Payment Apps</h4>
+                  <DollarSign className="w-3 h-3 sm:w-4 sm:h-4 text-[var(--status-warning-text)]" />
+                  <h4 className="font-medium text-foreground text-xs sm:text-sm">Payment Apps</h4>
                 </div>
-                <p className="text-lg sm:text-xl font-bold text-yellow-600">{project.stats.activePaymentApps}</p>
-                <p className="text-xs text-gray-600">Pending</p>
-                <div className="mt-1 text-xs text-yellow-600 font-medium">
+                <p className="text-lg sm:text-xl font-bold text-[var(--status-warning-text)]">{project.stats.activePaymentApps}</p>
+                <p className="text-xs text-muted-foreground">Pending</p>
+                <div className="mt-1 text-xs text-[var(--status-warning-text)] font-medium">
                   <span className="hidden sm:inline">Click to view</span>
                   <span className="sm:hidden">View</span>
                 </div>
               </div>
 
               <div 
-                className="bg-green-50 p-2 sm:p-3 rounded-lg cursor-pointer hover:shadow-md transition-all duration-200"
+                className="bg-[var(--status-success-bg)] p-2 sm:p-3 rounded-lg cursor-pointer hover:shadow-md transition-all duration-200"
                 onClick={(e) => {
                   e.stopPropagation();
                   handleStatCardClick(project, 'completed');
                 }}
               >
                 <div className="flex items-center gap-1 sm:gap-2 mb-1">
-                  <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 text-green-600" />
-                  <h4 className="font-medium text-gray-900 text-xs sm:text-sm">Completed</h4>
+                  <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 text-[var(--status-success-text)]" />
+                  <h4 className="font-medium text-foreground text-xs sm:text-sm">Completed</h4>
                 </div>
-                <p className="text-lg sm:text-xl font-bold text-green-600">{project.stats.completedPaymentApps}</p>
-                <p className="text-xs text-gray-600">Approved</p>
-                <div className="mt-1 text-xs text-green-600 font-medium">
+                <p className="text-lg sm:text-xl font-bold text-[var(--status-success-text)]">{project.stats.completedPaymentApps}</p>
+                <p className="text-xs text-muted-foreground">Approved</p>
+                <div className="mt-1 text-xs text-[var(--status-success-text)] font-medium">
                   <span className="hidden sm:inline">Click to view</span>
                   <span className="sm:hidden">View</span>
                 </div>
@@ -844,12 +846,12 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
             {/* Budget Progress */}
             <div className="mb-3 sm:mb-4">
               <div className="flex items-center justify-between text-xs sm:text-sm mb-2">
-                <span className="text-gray-600 font-medium">Budget Progress</span>
-                <span className="text-gray-900 font-semibold">{formatCurrency(project.stats.totalBudget)}</span>
+                <span className="text-muted-foreground font-medium">Budget Progress</span>
+                <span className="text-foreground font-semibold">{formatCurrency(project.stats.totalBudget)}</span>
               </div>
               
               {/* Progress Bar */}
-              <div className="w-full bg-gray-200 rounded-full h-2 sm:h-3 mb-2 relative overflow-hidden">
+              <div className="w-full bg-secondary/80 rounded-full h-2 sm:h-3 mb-2 relative overflow-hidden">
                 <div
                   className={`h-2 sm:h-3 rounded-full transition-all duration-500 ease-out ${
                     project.stats.completionPercentage > 95 ? 'bg-gradient-to-r from-red-500 to-red-600' :
@@ -876,9 +878,9 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
 
               {/* Budget Details */}
               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 text-xs">
-                <span className="text-gray-600">
+                <span className="text-muted-foreground">
                   Spent: <span 
-                    className="font-medium text-gray-900 cursor-pointer hover:text-blue-600 hover:underline"
+                    className="font-medium text-foreground cursor-pointer hover:text-primary hover:underline"
                     onClick={(e) => {
                       e.stopPropagation();
                       handleBudgetClick(project.id, 'spent');
@@ -887,9 +889,9 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
                     {formatCurrency(project.stats.totalSpent)}
                   </span>
                 </span>
-                <span className="text-gray-600">
+                <span className="text-muted-foreground">
                   Remaining: <span 
-                    className="font-medium text-gray-900 cursor-pointer hover:text-green-600 hover:underline"
+                    className="font-medium text-foreground cursor-pointer hover:text-[var(--status-success-text)] hover:underline"
                     onClick={(e) => {
                       e.stopPropagation();
                       handleBudgetClick(project.id, 'remaining');
@@ -901,14 +903,14 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
               </div>
               
                              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 text-xs mt-1">
-                 <span className="text-gray-600 font-medium">
+                 <span className="text-muted-foreground font-medium">
                    {project.stats.completionPercentage < 0.01 ? '<0.01%' : project.stats.completionPercentage.toFixed(2)}% utilized
                  </span>
                 <span className={`font-semibold ${
-                  project.stats.completionPercentage > 95 ? 'text-red-600' :
+                  project.stats.completionPercentage > 95 ? 'text-[var(--status-critical-text)]' :
                   project.stats.completionPercentage > 90 ? 'text-orange-600' :
-                  project.stats.completionPercentage > 75 ? 'text-yellow-600' :
-                  'text-green-700'
+                  project.stats.completionPercentage > 75 ? 'text-[var(--status-warning-text)]' :
+                  'text-[var(--status-success-text)]'
                 }`}>
                   {project.stats.completionPercentage > 95 ? '⚠️ Over budget' :
                    project.stats.completionPercentage > 90 ? '⚠️ Near limit' :
@@ -921,15 +923,15 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
             {/* Project Details */}
             <div className="space-y-1 sm:space-y-2 text-xs sm:text-sm">
               <div className="flex items-center gap-1 sm:gap-2">
-                <Building className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" />
-                <span className="text-gray-600">Phase:</span>
-                <span className="font-medium text-gray-900 truncate">{project.current_phase}</span>
+                <Building className="w-3 h-3 sm:w-4 sm:h-4 text-muted-foreground" />
+                <span className="text-muted-foreground">Phase:</span>
+                <span className="font-medium text-foreground truncate">{project.current_phase}</span>
               </div>
               {project.daysToInspection > 0 && (
                 <div className="flex items-center gap-1 sm:gap-2">
-                  <Calendar className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" />
-                  <span className="text-gray-600">Inspection:</span>
-                  <span className={`font-medium ${project.daysToInspection <= 3 ? 'text-red-600' : 'text-gray-900'}`}>
+                  <Calendar className="w-3 h-3 sm:w-4 sm:h-4 text-muted-foreground" />
+                  <span className="text-muted-foreground">Inspection:</span>
+                  <span className={`font-medium ${project.daysToInspection <= 3 ? 'text-[var(--status-critical-text)]' : 'text-foreground'}`}>
                     {project.daysToInspection} days
                   </span>
                 </div>
@@ -947,7 +949,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
                   params.set('project', project.id.toString());
                   router.replace(`/?${params.toString()}`, { scroll: false });
                 }}
-                className="w-full flex items-center justify-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-xs sm:text-sm font-medium"
+                className="w-full flex items-center justify-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors text-xs sm:text-sm font-medium"
               >
                 <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
                 <span className="hidden sm:inline">Create Payment App</span>
@@ -960,10 +962,10 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
 
       {/* Empty State */}
       {filteredProjects.length === 0 && (
-        <div className="text-center py-12 bg-white border-2 border-dashed border-gray-300 rounded-lg">
+        <div className="text-center py-12 bg-card border-2 border-dashed border-border rounded-lg">
           <div className="text-4xl mb-4">🏗️</div>
-          <p className="text-gray-500 font-medium">No projects found</p>
-          <p className="text-sm text-gray-400">
+          <p className="text-muted-foreground font-medium">No projects found</p>
+          <p className="text-sm text-muted-foreground">
             {searchQuery ? 'Try adjusting your search terms' : 'Create a new project to get started'}
           </p>
         </div>
@@ -972,15 +974,15 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
       {/* Data Modal */}
       {showDataModal && (
         <div className="fixed inset-0  bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden">
-            <div className="p-4 sm:p-6 border-b border-gray-200">
+          <div className="bg-card rounded-lg shadow-xl w-full max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden">
+            <div className="p-4 sm:p-6 border-b border-border">
               <div className="flex items-center justify-between">
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900 truncate pr-2">
+                <h3 className="text-base sm:text-lg font-semibold text-foreground truncate pr-2">
                   {modalTitle}
                 </h3>
                 <button
                   onClick={handleCloseDataModal}
-                  className="text-gray-400 hover:text-gray-600 p-1 flex-shrink-0"
+                  className="text-muted-foreground hover:text-muted-foreground p-1 flex-shrink-0"
                 >
                   <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -993,14 +995,14 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
               {loadingModalData ? (
                 <div className="flex items-center justify-center py-12">
                   <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                  <span className="ml-3 text-gray-600">Loading data...</span>
+                  <span className="ml-3 text-muted-foreground">Loading data...</span>
                 </div>
               ) : modalData.length === 0 ? (
                 <div className="flex items-center justify-center py-12">
                   <div className="text-center">
                     <div className="text-4xl mb-4">📭</div>
-                    <p className="text-gray-500 font-medium">No data found</p>
-                    <p className="text-sm text-gray-400">
+                    <p className="text-muted-foreground font-medium">No data found</p>
+                    <p className="text-sm text-muted-foreground">
                       {modalType === 'contractors' ? 'No contractors assigned to this project' :
                        modalType === 'payment_apps' ? 'No active payment applications found' :
                        modalType === 'completed' ? 'No completed payment applications found' :
@@ -1011,20 +1013,20 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
               ) : (
                 <div className="space-y-3 sm:space-y-4">
                   {modalData.map((item: any) => (
-                    <div key={item.id} className="bg-gray-50 rounded-lg p-3 sm:p-4 hover:bg-gray-100 transition-colors">
+                    <div key={item.id} className="bg-secondary rounded-lg p-3 sm:p-4 hover:bg-secondary transition-colors">
                       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1 sm:gap-2 mb-1 sm:mb-2">
-                            <span className="text-sm font-medium text-gray-900 truncate">
+                            <span className="text-sm font-medium text-foreground truncate">
                               {item.name || item.contractor_name || 'Unknown'}
                             </span>
                             {item.trade && (
-                              <span className="text-xs text-gray-500 bg-gray-200 px-1.5 py-0.5 rounded">
+                              <span className="text-xs text-muted-foreground bg-secondary/80 px-1.5 py-0.5 rounded">
                                 {item.trade}
                               </span>
                             )}
                           </div>
-                          <div className="space-y-0.5 text-xs sm:text-sm text-gray-600">
+                          <div className="space-y-0.5 text-xs sm:text-sm text-muted-foreground">
                             {item.email && (
                               <div className="truncate">{item.email}</div>
                             )}
@@ -1042,17 +1044,17 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
                         <div className="text-left sm:text-right">
                           {item.status && (
                             <div className={`text-xs sm:text-sm font-medium ${
-                              item.status === 'approved' ? 'text-green-600' :
-                              item.status === 'submitted' ? 'text-red-600' :
-                              item.status === 'needs_review' ? 'text-yellow-600' :
+                              item.status === 'approved' ? 'text-[var(--status-success-text)]' :
+                              item.status === 'submitted' ? 'text-[var(--status-critical-text)]' :
+                              item.status === 'needs_review' ? 'text-[var(--status-warning-text)]' :
                               item.status === 'check_ready' ? 'text-purple-600' :
-                              item.status === 'sms_sent' ? 'text-blue-600' :
-                              'text-gray-600'
+                              item.status === 'sms_sent' ? 'text-primary' :
+                              'text-muted-foreground'
                             }`}>
                               {item.status.replace('_', ' ').toUpperCase()}
                             </div>
                           )}
-                          <div className="space-y-0.5 text-xs sm:text-sm text-gray-600">
+                          <div className="space-y-0.5 text-xs sm:text-sm text-muted-foreground">
                             {item.contract_amount && (
                               <div>Contract: {formatCurrency(item.contract_amount)}</div>
                             )}
@@ -1074,15 +1076,15 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
              {/* Project Detail Modal */}
        {showProjectModal && selectedProject && (
          <div className="fixed inset-0  bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
-           <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] sm:max-h-[95vh] overflow-hidden flex flex-col">
-             <div className="p-4 sm:p-6 border-b border-gray-200 flex-shrink-0">
+           <div className="bg-card rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] sm:max-h-[95vh] overflow-hidden flex flex-col">
+             <div className="p-4 sm:p-6 border-b border-border flex-shrink-0">
                <div className="flex items-center justify-between">
-                 <h3 className="text-lg sm:text-xl font-semibold text-gray-900 truncate pr-2">
+                 <h3 className="text-lg sm:text-xl font-semibold text-foreground truncate pr-2">
                    {loadingProjectModal ? 'Loading Project Details...' : `${projectModalData.project?.name || 'Project Details'}`}
                  </h3>
                  <button
                    onClick={handleCloseModal}
-                   className="text-gray-400 hover:text-gray-600 p-1 flex-shrink-0"
+                   className="text-muted-foreground hover:text-muted-foreground p-1 flex-shrink-0"
                  >
                    <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -1095,53 +1097,53 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
               {loadingProjectModal ? (
                 <div className="flex items-center justify-center py-12">
                   <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                  <span className="ml-3 text-gray-600">Loading project data...</span>
+                  <span className="ml-3 text-muted-foreground">Loading project data...</span>
                 </div>
               ) : (
                 <div className="space-y-8">
                   {/* Project Overview */}
-                  <div className="bg-gray-50 rounded-lg p-6">
-                    <h4 className="text-lg font-semibold text-gray-900 mb-4">Project Overview</h4>
+                  <div className="bg-secondary rounded-lg p-6">
+                    <h4 className="text-lg font-semibold text-foreground mb-4">Project Overview</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                       <div>
-                        <label className="text-sm font-medium text-gray-600">Project Name</label>
-                        <p className="text-lg font-semibold text-gray-900">{projectModalData.project?.name}</p>
+                        <label className="text-sm font-medium text-muted-foreground">Project Name</label>
+                        <p className="text-lg font-semibold text-foreground">{projectModalData.project?.name}</p>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-gray-600">Client</label>
-                        <p className="text-lg font-semibold text-gray-900">{projectModalData.project?.client_name}</p>
+                        <label className="text-sm font-medium text-muted-foreground">Client</label>
+                        <p className="text-lg font-semibold text-foreground">{projectModalData.project?.client_name}</p>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-gray-600">Status</label>
+                        <label className="text-sm font-medium text-muted-foreground">Status</label>
                         <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
                           projectModalData.project?.at_risk 
-                            ? 'bg-red-100 text-red-800' 
-                            : 'bg-green-100 text-green-800'
+                            ? 'bg-[var(--status-critical-bg)] text-[var(--status-critical-text)]' 
+                            : 'bg-[var(--status-success-bg)] text-[var(--status-success-text)]'
                         }`}>
                           {projectModalData.project?.at_risk ? '⚠️ At Risk' : '✅ On Track'}
                         </span>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-gray-600">Phase</label>
-                        <p className="text-lg font-semibold text-gray-900">{projectModalData.project?.current_phase || 'N/A'}</p>
+                        <label className="text-sm font-medium text-muted-foreground">Phase</label>
+                        <p className="text-lg font-semibold text-foreground">{projectModalData.project?.current_phase || 'N/A'}</p>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-gray-600">Budget</label>
-                        <p className="text-lg font-semibold text-gray-900">{formatCurrency(projectModalData.project?.budget || 0)}</p>
+                        <label className="text-sm font-medium text-muted-foreground">Budget</label>
+                        <p className="text-lg font-semibold text-foreground">{formatCurrency(projectModalData.project?.budget || 0)}</p>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-gray-600">Spent</label>
-                        <p className="text-lg font-semibold text-gray-900">{formatCurrency(projectModalData.project?.spent || 0)}</p>
+                        <label className="text-sm font-medium text-muted-foreground">Spent</label>
+                        <p className="text-lg font-semibold text-foreground">{formatCurrency(projectModalData.project?.spent || 0)}</p>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-gray-600">Start Date</label>
-                        <p className="text-lg font-semibold text-gray-900">
+                        <label className="text-sm font-medium text-muted-foreground">Start Date</label>
+                        <p className="text-lg font-semibold text-foreground">
                           {projectModalData.project?.start_date ? formatDate(projectModalData.project.start_date) : 'N/A'}
                         </p>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-gray-600">Target Completion</label>
-                        <p className="text-lg font-semibold text-gray-900">
+                        <label className="text-sm font-medium text-muted-foreground">Target Completion</label>
+                        <p className="text-lg font-semibold text-foreground">
                           {projectModalData.project?.target_completion_date ? formatDate(projectModalData.project.target_completion_date) : 'N/A'}
                         </p>
                       </div>
@@ -1150,44 +1152,44 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
 
                   {/* Contractors */}
                   <div>
-                    <h4 className="text-lg font-semibold text-gray-900 mb-4">Contractors ({projectModalData.contractors?.length || 0})</h4>
+                    <h4 className="text-lg font-semibold text-foreground mb-4">Contractors ({projectModalData.contractors?.length || 0})</h4>
                     {projectModalData.contractors?.length > 0 ? (
                       <div className="overflow-x-auto">
                         <table className="min-w-full divide-y divide-gray-200">
-                          <thead className="bg-gray-50">
+                          <thead className="bg-secondary">
                             <tr>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Trade</th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Contact</th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Contract Amount</th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Paid to Date</th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Name</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Trade</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Contact</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Contract Amount</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Paid to Date</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Status</th>
                             </tr>
                           </thead>
-                          <tbody className="bg-white divide-y divide-gray-200">
+                          <tbody className="bg-card divide-y divide-gray-200">
                             {projectModalData.contractors.map((contractor: any) => (
-                              <tr key={contractor.id} className="hover:bg-gray-50">
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                              <tr key={contractor.id} className="hover:bg-secondary">
+                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-foreground">
                                   {contractor.contractors?.name}
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                                   {contractor.contractors?.trade}
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                                   <div>{contractor.contractors?.phone}</div>
                                   <div>{contractor.contractors?.email}</div>
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                                   {formatCurrency(contractor.contract_amount || 0)}
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                                   {formatCurrency(contractor.paid_to_date || 0)}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
                                   <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
                                     contractor.contract_status === 'active' 
-                                      ? 'bg-green-100 text-green-800' 
-                                      : 'bg-gray-100 text-gray-800'
+                                      ? 'bg-[var(--status-success-bg)] text-[var(--status-success-text)]' 
+                                      : 'bg-secondary text-foreground'
                                   }`}>
                                     {contractor.contract_status}
                                   </span>
@@ -1198,47 +1200,47 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
                         </table>
                       </div>
                     ) : (
-                      <div className="text-center py-8 bg-gray-50 rounded-lg">
+                      <div className="text-center py-8 bg-secondary rounded-lg">
                         <div className="text-4xl mb-4">👷</div>
-                        <p className="text-gray-500 font-medium">No contractors assigned</p>
-                        <p className="text-sm text-gray-400">This project doesn't have any contractors assigned yet</p>
+                        <p className="text-muted-foreground font-medium">No contractors assigned</p>
+                        <p className="text-sm text-muted-foreground">This project doesn't have any contractors assigned yet</p>
                       </div>
                     )}
                   </div>
 
                   {/* Payment Applications */}
                   <div>
-                    <h4 className="text-lg font-semibold text-gray-900 mb-4">Payment Applications ({projectModalData.paymentApps?.length || 0})</h4>
+                    <h4 className="text-lg font-semibold text-foreground mb-4">Payment Applications ({projectModalData.paymentApps?.length || 0})</h4>
                     {projectModalData.paymentApps?.length > 0 ? (
                       <div className="space-y-3">
                         {projectModalData.paymentApps.map((app: any) => (
-                          <div key={app.id} className="bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition-colors cursor-pointer">
+                          <div key={app.id} className="bg-secondary rounded-lg p-4 hover:bg-secondary transition-colors cursor-pointer">
                             <div className="flex items-center justify-between">
                               <div className="flex-1">
                                 <div className="flex items-center gap-2 mb-2">
-                                  <span className="text-sm font-medium text-gray-900">
+                                  <span className="text-sm font-medium text-foreground">
                                     {app.contractors?.name || 'Unknown Contractor'}
                                   </span>
-                                  <span className="text-xs text-gray-500">
+                                  <span className="text-xs text-muted-foreground">
                                     {app.contractors?.trade || ''}
                                   </span>
                                 </div>
-                                <div className="text-sm text-gray-600">
+                                <div className="text-sm text-muted-foreground">
                                   Amount: {formatCurrency(app.current_payment || 0)} • Created: {formatDate(app.created_at)}
                                 </div>
                               </div>
                               <div className="text-right">
                                 <div className={`text-sm font-medium ${
-                                  app.status === 'approved' ? 'text-green-600' :
-                                  app.status === 'submitted' ? 'text-red-600' :
-                                  app.status === 'needs_review' ? 'text-yellow-600' :
+                                  app.status === 'approved' ? 'text-[var(--status-success-text)]' :
+                                  app.status === 'submitted' ? 'text-[var(--status-critical-text)]' :
+                                  app.status === 'needs_review' ? 'text-[var(--status-warning-text)]' :
                                   app.status === 'check_ready' ? 'text-purple-600' :
-                                  app.status === 'sms_sent' ? 'text-blue-600' :
-                                  'text-gray-600'
+                                  app.status === 'sms_sent' ? 'text-primary' :
+                                  'text-muted-foreground'
                                 }`}>
                                   {app.status.replace('_', ' ').toUpperCase()}
                                 </div>
-                                <div className="text-xs text-gray-500">
+                                <div className="text-xs text-muted-foreground">
                                   ID: {app.id}
                                 </div>
                               </div>
@@ -1247,44 +1249,44 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
                         ))}
                       </div>
                     ) : (
-                      <div className="text-center py-8 bg-gray-50 rounded-lg">
+                      <div className="text-center py-8 bg-secondary rounded-lg">
                         <div className="text-4xl mb-4">📋</div>
-                        <p className="text-gray-500 font-medium">No payment applications</p>
-                        <p className="text-sm text-gray-400">This project doesn't have any payment applications yet</p>
+                        <p className="text-muted-foreground font-medium">No payment applications</p>
+                        <p className="text-sm text-muted-foreground">This project doesn't have any payment applications yet</p>
                       </div>
                     )}
                   </div>
 
                   {/* Daily Log Requests */}
                   <div>
-                    <h4 className="text-lg font-semibold text-gray-900 mb-4">Daily Log Requests ({projectModalData.dailyLogs?.length || 0})</h4>
+                    <h4 className="text-lg font-semibold text-foreground mb-4">Daily Log Requests ({projectModalData.dailyLogs?.length || 0})</h4>
                     {projectModalData.dailyLogs?.length > 0 ? (
                       <div className="space-y-3">
                         {projectModalData.dailyLogs.map((log: any) => (
-                          <div key={log.id} className="bg-gray-50 rounded-lg p-4">
+                          <div key={log.id} className="bg-secondary rounded-lg p-4">
                             <div className="flex items-center justify-between mb-2">
                               <div className="flex items-center gap-2">
-                                <span className="text-sm font-medium text-gray-900">
+                                <span className="text-sm font-medium text-foreground">
                                   {formatDate(log.request_date)}
                                 </span>
                                 <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                                  log.request_status === 'received' ? 'bg-green-100 text-green-800' :
-                                  log.request_status === 'sent' ? 'bg-blue-100 text-blue-800' :
-                                  log.request_status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                                  'bg-red-100 text-red-800'
+                                  log.request_status === 'received' ? 'bg-[var(--status-success-bg)] text-[var(--status-success-text)]' :
+                                  log.request_status === 'sent' ? 'bg-blue-100 text-primary' :
+                                  log.request_status === 'pending' ? 'bg-[var(--status-warning-bg)] text-[var(--status-warning-text)]' :
+                                  'bg-[var(--status-critical-bg)] text-[var(--status-critical-text)]'
                                 }`}>
                                   {log.request_status.toUpperCase()}
                                 </span>
                               </div>
-                              <div className="text-xs text-gray-500">
+                              <div className="text-xs text-muted-foreground">
                                 Retries: {log.retry_count}/{log.max_retries}
                               </div>
                             </div>
-                            <div className="text-sm text-gray-600">
+                            <div className="text-sm text-muted-foreground">
                               <div>PM Phone: {log.pm_phone_number}</div>
                               <div>Request Time: {log.request_time}</div>
                               {log.received_notes && (
-                                <div className="mt-2 p-2 bg-white rounded border">
+                                <div className="mt-2 p-2 bg-card rounded border">
                                   <strong>Notes:</strong> {log.received_notes}
                                 </div>
                               )}
@@ -1293,17 +1295,17 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
                         ))}
                       </div>
                     ) : (
-                      <p className="text-gray-500 text-center py-4">No daily log requests for this project</p>
+                      <p className="text-muted-foreground text-center py-4">No daily log requests for this project</p>
                     )}
                   </div>
                 </div>
               )}
                          </div>
 
-             <div className="flex items-center justify-end gap-3 p-4 sm:p-6 border-t border-gray-200 flex-shrink-0">
+             <div className="flex items-center justify-end gap-3 p-4 sm:p-6 border-t border-border flex-shrink-0">
                <button
                  onClick={handleCloseModal}
-                 className="px-3 sm:px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 text-sm sm:text-base"
+                 className="px-3 sm:px-4 py-2 text-foreground bg-secondary rounded-lg hover:bg-secondary/80 text-sm sm:text-base"
                >
                  Close
                </button>
@@ -1315,7 +1317,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
                    params.set('project', selectedProject.id.toString());
                    router.replace(`/?${params.toString()}`, { scroll: false });
                  }}
-                 className="px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm sm:text-base"
+                 className="px-3 sm:px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 text-sm sm:text-base"
                >
                  Create Payment Apps
                </button>
@@ -1327,15 +1329,15 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
       {/* Budget Details Modal */}
       {showBudgetModal && (
         <div className="fixed inset-0  bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
-            <div className="p-6 border-b border-gray-200">
+          <div className="bg-card rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+            <div className="p-6 border-b border-border">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900">
+                <h3 className="text-lg font-semibold text-foreground">
                   {modalTitle}
                 </h3>
                 <button
                   onClick={() => setShowBudgetModal(false)}
-                  className="text-gray-400 hover:text-gray-600 p-1"
+                  className="text-muted-foreground hover:text-muted-foreground p-1"
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -1347,52 +1349,52 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
               {loadingBudgetModal ? (
                 <div className="flex items-center justify-center py-12">
                   <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                  <span className="ml-3 text-gray-600">Loading data...</span>
+                  <span className="ml-3 text-muted-foreground">Loading data...</span>
                 </div>
               ) : budgetModalType === 'remaining' ? (
                 <div className="space-y-6">
                   {/* Summary Cards */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                     <div className="bg-blue-50 p-4 rounded-lg">
-                      <div className="text-sm text-blue-600 font-medium">Total Budget</div>
+                      <div className="text-sm text-primary font-medium">Total Budget</div>
                       <div className="text-2xl font-bold text-blue-900">{formatCurrency(budgetModalData.totalBudget)}</div>
                     </div>
                     <div className="bg-purple-50 p-4 rounded-lg">
                       <div className="text-sm text-purple-600 font-medium">Total Spent</div>
                       <div className="text-2xl font-bold text-purple-900">{formatCurrency(budgetModalData.totalSpent)}</div>
                     </div>
-                    <div className="bg-green-50 p-4 rounded-lg">
-                      <div className="text-sm text-green-600 font-medium">Remaining</div>
+                    <div className="bg-[var(--status-success-bg)] p-4 rounded-lg">
+                      <div className="text-sm text-[var(--status-success-text)] font-medium">Remaining</div>
                       <div className="text-2xl font-bold text-green-900">{formatCurrency(budgetModalData.remainingBudget)}</div>
                     </div>
                   </div>
                   
                   {/* Contract Breakdown */}
                   <div>
-                    <h4 className="text-lg font-semibold text-gray-900 mb-4">Contract Breakdown</h4>
+                    <h4 className="text-lg font-semibold text-foreground mb-4">Contract Breakdown</h4>
                     <div className="space-y-3">
                       {budgetModalData.items?.map((contract: any, index: number) => (
-                        <div key={index} className="bg-gray-50 p-4 rounded-lg">
+                        <div key={index} className="bg-secondary p-4 rounded-lg">
                           <div className="flex justify-between items-start mb-2">
                             <div>
-                              <div className="font-medium text-gray-900">{contract.name}</div>
-                              <div className="text-sm text-gray-600">{contract.trade}</div>
+                              <div className="font-medium text-foreground">{contract.name}</div>
+                              <div className="text-sm text-muted-foreground">{contract.trade}</div>
                             </div>
-                            <span className="text-xs text-gray-500 bg-gray-200 px-2 py-1 rounded">
+                            <span className="text-xs text-muted-foreground bg-secondary/80 px-2 py-1 rounded">
                               {contract.percentage}% of total
                             </span>
                           </div>
                           <div className="grid grid-cols-3 gap-4 text-sm">
                             <div>
-                              <div className="text-gray-600">Contract Amount</div>
+                              <div className="text-muted-foreground">Contract Amount</div>
                               <div className="font-medium">{formatCurrency(contract.contractAmount)}</div>
                             </div>
                             <div>
-                              <div className="text-gray-600">Paid to Date</div>
+                              <div className="text-muted-foreground">Paid to Date</div>
                               <div className="font-medium">{formatCurrency(contract.paidToDate)}</div>
                             </div>
                             <div>
-                              <div className="text-gray-600">Remaining</div>
+                              <div className="text-muted-foreground">Remaining</div>
                               <div className="font-medium">{formatCurrency(contract.remaining)}</div>
                             </div>
                           </div>
@@ -1404,32 +1406,32 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
               ) : budgetModalData.total ? (
                 <div className="space-y-4">
                   {/* Summary */}
-                  <div className="bg-gray-50 p-4 rounded-lg mb-6">
-                    <div className="text-sm text-gray-600">Total Spent</div>
-                    <div className="text-2xl font-bold text-gray-900">{formatCurrency(budgetModalData.total)}</div>
+                  <div className="bg-secondary p-4 rounded-lg mb-6">
+                    <div className="text-sm text-muted-foreground">Total Spent</div>
+                    <div className="text-2xl font-bold text-foreground">{formatCurrency(budgetModalData.total)}</div>
                   </div>
                   
                   {/* Payment Breakdown */}
                   <div>
-                    <h4 className="text-lg font-semibold text-gray-900 mb-4">Payment Breakdown</h4>
+                    <h4 className="text-lg font-semibold text-foreground mb-4">Payment Breakdown</h4>
                     <div className="space-y-3">
                       {budgetModalData.items?.map((payment: any, index: number) => (
-                        <div key={index} className="bg-white border border-gray-200 p-4 rounded-lg">
+                        <div key={index} className="bg-card border border-border p-4 rounded-lg">
                           <div className="flex justify-between items-start">
                             <div className="flex-1">
                               <div className="flex items-center gap-2 mb-1">
-                                <span className="font-medium text-gray-900">{payment.name}</span>
-                                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">{payment.trade}</span>
+                                <span className="font-medium text-foreground">{payment.name}</span>
+                                <span className="text-xs text-muted-foreground bg-secondary px-2 py-1 rounded">{payment.trade}</span>
                               </div>
-                              <div className="text-sm text-gray-600 mb-2">
+                              <div className="text-sm text-muted-foreground mb-2">
                                 <div>Date: {payment.date}</div>
                               </div>
-                              <div className="text-xs text-gray-500">
+                              <div className="text-xs text-muted-foreground">
                                 {payment.percentage}% of total spent
                               </div>
                             </div>
                             <div className="text-right">
-                              <div className="text-lg font-bold text-gray-900">{formatCurrency(payment.amount)}</div>
+                              <div className="text-lg font-bold text-foreground">{formatCurrency(payment.amount)}</div>
                             </div>
                           </div>
                         </div>
@@ -1440,8 +1442,8 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
               ) : (
                 <div className="text-center py-12">
                   <div className="text-4xl mb-4">📊</div>
-                  <p className="text-gray-500 font-medium">No data available</p>
-                  <p className="text-sm text-gray-400">There are no items in this category</p>
+                  <p className="text-muted-foreground font-medium">No data available</p>
+                  <p className="text-sm text-muted-foreground">There are no items in this category</p>
                 </div>
               )}
             </div>
@@ -1453,7 +1455,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
       {showNewProjectForm && (
         <AddForm
           title="New Project"
-          icon={<Building className="w-5 h-5 text-blue-600" />}
+          icon={<Building className="w-5 h-5 text-primary" />}
           fields={[
             {
               name: 'name',

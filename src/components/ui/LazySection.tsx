@@ -88,10 +88,10 @@ export const LazyChart: React.FC<{
   <LazySection
     className={className}
     fallback={
-      <div className="bg-white border border-gray-200 rounded-lg p-6">
+      <div className="bg-card border border-border rounded-lg p-6">
         <div className="space-y-4">
-          {title && <div className="h-6 bg-gray-200 rounded w-1/3"></div>}
-          <div className="h-64 bg-gray-100 rounded flex items-center justify-center">
+          {title && <div className="h-6 bg-secondary/80 rounded w-1/3"></div>}
+          <div className="h-64 bg-secondary rounded flex items-center justify-center">
             <LoadingSpinner text="Loading chart..." />
           </div>
         </div>
@@ -115,7 +115,7 @@ export const LazyTable: React.FC<{
       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
         <div className="space-y-2 p-4">
           {Array.from({ length: rows }).map((_, i) => (
-            <div key={i} className="h-10 bg-gray-100 rounded"></div>
+            <div key={i} className="h-10 bg-secondary rounded"></div>
           ))}
         </div>
       </div>
@@ -134,7 +134,7 @@ export const LazyCard: React.FC<{
   <LazySection
     className={className}
     fallback={
-      <div className="bg-white border border-gray-200 rounded-lg p-6">
+      <div className="bg-card border border-border rounded-lg p-6">
         <LoadingSkeleton lines={4} />
       </div>
     }

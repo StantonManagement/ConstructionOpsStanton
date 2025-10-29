@@ -49,12 +49,12 @@ const ProjectHeader: React.FC<{
     <div className="flex items-center justify-between">
       <div>
         <h2 className="text-2xl font-bold mb-2">Create Payment Applications</h2>
-        <div className="flex items-center space-x-3 text-blue-100">
+        <div className="flex items-center space-x-3 text-primary/80">
           <span className="text-xl">🏗️</span>
           <span className="text-lg font-medium">{project.name}</span>
         </div>
         {project.client_name && (
-          <div className="flex items-center space-x-2 mt-2 text-blue-200">
+          <div className="flex items-center space-x-2 mt-2 text-primary/60">
             <span className="text-sm">Client:</span>
             <span className="text-sm font-medium">{project.client_name}</span>
           </div>
@@ -62,7 +62,7 @@ const ProjectHeader: React.FC<{
       </div>
       <button
         onClick={handleBackToProjects}
-        className="bg-white/20 hover:bg-white/30 backdrop-blur-sm px-4 py-2 rounded-lg text-white font-medium transition-all duration-200 flex items-center space-x-2"
+        className="bg-card/20 hover:bg-card/30 backdrop-blur-sm px-4 py-2 rounded-lg text-card-foreground font-medium transition-all duration-200 flex items-center space-x-2"
       >
         <span>←</span>
         <span>Back to Projects</span>
@@ -104,10 +104,10 @@ const ContractorCard: React.FC<{
 
   return (
     <div
-      className={`relative bg-white border-2 rounded-xl p-6 cursor-pointer transition-all duration-200 transform hover:-translate-y-1 ${
+      className={`relative bg-card border-2 rounded-xl p-6 cursor-pointer transition-all duration-200 transform hover:-translate-y-1 ${
         isSelected
           ? 'border-blue-500 shadow-lg shadow-blue-500/25 bg-gradient-to-br from-blue-50 to-white'
-          : 'border-gray-200 shadow-sm hover:border-gray-300 hover:shadow-md'
+          : 'border-border shadow-sm hover:border-border hover:shadow-md'
       }`}
       onClick={() => onToggle(contract.subcontractor_id)}
     >
@@ -116,8 +116,8 @@ const ContractorCard: React.FC<{
         <div
           className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
             isSelected
-              ? 'bg-blue-600 border-blue-600'
-              : 'border-gray-300 bg-white hover:border-blue-300'
+              ? 'bg-primary border-primary'
+              : 'border-border bg-card hover:border-primary/50'
           }`}
         >
           {isSelected && (
@@ -130,11 +130,11 @@ const ContractorCard: React.FC<{
 
       {/* Header */}
       <div className="flex items-start space-x-3 mb-4">
-        <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-xl">
+        <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center text-xl">
           {getTradeIcon(contract.contractors.trade)}
         </div>
         <div className="flex-1">
-          <h4 className="font-semibold text-gray-900 text-lg mb-1">
+          <h4 className="font-semibold text-foreground text-lg mb-1">
             {contract.contractors.name}
           </h4>
           <div className="flex items-center space-x-2">

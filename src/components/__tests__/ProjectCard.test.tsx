@@ -49,7 +49,7 @@ describe('ProjectCard', () => {
     
     // Check that the percentage text is present
     expect(screen.getByText((content, element) => {
-      return Boolean(element?.className?.includes('text-gray-600 font-medium') && 
+      return Boolean(element?.className?.includes('text-muted-foreground font-medium') && 
              element?.textContent?.includes('<0.01%') && 
              element?.textContent?.includes('utilized'))
     })).toBeInTheDocument()

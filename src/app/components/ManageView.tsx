@@ -54,10 +54,10 @@ const NotificationManager: React.FC<{
           key={notification.id}
           className={`
             px-4 py-3 rounded-lg shadow-lg animate-slide-in flex items-center gap-3 min-w-80 backdrop-blur-sm
-            ${notification.type === 'success' ? 'bg-green-500/90 text-white' : ''}
-            ${notification.type === 'error' ? 'bg-red-500/90 text-white' : ''}
-            ${notification.type === 'warning' ? 'bg-yellow-500/90 text-white' : ''}
-            ${notification.type === 'info' ? 'bg-blue-500/90 text-white' : ''}
+            ${notification.type === 'success' ? 'bg-[var(--status-success-bg)] text-[var(--status-success-text)]' : ''}
+            ${notification.type === 'error' ? 'bg-[var(--status-critical-bg)] text-[var(--status-critical-text)]' : ''}
+            ${notification.type === 'warning' ? 'bg-[var(--status-warning-bg)] text-[var(--status-warning-text)]' : ''}
+            ${notification.type === 'info' ? 'bg-primary text-primary-foreground' : ''}
           `}
         >
           {notification.type === 'success' && <CheckCircle className="w-5 h-5 flex-shrink-0" />}
@@ -98,22 +98,22 @@ const QuickActions: React.FC<{
   return (
     <div className="flex flex-wrap items-center gap-2 sm:gap-3">
       {selectedCount > 0 && (
-        <div className="flex items-center gap-3 px-4 py-3 bg-red-50 border-2 border-red-200 rounded-lg shadow-sm">
+        <div className="flex items-center gap-3 px-4 py-3 bg-destructive/10 border-2 border-destructive/20 rounded-lg shadow-sm">
           <div className="flex items-center gap-2">
-            <AlertCircle className="w-5 h-5 text-red-600" />
-            <span className="text-sm font-semibold text-red-700">
+            <AlertCircle className="w-5 h-5 text-destructive" />
+            <span className="text-sm font-semibold text-destructive">
               {selectedCount} item{selectedCount > 1 ? 's' : ''} selected
             </span>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={onBulkDelete}
-              className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all duration-200 font-medium shadow-sm hover:shadow-md transform hover:scale-105"
+              className="flex items-center gap-2 px-4 py-2 bg-destructive text-destructive-foreground rounded-lg hover:bg-destructive/90 transition-all duration-200 font-medium shadow-sm hover:shadow-md transform hover:scale-105"
             >
               <Trash2 className="w-4 h-4" />
               Delete {selectedCount > 1 ? `${selectedCount} Items` : 'Item'}
             </button>
-            <span className="text-xs text-red-600 bg-red-100 px-2 py-1 rounded-full">
+            <span className="text-xs text-destructive bg-destructive/10 px-2 py-1 rounded-full">
               ⚠️ Permanent
             </span>
           </div>
@@ -122,14 +122,14 @@ const QuickActions: React.FC<{
 
       <button
         onClick={onSelectAll}
-        className="flex items-center gap-2 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
+        className="flex items-center gap-2 px-3 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors text-sm font-medium"
       >
         {selectedCount === totalCount && totalCount > 0 ? 'Deselect All' : 'Select All'}
       </button>
 
       <button
         onClick={onAddNew}
-        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-sm"
+        className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium shadow-sm"
       >
         {getIcon()}
         <span className="hidden sm:inline">{getAddLabel()}</span>
@@ -139,7 +139,7 @@ const QuickActions: React.FC<{
       {onExport && (
         <button
           onClick={onExport}
-          className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
+          className="flex items-center gap-2 px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors font-medium"
         >
           <Archive className="w-4 h-4" />
           <span className="hidden sm:inline">Export</span>
@@ -182,14 +182,14 @@ const SearchFilterBar: React.FC<{
           onClick={() => setShowFilters(!showFilters)}
           className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors ${
             hasActiveFilters 
-              ? 'bg-blue-50 border-blue-200 text-blue-700' 
-              : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+              ? 'bg-primary/10 border-primary text-primary' 
+              : 'bg-card border-border text-foreground hover:bg-accent'
           }`}
         >
           <Filter className="w-4 h-4" />
           <span className="text-sm font-medium">Filters</span>
           {hasActiveFilters && (
-            <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">
+            <span className="px-1.5 py-0.5 bg-primary/10 text-primary text-xs rounded-full">
               Active
             </span>
           )}
@@ -376,11 +376,11 @@ const ItemCard: React.FC<{
 
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
-      case 'active': return 'bg-green-100 text-green-800 border-green-200';
-      case 'completed': return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'pending': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'cancelled': return 'bg-red-100 text-red-800 border-red-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+      case 'active': return 'bg-[var(--status-success-bg)] text-[var(--status-success-text)] border-[var(--status-success-border)]';
+      case 'completed': return 'bg-primary/10 text-primary border-primary';
+      case 'pending': return 'bg-[var(--status-warning-bg)] text-[var(--status-warning-text)] border-[var(--status-warning-border)]';
+      case 'cancelled': return 'bg-[var(--status-critical-bg)] text-[var(--status-critical-text)] border-[var(--status-critical-border)]';
+      default: return 'bg-[var(--status-neutral-bg)] text-[var(--status-neutral-text)] border-[var(--status-neutral-border)]';
     }
   };
 
