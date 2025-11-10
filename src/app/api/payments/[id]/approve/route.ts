@@ -166,7 +166,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     console.log(`Payment application ${paymentAppId} approved by ${userData.name}`);
 
     // TEMPORARILY COMMENTED OUT: Generate invoice (G703 PDF) after approval
-    // This is to isolate the 405 error issue on Vercel
+    // This is to isolate the 405 error issue on Railway
     /*
     try {
       // Fetch additional data needed for invoice generation
