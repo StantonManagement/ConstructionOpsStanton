@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { supabaseAdmin as supabase } from '@/lib/supabaseClient';
 import MessagingResponse from 'twilio/lib/twiml/MessagingResponse';
 
 // Force Node.js runtime for better logging
 export const runtime = 'nodejs';
-
-const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
 // Example questions (replace with dynamic logic as needed)
 const QUESTIONS = [
@@ -56,6 +54,15 @@ async function generateSummary(paymentAppId: number) {
 }
 
 export async function POST(req: NextRequest) {
+  if (!supabase) {
+    const twiml = new MessagingResponse();
+    twiml.message('Service temporarily unavailable. Please try again later.');
+    return new NextResponse(twiml.toString(), {
+      status: 503,
+      headers: { 'Content-Type': 'text/xml' }
+    });
+  }
+
   const formData = await req.formData();
   const from = formData.get('From');
   const body = (formData.get('Body') || '').toString().trim().toUpperCase();

@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { supabaseAdmin as supabase } from '@/lib/supabaseClient';
 import Mustache from 'mustache';
-
-const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
 // @ts-ignore
 export async function POST(req: NextRequest, { params }) {
+  if (!supabase) {
+    return NextResponse.json({ error: 'Service unavailable' }, { status: 503 });
+  }
+
   const paymentAppId = parseInt(params.id, 10);
 
   // 1. Fetch all required data

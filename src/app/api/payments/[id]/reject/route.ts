@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { supabaseAdmin as supabase } from '@/lib/supabaseClient';
 
 export const runtime = 'nodejs';
 
@@ -8,8 +8,6 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
-
-const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
 export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: CORS_HEADERS as HeadersInit });
@@ -23,6 +21,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     if (!paymentAppId) {
       return NextResponse.json({ error: 'Payment application ID is required' }, { status: 400, headers: CORS_HEADERS });
+    }
+
+    if (!supabase) {
+      return NextResponse.json({ error: 'Service unavailable' }, { status: 503, headers: CORS_HEADERS });
     }
 
     // Get current user for rejection tracking
