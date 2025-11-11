@@ -174,7 +174,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
           <div className="bg-yellow-50 p-4 rounded-lg">
             <h4 className="font-medium text-yellow-900 mb-2">Mobile Notifications</h4>
             <p className="text-sm text-yellow-800">
-              Receive SMS notifications for critical updates when you're in the field.
+              Receive SMS notifications for critical updates when you&apos;re in the field.
             </p>
           </div>
         </div>
@@ -196,7 +196,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
           </h3>
           
           <p className="text-muted-foreground">
-            You're now ready to manage your construction projects efficiently. 
+            You&apos;re now ready to manage your construction projects efficiently. 
             The interface is designed to be simple and mobile-friendly for field workers.
           </p>
           

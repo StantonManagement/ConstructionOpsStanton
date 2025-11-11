@@ -226,6 +226,10 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
   const [budgetModalType, setBudgetModalType] = useState('');
   const [loadingBudgetModal, setLoadingBudgetModal] = useState(false);
 
+  // Contract details modal state
+  const [showContractModal, setShowContractModal] = useState(false);
+  const [selectedContract, setSelectedContract] = useState<any>(null);
+
   // New project form state
   const [showNewProjectForm, setShowNewProjectForm] = useState(false);
   const [isCreatingProject, setIsCreatingProject] = useState(false);
@@ -241,13 +245,29 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
         .select('*')
         .order('name');
 
-      if (projectsError) throw projectsError;
+      if (projectsError) {
+        throw new Error(`Failed to load projects: ${projectsError.message}`);
+      }
+
+      if (!projectsData || projectsData.length === 0) {
+        setProjects([]);
+        setLoading(false);
+        return;
+      }
 
       // Get all project IDs for batch queries to avoid N+1 problem
-      const projectIds = (projectsData || []).map(p => p.id);
+      const projectIds = projectsData.map(p => p.id);
 
-      // Batch fetch all data to prevent N+1 queries
-      const [contractorsData, paymentAppsData, budgetData, approvedPayments] = await Promise.all([
+      // Stats queries are non-blocking - if they fail, still show projects
+      let contractorsData: any = { data: [] };
+      let paymentAppsData: any = { data: [] };
+      let budgetData: any = { data: [] };
+      let approvedPayments: any = { data: [] };
+      let statsErrors: string[] = [];
+
+      try {
+        // Try to fetch stats - catch errors individually so one failure doesn't break everything
+        const statsPromises = await Promise.allSettled([
         supabase
           .from('project_contractors')
           .select('id, project_id')
@@ -267,15 +287,62 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
           .select('current_payment, project_id')
           .in('project_id', projectIds)
           .eq('status', 'approved')
-      ]);
+        ]);
 
-      // Group data by project_id for efficient lookup
-      const contractorsByProject = (contractorsData.data || []).reduce((acc: any, item) => {
+        // Process each promise result
+        if (statsPromises[0].status === 'fulfilled') {
+          contractorsData = statsPromises[0].value;
+        } else {
+          statsErrors.push('Failed to load contractor stats');
+          console.warn('[ProjectsView] Error fetching contractor stats:', statsPromises[0].reason);
+        }
+
+        if (statsPromises[1].status === 'fulfilled') {
+          paymentAppsData = statsPromises[1].value;
+          if (paymentAppsData.error) {
+            statsErrors.push('Failed to load payment application stats');
+            console.warn('[ProjectsView] Payment apps query error:', paymentAppsData.error);
+            // Check for relationship errors specifically
+            if (paymentAppsData.error.message?.includes('relationship') || 
+                paymentAppsData.error.message?.includes('Could not find a relationship')) {
+              console.warn('[ProjectsView] Relationship error detected. Run scripts/check-and-fix-relationships.sql in Supabase SQL Editor.');
+            }
+          }
+        } else {
+          statsErrors.push('Failed to load payment application stats');
+          console.warn('[ProjectsView] Error fetching payment apps stats:', statsPromises[1].reason);
+        }
+
+        if (statsPromises[2].status === 'fulfilled') {
+          budgetData = statsPromises[2].value;
+        } else {
+          statsErrors.push('Failed to load budget stats');
+          console.warn('[ProjectsView] Error fetching budget stats:', statsPromises[2].reason);
+        }
+
+        if (statsPromises[3].status === 'fulfilled') {
+          approvedPayments = statsPromises[3].value;
+          if (approvedPayments.error) {
+            statsErrors.push('Failed to load approved payments stats');
+            console.warn('[ProjectsView] Approved payments query error:', approvedPayments.error);
+          }
+        } else {
+          statsErrors.push('Failed to load approved payments stats');
+          console.warn('[ProjectsView] Error fetching approved payments stats:', statsPromises[3].reason);
+        }
+
+      } catch (statsError) {
+        console.warn('[ProjectsView] Error in stats queries (non-fatal):', statsError);
+        statsErrors.push('Some statistics could not be loaded');
+      }
+
+      // Group data by project_id for efficient lookup (safe defaults if queries failed)
+      const contractorsByProject = (contractorsData.data || []).reduce((acc: any, item: any) => {
         acc[item.project_id] = (acc[item.project_id] || 0) + 1;
         return acc;
       }, {});
 
-      const paymentAppsByProject = (paymentAppsData.data || []).reduce((acc: any, item) => {
+      const paymentAppsByProject = (paymentAppsData.data || []).reduce((acc: any, item: any) => {
         if (!acc[item.project_id]) acc[item.project_id] = { active: 0, completed: 0 };
         if (['submitted', 'needs_review'].includes(item.status)) {
           acc[item.project_id].active++;
@@ -285,20 +352,20 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
         return acc;
       }, {});
 
-      const budgetByProject = (budgetData.data || []).reduce((acc: any, item) => {
+      const budgetByProject = (budgetData.data || []).reduce((acc: any, item: any) => {
         if (!acc[item.project_id]) acc[item.project_id] = 0;
         acc[item.project_id] += Number(item.contract_amount) || 0;
         return acc;
       }, {});
 
-      const spentByProject = (approvedPayments.data || []).reduce((acc: any, item) => {
+      const spentByProject = (approvedPayments.data || []).reduce((acc: any, item: any) => {
         if (!acc[item.project_id]) acc[item.project_id] = 0;
         acc[item.project_id] += Number(item.current_payment) || 0;
         return acc;
       }, {});
 
-      // Enrich projects with pre-calculated stats
-      const enrichedProjects = (projectsData || []).map((project: any) => {
+      // Enrich projects with pre-calculated stats (with safe defaults)
+      const enrichedProjects = projectsData.map((project: any) => {
         const totalContractors = contractorsByProject[project.id] || 0;
         const paymentApps = paymentAppsByProject[project.id] || { active: 0, completed: 0 };
         const totalBudget = budgetByProject[project.id] || 0;
@@ -320,9 +387,21 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
       });
 
       setProjects(enrichedProjects);
+
+      // Show warning if stats failed but projects loaded
+      if (statsErrors.length > 0) {
+        console.warn('[ProjectsView] Projects loaded successfully, but some stats failed:', statsErrors);
+        // Set a non-blocking error message
+        setError(`Projects loaded, but some statistics could not be loaded. ${statsErrors.join(', ')}`);
+      } else {
+        setError(null);
+      }
+
     } catch (err) {
-      console.error('Error fetching projects:', err);
-      setError('Failed to load projects');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load projects';
+      console.error('[ProjectsView] Error fetching projects:', err);
+      setError(errorMessage);
+      setProjects([]);
     } finally {
       setLoading(false);
     }
@@ -1203,7 +1282,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
                       <div className="text-center py-8 bg-secondary rounded-lg">
                         <div className="text-4xl mb-4">👷</div>
                         <p className="text-muted-foreground font-medium">No contractors assigned</p>
-                        <p className="text-sm text-muted-foreground">This project doesn't have any contractors assigned yet</p>
+                        <p className="text-sm text-muted-foreground">This project doesn&apos;t have any contractors assigned yet</p>
                       </div>
                     )}
                   </div>
@@ -1252,7 +1331,53 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
                       <div className="text-center py-8 bg-secondary rounded-lg">
                         <div className="text-4xl mb-4">📋</div>
                         <p className="text-muted-foreground font-medium">No payment applications</p>
-                        <p className="text-sm text-muted-foreground">This project doesn't have any payment applications yet</p>
+                        <p className="text-sm text-muted-foreground">This project doesn&apos;t have any payment applications yet</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Contracts */}
+                  <div>
+                    <h4 className="text-lg font-semibold text-foreground mb-4">Contracts ({projectModalData.contracts?.length || 0})</h4>
+                    {projectModalData.contracts?.length > 0 ? (
+                      <div className="space-y-3">
+                        {projectModalData.contracts.map((contract: any) => (
+                          <div 
+                            key={contract.id} 
+                            className="bg-secondary rounded-lg p-4 hover:bg-secondary/80 transition-colors cursor-pointer"
+                            onClick={() => {
+                              setSelectedContract(contract);
+                              setShowContractModal(true);
+                            }}
+                          >
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-medium text-foreground">
+                                  {contract.contractors?.name || 'Unknown Contractor'}
+                                </span>
+                                <span className="text-xs text-muted-foreground">
+                                  {contract.contractors?.trade || ''}
+                                </span>
+                              </div>
+                              <div className="text-sm font-medium text-foreground">
+                                {formatCurrency(contract.contract_amount || 0)}
+                              </div>
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              <div>Start: {contract.start_date ? formatDate(contract.start_date) : 'N/A'}</div>
+                              <div>End: {contract.end_date ? formatDate(contract.end_date) : 'N/A'}</div>
+                              {contract.contract_nickname && (
+                                <div>Nickname: {contract.contract_nickname}</div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 bg-secondary rounded-lg">
+                        <div className="text-4xl mb-4">📄</div>
+                        <p className="text-muted-foreground font-medium">No contracts</p>
+                        <p className="text-sm text-muted-foreground">This project doesn&apos;t have any contracts yet</p>
                       </div>
                     )}
                   </div>
@@ -1446,6 +1571,107 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
                   <p className="text-sm text-muted-foreground">There are no items in this category</p>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Contract Details Modal */}
+      {showContractModal && selectedContract && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-card rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="p-4 sm:p-6 border-b border-border flex-shrink-0">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg sm:text-xl font-semibold text-foreground">
+                  Contract Details
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowContractModal(false);
+                    setSelectedContract(null);
+                  }}
+                  className="text-muted-foreground hover:text-foreground p-1 flex-shrink-0"
+                >
+                  <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <div className="p-4 sm:p-6 overflow-y-auto flex-1">
+              <div className="space-y-6">
+                {/* Contract Amount - Prominently Displayed */}
+                <div className="bg-primary/10 rounded-lg p-6 text-center">
+                  <div className="text-sm font-medium text-muted-foreground mb-2">Contract Amount</div>
+                  <div className="text-3xl font-bold text-primary">
+                    {formatCurrency(selectedContract.contract_amount || 0)}
+                  </div>
+                </div>
+
+                {/* Contract Information */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-secondary rounded-lg p-4">
+                    <label className="text-sm font-medium text-muted-foreground">Contractor</label>
+                    <p className="text-lg font-semibold text-foreground mt-1">
+                      {selectedContract.contractors?.name || 'Unknown Contractor'}
+                    </p>
+                    {selectedContract.contractors?.trade && (
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {selectedContract.contractors.trade}
+                      </p>
+                    )}
+                  </div>
+
+                  {selectedContract.contract_nickname && (
+                    <div className="bg-secondary rounded-lg p-4">
+                      <label className="text-sm font-medium text-muted-foreground">Contract Nickname</label>
+                      <p className="text-lg font-semibold text-foreground mt-1">
+                        {selectedContract.contract_nickname}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Dates */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-secondary rounded-lg p-4">
+                    <label className="text-sm font-medium text-muted-foreground">Start Date</label>
+                    <p className="text-base font-medium text-foreground mt-1">
+                      {selectedContract.start_date ? formatDate(selectedContract.start_date) : 'N/A'}
+                    </p>
+                  </div>
+
+                  <div className="bg-secondary rounded-lg p-4">
+                    <label className="text-sm font-medium text-muted-foreground">End Date</label>
+                    <p className="text-base font-medium text-foreground mt-1">
+                      {selectedContract.end_date ? formatDate(selectedContract.end_date) : 'N/A'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Status */}
+                {selectedContract.status && (
+                  <div className="bg-secondary rounded-lg p-4">
+                    <label className="text-sm font-medium text-muted-foreground">Status</label>
+                    <p className="text-base font-medium text-foreground mt-1 capitalize">
+                      {selectedContract.status}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 p-4 sm:p-6 border-t border-border flex-shrink-0">
+              <button
+                onClick={() => {
+                  setShowContractModal(false);
+                  setSelectedContract(null);
+                }}
+                className="px-3 sm:px-4 py-2 text-foreground bg-secondary rounded-lg hover:bg-secondary/80 text-sm sm:text-base"
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>

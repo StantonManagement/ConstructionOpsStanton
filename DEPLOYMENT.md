@@ -197,9 +197,9 @@ Add these variables:
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY` ⚠️ **CRITICAL**
 - `NEXT_PUBLIC_SITE_URL` (set to your Render deployment URL)
-- `TWILIO_ACCOUNT_SID` (if using SMS)
-- `TWILIO_AUTH_TOKEN` (if using SMS)
-- `TWILIO_PHONE_NUMBER` (if using SMS)
+- `TWILIO_ACCOUNT_SID` ⚠️ **REQUIRED** - SMS is a core feature
+- `TWILIO_AUTH_TOKEN` ⚠️ **REQUIRED** - SMS is a core feature
+- `TWILIO_PHONE_NUMBER` ⚠️ **REQUIRED** - SMS is a core feature
 - `SECRET_KEY`
 
 **Optional**:
@@ -230,9 +230,9 @@ Render will automatically check if your service is responding. Ensure your app s
 | `NEXT_PUBLIC_SITE_URL` | ✅ Yes | Build + Runtime | Same as above |
 | `CRON_SECRET` | ✅ Yes (Railway) | Runtime | Railway only: both services |
 | `RAILWAY_WEB_SERVICE_URL` | ✅ Yes (Railway) | Runtime | Railway cron service only |
-| `TWILIO_ACCOUNT_SID` | ⚠️ Conditional | Runtime | Same as above |
-| `TWILIO_AUTH_TOKEN` | ⚠️ Conditional | Runtime | Same as above |
-| `TWILIO_PHONE_NUMBER` | ⚠️ Conditional | Runtime | Same as above |
+| `TWILIO_ACCOUNT_SID` | ✅ Yes | Runtime | Same as above |
+| `TWILIO_AUTH_TOKEN` | ✅ Yes | Runtime | Same as above |
+| `TWILIO_PHONE_NUMBER` | ✅ Yes | Runtime | Same as above |
 | `SECRET_KEY` | ✅ Yes | Runtime | Same as above |
 
 ### Detailed Setup Instructions
@@ -283,7 +283,13 @@ Render will automatically check if your service is responding. Ensure your app s
    - **anon public** key → `NEXT_PUBLIC_SUPABASE_ANON_KEY`
    - **service_role** key → `SUPABASE_SERVICE_ROLE_KEY` (⚠️ Keep secret!)
 
-**Twilio Keys** (if using SMS):
+**Twilio Keys** (⚠️ **REQUIRED** - SMS is core feature):
+SMS functionality is essential for:
+- Daily log request reminders (sent at 6 PM EST)
+- PM notes notifications
+- Payment application notifications
+- Contractor communication
+
 1. Go to [Twilio Console](https://console.twilio.com)
 2. Navigate to **Account** → **Account Info**
 3. Copy **Account SID** → `TWILIO_ACCOUNT_SID`

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { DollarSign, Filter, Search, RefreshCw, CheckCircle, XCircle, Clock, AlertCircle, ChevronLeft, ChevronRight, Eye, Trash2 } from 'lucide-react';
 import { generateG703Pdf } from '@/lib/g703Pdf';
@@ -128,6 +129,11 @@ function PaymentCard({ application, isSelected, onSelect, onVerify, getDocumentF
       priority: "PICKUP",
       icon: "💰"
     },
+    rejected: { 
+      color: "bg-red-100 text-red-800 border-red-200", 
+      priority: "REJECTED",
+      icon: "❌"
+    },
   };
 
   const config = statusConfig[application.status] || statusConfig.needs_review;
@@ -188,12 +194,14 @@ function PaymentCard({ application, isSelected, onSelect, onVerify, getDocumentF
             className={`px-2 sm:px-3 py-1 rounded-md text-xs font-semibold transition-colors ${
               application.status === "approved"
                 ? "bg-green-600 text-white hover:bg-green-700"
+                : application.status === "rejected"
+                ? "bg-red-600 text-white hover:bg-red-700"
                 : config.priority === "URGENT" 
                 ? "bg-red-600 text-white hover:bg-red-700" 
                 : "bg-blue-600 text-white hover:bg-blue-700"
             }`}
           >
-            {application.status === "approved" ? "View" : config.priority === "URGENT" ? "URGENT" : "Verify"}
+            {application.status === "approved" || application.status === "rejected" ? "View" : config.priority === "URGENT" ? "URGENT" : "Verify"}
           </button>
           {doc && (
             <button
@@ -251,6 +259,11 @@ function PaymentRow({ application, isSelected, onSelect, onVerify, getDocumentFo
       priority: "PICKUP",
       icon: "💰"
     },
+    rejected: { 
+      color: "bg-red-100 text-red-800 border-red-200", 
+      priority: "REJECTED",
+      icon: "❌"
+    },
   };
 
   const config = statusConfig[application.status] || statusConfig.needs_review;
@@ -297,20 +310,28 @@ function PaymentRow({ application, isSelected, onSelect, onVerify, getDocumentFo
       <td className="px-4 py-3">
         <div className="flex items-center gap-2">
           <button
-            onClick={() => onVerify(application.id)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onVerify(application.id);
+            }}
             className={`px-3 py-1 rounded-md text-xs font-semibold transition-colors ${
               application.status === "approved"
                 ? "bg-green-600 text-white hover:bg-green-700"
+                : application.status === "rejected"
+                ? "bg-red-600 text-white hover:bg-red-700"
                 : config.priority === "URGENT" 
                 ? "bg-red-600 text-white hover:bg-red-700" 
                 : "bg-blue-600 text-white hover:bg-blue-700"
             }`}
           >
-            {application.status === "approved" ? "View" : config.priority === "URGENT" ? "URGENT" : "Verify"}
+            {application.status === "approved" || application.status === "rejected" ? "View" : config.priority === "URGENT" ? "URGENT" : "Verify"}
           </button>
           {doc && (
             <button
-              onClick={() => sendForSignature(application.id)}
+              onClick={(e) => {
+                e.stopPropagation();
+                sendForSignature(application.id);
+              }}
               className="px-3 py-1 bg-green-600 text-white rounded-md text-xs font-semibold hover:bg-green-700 transition-colors"
             >
               Sign
@@ -539,6 +560,7 @@ function FilterSidebar({ statusFilter, setStatusFilter, projectFilter, setProjec
             { value: 'submitted', label: 'Submitted' },
             { value: 'needs_review', label: 'Review' },
             { value: 'approved', label: 'Approved' },
+            { value: 'rejected', label: 'Rejected' },
             { value: 'check_ready', label: 'Ready' },
             { value: 'sms_sent', label: 'SMS Sent' }
           ].map((status) => (
@@ -667,10 +689,14 @@ interface PaymentApplicationsViewProps {
 }
 
 const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searchQuery = '' }) => {
+  const searchParams = useSearchParams();
   const [applications, setApplications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<string>('submitted'); // Changed default to 'submitted'
+  // Get statusFilter from URL params or default to 'submitted'
+  const [statusFilter, setStatusFilter] = useState<string>(
+    searchParams.get('statusFilter') || 'submitted'
+  );
   const [projectFilter, setProjectFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'status' | 'date' | 'amount'>('date');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
@@ -728,13 +754,17 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
 
   const itemsPerPage = 10;
 
-  // Fetch applications
+  // Fetch applications with fallback for relationship queries
   const fetchApplications = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
-      const { data: appsRaw, error: appsError } = await supabase
+      // Try relationship query first
+      let appsRaw: any[] | null = null;
+      let useFallback = false;
+      
+      const { data, error: appsError } = await supabase
         .from("payment_applications")
         .select(`
           id,
@@ -751,7 +781,60 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
         `)
         .order("created_at", { ascending: false });
 
-      if (appsError) throw new Error(appsError.message);
+      // Check if error is related to relationships
+      if (appsError) {
+        const isRelationshipError = appsError.message?.includes('relationship') || 
+                                   appsError.message?.includes('Could not find a relationship');
+        
+        if (isRelationshipError) {
+          console.warn('[PaymentApplicationsView] Relationship query failed, using fallback:', appsError.message);
+          console.warn('[PaymentApplicationsView] Make sure SUPABASE_SERVICE_ROLE_KEY is set in .env');
+          useFallback = true;
+        } else {
+          throw new Error(appsError.message);
+        }
+      } else {
+        appsRaw = data;
+      }
+
+      // Fallback: Manual queries if relationship syntax failed
+      if (useFallback || !appsRaw) {
+        console.log('[PaymentApplicationsView] Using fallback query pattern');
+        
+        // Fetch payment applications without relationships
+        const { data: appsData, error: appsError2 } = await supabase
+          .from("payment_applications")
+          .select("id, status, current_payment, current_period_value, created_at, project_id, contractor_id")
+          .order("created_at", { ascending: false });
+
+        if (appsError2) throw new Error(appsError2.message);
+        
+        // Fetch projects and contractors separately
+        const projectIds = [...new Set((appsData || []).map((a: any) => a.project_id).filter(Boolean))];
+        const contractorIds = [...new Set((appsData || []).map((a: any) => a.contractor_id).filter(Boolean))];
+
+        const [projectsResult, contractorsResult] = await Promise.all([
+          projectIds.length > 0 ? supabase
+            .from("projects")
+            .select("id, name, client_name")
+            .in("id", projectIds) : { data: [], error: null },
+          contractorIds.length > 0 ? supabase
+            .from("contractors")
+            .select("id, name, trade")
+            .in("id", contractorIds) : { data: [], error: null }
+        ]);
+
+        const projectsMap = new Map((projectsResult.data || []).map((p: any) => [p.id, p]));
+        const contractorsMap = new Map((contractorsResult.data || []).map((c: any) => [c.id, c]));
+
+        // Combine data
+        appsRaw = (appsData || []).map((app: any) => ({
+          ...app,
+          project: projectsMap.get(app.project_id) || { id: app.project_id, name: 'Unknown Project', client_name: '' },
+          contractor: contractorsMap.get(app.contractor_id) || { id: app.contractor_id, name: 'Unknown Contractor', trade: '' },
+          line_item_progress: [] // Will be fetched separately if needed
+        }));
+      }
 
       const sortedApps = (appsRaw || []).sort((a, b) => {
         if (a.status === "submitted" && b.status !== "submitted") return -1;
@@ -828,7 +911,14 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
     }
   }, []);
 
-  // Load data on mount
+  // Load data on mount and when statusFilter changes from URL
+  useEffect(() => {
+    const urlStatusFilter = searchParams?.get('statusFilter');
+    if (urlStatusFilter && urlStatusFilter !== statusFilter) {
+      setStatusFilter(urlStatusFilter);
+    }
+  }, [searchParams]);
+
   useEffect(() => {
     fetchApplications();
     fetchDocuments();

@@ -437,11 +437,22 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
             .eq("user_id", session.user.id)
             .single();
 
+          // Handle role: default to 'staff' if no role found (expected) or error
+          // Only log actual errors (not "no rows found" which is PGRST116)
           if (error) {
-            console.error("Role fetch error:", error);
-            setRole("pending");
+            // PGRST116 is "no rows found" - expected when user has no role entry yet
+            if (error.code !== 'PGRST116') {
+              console.error("Role fetch error:", {
+                message: error.message,
+                code: error.code,
+                details: error.details,
+                hint: error.hint
+              });
+            }
+            // Default to 'staff' when no role found or on error
+            setRole('staff');
           } else {
-            setRole(data?.role || "user");
+            setRole(data?.role || 'staff');
           }
         } else {
           setRole("unauthenticated");

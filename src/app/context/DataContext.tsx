@@ -224,8 +224,12 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
           `)
       ]);
 
-        // Handle projects
-        if (projectsResponse.data) {
+        // Handle projects with proper error checking
+        if (projectsResponse.error) {
+          console.error('[DataContext] Error fetching projects:', projectsResponse.error);
+          // Don't fail completely - set empty array but log the error
+          dispatch({ type: 'SET_PROJECTS', payload: [] });
+        } else if (projectsResponse.data) {
           dispatch({ type: 'SET_PROJECTS', payload: projectsResponse.data });
         }
 
@@ -269,12 +273,17 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
           dispatch({ type: 'SET_CONTRACTS', payload: mapped });
         }
 
-        // Log any errors
+        // Log any errors with more detail
         if (contractorsResponse.error) {
-          console.error('Error fetching contractors:', contractorsResponse.error);
+          console.error('[DataContext] Error fetching contractors:', contractorsResponse.error);
         }
         if (contractsResponse.error) {
-          console.error('Error fetching contracts:', contractsResponse.error);
+          console.error('[DataContext] Error fetching contracts:', contractsResponse.error);
+          // If relationship error, provide helpful message
+          if (contractsResponse.error.message?.includes('relationship') || 
+              contractsResponse.error.message?.includes('Could not find a relationship')) {
+            console.warn('[DataContext] Relationship query failed. Run scripts/check-and-fix-relationships.sql in Supabase SQL Editor.');
+          }
         }
 
     } catch (error) {

@@ -812,7 +812,7 @@ const UserManagementView: React.FC = () => {
             <div>
               <h3 className="text-sm font-medium text-[var(--status-warning-text)]">Access Denied</h3>
               <p className="text-sm text-[var(--status-warning-text)] mt-1">
-                You don't have permission to access this page. Contact your administrator for access.
+                You don&apos;t have permission to access this page. Contact your administrator for access.
               </p>
             </div>
           </div>

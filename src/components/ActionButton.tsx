@@ -1,9 +1,14 @@
 import React from 'react';
-import { Button, ButtonProps } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
+type ButtonProps = React.ComponentProps<"button"> & VariantProps<typeof buttonVariants> & {
+  asChild?: boolean;
+};
+
 interface ActionButtonProps extends Omit<ButtonProps, 'variant'> {
-  variant?: 'primary' | 'secondary' | 'destructive' | 'outline' | 'ghost';
+  variant?: 'default' | 'secondary' | 'destructive' | 'outline' | 'ghost' | 'link';
   size?: 'sm' | 'default' | 'lg' | 'icon';
   children: React.ReactNode;
 }
@@ -13,7 +18,7 @@ interface ActionButtonProps extends Omit<ButtonProps, 'variant'> {
  * Ensures all buttons use the design system colors
  */
 export const ActionButton: React.FC<ActionButtonProps> = ({ 
-  variant = 'primary', 
+  variant = 'default', 
   size = 'default',
   className,
   children,
@@ -38,7 +43,7 @@ export const ActionButton: React.FC<ActionButtonProps> = ({
  * Primary action button - for main actions
  */
 export const PrimaryButton: React.FC<Omit<ActionButtonProps, 'variant'>> = (props) => (
-  <ActionButton variant="primary" {...props} />
+  <ActionButton variant="default" {...props} />
 );
 
 /**

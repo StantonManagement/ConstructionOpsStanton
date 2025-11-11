@@ -112,8 +112,8 @@ class ColorValidator {
 
   private getSuggestion(hardcodedColor: string): string {
     // Check if we have a direct mapping
-    if (SEMANTIC_MAPPINGS[hardcodedColor]) {
-      return `Use ${SEMANTIC_MAPPINGS[hardcodedColor]} instead`;
+    if (hardcodedColor in SEMANTIC_MAPPINGS) {
+      return `Use ${SEMANTIC_MAPPINGS[hardcodedColor as keyof typeof SEMANTIC_MAPPINGS]} instead`;
     }
 
     // Generate generic suggestion based on color type
