@@ -82,7 +82,9 @@ function ProjectOverview({ project, onCreatePaymentApps, onStatsPaymentAppClick 
   const [projectModalData, setProjectModalData] = useState<any>({});
   const [loadingProjectModal, setLoadingProjectModal] = useState(false);
 
-  if (!project) return null;
+  // Contract modal state
+  const [showContractModal, setShowContractModal] = useState(false);
+  const [selectedContract, setSelectedContract] = useState<any>(null);
 
   // Function to handle stat card clicks
   const handleStatCardClick = async (type: string) => {
@@ -329,6 +331,8 @@ function ProjectOverview({ project, onCreatePaymentApps, onStatsPaymentAppClick 
       fetchProjectStats();
     }
   }, [project]);
+
+  if (!project) return null;
 
   if (loading) {
     return (
@@ -903,7 +907,14 @@ function ProjectOverview({ project, onCreatePaymentApps, onStatsPaymentAppClick 
                       {projectModalData.contracts?.length > 0 ? (
                         <div className="space-y-3">
                           {projectModalData.contracts.map((contract: any) => (
-                            <div key={contract.id} className="bg-muted rounded-lg p-4">
+                            <div 
+                              key={contract.id} 
+                              className="bg-muted rounded-lg p-4 hover:bg-muted/80 transition-colors cursor-pointer"
+                              onClick={() => {
+                                setSelectedContract(contract);
+                                setShowContractModal(true);
+                              }}
+                            >
                               <div className="flex items-center justify-between mb-2">
                                 <div className="flex items-center gap-2">
                                   <span className="text-sm font-medium text-foreground">
@@ -931,6 +942,107 @@ function ProjectOverview({ project, onCreatePaymentApps, onStatsPaymentAppClick 
                     </div>
                   </div>
                 )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Contract Details Modal */}
+        {showContractModal && selectedContract && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
+            <div className="bg-card rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+              <div className="p-4 sm:p-6 border-b border-border flex-shrink-0">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg sm:text-xl font-semibold text-foreground">
+                    Contract Details
+                  </h3>
+                  <button
+                    onClick={() => {
+                      setShowContractModal(false);
+                      setSelectedContract(null);
+                    }}
+                    className="text-muted-foreground hover:text-foreground p-1 flex-shrink-0"
+                  >
+                    <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-4 sm:p-6 overflow-y-auto flex-1">
+                <div className="space-y-6">
+                  {/* Contract Amount - Prominently Displayed */}
+                  <div className="bg-primary/10 rounded-lg p-6 text-center">
+                    <div className="text-sm font-medium text-muted-foreground mb-2">Contract Amount</div>
+                    <div className="text-3xl font-bold text-primary">
+                      {formatCurrency(selectedContract.contract_amount || 0)}
+                    </div>
+                  </div>
+
+                  {/* Contract Information */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="bg-muted rounded-lg p-4">
+                      <label className="text-sm font-medium text-muted-foreground">Contractor</label>
+                      <p className="text-lg font-semibold text-foreground mt-1">
+                        {selectedContract.contractors?.name || 'Unknown Contractor'}
+                      </p>
+                      {selectedContract.contractors?.trade && (
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {selectedContract.contractors.trade}
+                        </p>
+                      )}
+                    </div>
+
+                    {selectedContract.contract_nickname && (
+                      <div className="bg-muted rounded-lg p-4">
+                        <label className="text-sm font-medium text-muted-foreground">Contract Nickname</label>
+                        <p className="text-lg font-semibold text-foreground mt-1">
+                          {selectedContract.contract_nickname}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Dates */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="bg-muted rounded-lg p-4">
+                      <label className="text-sm font-medium text-muted-foreground">Start Date</label>
+                      <p className="text-base font-medium text-foreground mt-1">
+                        {selectedContract.start_date ? formatDate(selectedContract.start_date) : 'N/A'}
+                      </p>
+                    </div>
+
+                    <div className="bg-muted rounded-lg p-4">
+                      <label className="text-sm font-medium text-muted-foreground">End Date</label>
+                      <p className="text-base font-medium text-foreground mt-1">
+                        {selectedContract.end_date ? formatDate(selectedContract.end_date) : 'N/A'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Status */}
+                  {selectedContract.status && (
+                    <div className="bg-muted rounded-lg p-4">
+                      <label className="text-sm font-medium text-muted-foreground">Status</label>
+                      <p className="text-base font-medium text-foreground mt-1 capitalize">
+                        {selectedContract.status}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 p-4 sm:p-6 border-t border-border flex-shrink-0">
+                <button
+                  onClick={() => {
+                    setShowContractModal(false);
+                    setSelectedContract(null);
+                  }}
+                  className="px-3 sm:px-4 py-2 text-foreground bg-secondary rounded-lg hover:bg-secondary/80 text-sm sm:text-base"
+                >
+                  Close
+                </button>
               </div>
             </div>
           </div>
@@ -1101,11 +1213,11 @@ function DailyLogRequests({ projects }: { projects: any[] }) {
 
   const [phoneError, setPhoneError] = useState('');
 
-  if (!projects || !Array.isArray(projects)) return null;
-
   useEffect(() => {
-    fetchRequests();
-  }, []);
+    if (projects && Array.isArray(projects)) {
+      fetchRequests();
+    }
+  }, [projects]);
 
   const fetchRequests = async () => {
     try {
@@ -1599,28 +1711,28 @@ function PaymentCard({ application, isSelected, onSelect, onVerify, getDocumentF
   const [grandTotal, setGrandTotal] = useState(0);
   const [showDetails, setShowDetails] = useState(false);
 
-  if (!application) return null;
-
   useEffect(() => {
-    async function fetchGrandTotal() {
-      const lineItemIds = (application.line_item_progress || [])
-        .map((lip: any) => lip.line_item?.id)
-        .filter(Boolean);
-      if (!lineItemIds.length) return setGrandTotal(0);
-      const { data, error } = await supabase
-        .from("project_line_items")
-        .select("amount_for_this_period")
-        .in("id", lineItemIds);
-      if (!error && data) {
-        const total = data.reduce(
-          (sum: number, pli: any) => sum + (Number(pli.amount_for_this_period) || 0),
-          0
-        );
-        setGrandTotal(total);
+    if (application) {
+      async function fetchGrandTotal() {
+        const lineItemIds = (application.line_item_progress || [])
+          .map((lip: any) => lip.line_item?.id)
+          .filter(Boolean);
+        if (!lineItemIds.length) return setGrandTotal(0);
+        const { data, error } = await supabase
+          .from("project_line_items")
+          .select("amount_for_this_period")
+          .in("id", lineItemIds);
+        if (!error && data) {
+          const total = data.reduce(
+            (sum: number, pli: any) => sum + (Number(pli.amount_for_this_period) || 0),
+            0
+          );
+          setGrandTotal(total);
+        }
       }
+      fetchGrandTotal();
     }
-    fetchGrandTotal();
-  }, [application.line_item_progress]);
+  }, [application?.line_item_progress]);
 
   const statusConfig: any = {
     submitted: { 
@@ -1761,28 +1873,28 @@ function PaymentRow({ application, isSelected, onSelect, onVerify, getDocumentFo
   const [grandTotal, setGrandTotal] = useState(0);
   const [showDetails, setShowDetails] = useState(false);
 
-  if (!application) return null;
-
   useEffect(() => {
-    async function fetchGrandTotal() {
-      const lineItemIds = (application.line_item_progress || [])
-        .map((lip: any) => lip.line_item?.id)
-        .filter(Boolean);
-      if (!lineItemIds.length) return setGrandTotal(0);
-      const { data, error } = await supabase
-        .from("project_line_items")
-        .select("amount_for_this_period")
-        .in("id", lineItemIds);
-      if (!error && data) {
-        const total = data.reduce(
-          (sum: number, pli: any) => sum + (Number(pli.amount_for_this_period) || 0),
-          0
-        );
-        setGrandTotal(total);
+    if (application) {
+      async function fetchGrandTotal() {
+        const lineItemIds = (application.line_item_progress || [])
+          .map((lip: any) => lip.line_item?.id)
+          .filter(Boolean);
+        if (!lineItemIds.length) return setGrandTotal(0);
+        const { data, error } = await supabase
+          .from("project_line_items")
+          .select("amount_for_this_period")
+          .in("id", lineItemIds);
+        if (!error && data) {
+          const total = data.reduce(
+            (sum: number, pli: any) => sum + (Number(pli.amount_for_this_period) || 0),
+            0
+          );
+          setGrandTotal(total);
+        }
       }
+      fetchGrandTotal();
     }
-    fetchGrandTotal();
-  }, [application.line_item_progress]);
+  }, [application?.line_item_progress]);
 
   const statusConfig: any = {
     submitted: { 
@@ -2667,7 +2779,11 @@ export default function PMDashboard() {
     try {
       const userData = await fetchUser();
       setUser(userData);
-      const { data: appsRaw, error: appsError } = await supabase
+      // Try relationship query first, with fallback
+      let appsRaw: any[] | null = null;
+      let useFallback = false;
+
+      const { data, error: appsError } = await supabase
         .from("payment_applications")
         .select(`
           id,
@@ -2683,7 +2799,58 @@ export default function PMDashboard() {
           )
         `)
         .order("created_at", { ascending: false });
-      if (appsError) throw new Error(appsError.message);
+      
+      // Check if error is related to relationships
+      if (appsError) {
+        const isRelationshipError = appsError.message?.includes('relationship') || 
+                                   appsError.message?.includes('Could not find a relationship');
+        
+        if (isRelationshipError) {
+          console.warn('[PMDashboard] Relationship query failed, using fallback:', appsError.message);
+          console.warn('[PMDashboard] Make sure SUPABASE_SERVICE_ROLE_KEY is set in .env');
+          useFallback = true;
+        } else {
+          throw new Error(appsError.message);
+        }
+      } else {
+        appsRaw = data;
+      }
+
+      // Fallback: Manual queries if relationship syntax failed
+      if (useFallback || !appsRaw) {
+        console.log('[PMDashboard] Using fallback query pattern');
+        
+        const { data: appsData, error: appsError2 } = await supabase
+          .from("payment_applications")
+          .select("id, status, current_payment, current_period_value, created_at, project_id, contractor_id")
+          .order("created_at", { ascending: false });
+
+        if (appsError2) throw new Error(appsError2.message);
+        
+        const projectIds = [...new Set((appsData || []).map((a: any) => a.project_id).filter(Boolean))];
+        const contractorIds = [...new Set((appsData || []).map((a: any) => a.contractor_id).filter(Boolean))];
+
+        const [projectsResult, contractorsResult] = await Promise.all([
+          projectIds.length > 0 ? supabase
+            .from("projects")
+            .select("id, name, client_name")
+            .in("id", projectIds) : { data: [], error: null },
+          contractorIds.length > 0 ? supabase
+            .from("contractors")
+            .select("id, name, trade")
+            .in("id", contractorIds) : { data: [], error: null }
+        ]);
+
+        const projectsMap = new Map((projectsResult.data || []).map((p: any) => [p.id, p]));
+        const contractorsMap = new Map((contractorsResult.data || []).map((c: any) => [c.id, c]));
+
+        appsRaw = (appsData || []).map((app: any) => ({
+          ...app,
+          project: projectsMap.get(app.project_id) || { id: app.project_id, name: 'Unknown Project', client_name: '' },
+          contractor: contractorsMap.get(app.contractor_id) || { id: app.contractor_id, name: 'Unknown Contractor', trade: '' },
+          line_item_progress: []
+        }));
+      }
 
       const sortedApps = (appsRaw || []).sort((a, b) => {
         if (a.status === "submitted" && b.status !== "submitted") return -1;

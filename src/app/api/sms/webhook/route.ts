@@ -15,6 +15,10 @@ const QUESTIONS = [
 
 // Helper function to generate summary
 async function generateSummary(paymentAppId: number) {
+  if (!supabase) {
+    return 'Unable to generate summary at this time.';
+  }
+
   const { data: progressRows } = await supabase
     .from('payment_line_item_progress')
     .select('line_item_id, this_period_percent')

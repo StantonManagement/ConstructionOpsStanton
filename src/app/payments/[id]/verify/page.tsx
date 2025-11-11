@@ -88,6 +88,10 @@ export default function PaymentVerificationPage() {
     percentage: 0
   });
   const [includeChangeOrderPageInPdf, setIncludeChangeOrderPageInPdf] = useState(false);
+  
+  // Retry mechanism state
+  const [retryCount, setRetryCount] = useState(0);
+  const [loadingProgress, setLoadingProgress] = useState<string>('');
 
   // Smart back navigation function
   const handleBackNavigation = () => {
@@ -278,35 +282,239 @@ export default function PaymentVerificationPage() {
   };
 
   useEffect(() => {
-    async function fetchData() {
+    async function fetchData(retryAttempt: number = 0) {
       setLoading(true);
       setError(null);
+      setLoadingProgress('');
+      setRetryCount(retryAttempt);
+      
       try {
-        // 1. Fetch payment application
-        const { data: app, error: appError } = await supabase
-          .from("payment_applications")
-          .select("*, project:projects(*), contractor:contractors(*), line_item_progress:payment_line_item_progress(*, line_item:project_line_items(*))")
-          .eq("id", paymentAppId)
-          .single();
-        if (appError) throw new Error(appError.message);
+        // 1. Validate paymentAppId
+        if (!paymentAppId) {
+          throw new Error('Payment application ID is missing. Please check the URL and try again.');
+        }
+        
+        // Convert string ID to number if needed
+        const paymentIdString = Array.isArray(paymentAppId) ? paymentAppId[0] : paymentAppId;
+        const appId = typeof paymentIdString === 'string' ? parseInt(paymentIdString, 10) : paymentIdString;
+        if (isNaN(appId) || appId <= 0) {
+          throw new Error(`Invalid payment application ID: ${paymentAppId}. Please check the URL and try again.`);
+        }
+        
+        console.log('[PaymentVerificationPage] Fetching payment application:', appId);
+        
+        // 2. Create timeout wrapper for queries (reduced timeout to 20s)
+        const withTimeout = <T,>(promise: Promise<T>, timeoutMs: number = 20000): Promise<T> => {
+          return Promise.race([
+            promise,
+            new Promise<T>((_, reject) => 
+              setTimeout(() => reject(new Error('Request timeout: The server took too long to respond. Please try again.')), timeoutMs)
+            )
+          ]);
+        };
+        
+        setLoadingProgress('Fetching payment application data...');
+        
+        // 3. Try relationship query first with timeout
+        let app: any = null;
+        let useFallback = false;
+        
+        try {
+          const queryPromise = supabase
+            .from("payment_applications")
+            .select("*, project:projects(*), contractor:contractors(*), line_item_progress:payment_line_item_progress(*, line_item:project_line_items(*))")
+            .eq("id", appId)
+            .single() as any as Promise<any>;
+          
+          const result = await withTimeout(queryPromise, 30000);
+          const { data: appData, error: appError } = result;
+          
+          if (appError) {
+            const isRelationshipError = appError.message?.includes('relationship') || 
+                                       appError.message?.includes('Could not find a relationship') ||
+                                       appError.message?.includes('JSON object requested, multiple (or no) rows returned');
+            
+            if (isRelationshipError) {
+              console.warn('[PaymentVerificationPage] Relationship query failed, using fallback:', appError.message);
+              useFallback = true;
+            } else {
+              // If it's a not found error, throw it directly
+              if (appError.code === 'PGRST116' || appError.message?.includes('No rows returned')) {
+                throw new Error(`Payment application with ID ${appId} not found. Please verify the ID and try again.`);
+              }
+              throw new Error(appError.message || 'Failed to fetch payment application');
+            }
+          } else {
+            app = appData;
+          }
+        } catch (queryErr) {
+          if (queryErr instanceof Error && queryErr.message.includes('timeout')) {
+            throw queryErr;
+          }
+          if (queryErr instanceof Error && !queryErr.message.includes('relationship')) {
+            throw queryErr;
+          }
+          console.warn('[PaymentVerificationPage] Query failed, using fallback:', queryErr);
+          useFallback = true;
+        }
+        
+        // 4. Fallback: Fetch data separately if relationship query failed
+        if (useFallback || !app) {
+          console.log('[PaymentVerificationPage] Using fallback query pattern');
+          setLoadingProgress('Using fallback query method...');
+          
+          // Fetch payment application directly
+          const { data: appData, error: appError } = await withTimeout(
+            supabase
+              .from("payment_applications")
+              .select("*")
+              .eq("id", appId)
+              .single() as any as Promise<any>,
+            30000
+          );
+          
+          if (appError) {
+            if (appError.code === 'PGRST116' || appError.message?.includes('No rows returned')) {
+              throw new Error(`Payment application with ID ${appId} not found. Please verify the ID and try again.`);
+            }
+            throw new Error(appError.message || 'Failed to fetch payment application');
+          }
+          
+          if (!appData) {
+            throw new Error(`Payment application with ID ${appId} not found.`);
+          }
+          
+          app = appData;
+          
+          // Fetch project separately
+          if (app.project_id) {
+            setLoadingProgress('Loading project information...');
+            const { data: projectData, error: projectError } = await withTimeout(
+              supabase
+                .from("projects")
+                .select("*")
+                .eq("id", app.project_id)
+                .single() as any as Promise<any>,
+              30000
+            );
+            
+            if (!projectError && projectData) {
+              app.project = projectData;
+            } else {
+              console.warn('[PaymentVerificationPage] Could not fetch project:', projectError?.message);
+              app.project = { id: app.project_id, name: 'Unknown Project' };
+            }
+          }
+          
+          // Fetch contractor separately
+          if (app.contractor_id) {
+            setLoadingProgress('Loading contractor information...');
+            const { data: contractorData, error: contractorError } = await withTimeout(
+              supabase
+                .from("contractors")
+                .select("*")
+                .eq("id", app.contractor_id)
+                .single() as any as Promise<any>,
+              30000
+            );
+            
+            if (!contractorError && contractorData) {
+              app.contractor = contractorData;
+            } else {
+              console.warn('[PaymentVerificationPage] Could not fetch contractor:', contractorError?.message);
+              app.contractor = { id: app.contractor_id, name: 'Unknown Contractor' };
+            }
+          }
+          
+          // Fetch line item progress separately
+          if (app.id) {
+            setLoadingProgress('Loading line item progress...');
+            const { data: lineItemProgressData, error: lineItemError } = await withTimeout(
+              supabase
+                .from("payment_line_item_progress")
+                .select("*, line_item:project_line_items(*)")
+                .eq("payment_app_id", app.id) as any as Promise<any>,
+              30000
+            );
+            
+            if (!lineItemError && lineItemProgressData) {
+              app.line_item_progress = lineItemProgressData;
+            } else {
+              console.warn('[PaymentVerificationPage] Could not fetch line item progress:', lineItemError?.message);
+              app.line_item_progress = [];
+            }
+          } else {
+            app.line_item_progress = [];
+          }
+        }
+        
+        // 5. Set state with fetched data
+        if (!app) {
+          throw new Error(`Payment application with ID ${appId} not found.`);
+        }
+        
         setPaymentApp(app as PaymentApp);
-        setProject(app.project as Project);
-        setContractor(app.contractor as Contractor);
+        setProject((app.project || { id: app.project_id, name: 'Unknown Project' }) as Project);
+        setContractor((app.contractor || { id: app.contractor_id, name: 'Unknown Contractor' }) as Contractor);
         setLineItems((app.line_item_progress || []) as LineItem[]);
-        // 2. Fetch document
-        const { data: docs, error: docError } = await supabase
-          .from("payment_documents")
-          .select("*")
-          .eq("payment_app_id", paymentAppId);
-        if (docError) throw new Error(docError.message);
-        setDocument(docs && docs.length > 0 ? (docs[0] as Document) : null);
+        
+        // 6. Fetch document
+        setLoadingProgress('Loading documents...');
+        try {
+          const { data: docs, error: docError } = await withTimeout(
+            supabase
+              .from("payment_documents")
+              .select("*")
+              .eq("payment_app_id", appId) as any as Promise<any>,
+            30000
+          );
+          
+          if (docError) {
+            console.warn('[PaymentVerificationPage] Could not fetch documents:', docError.message);
+            setDocument(null);
+          } else {
+            setDocument(docs && docs.length > 0 ? (docs[0] as Document) : null);
+          }
+        } catch (docErr) {
+          console.warn('[PaymentVerificationPage] Error fetching documents:', docErr);
+          setDocument(null);
+        }
+        
+        setLoadingProgress('Complete!');
+        console.log('[PaymentVerificationPage] Successfully loaded payment application:', appId);
+        
       } catch (err) {
-        setError((err instanceof Error ? err.message : "Failed to load data"));
-      } finally {
-        setLoading(false);
+        console.error(`[PaymentVerificationPage] Error loading payment application (attempt ${retryAttempt + 1}):`, err);
+        const errorMessage = err instanceof Error 
+          ? err.message 
+          : 'Failed to load payment application. Please try again or contact support if the problem persists.';
+        
+        // Retry logic: up to 2 retries for timeout or network errors
+        const shouldRetry = retryAttempt < 2 && (
+          errorMessage.includes('timeout') || 
+          errorMessage.includes('network') ||
+          errorMessage.includes('fetch')
+        );
+        
+        if (shouldRetry) {
+          console.log(`[PaymentVerificationPage] Retrying... (${retryAttempt + 1}/2)`);
+          const retryDelay = 1000 * Math.pow(2, retryAttempt); // Exponential backoff: 1s, 2s
+          setTimeout(() => {
+            fetchData(retryAttempt + 1);
+          }, retryDelay);
+        } else {
+          setError(errorMessage);
+          setLoading(false);
+        }
       }
     }
-    if (paymentAppId) fetchData();
+    
+    if (paymentAppId) {
+      fetchData(0);
+    } else {
+      setLoading(false);
+      setError('Payment application ID is missing. Please check the URL and try again.');
+    }
   }, [paymentAppId]);
 
   useEffect(() => {
@@ -482,7 +690,9 @@ const lineItemsForTable = lineItems.map((li, idx) => {
         }
       }
       
-      router.push("/");
+      // Redirect to payment applications list with approved filter
+      const returnTo = searchParams.get('returnTo') || '/?tab=payment-applications';
+      router.push(`${returnTo.includes('?') ? returnTo + '&' : returnTo + '?'}statusFilter=approved`);
     } catch (err) {
       setError((err instanceof Error ? err.message : "Failed to approve"));
     } finally {
@@ -528,9 +738,10 @@ const lineItemsForTable = lineItems.map((li, idx) => {
       const result = await response.json();
       console.log('Payment rejected:', result);
       
-      // Show success message and redirect
+      // Show success message and redirect to payment applications list with rejected filter
       alert('Payment application rejected successfully!');
-      router.push("/");
+      const returnTo = searchParams.get('returnTo') || '/?tab=payment-applications';
+      router.push(`${returnTo.includes('?') ? returnTo + '&' : returnTo + '?'}statusFilter=rejected`);
     } catch (err) {
       setError((err instanceof Error ? err.message : "Failed to reject"));
     } finally {
@@ -629,7 +840,15 @@ const lineItemsForTable = lineItems.map((li, idx) => {
           <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-6"></div>
           <div className="bg-card rounded-xl shadow-lg p-6 max-w-md">
             <h2 className="text-xl font-semibold text-foreground mb-2">Loading Payment Application</h2>
-            <p className="text-muted-foreground">Please wait while we fetch the payment details...</p>
+            <p className="text-muted-foreground mb-2">{loadingProgress || 'Please wait while we fetch the payment details...'}</p>
+            {retryCount > 0 && (
+              <p className="text-xs text-muted-foreground">Retry attempt {retryCount}/2</p>
+            )}
+            {loadingProgress && (
+              <div className="mt-4 w-full bg-gray-200 rounded-full h-2">
+                <div className="bg-primary h-2 rounded-full animate-pulse" style={{ width: '60%' }}></div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -647,12 +866,26 @@ const lineItemsForTable = lineItems.map((li, idx) => {
           </div>
           <h2 className="text-xl font-semibold text-foreground mb-3">Error Loading Data</h2>
           <p className="text-muted-foreground mb-6 leading-relaxed">{error}</p>
-          <button
-            onClick={handleBackNavigation}
-            className="px-6 py-3 bg-destructive text-destructive-foreground rounded-lg hover:bg-destructive/90 transition-all duration-200 font-medium shadow-lg hover:shadow-xl"
-          >
-            Go Back to Dashboard
-          </button>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <button
+              onClick={() => {
+                setError(null);
+                setRetryCount(0);
+                setLoadingProgress('');
+                // Trigger re-fetch by updating a dependency or manually calling fetch
+                window.location.reload();
+              }}
+              className="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-all duration-200 font-medium shadow-lg hover:shadow-xl"
+            >
+              Retry
+            </button>
+            <button
+              onClick={handleBackNavigation}
+              className="px-6 py-3 bg-destructive text-destructive-foreground rounded-lg hover:bg-destructive/90 transition-all duration-200 font-medium shadow-lg hover:shadow-xl"
+            >
+              Go Back to Dashboard
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -967,7 +1200,7 @@ const lineItemsForTable = lineItems.map((li, idx) => {
                         </div>
                         <div>
                           <h3 className="text-base font-semibold text-foreground">No line items found</h3>
-                          <p className="text-muted-foreground text-sm">This payment application doesn't have any line items.</p>
+                          <p className="text-muted-foreground text-sm">This payment application doesn&apos;t have any line items.</p>
                         </div>
                       </div>
                     </td>
