@@ -211,6 +211,9 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       setLoading(true);
     }
     try {
+      console.log('[DataContext] Starting data fetch...');
+      const startTime = performance.now();
+      
       // Simple Promise.all without timeouts that cause issues
       const [projectsResponse, contractorsResponse, contractsResponse] = await Promise.all([
         supabase.from('projects').select('*'),
@@ -223,6 +226,9 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
             contractors (id, name, trade)
           `)
       ]);
+      
+      const fetchTime = performance.now() - startTime;
+      console.log(`[DataContext] Data fetch completed in ${fetchTime.toFixed(0)}ms`);
 
         // Handle projects with proper error checking
         if (projectsResponse.error) {
