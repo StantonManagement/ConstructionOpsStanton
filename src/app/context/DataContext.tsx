@@ -59,6 +59,7 @@ export interface DataContextType {
   dispatch: Dispatch<{ type: string; payload?: unknown }>;
   refreshData: () => Promise<void>;
   loading: boolean;
+  error: string | null;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -204,20 +205,38 @@ function dataReducer(state: InitialDataType, action: { type: string; payload?: u
 export const DataProvider = ({ children }: { children: React.ReactNode }) => {
   const [state, dispatch] = useReducer(dataReducer, initialData);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Timeout wrapper to prevent infinite hangs
+  const withTimeout = <T,>(promise: Promise<T>, timeoutMs: number, queryName: string): Promise<T> => {
+    return Promise.race([
+      promise,
+      new Promise<T>((_, reject) =>
+        setTimeout(() => reject(new Error(`Query timeout: ${queryName} took longer than ${timeoutMs}ms`)), timeoutMs)
+      ),
+    ]);
+  };
 
   // Internal data fetching function
   const performDataFetch = async (shouldSetLoading = true) => {
     if (shouldSetLoading) {
       setLoading(true);
     }
+    setError(null); // Clear previous errors
+    
     try {
       console.log('[DataContext] Starting data fetch...');
       const startTime = performance.now();
       
-      // Simple Promise.all without timeouts that cause issues
-      const [projectsResponse, contractorsResponse, contractsResponse] = await Promise.all([
-        supabase.from('projects').select('*'),
-        supabase.from('contractors').select('*'),
+      // Fetch with individual timeouts and detailed logging
+      console.log('[DataContext] Fetching projects...');
+      const projectsQuery = Promise.resolve(supabase.from('projects').select('*'));
+      
+      console.log('[DataContext] Fetching contractors...');
+      const contractorsQuery = Promise.resolve(supabase.from('contractors').select('*'));
+      
+      console.log('[DataContext] Fetching contracts...');
+      const contractsQuery = Promise.resolve(
         supabase
           .from('contracts')
           .select(`
@@ -225,22 +244,42 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
             projects (id, name, client_name),
             contractors (id, name, trade)
           `)
-      ]);
+      );
+      
+      const [projectsResponse, contractorsResponse, contractsResponse] = await Promise.all([
+        withTimeout(projectsQuery, 10000, 'projects'),
+        withTimeout(contractorsQuery, 10000, 'contractors'),
+        withTimeout(contractsQuery, 10000, 'contracts')
+      ]) as any[];
       
       const fetchTime = performance.now() - startTime;
       console.log(`[DataContext] Data fetch completed in ${fetchTime.toFixed(0)}ms`);
 
         // Handle projects with proper error checking
         if (projectsResponse.error) {
-          console.error('[DataContext] Error fetching projects:', projectsResponse.error);
-          // Don't fail completely - set empty array but log the error
+          console.error('[DataContext] ❌ Error fetching projects:', {
+            code: projectsResponse.error.code,
+            message: projectsResponse.error.message,
+            details: projectsResponse.error.details,
+            hint: projectsResponse.error.hint
+          });
           dispatch({ type: 'SET_PROJECTS', payload: [] });
         } else if (projectsResponse.data) {
+          console.log(`[DataContext] ✓ Fetched ${projectsResponse.data.length} projects`);
           dispatch({ type: 'SET_PROJECTS', payload: projectsResponse.data });
         }
 
         // Handle contractors
-        if (contractorsResponse.data && !contractorsResponse.error) {
+        if (contractorsResponse.error) {
+          console.error('[DataContext] ❌ Error fetching contractors:', {
+            code: contractorsResponse.error.code,
+            message: contractorsResponse.error.message,
+            details: contractorsResponse.error.details,
+            hint: contractorsResponse.error.hint
+          });
+          dispatch({ type: 'SET_SUBCONTRACTORS', payload: [] });
+        } else if (contractorsResponse.data) {
+          console.log(`[DataContext] ✓ Fetched ${contractorsResponse.data.length} contractors`);
           const mapped = contractorsResponse.data.map((c: ContractorDB) => ({
             id: c.id,
             name: c.name,
@@ -263,7 +302,21 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
         }
 
         // Handle contracts
-        if (contractsResponse.data && !contractsResponse.error) {
+        if (contractsResponse.error) {
+          console.error('[DataContext] ❌ Error fetching contracts:', {
+            code: contractsResponse.error.code,
+            message: contractsResponse.error.message,
+            details: contractsResponse.error.details,
+            hint: contractsResponse.error.hint
+          });
+          // If relationship error, provide helpful message
+          if (contractsResponse.error.message?.includes('relationship') || 
+              contractsResponse.error.message?.includes('Could not find a relationship')) {
+            console.warn('[DataContext] 💡 Relationship query failed. Run scripts/check-and-fix-relationships.sql in Supabase SQL Editor.');
+          }
+          dispatch({ type: 'SET_CONTRACTS', payload: [] });
+        } else if (contractsResponse.data) {
+          console.log(`[DataContext] ✓ Fetched ${contractsResponse.data.length} contracts`);
           const mapped = contractsResponse.data.map((c: any) => ({
             id: c.id,
             project_id: c.project_id,
@@ -279,26 +332,20 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
           dispatch({ type: 'SET_CONTRACTS', payload: mapped });
         }
 
-        // Log any errors with more detail
-        if (contractorsResponse.error) {
-          console.error('[DataContext] Error fetching contractors:', contractorsResponse.error);
-        }
-        if (contractsResponse.error) {
-          console.error('[DataContext] Error fetching contracts:', contractsResponse.error);
-          // If relationship error, provide helpful message
-          if (contractsResponse.error.message?.includes('relationship') || 
-              contractsResponse.error.message?.includes('Could not find a relationship')) {
-            console.warn('[DataContext] Relationship query failed. Run scripts/check-and-fix-relationships.sql in Supabase SQL Editor.');
-          }
-        }
-
     } catch (error) {
-      console.error('Error fetching data:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      console.error('[DataContext] ❌ Critical error during data fetch:', error);
+      
+      // Set error state for UI to display
+      setError(errorMessage);
+      
       // Set empty arrays on error
       dispatch({ type: 'SET_PROJECTS', payload: [] });
       dispatch({ type: 'SET_SUBCONTRACTORS', payload: [] });
       dispatch({ type: 'SET_CONTRACTS', payload: [] });
     } finally {
+      // Always clear loading state, even on error or timeout
+      console.log('[DataContext] Setting loading to false');
       if (shouldSetLoading) {
         setLoading(false);
       }
@@ -326,7 +373,8 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     dispatch,
     refreshData,
     loading,
-  }), [state, refreshData, loading]);
+    error,
+  }), [state, refreshData, loading, error]);
 
   return (
     <DataContext.Provider value={value}>
