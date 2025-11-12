@@ -46,17 +46,23 @@ export default function Page() {
           // Simple role fetch without complex timeouts
           try {
             const { data, error } = await supabase
-              .from("users")
+              .from("user_role")
               .select("role")
-              .eq("uuid", session.user.id)
+              .eq("user_id", session.user.id)
               .single();
-            if (!error && data?.role) {
-              setRole(data.role);
+            
+            // Handle role: default to 'staff' if no role found
+            // PGRST116 is "no rows found" - expected when user has no role entry yet
+            if (error) {
+              if (error.code !== 'PGRST116') {
+                console.error('Error fetching user role:', error);
+              }
+              setRole('staff'); // Default to staff
             } else {
-              setRole(null);
+              setRole(data?.role || 'staff');
             }
           } catch {
-            setRole(null);
+            setRole('staff'); // Default to staff on unexpected errors
           }
         } else {
           setRole(null);
@@ -79,17 +85,22 @@ export default function Page() {
         (async () => {
           try {
             const { data, error } = await supabase
-              .from("users")
+              .from("user_role")
               .select("role")
-              .eq("uuid", session.user.id)
+              .eq("user_id", session.user.id)
               .single();
-            if (!error && data?.role) {
-              setRole(data.role);
+            
+            // Handle role: default to 'staff' if no role found
+            if (error) {
+              if (error.code !== 'PGRST116') {
+                console.error('Error fetching user role:', error);
+              }
+              setRole('staff');
             } else {
-              setRole(null);
+              setRole(data?.role || 'staff');
             }
           } catch {
-            setRole(null);
+            setRole('staff');
           }
         })();
       } else {
