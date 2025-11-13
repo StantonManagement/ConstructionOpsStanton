@@ -84,12 +84,12 @@ const initialData: InitialDataType = {
 
 type ContractorDB = {
   id: number;
-  company_name: string;
-  contact_name: string;
-  contact_email: string;
-  contact_phone: string;
-  address: string;
+  name: string;
+  trade: string;
+  phone: string;
+  email?: string;
   status?: string;
+  performance_score?: number;
   created_at?: string;
   updated_at?: string;
 };
@@ -227,7 +227,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       const projectsQuery = Promise.resolve(supabase.from('projects').select('*'));
       
       console.log('[DataContext] Fetching contractors...');
-      const contractorsQuery = Promise.resolve(supabase.from('subcontractors').select('*'));
+      const contractorsQuery = Promise.resolve(supabase.from('contractors').select('*'));
       
       console.log('[DataContext] Fetching contracts...');
       const contractsQuery = Promise.resolve(
@@ -236,7 +236,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
           .select(`
             *,
             projects (id, name, client_name),
-            subcontractors (id, company_name, contact_name)
+            contractors (id, name, trade)
           `)
       );
       
@@ -276,16 +276,16 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
           console.log(`[DataContext] ✓ Fetched ${contractorsResponse.data.length} contractors`);
           const mapped = contractorsResponse.data.map((c: ContractorDB) => ({
             id: c.id,
-            name: c.company_name,
-            trade: 'General', // Default since subcontractors table doesn't have trade field
+            name: c.name,
+            trade: c.trade,
             contractAmount: 0,
             paidToDate: 0,
             lastPayment: '',
             status: c.status ?? 'active',
             changeOrdersPending: false,
             lineItemCount: 0,
-            phone: c.contact_phone ?? '',
-            email: c.contact_email ?? '',
+            phone: c.phone ?? '',
+            email: c.email ?? '',
             hasOpenPaymentApp: false,
             compliance: {
               insurance: 'valid',
@@ -321,7 +321,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
             end_date: c.end_date,
             status: c.status ?? 'active',
             project: c.projects,
-            subcontractor: c.subcontractors,
+            subcontractor: c.contractors,
           }));
           dispatch({ type: 'SET_CONTRACTS', payload: mapped });
         }
