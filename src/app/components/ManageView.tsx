@@ -889,8 +889,17 @@ const AddContractForm: React.FC<{
     }
     if (!formData.contractNickname.trim()) newErrors.contractNickname = 'Contract nickname is required';
 
+    // Validate line items using the hook
+    if (lineItemsHook.hasEmptyRows) {
+      setValidationError('Some line items are incomplete. Please fill in both description and value, or remove the row.');
+    } else if (Math.abs(lineItemsHook.totalScheduledValue - Number(formData.contractAmount)) > 0.01) {
+      setValidationError(`Total Scheduled Value ($${lineItemsHook.totalScheduledValue.toFixed(2)}) must equal Contract Amount ($${Number(formData.contractAmount).toFixed(2)})`);
+    } else {
+      setValidationError('');
+    }
+
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    return Object.keys(newErrors).length === 0 && !validationError;
   };
 
   const validateLineItemField = (value: string, fieldName: string): string => {
@@ -996,8 +1005,20 @@ const AddContractForm: React.FC<{
         }
       }
 
-      if (lineItems.length > 0) {
-        const itemsToInsert = lineItems.map(item => ({
+      // Save line items using items from the hook
+      const itemsToSave = lineItemsHook.itemsWithData;
+      
+      if (itemsToSave.length > 0) {
+        // Delete existing line items if editing
+        if (isEdit && initialData?.id) {
+          await supabase
+            .from('project_line_items')
+            .delete()
+            .eq('contract_id', initialData.id);
+        }
+
+        // Insert all line items
+        const itemsToInsert = itemsToSave.map((item, index) => ({
           contract_id: contractId,
           project_id: Number(formData.projectId),
           contractor_id: Number(formData.subcontractorId),
@@ -1008,30 +1029,19 @@ const AddContractForm: React.FC<{
           this_period: Number(item.thisPeriod) || 0,
           material_presently_stored: Number(item.materialStored) || 0,
           percent_gc: Number(item.percentGC) || 0,
+          display_order: index + 1,
           status: 'active',
         }));
 
-        if (isEdit && initialData?.id) {
-          // For edit mode, we might want to update existing line items or add new ones
-          const { error: lineItemsError } = await supabase
-            .from('project_line_items')
-            .insert(itemsToInsert);
+        const { error: lineItemsError } = await supabase
+          .from('project_line_items')
+          .insert(itemsToInsert);
 
-          if (lineItemsError) {
-            throw new Error(`Failed to update line items: ${lineItemsError.message}`);
+        if (lineItemsError) {
+          if (!isEdit) {
+            await supabase.from('contracts').delete().eq('id', contractId);
           }
-        } else {
-          // Create mode
-          const { error: lineItemsError } = await supabase
-            .from('project_line_items')
-            .insert(itemsToInsert);
-
-          if (lineItemsError) {
-            if (!isEdit) {
-              await supabase.from('contracts').delete().eq('id', contractId);
-            }
-            throw new Error(`Failed to create line items: ${lineItemsError.message}`);
-          }
+          throw new Error(`Failed to save line items: ${lineItemsError.message}`);
         }
       }
 
@@ -1044,7 +1054,7 @@ const AddContractForm: React.FC<{
           startDate: "",
           endDate: "",
         });
-        setLineItems([]);
+        lineItemsHook.setAllItems([]);
       }
 
       if (onSuccess) onSuccess();
@@ -1287,9 +1297,60 @@ const AddContractForm: React.FC<{
           </div>
         </div>
 
+        {/* Contract Locking Warning */}
+        {isContractLocked && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+            <div className="flex items-center gap-2 text-yellow-800">
+              <AlertCircle className="w-5 h-5" />
+              <p className="font-medium">Contract Locked</p>
+            </div>
+            <p className="text-sm text-yellow-700 mt-1">
+              Line items cannot be edited after a payment application has been submitted.
+            </p>
+          </div>
+        )}
+
+        {/* Line Items Section */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Line Items</label>
-          <div className="border rounded-lg p-4 bg-gray-50 mb-4">
+          
+          <EditableLineItemsTable
+            items={lineItemsHook.items}
+            emptyRowIds={lineItemsHook.emptyRowIds}
+            onAddItem={lineItemsHook.addItem}
+            onUpdateItem={lineItemsHook.updateItem}
+            onDeleteItems={lineItemsHook.deleteItems}
+            onReorderItem={lineItemsHook.reorderItem}
+            onUndo={lineItemsHook.undo}
+            canUndo={lineItemsHook.canUndo}
+            disabled={isContractLocked}
+          />
+          
+          {/* Validation Messages */}
+          {validationError && (
+            <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-sm text-red-700 flex items-center gap-2">
+                <AlertCircle className="w-4 h-4" />
+                {validationError}
+              </p>
+            </div>
+          )}
+          
+          {/* Total Display */}
+          <div className="mt-3 text-right">
+            <p className="text-sm text-gray-600">
+              Total Scheduled Value:{' '}
+              <span className={`font-semibold ${
+                Math.abs(lineItemsHook.totalScheduledValue - Number(formData.contractAmount)) < 0.01
+                  ? 'text-green-600'
+                  : 'text-red-600'
+              }`}>
+                ${lineItemsHook.totalScheduledValue.toFixed(2)}
+              </span>
+            </p>
+          </div>
+          
+          <div className="border rounded-lg p-4 bg-gray-50 mb-4 hidden">
             {showLineItemForm ? (
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end mb-4">
                 <div>
@@ -1501,9 +1562,6 @@ const AddContractForm: React.FC<{
                 )}
               </tbody>
             </table>
-            <div className="text-right mt-2 text-sm text-gray-700">
-              Total Scheduled Value: <span className="font-semibold">${totalScheduledValue.toLocaleString()}</span>
-            </div>
           </div>
         </div>
 
