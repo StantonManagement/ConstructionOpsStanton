@@ -1,14 +1,14 @@
 import React, { useState, ChangeEvent, FormEvent, ReactNode, useCallback, useMemo, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { Building, UserPlus, FilePlus, AlertCircle, CheckCircle, X, Search, Filter, Plus, Edit3, Eye, Trash2, Archive, Star, Calendar, DollarSign } from 'lucide-react';
-import LineItemFormModal from '@/components/LineItemFormModal';
 import { useProjects } from '@/hooks/queries/useProjects';
 import { useContractors } from '@/hooks/queries/useContractors';
 import { useContracts } from '@/hooks/queries/useContracts';
 import { useCreateProject, useUpdateProject, useDeleteProject } from '@/hooks/mutations/useProjectMutations';
 import { useCreateContractor, useUpdateContractor, useDeleteContractor } from '@/hooks/mutations/useContractorMutations';
-import LineItemEditor, { LineItem } from '@/components/LineItemEditor';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useLineItemsState, LineItem } from '@/hooks/useLineItemsState';
+import EditableLineItemsTable from '@/app/components/EditableLineItemsTable';
 
 // Enhanced notification system
 type NotificationType = 'success' | 'error' | 'warning' | 'info';
@@ -800,50 +800,81 @@ const AddContractForm: React.FC<{
     startDate: initialData?.start_date || "",
     endDate: initialData?.end_date || "",
   });
-  const [lineItems, setLineItems] = useState<LineItem[]>([]);
+  
+  // Use the new line items state management hook
+  const lineItemsHook = useLineItemsState([]);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [lineItemForm, setLineItemForm] = useState({ itemNo: '', description: '', scheduledValue: '', fromPrevious: '', thisPeriod: '', materialStored: '', percentGC: '' });
-  const [editingLineItemIndex, setEditingLineItemIndex] = useState<number | null>(null);
-  const [showLineItemForm, setShowLineItemForm] = useState(false);
+  const [isContractLocked, setIsContractLocked] = useState(false);
+  const [validationError, setValidationError] = useState('');
 
-  const totalScheduledValue = lineItems.reduce((sum, item) => sum + (typeof item.scheduledValue === 'number' ? item.scheduledValue : Number(item.scheduledValue) || 0), 0);
+  // Initialize empty rows for new contracts, load existing for edits
+  useEffect(() => {
+    if (!isEdit) {
+      lineItemsHook.initializeEmptyRows(5);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEdit]);
 
-  // Load existing line items when editing
+  // Load existing line items and check for locking when editing
   useEffect(() => {
     if (isEdit && initialData?.id) {
-      const loadLineItems = async () => {
+      const loadData = async () => {
         try {
-          const { data: lineItemsData, error } = await supabase
+          // Check if contract is locked (has payment applications)
+          const { data: paymentApps, error: paymentError } = await supabase
+            .from('payment_applications')
+            .select('id, status')
+            .eq('project_id', initialData.project_id)
+            .eq('contractor_id', initialData.subcontractor_id);
+
+          if (paymentError) {
+            console.error('Error checking payment applications:', paymentError);
+            setIsContractLocked(false);
+          } else if (paymentApps && paymentApps.length > 0) {
+            const hasNonDraftPayments = paymentApps.some(app => app.status !== 'draft');
+            setIsContractLocked(hasNonDraftPayments);
+          } else {
+            setIsContractLocked(false);
+          }
+
+          // Load line items
+          const { data: lineItemsData, error: lineItemsError } = await supabase
             .from('project_line_items')
             .select('*')
             .eq('contract_id', initialData.id)
             .order('display_order', { ascending: true });
 
-          if (error) {
-            console.error('Error loading line items:', error);
+          if (lineItemsError) {
+            console.error('Error loading line items:', lineItemsError);
+            lineItemsHook.initializeEmptyRows(5);
             return;
           }
 
-          if (lineItemsData) {
-            const formattedLineItems = lineItemsData.map(item => ({
-              itemNo: item.item_no || '',
+          if (lineItemsData && lineItemsData.length > 0) {
+            const formattedLineItems: LineItem[] = lineItemsData.map((item, index) => ({
+              id: crypto.randomUUID(),
+              itemNo: index + 1,
               description: item.description_of_work || '',
               scheduledValue: item.scheduled_value?.toString() || '',
-              fromPrevious: item.from_previous_application?.toString() || '',
-              thisPeriod: item.this_period?.toString() || '',
-              materialStored: item.material_presently_stored?.toString() || '',
-              percentGC: item.percent_gc?.toString() || '',
+              fromPrevious: item.from_previous_application?.toString() || '0.00',
+              thisPeriod: item.this_period?.toString() || '0.00',
+              materialStored: item.material_presently_stored?.toString() || '0.00',
+              percentGC: item.percent_gc?.toString() || '0.00',
             }));
-            setLineItems(formattedLineItems);
+            lineItemsHook.setAllItems(formattedLineItems);
+          } else {
+            lineItemsHook.initializeEmptyRows(5);
           }
         } catch (error) {
-          console.error('Error loading line items:', error);
+          console.error('Error loading contract data:', error);
+          setIsContractLocked(false);
+          lineItemsHook.initializeEmptyRows(5);
         }
       };
-
-      loadLineItems();
+      loadData();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEdit, initialData?.id]);
 
   const validateForm = () => {
