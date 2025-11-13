@@ -84,20 +84,14 @@ const initialData: InitialDataType = {
 
 type ContractorDB = {
   id: number;
-  name: string;
-  trade: string;
-  contract_amount?: number;
-  paid_to_date?: number;
-  last_payment?: string;
+  company_name: string;
+  contact_name: string;
+  contact_email: string;
+  contact_phone: string;
+  address: string;
   status?: string;
-  change_orders_pending?: boolean;
-  line_item_count?: number;
-  phone?: string;
-  email?: string;
-  has_open_payment_app?: boolean;
-  insurance_status?: string;
-  license_status?: string;
-  performance_score?: number;
+  created_at?: string;
+  updated_at?: string;
 };
 
 function dataReducer(state: InitialDataType, action: { type: string; payload?: unknown }) {
@@ -233,16 +227,16 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       const projectsQuery = Promise.resolve(supabase.from('projects').select('*'));
       
       console.log('[DataContext] Fetching contractors...');
-      const contractorsQuery = Promise.resolve(supabase.from('contractors').select('*'));
+      const contractorsQuery = Promise.resolve(supabase.from('subcontractors').select('*'));
       
       console.log('[DataContext] Fetching contracts...');
       const contractsQuery = Promise.resolve(
         supabase
-          .from('contracts')
+          .from('project_contractors')
           .select(`
             *,
             projects (id, name, client_name),
-            contractors (id, name, trade)
+            subcontractors (id, company_name, contact_name)
           `)
       );
       
@@ -282,20 +276,20 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
           console.log(`[DataContext] ✓ Fetched ${contractorsResponse.data.length} contractors`);
           const mapped = contractorsResponse.data.map((c: ContractorDB) => ({
             id: c.id,
-            name: c.name,
-            trade: c.trade,
-            contractAmount: c.contract_amount ?? 0,
-            paidToDate: c.paid_to_date ?? 0,
-            lastPayment: c.last_payment ?? '',
+            name: c.company_name,
+            trade: 'General', // Default since subcontractors table doesn't have trade field
+            contractAmount: 0,
+            paidToDate: 0,
+            lastPayment: '',
             status: c.status ?? 'active',
-            changeOrdersPending: c.change_orders_pending ?? false,
-            lineItemCount: c.line_item_count ?? 0,
-            phone: c.phone ?? '',
-            email: c.email ?? '',
-            hasOpenPaymentApp: c.has_open_payment_app ?? false,
+            changeOrdersPending: false,
+            lineItemCount: 0,
+            phone: c.contact_phone ?? '',
+            email: c.contact_email ?? '',
+            hasOpenPaymentApp: false,
             compliance: {
-              insurance: c.insurance_status ?? 'valid',
-              license: c.license_status ?? 'valid'
+              insurance: 'valid',
+              license: 'valid'
             },
           }));
           dispatch({ type: 'SET_SUBCONTRACTORS', payload: mapped });
@@ -327,7 +321,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
             end_date: c.end_date,
             status: c.status ?? 'active',
             project: c.projects,
-            subcontractor: c.contractors,
+            subcontractor: c.subcontractors,
           }));
           dispatch({ type: 'SET_CONTRACTS', payload: mapped });
         }
