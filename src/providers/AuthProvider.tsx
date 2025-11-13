@@ -23,13 +23,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    console.log('[Auth] ===== AUTH PROVIDER MOUNTING =====');
     // Get initial session
     const initializeAuth = async () => {
       try {
+        console.log('[Auth] 1. Setting isLoading = true');
         setIsLoading(true);
         setError(null);
 
+        console.log('[Auth] 2. Fetching session from Supabase...');
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        console.log('[Auth] 3. Session result:', session ? 'Found session' : 'No session', sessionError);
         
         if (sessionError) {
           console.error('[Auth] Session error:', sessionError);
@@ -53,10 +57,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.error('[Auth] Initialization error:', err);
         setError(err instanceof Error ? err.message : 'Authentication failed');
       } finally {
+        console.log('[Auth] 4. SETTING isLoading = FALSE');
         setIsLoading(false);
       }
     };
 
+    console.log('[Auth] 5. Calling initializeAuth()...');
     initializeAuth();
 
     // Listen for auth changes
