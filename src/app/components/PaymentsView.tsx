@@ -1027,8 +1027,38 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
   };
 
   const sendForSignature = async (paymentAppId: number) => {
-    // TODO: Implement signature sending
-    console.log('Sending for signature:', paymentAppId);
+    try {
+      const confirmed = window.confirm('Send this payment application for electronic signature via DocuSign?');
+      if (!confirmed) return;
+      
+      setIsRefreshing(true);
+      
+      // Note: This is a placeholder for DocuSign integration
+      // Full implementation requires DocuSign OAuth setup and API integration
+      const res = await fetch(`/api/payments/${paymentAppId}/send-signature`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      
+      const data = await res.json();
+      
+      if (!res.ok || data.error) {
+        // If API doesn't exist yet, show a friendly message
+        if (res.status === 404) {
+          alert('DocuSign integration is not yet configured.\n\nTo enable electronic signatures:\n1. Set up DocuSign developer account\n2. Configure OAuth credentials\n3. Implement signature workflow\n\nFor now, please use manual signature process.');
+        } else {
+          alert(data.error || 'Failed to send for signature.');
+        }
+      } else {
+        alert('Signature request sent successfully!\n\nThe recipient will receive an email with signing instructions.');
+        await fetchApplications();
+      }
+    } catch (error) {
+      console.error('Error sending for signature:', error);
+      alert('DocuSign integration is not yet configured. Please complete the integration setup in Settings > Integrations.');
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   const handleDeletePayment = async (paymentAppId: number) => {
@@ -1124,9 +1154,56 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
   };
 
   const handleApproveSelected = async () => {
-    // TODO: Implement bulk approve
-    console.log('Approving selected:', selectedItems);
+    if (selectedItems.length === 0) return;
+    
+    const confirmed = window.confirm(`Are you sure you want to approve ${selectedItems.length} payment application(s)?`);
+    if (!confirmed) return;
+    
+    setIsRefreshing(true);
+    let successCount = 0;
+    let failCount = 0;
+    const errors: string[] = [];
+    
+    for (let i = 0; i < selectedItems.length; i++) {
+      const paymentId = selectedItems[i];
+      try {
+        const res = await fetch(`/api/payments/${paymentId}/approve`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ notes: `Bulk approved (${i + 1}/${selectedItems.length})` }),
+        });
+        
+        const data = await res.json();
+        
+        if (!res.ok || data.error) {
+          failCount++;
+          errors.push(`Payment #${paymentId}: ${data.error || 'Failed'}`);
+        } else {
+          successCount++;
+        }
+      } catch (error) {
+        failCount++;
+        errors.push(`Payment #${paymentId}: Network error`);
+        console.error(`Error approving payment ${paymentId}:`, error);
+      }
+    }
+    
+    // Refresh applications list
+    await fetchApplications();
+    
+    // Clear selection
     setSelectedItems([]);
+    setIsRefreshing(false);
+    
+    // Show results
+    let message = `Bulk approval complete:\n✓ ${successCount} approved`;
+    if (failCount > 0) {
+      message += `\n✗ ${failCount} failed`;
+      if (errors.length > 0 && errors.length <= 5) {
+        message += '\n\nErrors:\n' + errors.join('\n');
+      }
+    }
+    alert(message);
   };
 
   const handleStatClick = async (type: string) => {
@@ -1579,13 +1656,45 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
                     Cancel
                   </button>
                   <button
-                    onClick={() => {
-                      // TODO: Implement approval logic
-                      setShowConfirmDialog(null);
+                    onClick={async () => {
+                      if (!selectedPaymentForVerification?.id) {
+                        alert('No payment application selected');
+                        setShowConfirmDialog(null);
+                        return;
+                      }
+                      
+                      setActionLoading(true);
+                      try {
+                        const res = await fetch(`/api/payments/${selectedPaymentForVerification.id}/approve`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ notes: approvalNotes }),
+                        });
+                        
+                        const data = await res.json();
+                        
+                        if (!res.ok || data.error) {
+                          alert(data.error || 'Failed to approve payment application.');
+                        } else {
+                          alert('Payment application approved successfully!');
+                          // Refresh applications list
+                          await fetchApplications();
+                          // Close verification view
+                          handleVerificationClose();
+                        }
+                      } catch (error) {
+                        console.error('Error approving payment:', error);
+                        alert('Network error. Please try again.');
+                      } finally {
+                        setActionLoading(false);
+                        setShowConfirmDialog(null);
+                        setApprovalNotes('');
+                      }
                     }}
-                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                    disabled={actionLoading}
+                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Approve
+                    {actionLoading ? 'Approving...' : 'Approve'}
                   </button>
                 </div>
               </>
@@ -1611,13 +1720,50 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
                     Cancel
                   </button>
                   <button
-                    onClick={() => {
-                      // TODO: Implement rejection logic
-                      setShowConfirmDialog(null);
+                    onClick={async () => {
+                      if (!selectedPaymentForVerification?.id) {
+                        alert('No payment application selected');
+                        setShowConfirmDialog(null);
+                        return;
+                      }
+                      
+                      if (!rejectionNotes.trim()) {
+                        alert('Please provide a rejection reason');
+                        return;
+                      }
+                      
+                      setActionLoading(true);
+                      try {
+                        const res = await fetch(`/api/payments/${selectedPaymentForVerification.id}/reject`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ notes: rejectionNotes }),
+                        });
+                        
+                        const data = await res.json();
+                        
+                        if (!res.ok || data.error) {
+                          alert(data.error || 'Failed to reject payment application.');
+                        } else {
+                          alert('Payment application rejected successfully.');
+                          // Refresh applications list
+                          await fetchApplications();
+                          // Close verification view
+                          handleVerificationClose();
+                        }
+                      } catch (error) {
+                        console.error('Error rejecting payment:', error);
+                        alert('Network error. Please try again.');
+                      } finally {
+                        setActionLoading(false);
+                        setShowConfirmDialog(null);
+                        setRejectionNotes('');
+                      }
                     }}
-                    className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                    disabled={actionLoading || !rejectionNotes.trim()}
+                    className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Reject
+                    {actionLoading ? 'Rejecting...' : 'Reject'}
                   </button>
                 </div>
               </>

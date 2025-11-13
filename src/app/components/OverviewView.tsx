@@ -406,6 +406,7 @@ const DecisionQueueCards: React.FC<{ role: string | null, setError: (msg: string
 const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchToPayments, searchQuery = '' }) => {
   const { projects } = useData();
   const [role, setRole] = useState<string | null>(null);
+  const [lastActiveProject, setLastActiveProject] = useState<Project | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Filter projects based on search query
@@ -475,6 +476,19 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Load last active project from localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined' && projects.length > 0) {
+      const lastProjectId = localStorage.getItem('lastActiveProjectId');
+      if (lastProjectId) {
+        const project = projects.find(p => p.id.toString() === lastProjectId);
+        if (project) {
+          setLastActiveProject(project);
+        }
+      }
+    }
+  }, [projects]);
 
   // Enhanced project stats with contractor data
   const [enhancedProjects, setEnhancedProjects] = useState<any[]>([]);
@@ -827,6 +841,36 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
             onClick={() => handleBudgetCardClick('progress')}
           />
         </div>
+
+        {/* Quick Jump to Last Active Project */}
+        {lastActiveProject && onProjectSelect && (
+          <div className="bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 rounded-2xl border-2 border-purple-300 shadow-lg p-6 mb-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-indigo-500 rounded-xl flex items-center justify-center text-white text-xl shadow-lg">
+                ⚡
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-purple-900">Quick Jump</h3>
+                <p className="text-sm text-purple-600">Return to your last active project</p>
+              </div>
+            </div>
+            <button
+              onClick={() => onProjectSelect(lastActiveProject)}
+              className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl px-6 py-4 font-semibold transition-all duration-200 shadow-md hover:shadow-xl transform hover:scale-[1.02] flex items-center justify-between group"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center text-xl">
+                  🏗️
+                </div>
+                <div className="text-left">
+                  <div className="font-bold text-lg">{lastActiveProject.name}</div>
+                  <div className="text-sm text-purple-100">{lastActiveProject.client_name}</div>
+                </div>
+              </div>
+              <span className="text-2xl text-white/80 group-hover:text-white group-hover:translate-x-1 transition-all">→</span>
+            </button>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 sm:gap-10">
           {/* Enhanced Projects List */}

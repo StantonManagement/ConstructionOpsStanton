@@ -212,7 +212,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   // Internal data fetching function
-  const performDataFetch = async (shouldSetLoading = true) => {
+  const performDataFetch = useCallback(async (shouldSetLoading = true) => {
     if (shouldSetLoading) {
       setLoading(true);
     }
@@ -344,17 +344,17 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
         setLoading(false);
       }
     }
-  };
+  }, []);
 
   // Initial data fetch with loading state
   const fetchAllData = useCallback(async () => {
     await performDataFetch(true);
-  }, []);
+  }, [performDataFetch]);
 
   // Refresh data without showing loading state
   const refreshData = useCallback(async () => {
     await performDataFetch(false);
-  }, []);
+  }, [performDataFetch]);
 
   // Initialize data on mount - only once
   useEffect(() => {

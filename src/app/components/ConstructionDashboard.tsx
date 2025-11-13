@@ -11,17 +11,11 @@ import { useRouter, useSearchParams } from 'next/navigation';
 
 // Lazy load heavy components
 const OverviewView = lazy(() => import('./OverviewView'));
-const PaymentProcessingView = lazy(() => import('./PaymentProcessingView'));
-const PaymentApplicationsView = lazy(() => import('./PaymentApplicationsView'));
+const PaymentsView = lazy(() => import('./PaymentsView'));
 const ProjectsView = lazy(() => import('./ProjectsView'));
 const DailyLogsView = lazy(() => import('./DailyLogsView'));
-const SubcontractorsView = lazy(() => import('./SubcontractorsView'));
-const ComplianceView = lazy(() => import('./ComplianceView'));
-const MetricsView = lazy(() => import('./MetricsView'));
-const ManageView = lazy(() => import('./ManageView'));
-const SubcontractorSelectionView = lazy(() => import('./SubcontractorSelectionView'));
+const SettingsView = lazy(() => import('./SettingsView'));
 const UserProfile = lazy(() => import('./UserProfile'));
-const UserManagementView = lazy(() => import('./UserManagementView'));
 
 interface UserData {
   name: string;
@@ -41,44 +35,42 @@ const ConstructionDashboard: React.FC = () => {
 
   // Removed progressive loading to fix refresh issues
 
-  // URL-based tab management
+  // URL-based tab management with redirects for old tab names
   useEffect(() => {
-    const tabFromUrl = searchParams.get('tab');
+    let tabFromUrl = searchParams.get('tab');
     const projectFromUrl = searchParams.get('project');
     const subtabFromUrl = searchParams.get('subtab');
     
-    if (tabFromUrl && ['overview', 'payment', 'payment-applications', 'projects', 'daily-logs', 'subcontractors', 'compliance', 'metrics', 'contracts', 'user-management'].includes(tabFromUrl)) {
+    // Redirect old tab names to new structure
+    const redirects: Record<string, string> = {
+      'payment-applications': 'payments',
+      'payment': 'payments',
+      'subcontractors': 'projects',
+      'contracts': 'projects',
+      'metrics': 'overview',
+      'user-management': 'settings',
+      'compliance': 'overview'
+    };
+    
+    // Check if we need to redirect
+    if (tabFromUrl && redirects[tabFromUrl]) {
+      const newTab = redirects[tabFromUrl];
+      const params = new URLSearchParams(searchParams.toString());
+      params.set('tab', newTab);
+      router.replace(`/?${params.toString()}`, { scroll: false });
+      tabFromUrl = newTab;
+    }
+    
+    // Validate and set active tab (new tab names only)
+    if (tabFromUrl && ['overview', 'projects', 'payments', 'settings', 'daily-logs'].includes(tabFromUrl)) {
       setActiveTab(tabFromUrl);
     }
     
-    // Handle project selection from URL
-    if (projectFromUrl && tabFromUrl === 'payment') {
-      // Fetch project data and set selected project
-      const fetchProjectFromUrl = async () => {
-        try {
-          const { data: project, error } = await supabase
-            .from('projects')
-            .select('*')
-            .eq('id', projectFromUrl)
-            .single();
-          
-          if (!error && project) {
-            setSelectedProject(project);
-          }
-        } catch (err) {
-          console.error('Error fetching project from URL:', err);
-        }
-      };
-      
-      fetchProjectFromUrl();
-    } else if (tabFromUrl && tabFromUrl !== 'payment') {
-      // Clear selected project when switching away from payment tab
-      setSelectedProject(null);
-    } else if (!projectFromUrl && tabFromUrl === 'payment') {
-      // Clear selected project when on payment tab but no project in URL
+    // Clear selected project when switching tabs
+    if (tabFromUrl && tabFromUrl !== 'payments') {
       setSelectedProject(null);
     }
-  }, [searchParams]);
+  }, [searchParams, router]);
 
   const handleTabChange = useCallback((tab: string) => {
     setActiveTab(tab);
@@ -87,7 +79,7 @@ const ConstructionDashboard: React.FC = () => {
     params.set('tab', tab);
     
     // Clear irrelevant parameters based on the tab
-    if (tab !== 'payment') {
+    if (tab !== 'payments' && tab !== 'settings') {
       params.delete('subtab');
       params.delete('project');
     }
@@ -152,10 +144,10 @@ const ConstructionDashboard: React.FC = () => {
   // Handle project selection and redirect to payments tab
   const handleProjectSelect = useCallback((project: Project) => {
     setSelectedProject(project);
-    setActiveTab('payment');
+    setActiveTab('payments');
     // Update URL with project parameter
     const params = new URLSearchParams();
-    params.set('tab', 'payment');
+    params.set('tab', 'payments');
     params.set('project', project.id.toString());
     router.replace(`/?${params.toString()}`, { scroll: false });
   }, [router]);
@@ -163,10 +155,10 @@ const ConstructionDashboard: React.FC = () => {
   // Handle switching to payments tab without selecting a specific project
   const handleSwitchToPayments = useCallback(() => {
     setSelectedProject(null);
-    setActiveTab('payment');
+    setActiveTab('payments');
     // Update URL without project parameter
     const params = new URLSearchParams(searchParams.toString());
-    params.set('tab', 'payment');
+    params.set('tab', 'payments');
     params.delete('project');
     router.replace(`/?${params.toString()}`, { scroll: false });
   }, [searchParams, router]);
@@ -208,19 +200,20 @@ const ConstructionDashboard: React.FC = () => {
       <main className="lg:ml-64 transition-all duration-300 pt-20 lg:pt-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <Suspense fallback={<LoadingSpinner size="lg" text="Loading..." className="py-20" />}>
-            {/* Always show overview immediately - no progressive loading for main tab */}
+            {/* Overview Tab */}
             {activeTab === 'overview' && <OverviewView onProjectSelect={handleProjectSelect} onSwitchToPayments={handleSwitchToPayments} searchQuery={searchQuery} />}
 
-            {/* Other tabs use progressive loading */}
-            {activeTab === 'payment' && (selectedProject ? <SubcontractorSelectionView selectedProject={selectedProject} setSelectedProject={setSelectedProject} /> : <PaymentProcessingView setSelectedProject={setSelectedProject} searchQuery={searchQuery} />)}
-            {activeTab === 'payment-applications' && <PaymentApplicationsView searchQuery={searchQuery} />}
+            {/* Projects Tab */}
             {activeTab === 'projects' && <ProjectsView searchQuery={searchQuery} />}
+            
+            {/* Payments Tab */}
+            {activeTab === 'payments' && <PaymentsView searchQuery={searchQuery} />}
+            
+            {/* Settings Tab */}
+            {activeTab === 'settings' && <SettingsView />}
+            
+            {/* Daily Logs Tab */}
             {activeTab === 'daily-logs' && <DailyLogsView searchQuery={searchQuery} />}
-            {activeTab === 'subcontractors' && <SubcontractorsView searchQuery={searchQuery} />}
-            {activeTab === 'compliance' && <ComplianceView />}
-            {activeTab === 'metrics' && <MetricsView />}
-            {activeTab === 'contracts' && <ManageView searchQuery={searchQuery} />}
-            {activeTab === 'user-management' && <UserManagementView />}
           </Suspense>
         </div>
       </main>

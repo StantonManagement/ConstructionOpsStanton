@@ -166,53 +166,24 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab, setSel
       label: 'Projects',
       href: '/?tab=projects'
     },
-    // {
-    //   id: 'payment',
-    //   icon: <DollarSign className="w-5 h-5"/>,
-    //   label: 'Payments',
-    //   href: '/?tab=payment'
-    // },
     {
-      id: 'payment-applications',
+      id: 'payments',
       icon: <DollarSign className="w-5 h-5"/>,
-      label: 'Payments Apps',
-      href: '/?tab=payment-applications'
+      label: 'Payments',
+      href: '/?tab=payments'
     },
     {
-      id: 'subcontractors',
-      icon: <Users className="w-5 h-5"/>,
-      label: 'Contractors',
-      href: '/?tab=subcontractors'
+      id: 'settings',
+      icon: <Settings className="w-5 h-5"/>,
+      label: 'Settings',
+      href: '/?tab=settings'
     },
     {
       id: 'daily-logs',
       icon: <FileText className="w-5 h-5"/>,
       label: 'Daily Logs',
-      href: '/?tab=daily-logs'
-    },
-    // {
-    //   id: 'compliance',
-    //   icon: <ShieldCheck className="w-5 h-5"/>,
-    //   label: 'Compliance',
-    //   href: '/?tab=compliance'
-    // },
-    {
-      id: 'metrics',
-      icon: <BarChart2 className="w-5 h-5"/>,
-      label: 'Reports',
-      href: '/?tab=metrics'
-    },
-    {
-      id: 'contracts',
-      icon: <Settings className="w-5 h-5"/>,
-      label: 'Contracts',
-      href: '/?tab=contracts'
-    },
-    {
-      id: 'user-management',
-      icon: <UserCog className="w-5 h-5"/>,
-      label: 'User Management',
-      roles: ['admin', 'pm']
+      href: '/?tab=daily-logs',
+      roles: ['admin', 'staff']
     }
   ];
 

@@ -487,22 +487,113 @@ const PaymentProcessingView: React.FC<PaymentProcessingViewProps> = ({
     upcomingCount: upcoming.length,
   }), [outstanding, upcoming]);
 
+  // Modal state
+  const [showReminderModal, setShowReminderModal] = useState(false);
+  const [showPreparePaymentModal, setShowPreparePaymentModal] = useState(false);
+  const [selectedApp, setSelectedApp] = useState<PaymentApplication | null>(null);
+  const [reminderType, setReminderType] = useState<'email' | 'sms'>('sms');
+  const [reminderMessage, setReminderMessage] = useState('');
+  const [paymentNotes, setPaymentNotes] = useState('');
+  const [sendingReminder, setSendingReminder] = useState(false);
+  const [preparingPayment, setPreparingPayment] = useState(false);
+
   // Action handlers
   const handlePaymentAction = useCallback((app: PaymentApplication, action: string) => {
     switch (action) {
       case 'remind':
-        // TODO: Implement actual reminder functionality
-        alert(`Reminder sent for ${app.project.name} - ${app.contractor.name}`);
+        setSelectedApp(app);
+        setReminderMessage(`Hi ${app.contractor.name}, this is a reminder about payment application #${app.id} for ${app.project.name}. Please review at your earliest convenience.`);
+        setShowReminderModal(true);
         break;
       case 'prepare':
-        // TODO: Implement payment preparation and approval flow
-        // When approved, invoice will be automatically generated
-        alert(`Preparing payment for ${app.project.name} - ${app.contractor.name}\n\nNote: Invoice will be automatically generated upon payment approval.`);
+        setSelectedApp(app);
+        setPaymentNotes('');
+        setShowPreparePaymentModal(true);
         break;
       default:
         console.warn('Unknown action:', action);
     }
   }, []);
+
+  const handleSendReminder = async () => {
+    if (!selectedApp) return;
+    
+    setSendingReminder(true);
+    try {
+      if (reminderType === 'sms') {
+        // Fetch contractor's phone number from database
+        const { data: contractorData, error: contractorError } = await supabase
+          .from('contractors')
+          .select('phone')
+          .eq('id', selectedApp.contractor.id)
+          .single();
+        
+        if (contractorError || !contractorData?.phone) {
+          alert('Contractor phone number not found. Please update contractor information first.');
+          setSendingReminder(false);
+          return;
+        }
+        
+        // Send SMS reminder using existing SMS infrastructure
+        const response = await fetch('/api/sms/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: contractorData.phone, // Use actual phone number
+            message: reminderMessage,
+          }),
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to send SMS reminder');
+        }
+      } else {
+        // Send email reminder (placeholder - would need email service)
+        alert('Email reminder functionality requires email service configuration.\n\nFor now, please use SMS reminders.');
+        setSendingReminder(false);
+        return;
+      }
+      
+      alert(`Reminder sent successfully to ${selectedApp.contractor.name}!`);
+      setShowReminderModal(false);
+      setReminderMessage('');
+    } catch (error) {
+      console.error('Error sending reminder:', error);
+      alert('Failed to send reminder. Please try again.');
+    } finally {
+      setSendingReminder(false);
+    }
+  };
+
+  const handlePreparePayment = async () => {
+    if (!selectedApp) return;
+    
+    setPreparingPayment(true);
+    try {
+      // Update payment application status to indicate it's being prepared
+      const { error } = await supabase
+        .from('payment_applications')
+        .update({ 
+          status: 'approved',
+          pm_notes: paymentNotes || 'Payment prepared for processing',
+        })
+        .eq('id', selectedApp.id);
+      
+      if (error) throw error;
+      
+      alert(`Payment prepared successfully!\n\nPayment Application: #${selectedApp.id}\nContractor: ${selectedApp.contractor.name}\nAmount: ${formatCurrency(selectedApp.current_payment)}\n\nStatus updated to "Approved" - ready for check generation.`);
+      
+      // Refresh applications
+      refetch();
+      setShowPreparePaymentModal(false);
+      setPaymentNotes('');
+    } catch (error) {
+      console.error('Error preparing payment:', error);
+      alert('Failed to prepare payment. Please try again.');
+    } finally {
+      setPreparingPayment(false);
+    }
+  };
 
   const handleProjectSelection = useCallback((project: Project) => {
     setSelectedProject(project);
@@ -736,6 +827,168 @@ const PaymentProcessingView: React.FC<PaymentProcessingViewProps> = ({
           </div>
         )}
       </div>*/}
+
+      {/* Send Reminder Modal */}
+      {showReminderModal && selectedApp && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 max-w-lg w-full">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Send Reminder</h3>
+            
+            <div className="space-y-4">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div>
+                    <span className="font-medium text-gray-700">Project:</span>
+                    <p className="text-gray-900">{selectedApp.project.name}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-700">Contractor:</span>
+                    <p className="text-gray-900">{selectedApp.contractor.name}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-700">Payment App:</span>
+                    <p className="text-gray-900">#{selectedApp.id}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-700">Amount:</span>
+                    <p className="text-gray-900">{formatCurrency(selectedApp.current_payment)}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Reminder Type</label>
+                <div className="flex gap-4">
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      value="sms"
+                      checked={reminderType === 'sms'}
+                      onChange={(e) => setReminderType(e.target.value as 'sms')}
+                      className="w-4 h-4 text-blue-600"
+                    />
+                    <span className="ml-2 text-sm text-gray-700">📱 SMS</span>
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      value="email"
+                      checked={reminderType === 'email'}
+                      onChange={(e) => setReminderType(e.target.value as 'email')}
+                      className="w-4 h-4 text-blue-600"
+                    />
+                    <span className="ml-2 text-sm text-gray-700">✉️ Email</span>
+                  </label>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Message</label>
+                <textarea
+                  value={reminderMessage}
+                  onChange={(e) => setReminderMessage(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                  rows={4}
+                  placeholder="Enter your reminder message"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  {reminderMessage.length} characters
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setShowReminderModal(false);
+                  setReminderMessage('');
+                }}
+                disabled={sendingReminder}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSendReminder}
+                disabled={sendingReminder || !reminderMessage.trim()}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {sendingReminder ? 'Sending...' : 'Send Reminder'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Prepare Payment Modal */}
+      {showPreparePaymentModal && selectedApp && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 max-w-lg w-full">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Prepare Payment</h3>
+            
+            <div className="space-y-4">
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <h4 className="font-semibold text-green-900 mb-3">Payment Summary</h4>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-700">Project:</span>
+                    <span className="font-medium text-gray-900">{selectedApp.project.name}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-700">Contractor:</span>
+                    <span className="font-medium text-gray-900">{selectedApp.contractor.name}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-700">Payment App:</span>
+                    <span className="font-medium text-gray-900">#{selectedApp.id}</span>
+                  </div>
+                  <div className="flex justify-between pt-2 border-t border-green-300">
+                    <span className="font-semibold text-gray-900">Payment Amount:</span>
+                    <span className="font-bold text-green-700 text-lg">{formatCurrency(selectedApp.current_payment)}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Payment Notes (Optional)</label>
+                <textarea
+                  value={paymentNotes}
+                  onChange={(e) => setPaymentNotes(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                  rows={3}
+                  placeholder="Add any notes about this payment..."
+                />
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p className="text-sm text-blue-800">
+                  <strong>Note:</strong> Preparing this payment will update the status to "Approved" and mark it as ready for check generation.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setShowPreparePaymentModal(false);
+                  setPaymentNotes('');
+                }}
+                disabled={preparingPayment}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handlePreparePayment}
+                disabled={preparingPayment}
+                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {preparingPayment ? 'Preparing...' : 'Prepare Payment'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

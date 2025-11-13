@@ -6,6 +6,7 @@ import { Building, Users, DollarSign, Calendar, AlertCircle, CheckCircle, Clock,
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { getProjectStatusBadge, getStatusLabel } from '@/lib/statusColors';
+import ProjectDetailView from './ProjectDetailView';
 
 // Form validation utilities
 const validators = {
@@ -211,6 +212,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedProject, setSelectedProject] = useState<any>(null);
+  const [showDetailView, setShowDetailView] = useState(false);
   const [showProjectModal, setShowProjectModal] = useState(false);
   const [showDataModal, setShowDataModal] = useState(false);
   const [modalData, setModalData] = useState<any[]>([]);
@@ -665,6 +667,36 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
 
   const handleProjectClick = async (project: any) => {
     setSelectedProject(project);
+    setShowDetailView(true);
+    // Update URL to include project ID
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('projectId', project.id.toString());
+    router.replace(`/?tab=projects&${params.toString()}`, { scroll: false });
+  };
+
+  const handleBackToList = () => {
+    setSelectedProject(null);
+    setShowDetailView(false);
+    // Remove project ID from URL
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete('projectId');
+    router.replace(`/?tab=projects&${params.toString()}`, { scroll: false });
+  };
+
+  // Handle URL-based project selection
+  useEffect(() => {
+    const projectIdFromUrl = searchParams.get('projectId');
+    if (projectIdFromUrl && projects.length > 0) {
+      const project = projects.find(p => p.id.toString() === projectIdFromUrl);
+      if (project && !showDetailView) {
+        setSelectedProject(project);
+        setShowDetailView(true);
+      }
+    }
+  }, [searchParams, projects, showDetailView]);
+
+  const handleProjectClickOld = async (project: any) => {
+    setSelectedProject(project);
     setShowProjectModal(true);
     setLoadingProjectModal(true);
 
@@ -768,6 +800,11 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
     setSelectedProject(null);
     setProjectModalData({});
   };
+
+  // If a project is selected, show detail view
+  if (showDetailView && selectedProject) {
+    return <ProjectDetailView project={selectedProject} onBack={handleBackToList} />;
+  }
 
   if (loading) {
     return (

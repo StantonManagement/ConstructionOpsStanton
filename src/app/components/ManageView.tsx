@@ -8,7 +8,7 @@ import { useCreateProject, useUpdateProject, useDeleteProject } from '@/hooks/mu
 import { useCreateContractor, useUpdateContractor, useDeleteContractor } from '@/hooks/mutations/useContractorMutations';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useLineItemsState, LineItem } from '@/hooks/useLineItemsState';
-import EditableLineItemsTable from '@/app/components/EditableLineItemsTable';
+import { EditableLineItemsTable } from '@/app/components/EditableLineItemsTable';
 
 // Enhanced notification system
 type NotificationType = 'success' | 'error' | 'warning' | 'info';
@@ -1079,63 +1079,6 @@ const AddContractForm: React.FC<{
     setDirty(true);
   };
 
-  const handleLineItemChange = (field: keyof LineItem) => (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setLineItemForm(prev => ({ ...prev, [field]: value }));
-
-    // Clear any existing error for this field
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
-    }
-  };
-
-  const handleSaveLineItem = () => {
-    if (!lineItemForm.itemNo || !lineItemForm.description || !lineItemForm.scheduledValue) {
-      alert('Please fill in all required fields');
-      return;
-    }
-
-    // Validate From Previous and This Period fields
-    const fromPreviousError = validateLineItemField(lineItemForm.fromPrevious, 'From Previous');
-    const thisPeriodError = validateLineItemField(lineItemForm.thisPeriod, 'This Period');
-    const materialStoredError = validateLineItemField(lineItemForm.materialStored, 'Material Stored');
-    const percentGCError = validateLineItemField(lineItemForm.percentGC, '% G/C');
-
-    if (fromPreviousError || thisPeriodError || materialStoredError || percentGCError) {
-      setErrors({
-        ...errors,
-        fromPrevious: fromPreviousError,
-        thisPeriod: thisPeriodError,
-        materialStored: materialStoredError,
-        percentGC: percentGCError
-      });
-      return;
-    }
-
-    const newItem: LineItem = {
-      ...lineItemForm,
-      scheduledValue: lineItemForm.scheduledValue,
-      fromPrevious: lineItemForm.fromPrevious,
-      thisPeriod: lineItemForm.thisPeriod,
-      materialStored: lineItemForm.materialStored,
-      percentGC: lineItemForm.percentGC,
-    };
-
-    if (editingLineItemIndex !== null) {
-      const updatedItems = [...lineItems];
-      updatedItems[editingLineItemIndex] = newItem;
-      setLineItems(updatedItems);
-      setEditingLineItemIndex(null);
-    } else {
-      setLineItems([...lineItems, newItem]);
-    }
-
-    setLineItemForm({ itemNo: '', description: '', scheduledValue: '', fromPrevious: '', thisPeriod: '', materialStored: '', percentGC: '' });
-    setShowLineItemForm(false);
-    // Clear any validation errors
-    setErrors({});
-  };
-
   return (
     <div className="bg-white rounded-xl p-6 w-full shadow-2xl max-h-[90vh] overflow-y-auto">
       <div className="flex justify-between items-center mb-6">
@@ -1316,14 +1259,14 @@ const AddContractForm: React.FC<{
           
           <EditableLineItemsTable
             items={lineItemsHook.items}
+            contractAmount={Number(formData.contractAmount) || 0}
             emptyRowIds={lineItemsHook.emptyRowIds}
-            onAddItem={lineItemsHook.addItem}
-            onUpdateItem={lineItemsHook.updateItem}
-            onDeleteItems={lineItemsHook.deleteItems}
-            onReorderItem={lineItemsHook.reorderItem}
-            onUndo={lineItemsHook.undo}
-            canUndo={lineItemsHook.canUndo}
-            disabled={isContractLocked}
+            onAdd={lineItemsHook.addItem}
+            onUpdate={lineItemsHook.updateItem}
+            onDelete={lineItemsHook.deleteItems}
+            onReorder={lineItemsHook.reorderItem}
+            isEditable={!isContractLocked}
+            maxItems={100}
           />
           
           {/* Validation Messages */}
@@ -1348,220 +1291,6 @@ const AddContractForm: React.FC<{
                 ${lineItemsHook.totalScheduledValue.toFixed(2)}
               </span>
             </p>
-          </div>
-          
-          <div className="border rounded-lg p-4 bg-gray-50 mb-4 hidden">
-            {showLineItemForm ? (
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end mb-4">
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Item No</label>
-                  <input
-                    type="text"
-                    name="itemNo"
-                    value={lineItemForm.itemNo}
-                    onChange={handleLineItemChange('itemNo')}
-                    className="w-full px-3 py-2 text-base border rounded-lg bg-white text-gray-900"
-                    required
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Description</label>
-                  <input
-                    type="text"
-                    name="description"
-                    value={lineItemForm.description}
-                    onChange={handleLineItemChange('description')}
-                    className="w-full px-3 py-2 text-base border rounded-lg bg-white text-gray-900"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Scheduled Value</label>
-                  <input
-                    type="number"
-                    name="scheduledValue"
-                    value={lineItemForm.scheduledValue}
-                    onChange={handleLineItemChange('scheduledValue')}
-                    className="w-full px-3 py-2 text-base border rounded-lg bg-white text-gray-900"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">From Previous Application</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    max="100"
-                    value={lineItemForm.fromPrevious}
-                    onChange={handleLineItemChange('fromPrevious')}
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                      errors.fromPrevious ? 'border-red-300' : 'border-gray-300'
-                    }`}
-                    placeholder="0.00"
-                  />
-                  {errors.fromPrevious && (
-                    <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
-                      <AlertCircle className="w-4 h-4" />
-                      {errors.fromPrevious}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">This Period</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    max="100"
-                    value={lineItemForm.thisPeriod}
-                    onChange={handleLineItemChange('thisPeriod')}
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                      errors.thisPeriod ? 'border-red-300' : 'border-gray-300'
-                    }`}
-                    placeholder="0.00"
-                  />
-                  {errors.thisPeriod && (
-                    <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
-                      <AlertCircle className="w-4 h-4" />
-                      {errors.thisPeriod}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Material Presently Stored</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    max="100"
-                    value={lineItemForm.materialStored}
-                    onChange={handleLineItemChange('materialStored')}
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                      errors.materialStored ? 'border-red-300' : 'border-gray-300'
-                    }`}
-                    placeholder="0.00"
-                  />
-                  {errors.materialStored && (
-                    <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
-                      <AlertCircle className="w-4 h-4" />
-                      {errors.materialStored}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">% G/C</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    max="100"
-                    value={lineItemForm.percentGC}
-                    onChange={handleLineItemChange('percentGC')}
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                      errors.percentGC ? 'border-red-300' : 'border-gray-300'
-                    }`}
-                    placeholder="0.00"
-                  />
-                  {errors.percentGC && (
-                    <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
-                      <AlertCircle className="w-4 h-4" />
-                      {errors.percentGC}
-                    </p>
-                  )}
-                </div>
-                <div className="md:col-span-4 flex gap-2">
-                  <button
-                    type="button"
-                    onClick={handleSaveLineItem}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                  >
-                    {editingLineItemIndex === null ? 'Add' : 'Update'}
-                  </button>
-                  {editingLineItemIndex !== null && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setLineItemForm({ itemNo: '', description: '', scheduledValue: '', fromPrevious: '', thisPeriod: '', materialStored: '', percentGC: '' });
-                        setEditingLineItemIndex(null);
-                        setShowLineItemForm(false);
-                        setErrors({});
-                      }}
-                      className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300"
-                    >
-                      Cancel
-                    </button>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <div className="flex justify-end mt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowLineItemForm(true)}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold shadow flex items-center gap-2"
-                >
-                  <Plus className="w-4 h-4" />
-                  Add Line Item
-                </button>
-              </div>
-            )}
-            <table className="min-w-full text-sm border">
-              <thead>
-                <tr>
-                  <th className="border px-2 py-1 text-gray-700">Item No</th>
-                  <th className="border px-2 py-1 text-gray-700">Description</th>
-                  <th className="border px-2 py-1 text-gray-700">Scheduled Value</th>
-                  <th className="border px-2 py-1 text-gray-700">From Previous</th>
-                  <th className="border px-2 py-1 text-gray-700">This Period</th>
-                  <th className="border px-2 py-1 text-gray-700">Material Stored</th>
-                  <th className="border px-2 py-1 text-gray-700">% G/C</th>
-                  <th className="border px-2 py-1 text-gray-700">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {lineItems.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} className="text-center text-gray-500 py-2">No line items added.</td>
-                  </tr>
-                ) : (
-                  lineItems.map((item, idx) => (
-                    <tr key={idx}>
-                      <td className="border px-2 py-1 text-gray-700">{item.itemNo}</td>
-                      <td className="border px-2 py-1 text-gray-700">{item.description}</td>
-                      <td className="border px-2 py-1 text-gray-700">{item.scheduledValue}</td>
-                      <td className="border px-2 py-1 text-gray-700">{item.fromPrevious}</td>
-                      <td className="border px-2 py-1 text-gray-700">{item.thisPeriod}</td>
-                      <td className="border px-2 py-1 text-gray-700">{item.materialStored}</td>
-                      <td className="border px-2 py-1 text-gray-700">{item.percentGC}</td>
-                      <td className="border px-2 py-1 text-gray-700 flex gap-2">
-                        <button
-                          type="button"
-                          className="text-blue-600 hover:underline"
-                          onClick={() => {
-                            setLineItemForm(item);
-                            setEditingLineItemIndex(idx);
-                            setShowLineItemForm(true);
-                          }}
-                        >
-                          Edit
-                        </button>
-                        <button
-                          type="button"
-                          className="text-red-600 hover:underline"
-                          onClick={() => {
-                            setLineItems(prev => prev.filter((_, i) => i !== idx));
-                            setErrors({}); // Clear errors when removing item
-                          }}
-                        >
-                          Remove
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
           </div>
         </div>
 
@@ -1792,6 +1521,78 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
     setShowDeleteConfirmation(true);
   };
 
+  const handleExport = () => {
+    try {
+      const data = currentData;
+      
+      if (data.length === 0) {
+        addNotification('info', 'No data to export');
+        return;
+      }
+      
+      // Prepare CSV headers
+      const headers = [
+        'ID',
+        'Project',
+        'Contractor',
+        'Trade',
+        'Original Amount',
+        'Change Orders',
+        'Current Amount',
+        'Paid to Date',
+        'Remaining',
+        'Status',
+        'Start Date',
+        'End Date',
+      ];
+      
+      // Prepare CSV rows
+      const rows = data.map((contract: any) => {
+        const changeOrders = (contract.contract_amount || 0) - (contract.original_contract_amount || 0);
+        const remaining = (contract.contract_amount || 0) - (contract.paid_to_date || 0);
+        
+        // Get project and contractor names from the contract object if available
+        const projectName = contract.project?.name || contract.project_name || 'Unknown';
+        const contractorName = contract.contractor?.name || contract.contractor_name || 'Unknown';
+        const contractorTrade = contract.contractor?.trade || contract.contractor_trade || 'N/A';
+        
+        return [
+          contract.id,
+          `"${projectName}"`,
+          `"${contractorName}"`,
+          `"${contractorTrade}"`,
+          contract.original_contract_amount || 0,
+          changeOrders,
+          contract.contract_amount || 0,
+          contract.paid_to_date || 0,
+          remaining,
+          `"${contract.contract_status || 'active'}"`,
+          contract.start_date || '',
+          contract.end_date || '',
+        ].join(',');
+      });
+      
+      // Create CSV content
+      const csv = [headers.join(','), ...rows].join('\n');
+      
+      // Create blob and download
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `contracts_export_${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      addNotification('success', `Exported ${data.length} contract(s) successfully!`);
+    } catch (error) {
+      console.error('Error exporting data:', error);
+      addNotification('error', 'Failed to export data. Please try again.');
+    }
+  };
+
   const confirmBulkDelete = async () => {
     if (selectedItems.size === 0) return;
 
@@ -1906,7 +1707,7 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
             onAddNew={() => handleOpenForm('contract')}
             selectedCount={selectedItems.size}
             onBulkDelete={handleBulkDelete}
-            onExport={() => addNotification('info', 'Export feature coming soon!')}
+            onExport={handleExport}
             onSelectAll={handleSelectAll}
             totalCount={currentData.length}
           />
