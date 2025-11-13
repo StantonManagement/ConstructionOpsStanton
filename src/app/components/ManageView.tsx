@@ -808,7 +808,8 @@ const AddContractForm: React.FC<{
     if (!isEdit) {
       lineItemsHook.initializeEmptyRows(5);
     }
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEdit]);
 
   // Load existing line items and check for locking when editing
   useEffect(() => {
@@ -880,7 +881,8 @@ const AddContractForm: React.FC<{
 
       loadData();
     }
-  }, [isEdit, initialData?.id]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEdit, initialData?.id, initialData?.project_id, initialData?.subcontractor_id]);
 
   // Keyboard shortcut for undo (Ctrl+Z / Cmd+Z)
   useEffect(() => {
@@ -899,7 +901,8 @@ const AddContractForm: React.FC<{
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [lineItemsHook]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lineItemsHook.canUndo]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
