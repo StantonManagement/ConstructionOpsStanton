@@ -2,9 +2,9 @@ import React, { useState, ChangeEvent, FormEvent, ReactNode, useCallback, useMem
 import { useData } from '../context/DataContext';
 import { supabase } from '@/lib/supabaseClient';
 import { Building, UserPlus, FilePlus, AlertCircle, CheckCircle, X, Search, Filter, Plus, Edit3, Eye, Trash2, Archive, Star, Calendar, DollarSign } from 'lucide-react';
-import LineItemFormModal from '@/components/LineItemFormModal';
-import LineItemEditor, { LineItem } from '@/components/LineItemEditor';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useLineItemsState, LineItem } from '@/hooks/useLineItemsState';
+import { EditableLineItemsTable } from '@/app/components/EditableLineItemsTable';
 
 // Enhanced notification system
 type NotificationType = 'success' | 'error' | 'warning' | 'info';
@@ -795,51 +795,111 @@ const AddContractForm: React.FC<{
     startDate: initialData?.start_date || "",
     endDate: initialData?.end_date || "",
   });
-  const [lineItems, setLineItems] = useState<LineItem[]>([]);
+  
+  // Use new line items hook
+  const lineItemsHook = useLineItemsState([]);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [lineItemForm, setLineItemForm] = useState({ itemNo: '', description: '', scheduledValue: '', fromPrevious: '', thisPeriod: '', materialStored: '', percentGC: '' });
-  const [editingLineItemIndex, setEditingLineItemIndex] = useState<number | null>(null);
-  const [showLineItemForm, setShowLineItemForm] = useState(false);
+  const [isContractLocked, setIsContractLocked] = useState(false);
+  const [validationError, setValidationError] = useState('');
 
-  const totalScheduledValue = lineItems.reduce((sum, item) => sum + (typeof item.scheduledValue === 'number' ? item.scheduledValue : Number(item.scheduledValue) || 0), 0);
+  // Initialize empty rows for create mode
+  useEffect(() => {
+    if (!isEdit) {
+      lineItemsHook.initializeEmptyRows(5);
+    }
+  }, []);
 
-  // Load existing line items when editing
+  // Load existing line items and check for locking when editing
   useEffect(() => {
     if (isEdit && initialData?.id) {
-      const loadLineItems = async () => {
+      const loadData = async () => {
         try {
-          const { data: lineItemsData, error } = await supabase
+          // Check if contract is locked (has payment applications)
+          // Note: payment_applications doesn't have contract_id, must use project_id + contractor_id
+          const { data: paymentApps, error: paymentError } = await supabase
+            .from('payment_applications')
+            .select('id, status')
+            .eq('project_id', initialData.project_id)
+            .eq('contractor_id', initialData.subcontractor_id);
+
+          if (paymentError) {
+            console.error('Error checking payment applications:', paymentError);
+            // Fallback: if query fails, assume contract is not locked to allow editing
+            setIsContractLocked(false);
+          } else if (paymentApps && paymentApps.length > 0) {
+            // Contract is locked if it has any non-draft payment applications
+            const hasNonDraftPayments = paymentApps.some(app => app.status !== 'draft');
+            setIsContractLocked(hasNonDraftPayments);
+            
+            if (hasNonDraftPayments) {
+              console.log(`Contract locked: Found ${paymentApps.length} payment application(s) for this contract`);
+            }
+          } else {
+            // No payment applications found, contract is not locked
+            setIsContractLocked(false);
+          }
+
+          // Load line items
+          const { data: lineItemsData, error: lineItemsError } = await supabase
             .from('project_line_items')
             .select('*')
             .eq('contract_id', initialData.id)
             .order('display_order', { ascending: true });
 
-          if (error) {
-            console.error('Error loading line items:', error);
+          if (lineItemsError) {
+            console.error('Error loading line items:', lineItemsError);
+            // Fallback: initialize with empty rows so modal still works
+            lineItemsHook.initializeEmptyRows(5);
             return;
           }
 
-          if (lineItemsData) {
-            const formattedLineItems = lineItemsData.map(item => ({
-              itemNo: item.item_no || '',
+          if (lineItemsData && lineItemsData.length > 0) {
+            const formattedLineItems: LineItem[] = lineItemsData.map((item, index) => ({
+              id: crypto.randomUUID(),
+              itemNo: index + 1,
               description: item.description_of_work || '',
               scheduledValue: item.scheduled_value?.toString() || '',
-              fromPrevious: item.from_previous_application?.toString() || '',
-              thisPeriod: item.this_period?.toString() || '',
-              materialStored: item.material_presently_stored?.toString() || '',
-              percentGC: item.percent_gc?.toString() || '',
+              fromPrevious: item.from_previous_application?.toString() || '0.00',
+              thisPeriod: item.this_period?.toString() || '0.00',
+              materialStored: item.material_presently_stored?.toString() || '0.00',
+              percentGC: item.percent_gc?.toString() || '0.00',
             }));
-            setLineItems(formattedLineItems);
+            lineItemsHook.setAllItems(formattedLineItems);
+          } else {
+            // No existing line items, initialize with empty rows
+            lineItemsHook.initializeEmptyRows(5);
           }
         } catch (error) {
-          console.error('Error loading line items:', error);
+          console.error('Error loading contract data:', error);
+          // Fallback: initialize with empty rows and unlock contract so modal still works
+          setIsContractLocked(false);
+          lineItemsHook.initializeEmptyRows(5);
         }
       };
 
-      loadLineItems();
+      loadData();
     }
   }, [isEdit, initialData?.id]);
+
+  // Keyboard shortcut for undo (Ctrl+Z / Cmd+Z)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && lineItemsHook.canUndo) {
+        e.preventDefault();
+        lineItemsHook.undo();
+        // Show brief notification
+        const notification = document.createElement('div');
+        notification.textContent = 'Undone';
+        notification.className = 'fixed bottom-4 right-4 bg-gray-800 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+        document.body.appendChild(notification);
+        setTimeout(() => notification.remove(), 1500);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [lineItemsHook]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -853,24 +913,24 @@ const AddContractForm: React.FC<{
     }
     if (!formData.contractNickname.trim()) newErrors.contractNickname = 'Contract nickname is required';
 
+    // Validate line items
+    const contractAmount = Number(formData.contractAmount) || 0;
+    const totalMatch = Math.abs(lineItemsHook.totalScheduledValue - contractAmount) < 0.01;
+    
+    if (!totalMatch && lineItemsHook.itemsWithData.length > 0) {
+      newErrors.contractAmount = 'Total Scheduled Value must equal Contract Amount';
+      setValidationError(`Total ($${lineItemsHook.totalScheduledValue.toFixed(2)}) does not match Contract Amount ($${contractAmount.toFixed(2)})`);
+    } else {
+      setValidationError('');
+    }
+
+    if (lineItemsHook.hasEmptyRows) {
+      newErrors.lineItems = 'Remove or complete empty line items';
+      setValidationError('Remove or complete empty line items');
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  };
-
-  const validateLineItemField = (value: string, fieldName: string): string => {
-    if (value === '') return '';
-
-    const numValue = Number(value);
-    if (isNaN(numValue)) {
-      return `${fieldName} must be a valid number`;
-    }
-    if (numValue < 0) {
-      return `${fieldName} cannot be negative`;
-    }
-    if (numValue > 100) {
-      return `${fieldName} cannot be greater than 100`;
-    }
-    return '';
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -960,8 +1020,11 @@ const AddContractForm: React.FC<{
         }
       }
 
-      if (lineItems.length > 0) {
-        const itemsToInsert = lineItems.map(item => ({
+      // Save line items (only items with data)
+      const itemsToSave = lineItemsHook.itemsWithData;
+      
+      if (itemsToSave.length > 0 && !isContractLocked) {
+        const itemsToInsert = itemsToSave.map((item, index) => ({
           contract_id: contractId,
           project_id: Number(formData.projectId),
           contractor_id: Number(formData.subcontractorId),
@@ -972,11 +1035,17 @@ const AddContractForm: React.FC<{
           this_period: Number(item.thisPeriod) || 0,
           material_presently_stored: Number(item.materialStored) || 0,
           percent_gc: Number(item.percentGC) || 0,
+          display_order: index + 1,
           status: 'active',
         }));
 
         if (isEdit && initialData?.id) {
-          // For edit mode, we might want to update existing line items or add new ones
+          // Delete existing line items first, then insert new ones
+          await supabase
+            .from('project_line_items')
+            .delete()
+            .eq('contract_id', initialData.id);
+
           const { error: lineItemsError } = await supabase
             .from('project_line_items')
             .insert(itemsToInsert);
@@ -1008,7 +1077,8 @@ const AddContractForm: React.FC<{
           startDate: "",
           endDate: "",
         });
-        setLineItems([]);
+        lineItemsHook.setAllItems([]);
+        lineItemsHook.initializeEmptyRows(5);
       }
 
       if (onSuccess) onSuccess();
@@ -1031,63 +1101,6 @@ const AddContractForm: React.FC<{
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
     setDirty(true);
-  };
-
-  const handleLineItemChange = (field: keyof LineItem) => (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setLineItemForm(prev => ({ ...prev, [field]: value }));
-
-    // Clear any existing error for this field
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
-    }
-  };
-
-  const handleSaveLineItem = () => {
-    if (!lineItemForm.itemNo || !lineItemForm.description || !lineItemForm.scheduledValue) {
-      alert('Please fill in all required fields');
-      return;
-    }
-
-    // Validate From Previous and This Period fields
-    const fromPreviousError = validateLineItemField(lineItemForm.fromPrevious, 'From Previous');
-    const thisPeriodError = validateLineItemField(lineItemForm.thisPeriod, 'This Period');
-    const materialStoredError = validateLineItemField(lineItemForm.materialStored, 'Material Stored');
-    const percentGCError = validateLineItemField(lineItemForm.percentGC, '% G/C');
-
-    if (fromPreviousError || thisPeriodError || materialStoredError || percentGCError) {
-      setErrors({
-        ...errors,
-        fromPrevious: fromPreviousError,
-        thisPeriod: thisPeriodError,
-        materialStored: materialStoredError,
-        percentGC: percentGCError
-      });
-      return;
-    }
-
-    const newItem: LineItem = {
-      ...lineItemForm,
-      scheduledValue: lineItemForm.scheduledValue,
-      fromPrevious: lineItemForm.fromPrevious,
-      thisPeriod: lineItemForm.thisPeriod,
-      materialStored: lineItemForm.materialStored,
-      percentGC: lineItemForm.percentGC,
-    };
-
-    if (editingLineItemIndex !== null) {
-      const updatedItems = [...lineItems];
-      updatedItems[editingLineItemIndex] = newItem;
-      setLineItems(updatedItems);
-      setEditingLineItemIndex(null);
-    } else {
-      setLineItems([...lineItems, newItem]);
-    }
-
-    setLineItemForm({ itemNo: '', description: '', scheduledValue: '', fromPrevious: '', thisPeriod: '', materialStored: '', percentGC: '' });
-    setShowLineItemForm(false);
-    // Clear any validation errors
-    setErrors({});
   };
 
   return (
@@ -1252,224 +1265,57 @@ const AddContractForm: React.FC<{
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Line Items</label>
-          <div className="border rounded-lg p-4 bg-gray-50 mb-4">
-            {showLineItemForm ? (
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end mb-4">
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Item No</label>
-                  <input
-                    type="text"
-                    name="itemNo"
-                    value={lineItemForm.itemNo}
-                    onChange={handleLineItemChange('itemNo')}
-                    className="w-full px-3 py-2 text-base border rounded-lg bg-white text-gray-900"
-                    required
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Description</label>
-                  <input
-                    type="text"
-                    name="description"
-                    value={lineItemForm.description}
-                    onChange={handleLineItemChange('description')}
-                    className="w-full px-3 py-2 text-base border rounded-lg bg-white text-gray-900"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Scheduled Value</label>
-                  <input
-                    type="number"
-                    name="scheduledValue"
-                    value={lineItemForm.scheduledValue}
-                    onChange={handleLineItemChange('scheduledValue')}
-                    className="w-full px-3 py-2 text-base border rounded-lg bg-white text-gray-900"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">From Previous Application</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    max="100"
-                    value={lineItemForm.fromPrevious}
-                    onChange={handleLineItemChange('fromPrevious')}
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                      errors.fromPrevious ? 'border-red-300' : 'border-gray-300'
-                    }`}
-                    placeholder="0.00"
-                  />
-                  {errors.fromPrevious && (
-                    <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
-                      <AlertCircle className="w-4 h-4" />
-                      {errors.fromPrevious}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">This Period</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    max="100"
-                    value={lineItemForm.thisPeriod}
-                    onChange={handleLineItemChange('thisPeriod')}
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                      errors.thisPeriod ? 'border-red-300' : 'border-gray-300'
-                    }`}
-                    placeholder="0.00"
-                  />
-                  {errors.thisPeriod && (
-                    <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
-                      <AlertCircle className="w-4 h-4" />
-                      {errors.thisPeriod}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Material Presently Stored</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    max="100"
-                    value={lineItemForm.materialStored}
-                    onChange={handleLineItemChange('materialStored')}
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                      errors.materialStored ? 'border-red-300' : 'border-gray-300'
-                    }`}
-                    placeholder="0.00"
-                  />
-                  {errors.materialStored && (
-                    <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
-                      <AlertCircle className="w-4 h-4" />
-                      {errors.materialStored}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">% G/C</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    max="100"
-                    value={lineItemForm.percentGC}
-                    onChange={handleLineItemChange('percentGC')}
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                      errors.percentGC ? 'border-red-300' : 'border-gray-300'
-                    }`}
-                    placeholder="0.00"
-                  />
-                  {errors.percentGC && (
-                    <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
-                      <AlertCircle className="w-4 h-4" />
-                      {errors.percentGC}
-                    </p>
-                  )}
-                </div>
-                <div className="md:col-span-4 flex gap-2">
-                  <button
-                    type="button"
-                    onClick={handleSaveLineItem}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                  >
-                    {editingLineItemIndex === null ? 'Add' : 'Update'}
-                  </button>
-                  {editingLineItemIndex !== null && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setLineItemForm({ itemNo: '', description: '', scheduledValue: '', fromPrevious: '', thisPeriod: '', materialStored: '', percentGC: '' });
-                        setEditingLineItemIndex(null);
-                        setShowLineItemForm(false);
-                        setErrors({});
-                      }}
-                      className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300"
-                    >
-                      Cancel
-                    </button>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <div className="flex justify-end mt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowLineItemForm(true)}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold shadow flex items-center gap-2"
-                >
-                  <Plus className="w-4 h-4" />
-                  Add Line Item
-                </button>
-              </div>
-            )}
-            <table className="min-w-full text-sm border">
-              <thead>
-                <tr>
-                  <th className="border px-2 py-1 text-gray-700">Item No</th>
-                  <th className="border px-2 py-1 text-gray-700">Description</th>
-                  <th className="border px-2 py-1 text-gray-700">Scheduled Value</th>
-                  <th className="border px-2 py-1 text-gray-700">From Previous</th>
-                  <th className="border px-2 py-1 text-gray-700">This Period</th>
-                  <th className="border px-2 py-1 text-gray-700">Material Stored</th>
-                  <th className="border px-2 py-1 text-gray-700">% G/C</th>
-                  <th className="border px-2 py-1 text-gray-700">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {lineItems.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} className="text-center text-gray-500 py-2">No line items added.</td>
-                  </tr>
-                ) : (
-                  lineItems.map((item, idx) => (
-                    <tr key={idx}>
-                      <td className="border px-2 py-1 text-gray-700">{item.itemNo}</td>
-                      <td className="border px-2 py-1 text-gray-700">{item.description}</td>
-                      <td className="border px-2 py-1 text-gray-700">{item.scheduledValue}</td>
-                      <td className="border px-2 py-1 text-gray-700">{item.fromPrevious}</td>
-                      <td className="border px-2 py-1 text-gray-700">{item.thisPeriod}</td>
-                      <td className="border px-2 py-1 text-gray-700">{item.materialStored}</td>
-                      <td className="border px-2 py-1 text-gray-700">{item.percentGC}</td>
-                      <td className="border px-2 py-1 text-gray-700 flex gap-2">
-                        <button
-                          type="button"
-                          className="text-blue-600 hover:underline"
-                          onClick={() => {
-                            setLineItemForm(item);
-                            setEditingLineItemIndex(idx);
-                            setShowLineItemForm(true);
-                          }}
-                        >
-                          Edit
-                        </button>
-                        <button
-                          type="button"
-                          className="text-red-600 hover:underline"
-                          onClick={() => {
-                            setLineItems(prev => prev.filter((_, i) => i !== idx));
-                            setErrors({}); // Clear errors when removing item
-                          }}
-                        >
-                          Remove
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-            <div className="text-right mt-2 text-sm text-gray-700">
-              Total Scheduled Value: <span className="font-semibold">${totalScheduledValue.toLocaleString()}</span>
-            </div>
+          <div className="flex items-center justify-between mb-2">
+            <label className="block text-sm font-medium text-gray-700">Line Items</label>
+            <button
+              type="button"
+              disabled={true}
+              className="px-3 py-1.5 text-sm bg-gray-300 text-gray-500 rounded cursor-not-allowed flex items-center gap-2"
+              title="Available in next phase"
+            >
+              <Plus className="w-4 h-4" />
+              Import from CSV (Coming Soon)
+            </button>
           </div>
+          {isContractLocked && (
+            <div className="mb-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 text-yellow-600" />
+              <span className="text-sm text-yellow-800 font-medium">
+                ⚠️ Contract locked after first payment. Use Change Orders to modify line items.
+              </span>
+            </div>
+          )}
+          <EditableLineItemsTable
+            items={lineItemsHook.items}
+            contractAmount={Number(formData.contractAmount) || 0}
+            onUpdate={(id, field, value) => {
+              lineItemsHook.updateItem(id, field, value);
+              setDirty(true);
+            }}
+            onDelete={(ids) => {
+              lineItemsHook.deleteItems(ids);
+              setDirty(true);
+            }}
+            onReorder={(fromIndex, toIndex) => {
+              lineItemsHook.reorderItem(fromIndex, toIndex);
+              setDirty(true);
+            }}
+            onAdd={() => {
+              lineItemsHook.addItem();
+              setDirty(true);
+            }}
+            isEditable={!isContractLocked}
+            maxItems={15}
+            emptyRowIds={lineItemsHook.emptyRowIds}
+          />
         </div>
+
+        {validationError && (
+          <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <AlertCircle className="w-5 h-5 text-red-600" />
+            <span className="text-sm text-red-800 font-medium">⚠️ {validationError}</span>
+          </div>
+        )}
 
         <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
           <button
