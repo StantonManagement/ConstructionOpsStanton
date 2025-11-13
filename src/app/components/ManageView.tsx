@@ -1,8 +1,12 @@
 import React, { useState, ChangeEvent, FormEvent, ReactNode, useCallback, useMemo, useEffect } from 'react';
-import { useData } from '../context/DataContext';
 import { supabase } from '@/lib/supabaseClient';
 import { Building, UserPlus, FilePlus, AlertCircle, CheckCircle, X, Search, Filter, Plus, Edit3, Eye, Trash2, Archive, Star, Calendar, DollarSign } from 'lucide-react';
 import LineItemFormModal from '@/components/LineItemFormModal';
+import { useProjects } from '@/hooks/queries/useProjects';
+import { useContractors } from '@/hooks/queries/useContractors';
+import { useContracts } from '@/hooks/queries/useContracts';
+import { useCreateProject, useUpdateProject, useDeleteProject } from '@/hooks/mutations/useProjectMutations';
+import { useCreateContractor, useUpdateContractor, useDeleteContractor } from '@/hooks/mutations/useContractorMutations';
 import LineItemEditor, { LineItem } from '@/components/LineItemEditor';
 import { useRouter, useSearchParams } from 'next/navigation';
 
@@ -785,8 +789,9 @@ const AddContractForm: React.FC<{
   setDirty: (dirty: boolean) => void;
   initialData?: any;
   isEdit?: boolean;
-}> = ({ onClose, onSuccess, onError, setDirty, initialData, isEdit = false }) => {
-  const { projects, subcontractors } = useData();
+  projects: any[];
+  subcontractors: any[];
+}> = ({ onClose, onSuccess, onError, setDirty, initialData, isEdit = false, projects, subcontractors }) => {
   const [formData, setFormData] = useState({
     projectId: initialData?.project_id?.toString() || "",
     subcontractorId: initialData?.subcontractor_id?.toString() || "",
@@ -1506,7 +1511,11 @@ interface ManageViewProps {
 }
 
 const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
-  const { dispatch, projects, subcontractors, contracts = [], refreshData } = useData();
+  // Use React Query hooks instead of DataContext
+  const { data: projects = [], isLoading: projectsLoading, refetch: refetchProjects } = useProjects();
+  const { data: subcontractors = [], isLoading: contractorsLoading, refetch: refetchContractors } = useContractors();
+  const { data: contracts = [], isLoading: contractsLoading, refetch: refetchContracts } = useContracts();
+  
   const router = useRouter();
   const searchParams = useSearchParams();
   const [notifications, setNotifications] = useState<NotificationData[]>([]);
@@ -1573,63 +1582,26 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
     setNotifications(prev => prev.filter(n => n.id !== id));
   }, []);
 
+  // React Query handles data refreshing automatically
   const refreshContracts = useCallback(async () => {
     try {
-      const { data } = await supabase
-        .from('contracts')
-        .select(`
-          *,
-          projects (id, name, client_name),
-          contractors (id, name, trade)
-        `);
-      if (data) {
-        const mapped = data.map((c: any) => ({
-          id: c.id,
-          project_id: c.project_id,
-          subcontractor_id: c.subcontractor_id,
-          contract_amount: c.contract_amount,
-          contract_nickname: c.contract_nickname,
-          start_date: c.start_date,
-          end_date: c.end_date,
-          status: c.status ?? 'active',
-          project: c.projects,
-          subcontractor: c.contractors,
-        }));
-        dispatch({ type: 'SET_CONTRACTS', payload: mapped });
-      }
+      await refetchContracts();
+      addNotification('success', 'Contracts refreshed');
     } catch (error) {
       console.error('Error refreshing contracts:', error);
       addNotification('error', 'Failed to refresh contracts data');
     }
-  }, [dispatch, addNotification]);
+  }, [refetchContracts, addNotification]);
 
   const refreshSubcontractors = useCallback(async () => {
     try {
-      const { data } = await supabase.from('contractors').select('*');
-      if (data) {
-        // Map DB fields to Subcontractor interface as needed
-        const mapped = data.map((c: any) => ({
-          id: c.id,
-          name: c.name,
-          trade: c.trade,
-          contractAmount: c.contract_amount ?? 0,
-          paidToDate: c.paid_to_date ?? 0,
-          lastPayment: c.last_payment ?? '',
-          status: c.status ?? 'active',
-          changeOrdersPending: c.change_orders_pending ?? false,
-          lineItemCount: c.line_item_count ?? 0,
-          phone: c.phone ?? '',
-          email: c.email ?? '',
-          hasOpenPaymentApp: c.has_open_payment_app ?? false,
-          compliance: { insurance: c.insurance_status ?? 'valid', license: c.license_status ?? 'valid' },
-        }));
-        dispatch({ type: 'SET_SUBCONTRACTORS', payload: mapped });
-      }
+      await refetchContractors();
+      addNotification('success', 'Contractors refreshed');
     } catch (error) {
       console.error('Error refreshing subcontractors:', error);
       addNotification('error', 'Failed to refresh subcontractors data');
     }
-  }, [dispatch, addNotification]);
+  }, [refetchContractors, addNotification]);
 
 
 
@@ -1917,10 +1889,12 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
               onSuccess={async () => {
                 addNotification('success', 'Contract added successfully!');
                 // Refresh contracts data
-                refreshData();
+                await refetchContracts();
               }}
               onError={(message) => addNotification('error', message)}
               setDirty={setFormDirty}
+              projects={projects}
+              subcontractors={subcontractors}
             />
           </div>
         </div>
@@ -1971,12 +1945,14 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
               onSuccess={async () => {
                 addNotification('success', 'Contract updated successfully!');
                 // Refresh contracts data
-                refreshData();
+                await refetchContracts();
               }}
               onError={(message) => addNotification('error', message)}
               setDirty={setFormDirty}
               initialData={selectedItem}
               isEdit={true}
+              projects={projects}
+              subcontractors={subcontractors}
             />
           </div>
         </div>
