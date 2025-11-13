@@ -68,12 +68,9 @@ const DashboardWithLoading = () => {
 
 export default function Page() {
   const { user, role, isLoading, error } = useAuth();
-  
-  console.log('[Page] Render - isLoading:', isLoading, 'user:', user ? 'exists' : 'none', 'role:', role);
 
   // Show loading state while auth is initializing
   if (isLoading) {
-    console.log('[Page] Showing auth loading spinner...');
     return <ConstructionLoader />;
   }
 
@@ -105,7 +102,6 @@ export default function Page() {
   }
 
   // Admin/Staff dashboard (wrapped in DataProvider for now, will migrate later)
-  console.log('[Page] Rendering DataProvider + Dashboard...');
   return (
     <DataProvider>
       <DashboardWithLoading />
