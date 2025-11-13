@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useAuth } from '@/providers/AuthProvider';
 import { DataProvider, useData } from './context/DataContext';
-import { supabase } from '@/lib/supabaseClient';
 import ConstructionDashboard from './components/ConstructionDashboard';
 import PMDashboard from './components/PMDashboard';
 import AuthScreen from './components/AuthScreen';
@@ -68,93 +67,41 @@ const DashboardWithLoading = () => {
 };
 
 export default function Page() {
-  const [session, setSession] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [role, setRole] = useState<string | null>(null);
+  const { user, role, isLoading, error } = useAuth();
 
-  useEffect(() => {
-    const getSessionAndRole = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        setSession(session);
+  // Show loading state while auth is initializing
+  if (isLoading) {
+    return <ConstructionLoader />;
+  }
 
-        if (session?.user) {
-          // Simple role fetch without complex timeouts
-          try {
-            const { data, error } = await supabase
-              .from("user_role")
-              .select("role")
-              .eq("user_id", session.user.id)
-              .single();
-            
-            // Handle role: default to 'staff' if no role found
-            // PGRST116 is "no rows found" - expected when user has no role entry yet
-            if (error) {
-              if (error.code !== 'PGRST116') {
-                console.error('Error fetching user role:', error);
-              }
-              setRole('staff'); // Default to staff
-            } else {
-              setRole(data?.role || 'staff');
-            }
-          } catch {
-            setRole('staff'); // Default to staff on unexpected errors
-          }
-        } else {
-          setRole(null);
-        }
-      } catch (error) {
-        console.error('Error fetching session:', error);
-        setSession(null);
-        setRole(null);
-      } finally {
-        setLoading(false);
-      }
-    };
+  // Show auth error if something went wrong
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="text-center max-w-md mx-auto p-6">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+            <div className="text-red-600 text-5xl mb-4">⚠️</div>
+            <h2 className="text-xl font-semibold text-red-900 mb-2">
+              Authentication Error
+            </h2>
+            <p className="text-sm text-red-700">{error}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-    getSessionAndRole();
+  // Show login screen if not authenticated
+  if (!user) {
+    return <AuthScreen />;
+  }
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      if (session?.user) {
-        // Quick role update
-        (async () => {
-          try {
-            const { data, error } = await supabase
-              .from("user_role")
-              .select("role")
-              .eq("user_id", session.user.id)
-              .single();
-            
-            // Handle role: default to 'staff' if no role found
-            if (error) {
-              if (error.code !== 'PGRST116') {
-                console.error('Error fetching user role:', error);
-              }
-              setRole('staff');
-            } else {
-              setRole(data?.role || 'staff');
-            }
-          } catch {
-            setRole('staff');
-          }
-        })();
-      } else {
-        setRole(null);
-      }
-    });
-
-    return () => {
-      listener.subscription.unsubscribe();
-    };
-  }, []);
-
-  if (loading) return <ConstructionLoader />;
-  if (!session) return <AuthScreen />;
-
+  // Route to appropriate dashboard based on role
   if (role === "pm") {
     return <PMDashboard />;
   }
+
+  // Admin/Staff dashboard (wrapped in DataProvider for now, will migrate later)
   return (
     <DataProvider>
       <DashboardWithLoading />
