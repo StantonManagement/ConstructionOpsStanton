@@ -139,3 +139,5 @@ WHERE user_id = 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx';
 - [AUTH_USERS_MIGRATION_README.md](./AUTH_USERS_MIGRATION_README.md) - Authentication details
 - [scripts/create-user-role-table.sql](./scripts/create-user-role-table.sql) - The main migration
 
+
+

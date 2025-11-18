@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { FileText, Plus, Edit, Trash2, Eye, AlertCircle, CheckCircle, Clock, RefreshCw, Phone, Mail, MessageSquare } from 'lucide-react';
+import { useModal } from '../context/ModalContext';
 
 // Utility functions
 const formatDate = (dateString: string) => {
@@ -65,6 +66,7 @@ interface DailyLogsViewProps {
 }
 
 const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
+  const { showToast, showConfirm } = useModal();
   const [requests, setRequests] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -182,7 +184,7 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
       setError(null);
       
       // Show success message
-      alert(`Daily log request added successfully! The system will automatically request notes from the PM daily at ${requestTime} EST.`);
+      showToast({ message: `Daily log request added successfully! The system will automatically request notes from the PM daily at ${requestTime} EST.`, type: 'success', duration: 7000 });
     } catch (err) {
       console.error('Error adding request:', err);
       setError('Failed to add daily log request');

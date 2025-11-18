@@ -49,69 +49,47 @@ const usePaymentApplications = () => {
     setError(null);
 
     try {
-      // Try relationship query first, with fallback
-      let appsRaw: any[] | null = null;
-      let useFallback = false;
+      // Get auth token
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('Authentication required');
+      }
 
-      const { data, error: appsError } = await supabase
-        .from('payment_applications')
-        .select(`
-          id, status, current_payment, created_at, payment_period_end, project_id, contractor_id,
-          project:projects(id, name),
-          contractor:contractors(id, name)
-        `)
-        .order('created_at', { ascending: false });
+      console.log('[PaymentProcessingView] Fetching from API...');
+      const startTime = Date.now();
 
-      // Check if error is related to relationships
-      if (appsError) {
-        const isRelationshipError = appsError.message?.includes('relationship') || 
-                                   appsError.message?.includes('Could not find a relationship');
-        
-        if (isRelationshipError) {
-          console.warn('[PaymentProcessingView] Relationship query failed, using fallback:', appsError.message);
-          console.warn('[PaymentProcessingView] Make sure SUPABASE_SERVICE_ROLE_KEY is set in .env');
-          useFallback = true;
-        } else {
-          throw appsError;
+      // Call API
+      const response = await fetch('/api/payment-applications/list', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          // Add filters here if needed
+        })
+      });
+
+      if (!response.ok) {
+        let errorMessage = 'Failed to load payment applications';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch (e) {
+          errorMessage = `${errorMessage} (${response.status}: ${response.statusText})`;
         }
-      } else {
-        appsRaw = data;
+        throw new Error(errorMessage);
       }
 
-      // Fallback: Manual queries if relationship syntax failed
-      if (useFallback || !appsRaw) {
-        console.log('[PaymentProcessingView] Using fallback query pattern');
-        
-        const { data: appsData, error: appsError2 } = await supabase
-          .from('payment_applications')
-          .select('id, status, current_payment, created_at, payment_period_end, project_id, contractor_id')
-          .order('created_at', { ascending: false });
+      const result = await response.json();
+      const fetchTime = Date.now() - startTime;
+      console.log(`[PaymentProcessingView] Loaded in ${fetchTime}ms`);
 
-        if (appsError2) throw appsError2;
-        
-        const projectIds = [...new Set((appsData || []).map((a: any) => a.project_id).filter(Boolean))];
-        const contractorIds = [...new Set((appsData || []).map((a: any) => a.contractor_id).filter(Boolean))];
-
-        const [projectsResult, contractorsResult] = await Promise.all([
-          projectIds.length > 0 ? supabase
-            .from('projects')
-            .select('id, name')
-            .in('id', projectIds) : { data: [], error: null },
-          contractorIds.length > 0 ? supabase
-            .from('contractors')
-            .select('id, name')
-            .in('id', contractorIds) : { data: [], error: null }
-        ]);
-
-        const projectsMap = new Map((projectsResult.data || []).map((p: any) => [p.id, p]));
-        const contractorsMap = new Map((contractorsResult.data || []).map((c: any) => [c.id, c]));
-
-        appsRaw = (appsData || []).map((app: any) => ({
-          ...app,
-          project: projectsMap.get(app.project_id) || { id: app.project_id, name: 'Unknown Project' },
-          contractor: contractorsMap.get(app.contractor_id) || { id: app.contractor_id, name: 'Unknown Contractor' }
-        }));
+      if (!result.success || !result.data) {
+        throw new Error('Invalid API response');
       }
+
+      const { applications: appsRaw } = result.data;
 
       // Step 2: For each app, fetch contract info and line items
       const enrichedApps: PaymentApplication[] = await Promise.all((appsRaw || []).map(async (app: any) => {

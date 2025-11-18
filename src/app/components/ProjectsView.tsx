@@ -236,168 +236,55 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
   const [showNewProjectForm, setShowNewProjectForm] = useState(false);
   const [isCreatingProject, setIsCreatingProject] = useState(false);
 
-  // Fetch projects with stats
+  // Fetch projects from API
   const fetchProjects = useCallback(async () => {
     setLoading(true);
     setError(null);
     
     try {
-      const { data: projectsData, error: projectsError } = await supabase
-        .from('projects')
-        .select('*')
-        .order('name');
-
-      if (projectsError) {
-        throw new Error(`Failed to load projects: ${projectsError.message}`);
+      // Get auth token
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('Authentication required');
       }
 
-      if (!projectsData || projectsData.length === 0) {
-        setProjects([]);
-        setLoading(false);
-        return;
-      }
+      console.log('[ProjectsView] Fetching from API...');
+      const startTime = Date.now();
 
-      // Get all project IDs for batch queries to avoid N+1 problem
-      const projectIds = projectsData.map(p => p.id);
-
-      // Stats queries are non-blocking - if they fail, still show projects
-      let contractorsData: any = { data: [] };
-      let paymentAppsData: any = { data: [] };
-      let budgetData: any = { data: [] };
-      let approvedPayments: any = { data: [] };
-      let statsErrors: string[] = [];
-
-      try {
-        // Try to fetch stats - catch errors individually so one failure doesn't break everything
-        const statsPromises = await Promise.allSettled([
-        supabase
-          .from('project_contractors')
-          .select('id, project_id')
-          .in('project_id', projectIds)
-          .eq('contract_status', 'active'),
-        supabase
-          .from('payment_applications')
-          .select('id, status, project_id')
-          .in('project_id', projectIds),
-        supabase
-          .from('project_contractors')
-          .select('contract_amount, paid_to_date, project_id')
-          .in('project_id', projectIds)
-          .eq('contract_status', 'active'),
-        supabase
-          .from('payment_applications')
-          .select('current_payment, project_id')
-          .in('project_id', projectIds)
-          .eq('status', 'approved')
-        ]);
-
-        // Process each promise result
-        if (statsPromises[0].status === 'fulfilled') {
-          contractorsData = statsPromises[0].value;
-        } else {
-          statsErrors.push('Failed to load contractor stats');
-          console.warn('[ProjectsView] Error fetching contractor stats:', statsPromises[0].reason);
-        }
-
-        if (statsPromises[1].status === 'fulfilled') {
-          paymentAppsData = statsPromises[1].value;
-          if (paymentAppsData.error) {
-            statsErrors.push('Failed to load payment application stats');
-            console.warn('[ProjectsView] Payment apps query error:', paymentAppsData.error);
-            // Check for relationship errors specifically
-            if (paymentAppsData.error.message?.includes('relationship') || 
-                paymentAppsData.error.message?.includes('Could not find a relationship')) {
-              console.warn('[ProjectsView] Relationship error detected. Run scripts/check-and-fix-relationships.sql in Supabase SQL Editor.');
-            }
-          }
-        } else {
-          statsErrors.push('Failed to load payment application stats');
-          console.warn('[ProjectsView] Error fetching payment apps stats:', statsPromises[1].reason);
-        }
-
-        if (statsPromises[2].status === 'fulfilled') {
-          budgetData = statsPromises[2].value;
-        } else {
-          statsErrors.push('Failed to load budget stats');
-          console.warn('[ProjectsView] Error fetching budget stats:', statsPromises[2].reason);
-        }
-
-        if (statsPromises[3].status === 'fulfilled') {
-          approvedPayments = statsPromises[3].value;
-          if (approvedPayments.error) {
-            statsErrors.push('Failed to load approved payments stats');
-            console.warn('[ProjectsView] Approved payments query error:', approvedPayments.error);
-          }
-        } else {
-          statsErrors.push('Failed to load approved payments stats');
-          console.warn('[ProjectsView] Error fetching approved payments stats:', statsPromises[3].reason);
-        }
-
-      } catch (statsError) {
-        console.warn('[ProjectsView] Error in stats queries (non-fatal):', statsError);
-        statsErrors.push('Some statistics could not be loaded');
-      }
-
-      // Group data by project_id for efficient lookup (safe defaults if queries failed)
-      const contractorsByProject = (contractorsData.data || []).reduce((acc: any, item: any) => {
-        acc[item.project_id] = (acc[item.project_id] || 0) + 1;
-        return acc;
-      }, {});
-
-      const paymentAppsByProject = (paymentAppsData.data || []).reduce((acc: any, item: any) => {
-        if (!acc[item.project_id]) acc[item.project_id] = { active: 0, completed: 0 };
-        if (['submitted', 'needs_review'].includes(item.status)) {
-          acc[item.project_id].active++;
-        } else if (item.status === 'approved') {
-          acc[item.project_id].completed++;
-        }
-        return acc;
-      }, {});
-
-      const budgetByProject = (budgetData.data || []).reduce((acc: any, item: any) => {
-        if (!acc[item.project_id]) acc[item.project_id] = 0;
-        acc[item.project_id] += Number(item.contract_amount) || 0;
-        return acc;
-      }, {});
-
-      const spentByProject = (approvedPayments.data || []).reduce((acc: any, item: any) => {
-        if (!acc[item.project_id]) acc[item.project_id] = 0;
-        acc[item.project_id] += Number(item.current_payment) || 0;
-        return acc;
-      }, {});
-
-      // Enrich projects with pre-calculated stats (with safe defaults)
-      const enrichedProjects = projectsData.map((project: any) => {
-        const totalContractors = contractorsByProject[project.id] || 0;
-        const paymentApps = paymentAppsByProject[project.id] || { active: 0, completed: 0 };
-        const totalBudget = budgetByProject[project.id] || 0;
-        const totalSpent = spentByProject[project.id] || 0;
-
-        const completionPercentage = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0;
-
-        return {
-          ...project,
-          stats: {
-            totalContractors,
-            activePaymentApps: paymentApps.active,
-            completedPaymentApps: paymentApps.completed,
-            totalBudget,
-            totalSpent,
-            completionPercentage
-          }
-        };
+      // Call API
+      const response = await fetch('/api/projects/list', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          // Add filters here if needed (e.g., status: 'active')
+        })
       });
 
-      setProjects(enrichedProjects);
-
-      // Show warning if stats failed but projects loaded
-      if (statsErrors.length > 0) {
-        console.warn('[ProjectsView] Projects loaded successfully, but some stats failed:', statsErrors);
-        // Set a non-blocking error message
-        setError(`Projects loaded, but some statistics could not be loaded. ${statsErrors.join(', ')}`);
-      } else {
-        setError(null);
+      if (!response.ok) {
+        let errorMessage = 'Failed to load projects';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch (e) {
+          errorMessage = `${errorMessage} (${response.status}: ${response.statusText})`;
+        }
+        throw new Error(errorMessage);
       }
+
+      const result = await response.json();
+      const fetchTime = Date.now() - startTime;
+      console.log(`[ProjectsView] Loaded in ${fetchTime}ms`);
+
+      if (!result.success || !result.data) {
+        throw new Error('Invalid API response');
+      }
+
+      const { projects: enrichedProjects } = result.data;
+
+      setProjects(enrichedProjects || []);
 
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load projects';

@@ -182,10 +182,39 @@ const ContractorDetailView: React.FC<ContractorDetailViewProps> = ({ contract, c
   const fetchLineItems = useCallback(async () => {
     setLoading(true);
     try {
+      // First, find the contracts record that matches this project + contractor
+      // Note: contracts table uses 'subcontractor_id' not 'contractor_id'
+      const { data: contractRecord, error: contractError } = await supabase
+        .from('contracts')
+        .select('id')
+        .eq('project_id', contract.project_id)
+        .eq('subcontractor_id', contract.subcontractor_id)
+        .single();
+
+      if (contractError) {
+        console.error('Error fetching contract record:', contractError);
+        // If no contract found, try querying by project_id + contractor_id directly
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('project_line_items')
+          .select('*')
+          .eq('project_id', contract.project_id)
+          .eq('contractor_id', contract.subcontractor_id)
+          .order('display_order', { ascending: true });
+        
+        if (fallbackError) {
+          console.error('Error with fallback query:', fallbackError);
+          setLineItems([]);
+        } else {
+          setLineItems(fallbackData || []);
+        }
+        return;
+      }
+
+      // Now fetch line items using the contracts.id
       const { data, error } = await supabase
         .from('project_line_items')
         .select('*')
-        .eq('contract_id', contract.id)
+        .eq('contract_id', contractRecord.id)
         .order('display_order', { ascending: true });
 
       if (error) {
@@ -196,10 +225,11 @@ const ContractorDetailView: React.FC<ContractorDetailViewProps> = ({ contract, c
       setLineItems(data || []);
     } catch (error) {
       console.error('Error fetching line items:', error);
+      setLineItems([]);
     } finally {
       setLoading(false);
     }
-  }, [contract.id]);
+  }, [contract.id, contract.project_id, contract.subcontractor_id]);
 
   useEffect(() => {
     fetchLineItems();
@@ -299,6 +329,41 @@ const ContractorDetailView: React.FC<ContractorDetailViewProps> = ({ contract, c
     }
     
     try {
+      // First, find or create the contracts record
+      let contractRecordId = null;
+      
+      const { data: existingContract, error: contractError } = await supabase
+        .from('contracts')
+        .select('id')
+        .eq('project_id', contract.project_id)
+        .eq('subcontractor_id', contract.subcontractor_id)
+        .single();
+      
+      if (contractError && contractError.code === 'PGRST116') {
+        // No contract found, create one
+        const { data: newContract, error: createError } = await supabase
+          .from('contracts')
+          .insert({
+            project_id: contract.project_id,
+            subcontractor_id: contract.subcontractor_id,
+            contract_amount: contract.contract_amount || 0,
+            original_contract_amount: contract.original_contract_amount || contract.contract_amount || 0,
+            start_date: new Date().toISOString().split('T')[0],
+          })
+          .select('id')
+          .single();
+        
+        if (createError) {
+          console.error('Error creating contract record:', createError);
+          throw createError;
+        }
+        contractRecordId = newContract.id;
+      } else if (existingContract) {
+        contractRecordId = existingContract.id;
+      } else {
+        throw new Error('Failed to get or create contract record');
+      }
+      
       // Get the next display order
       const maxOrder = lineItems.length > 0 
         ? Math.max(...lineItems.map(item => item.display_order || 0))
@@ -307,7 +372,9 @@ const ContractorDetailView: React.FC<ContractorDetailViewProps> = ({ contract, c
       const { data, error } = await supabase
         .from('project_line_items')
         .insert({
-          contract_id: contract.id,
+          contract_id: contractRecordId,
+          project_id: contract.project_id,
+          contractor_id: contract.subcontractor_id,
           description_of_work: newLineItem.description_of_work,
           scheduled_value: newLineItem.scheduled_value,
           item_no: newLineItem.item_no || null,

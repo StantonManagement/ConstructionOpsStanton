@@ -172,7 +172,7 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ project, onBack }
     try {
       // Fetch contracts for budget total
       const { data: contractsData } = await supabase
-        .from('contracts')
+        .from('project_contractors')
         .select('contract_amount')
         .eq('project_id', project.id)
         .eq('contract_status', 'active');
@@ -260,12 +260,16 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ project, onBack }
 
   const handleEditContract = (contract: any) => {
     console.log('Edit contract:', contract);
-    // TODO: Open contract modal with line items
+    setSelectedContract(contract);
+    setSelectedContractor(contract.contractors);
+    setShowContractorDetail(true);
   };
 
   const handleViewLineItems = (contract: any) => {
     console.log('View line items:', contract);
-    // TODO: Open read-only line items modal
+    setSelectedContract(contract);
+    setSelectedContractor(contract.contractors);
+    setShowContractorDetail(true);
   };
 
   const handleViewContractorDetail = (contract: any) => {

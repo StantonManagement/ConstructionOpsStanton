@@ -88,10 +88,6 @@ export default function PaymentVerificationPage() {
     percentage: 0
   });
   const [includeChangeOrderPageInPdf, setIncludeChangeOrderPageInPdf] = useState(false);
-  
-  // Retry mechanism state
-  const [retryCount, setRetryCount] = useState(0);
-  const [loadingProgress, setLoadingProgress] = useState<string>('');
 
   // Smart back navigation function
   const handleBackNavigation = () => {
@@ -285,8 +281,6 @@ export default function PaymentVerificationPage() {
     async function fetchData(retryAttempt: number = 0) {
       setLoading(true);
       setError(null);
-      setLoadingProgress('');
-      setRetryCount(retryAttempt);
       
       try {
         // 1. Validate paymentAppId
@@ -312,8 +306,6 @@ export default function PaymentVerificationPage() {
             )
           ]);
         };
-        
-        setLoadingProgress('Fetching payment application data...');
         
         // 3. Try relationship query first with timeout
         let app: any = null;
@@ -361,7 +353,6 @@ export default function PaymentVerificationPage() {
         // 4. Fallback: Fetch data separately if relationship query failed
         if (useFallback || !app) {
           console.log('[PaymentVerificationPage] Using fallback query pattern');
-          setLoadingProgress('Using fallback query method...');
           
           // Fetch payment application directly
           const { data: appData, error: appError } = await withTimeout(
@@ -388,7 +379,6 @@ export default function PaymentVerificationPage() {
           
           // Fetch project separately
           if (app.project_id) {
-            setLoadingProgress('Loading project information...');
             const { data: projectData, error: projectError } = await withTimeout(
               supabase
                 .from("projects")
@@ -408,7 +398,6 @@ export default function PaymentVerificationPage() {
           
           // Fetch contractor separately
           if (app.contractor_id) {
-            setLoadingProgress('Loading contractor information...');
             const { data: contractorData, error: contractorError } = await withTimeout(
               supabase
                 .from("contractors")
@@ -428,7 +417,6 @@ export default function PaymentVerificationPage() {
           
           // Fetch line item progress separately
           if (app.id) {
-            setLoadingProgress('Loading line item progress...');
             const { data: lineItemProgressData, error: lineItemError } = await withTimeout(
               supabase
                 .from("payment_line_item_progress")
@@ -459,7 +447,6 @@ export default function PaymentVerificationPage() {
         setLineItems((app.line_item_progress || []) as LineItem[]);
         
         // 6. Fetch document
-        setLoadingProgress('Loading documents...');
         try {
           const { data: docs, error: docError } = await withTimeout(
             supabase
@@ -480,8 +467,8 @@ export default function PaymentVerificationPage() {
           setDocument(null);
         }
         
-        setLoadingProgress('Complete!');
         console.log('[PaymentVerificationPage] Successfully loaded payment application:', appId);
+        setLoading(false);
         
       } catch (err) {
         console.error(`[PaymentVerificationPage] Error loading payment application (attempt ${retryAttempt + 1}):`, err);
@@ -840,15 +827,10 @@ const lineItemsForTable = lineItems.map((li, idx) => {
           <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-6"></div>
           <div className="bg-card rounded-xl shadow-lg p-6 max-w-md">
             <h2 className="text-xl font-semibold text-foreground mb-2">Loading Payment Application</h2>
-            <p className="text-muted-foreground mb-2">{loadingProgress || 'Please wait while we fetch the payment details...'}</p>
-            {retryCount > 0 && (
-              <p className="text-xs text-muted-foreground">Retry attempt {retryCount}/2</p>
-            )}
-            {loadingProgress && (
-              <div className="mt-4 w-full bg-gray-200 rounded-full h-2">
-                <div className="bg-primary h-2 rounded-full animate-pulse" style={{ width: '60%' }}></div>
-              </div>
-            )}
+            <p className="text-muted-foreground mb-2">Please wait while we fetch the payment details...</p>
+            <div className="mt-4 w-full bg-gray-200 rounded-full h-2">
+              <div className="bg-primary h-2 rounded-full animate-pulse" style={{ width: '60%' }}></div>
+            </div>
           </div>
         </div>
       </div>
@@ -870,8 +852,6 @@ const lineItemsForTable = lineItems.map((li, idx) => {
             <button
               onClick={() => {
                 setError(null);
-                setRetryCount(0);
-                setLoadingProgress('');
                 // Trigger re-fetch by updating a dependency or manually calling fetch
                 window.location.reload();
               }}

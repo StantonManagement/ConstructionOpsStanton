@@ -1,24 +1,53 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Users, Building2, Plug, Settings as SettingsIcon } from 'lucide-react';
+import { Users, Building2, Plug, Settings as SettingsIcon, Shield } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import UserManagementView from './UserManagementView';
+import PermissionsManagement from './PermissionsManagement';
 import { useAuth } from '@/providers/AuthProvider';
 
-type SettingsTab = 'users' | 'company' | 'integrations' | 'preferences';
+import { hasRoleAccess, canAccessUserManagement, canAccessPermissionsManagement } from '@/lib/permissions';
+
+type SettingsTab = 'users' | 'permissions' | 'company' | 'integrations' | 'preferences';
 
 // Sub-tab Navigation Component
 function SettingsTabNavigation({ activeTab, onTabChange, userRole }: { activeTab: SettingsTab; onTabChange: (tab: SettingsTab) => void; userRole?: string }) {
   const allTabs = [
-    { id: 'users' as const, label: 'Users', icon: Users, roles: ['admin'] },
-    { id: 'company' as const, label: 'Company', icon: Building2, roles: ['admin', 'pm', 'staff'] },
-    { id: 'integrations' as const, label: 'Integrations', icon: Plug, roles: ['admin'] },
-    { id: 'preferences' as const, label: 'Preferences', icon: SettingsIcon, roles: ['admin', 'pm', 'staff'] }
+    { 
+      id: 'users' as const, 
+      label: 'Users', 
+      icon: Users, 
+      canAccess: () => canAccessUserManagement(userRole)
+    },
+    { 
+      id: 'permissions' as const, 
+      label: 'Permissions', 
+      icon: Shield, 
+      canAccess: () => canAccessPermissionsManagement(userRole)
+    },
+    { 
+      id: 'company' as const, 
+      label: 'Company', 
+      icon: Building2, 
+      canAccess: () => true // All roles can access
+    },
+    { 
+      id: 'integrations' as const, 
+      label: 'Integrations', 
+      icon: Plug, 
+      canAccess: () => hasRoleAccess(userRole, 'admin')
+    },
+    { 
+      id: 'preferences' as const, 
+      label: 'Preferences', 
+      icon: SettingsIcon, 
+      canAccess: () => true // All roles can access
+    }
   ];
 
-  // Filter tabs based on user role
-  const tabs = allTabs.filter(tab => !tab.roles || tab.roles.includes(userRole || ''));
+  // Filter tabs based on user role permissions
+  const tabs = allTabs.filter(tab => tab.canAccess());
 
   return (
     <div className="border-b border-gray-200 mb-6">
@@ -440,11 +469,13 @@ const SettingsView: React.FC = () => {
   // URL-based tab management
   useEffect(() => {
     const subtabFromUrl = searchParams.get('subtab') as SettingsTab;
-    if (subtabFromUrl && ['users', 'company', 'integrations', 'preferences'].includes(subtabFromUrl)) {
-      // Check if user has access to this tab
-      if (subtabFromUrl === 'users' && role !== 'admin') {
+    if (subtabFromUrl && ['users', 'permissions', 'company', 'integrations', 'preferences'].includes(subtabFromUrl)) {
+      // Check if user has access to this tab using centralized permission system
+      if (subtabFromUrl === 'users' && !canAccessUserManagement(role)) {
         setActiveTab(getDefaultTab());
-      } else if (subtabFromUrl === 'integrations' && role !== 'admin') {
+      } else if (subtabFromUrl === 'permissions' && !canAccessPermissionsManagement(role)) {
+        setActiveTab(getDefaultTab());
+      } else if (subtabFromUrl === 'integrations' && !hasRoleAccess(role, 'admin')) {
         setActiveTab(getDefaultTab());
       } else {
         setActiveTab(subtabFromUrl);
@@ -476,6 +507,7 @@ const SettingsView: React.FC = () => {
       {/* Tab Content */}
       <div>
         {activeTab === 'users' && <UserManagementView />}
+        {activeTab === 'permissions' && <PermissionsManagement />}
         {activeTab === 'company' && <CompanySettingsTab />}
         {activeTab === 'integrations' && <IntegrationsTab />}
         {activeTab === 'preferences' && <PreferencesTab />}

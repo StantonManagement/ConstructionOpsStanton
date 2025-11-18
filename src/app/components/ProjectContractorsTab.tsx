@@ -36,13 +36,11 @@ interface Contract {
   original_contract_amount: number;
   paid_to_date: number;
   display_order: number;
-  start_date?: string;
-  end_date?: string;
   contract_status?: string;
 }
 
 interface ContractWithContractor extends Contract {
-  subcontractor_id: number;
+  contractor_id: number;
   contractors: Contractor;
   line_items?: any[];
 }
@@ -260,7 +258,7 @@ function ContractorCard({ contract, onRequestPayment, onEditContract, onViewLine
         <button
           onClick={(e) => {
             e.stopPropagation();
-            onRequestPayment(contract.subcontractor_id, contract.id);
+            onRequestPayment(contract.contractor_id, contract.id);
           }}
           disabled={isRequesting}
           className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -329,8 +327,6 @@ const ProjectContractorsTab: React.FC<ProjectContractorsTabProps> = ({
   const [selectedContractorId, setSelectedContractorId] = useState<number | null>(null);
   const [newContract, setNewContract] = useState({
     contract_amount: 0,
-    start_date: '',
-    end_date: '',
   });
 
   const sensors = useSensors(
@@ -344,17 +340,16 @@ const ProjectContractorsTab: React.FC<ProjectContractorsTabProps> = ({
     setLoading(true);
     try {
       const { data, error } = await supabase
-        .from('contracts')
+        .from('project_contractors')
         .select(`
           id,
+          project_id,
           contract_amount,
           original_contract_amount,
           paid_to_date,
           display_order,
-          start_date,
-          end_date,
           contract_status,
-          subcontractor_id,
+          contractor_id,
           contractors (
             id,
             name,
@@ -427,7 +422,7 @@ const ProjectContractorsTab: React.FC<ProjectContractorsTabProps> = ({
 
       for (const update of updates) {
         const { error } = await supabase
-          .from('contracts')
+          .from('project_contractors')
           .update({ display_order: update.display_order })
           .eq('id', update.id);
 
@@ -463,7 +458,7 @@ const ProjectContractorsTab: React.FC<ProjectContractorsTabProps> = ({
       if (error) throw error;
       
       // Filter out contractors already on this project
-      const existingContractorIds = contracts.map(c => c.subcontractor_id);
+      const existingContractorIds = contracts.map(c => c.contractor_id);
       const available = (allContractors || []).filter(
         c => !existingContractorIds.includes(c.id)
       );
@@ -495,17 +490,15 @@ const ProjectContractorsTab: React.FC<ProjectContractorsTabProps> = ({
         : 0;
       
       const { data, error } = await supabase
-        .from('contracts')
+        .from('project_contractors')
         .insert({
           project_id: project.id,
-          subcontractor_id: selectedContractorId,
+          contractor_id: selectedContractorId,
           contract_amount: newContract.contract_amount,
           original_contract_amount: newContract.contract_amount,
           paid_to_date: 0,
           display_order: maxOrder + 1,
           contract_status: 'active',
-          start_date: newContract.start_date || null,
-          end_date: newContract.end_date || null,
         })
         .select()
         .single();
@@ -517,7 +510,7 @@ const ProjectContractorsTab: React.FC<ProjectContractorsTabProps> = ({
       
       // Reset form and close modal
       setSelectedContractorId(null);
-      setNewContract({ contract_amount: 0, start_date: '', end_date: '' });
+      setNewContract({ contract_amount: 0 });
       setShowAddContractorModal(false);
       alert('Contractor added to project successfully!');
     } catch (error) {
@@ -651,27 +644,6 @@ const ProjectContractorsTab: React.FC<ProjectContractorsTabProps> = ({
                     required
                   />
                 </div>
-                
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
-                    <input
-                      type="date"
-                      value={newContract.start_date}
-                      onChange={(e) => setNewContract({ ...newContract, start_date: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">End Date</label>
-                    <input
-                      type="date"
-                      value={newContract.end_date}
-                      onChange={(e) => setNewContract({ ...newContract, end_date: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                </div>
               </div>
             )}
             
@@ -680,7 +652,7 @@ const ProjectContractorsTab: React.FC<ProjectContractorsTabProps> = ({
                 onClick={() => {
                   setShowAddContractorModal(false);
                   setSelectedContractorId(null);
-                  setNewContract({ contract_amount: 0, start_date: '', end_date: '' });
+                  setNewContract({ contract_amount: 0 });
                 }}
                 className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
               >

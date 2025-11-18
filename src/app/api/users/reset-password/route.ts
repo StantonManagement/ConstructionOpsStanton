@@ -1,21 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-// Create admin client with service role key
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  }
-);
+import { supabaseAdmin } from '@/lib/supabaseClient';
 
 // POST - Reset user password
 export async function POST(request: NextRequest) {
   try {
+    // Ensure admin client is available (should always be true in API routes)
+    if (!supabaseAdmin) {
+      return NextResponse.json(
+        { error: 'Server configuration error: Admin client not available' },
+        { status: 500 }
+      );
+    }
+    
     // Get the authorization header
     const authHeader = request.headers.get('authorization');
     

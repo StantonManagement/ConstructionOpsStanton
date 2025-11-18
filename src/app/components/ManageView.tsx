@@ -365,7 +365,7 @@ const ItemCard: React.FC<{
   item: any;
   type: 'project' | 'vendor' | 'contract';
   selected: boolean;
-  onSelect: (id: number) => void;
+  onSelect: (id: string) => void;
   onView: (item: any) => void;
   onEdit: (item: any) => void;
   onDelete: (item: any) => void;
@@ -1351,7 +1351,7 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
     contractValue: 'all',
     expiry: 'all'
   });
-  const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [viewModal, setViewModal] = useState<'contract' | null>(null);
   const [editModal, setEditModal] = useState<'contract' | null>(null);
   const [selectedItem, setSelectedItem] = useState<any>(null);
@@ -1506,7 +1506,7 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
     }
   };
 
-  const handleItemSelect = (id: number) => {
+  const handleItemSelect = (id: string) => {
     const newSelected = new Set(selectedItems);
     if (newSelected.has(id)) {
       newSelected.delete(id);
@@ -1606,8 +1606,8 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
 
       if (error) throw error;
 
-      // Update local state with optimistic updates
-      dispatch({ type: 'SET_CONTRACTS', payload: contracts.filter(c => !selectedItems.has(c.id)) });
+      // React Query will automatically refetch contracts after mutation
+      // No need for manual dispatch - the query will update automatically
 
       addNotification('success', `Successfully deleted ${selectedItems.size} item(s)`);
       setSelectedItems(new Set());
@@ -1850,30 +1850,36 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirmation && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full p-6">
+        <div 
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          onClick={() => setShowDeleteConfirmation(false)}
+        >
+          <div 
+            className="bg-card rounded-xl shadow-2xl max-w-lg w-full p-6 border border-border"
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Header with Warning Icon */}
             <div className="flex items-center gap-4 mb-6">
-              <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
-                <AlertCircle className="w-8 h-8 text-red-600" />
+              <div className="w-16 h-16 rounded-2xl bg-[var(--status-critical-bg)] flex items-center justify-center flex-shrink-0">
+                <AlertCircle className="w-8 h-8 text-[var(--status-critical-icon)]" />
               </div>
               <div>
-                <h3 className="text-xl font-bold text-gray-900">Delete Confirmation</h3>
-                <p className="text-sm text-gray-600 mt-1">This action cannot be undone</p>
+                <h3 className="text-xl font-bold text-foreground">Delete Confirmation</h3>
+                <p className="text-sm text-muted-foreground mt-1">This action cannot be undone</p>
               </div>
             </div>
 
             {/* Warning Message */}
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+            <div className="bg-[var(--status-critical-bg)] border border-[var(--status-critical-border)] rounded-lg p-4 mb-6">
               <div className="flex items-start gap-3">
-                <div className="w-6 h-6 rounded-full bg-red-200 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <span className="text-red-600 text-sm font-bold">!</span>
+                <div className="w-6 h-6 rounded-full bg-[var(--status-critical-border)] flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-[var(--status-critical-icon)] text-sm font-bold">!</span>
                 </div>
                 <div>
-                  <p className="text-red-800 font-medium mb-2">
+                  <p className="text-[var(--status-critical-text)] font-medium mb-2">
                     Are you sure you want to delete {selectedItems.size} contract{selectedItems.size > 1 ? 's' : ''}?
                   </p>
-                  <ul className="text-red-700 text-sm space-y-1">
+                  <ul className="text-[var(--status-critical-text)] text-sm space-y-1">
                     <li>• This will permanently remove {selectedItems.size > 1 ? 'them' : 'it'} from your system</li>
                     <li>• All associated data will be lost</li>
                     <li>• This action cannot be reversed</li>
@@ -1886,14 +1892,14 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
             <div className="flex flex-col sm:flex-row gap-3 sm:justify-end">
               <button 
                 onClick={() => setShowDeleteConfirmation(false)} 
-                className="flex-1 sm:flex-none px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium border border-gray-300"
+                className="flex-1 sm:flex-none px-6 py-3 bg-muted text-muted-foreground rounded-lg hover:bg-muted/80 transition-colors font-medium border border-border"
                 disabled={deleteLoading}
               >
                 Cancel
               </button>
               <button 
                 onClick={confirmBulkDelete} 
-                className="flex-1 sm:flex-none px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:bg-red-400 font-medium flex items-center justify-center gap-2 shadow-sm"
+                className="flex-1 sm:flex-none px-6 py-3 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white rounded-lg transition-colors disabled:opacity-50 font-medium flex items-center justify-center gap-2 shadow-lg"
                 disabled={deleteLoading}
               >
                 {deleteLoading ? (
@@ -1912,7 +1918,7 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
 
             {/* Additional Safety Note */}
             <div className="mt-4 text-center">
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-muted-foreground">
                 💡 Tip: You can always recreate items if needed, but historical data will be lost.
               </p>
             </div>
@@ -1922,25 +1928,33 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
 
       {/* Unsaved Warning Modal */}
       {showUnsavedWarning && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+        <div 
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          onClick={handleCancelSwitch}
+        >
+          <div 
+            className="bg-card rounded-xl shadow-2xl max-w-md w-full p-6 border border-border"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center gap-3 mb-4">
-              <AlertCircle className="w-8 h-8 text-yellow-500" />
-              <h3 className="text-lg font-semibold text-gray-800">Unsaved Changes</h3>
+              <div className="w-12 h-12 rounded-xl bg-[var(--status-warning-bg)] flex items-center justify-center">
+                <AlertCircle className="w-7 h-7 text-[var(--status-warning-icon)]" />
+              </div>
+              <h3 className="text-lg font-semibold text-foreground">Unsaved Changes</h3>
             </div>
-            <p className="text-gray-600 mb-6">
+            <p className="text-muted-foreground mb-6">
               You have unsaved changes. Are you sure you want to switch forms? Your current changes will be lost.
             </p>
             <div className="flex justify-end gap-3">
               <button 
                 onClick={handleCancelSwitch} 
-                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+                className="px-4 py-2 bg-muted text-muted-foreground rounded-lg hover:bg-muted/80 transition-colors border border-border"
               >
                 Cancel
               </button>
               <button 
                 onClick={handleConfirmSwitch} 
-                className="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors"
+                className="px-4 py-2 bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 text-white rounded-lg transition-colors shadow-lg"
               >
                 Discard Changes
               </button>

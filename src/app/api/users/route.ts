@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseClient';
+import { canAccessUserManagement } from '@/lib/permissions';
 
 // GET - Fetch all users from auth.users with their roles from user_role table
 export async function GET(request: NextRequest) {
@@ -24,14 +25,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized - Invalid token' }, { status: 401 });
     }
 
-    // Check if the user has admin role
+    // Check if the user has permission to access user management
     const { data: userRole, error: roleError } = await supabaseAdmin
       .from('user_role')
       .select('role')
       .eq('user_id', user.id)
       .single();
 
-    if (roleError || !userRole || !['admin', 'pm'].includes(userRole.role)) {
+    if (roleError || !userRole || !canAccessUserManagement(userRole.role)) {
       return NextResponse.json({ error: 'Unauthorized - Insufficient permissions' }, { status: 403 });
     }
 

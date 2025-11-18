@@ -158,32 +158,36 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab, setSel
       id: 'overview',
       icon: <Home className="w-5 h-5"/>,
       label: 'Overview',
-      href: '/?tab=overview'
+      href: '/?tab=overview',
+      canAccess: true // All users can access
     },
     {
       id: 'projects',
       icon: <Building className="w-5 h-5"/>,
       label: 'Projects',
-      href: '/?tab=projects'
+      href: '/?tab=projects',
+      canAccess: true // All users can access
     },
     {
       id: 'payments',
       icon: <DollarSign className="w-5 h-5"/>,
       label: 'Payments',
-      href: '/?tab=payments'
+      href: '/?tab=payments',
+      canAccess: true // All users can access
     },
     {
       id: 'settings',
       icon: <Settings className="w-5 h-5"/>,
       label: 'Settings',
-      href: '/?tab=settings'
+      href: '/?tab=settings',
+      canAccess: true // All users can access
     },
     {
       id: 'daily-logs',
       icon: <FileText className="w-5 h-5"/>,
       label: 'Daily Logs',
       href: '/?tab=daily-logs',
-      roles: ['admin', 'staff']
+      canAccess: userRole && ['admin', 'staff'].includes(userRole.toLowerCase()) // Admin and Staff only
     }
   ];
 
@@ -232,7 +236,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab, setSel
           <div className="flex-1 overflow-y-auto py-4">
             <div className="space-y-2 px-4">
               {navigationItems
-                .filter(item => !item.roles || (userRole && item.roles.map(r => r.toLowerCase()).includes(userRole.toLowerCase())))
+                .filter(item => item.canAccess)
                 .map((item) => (
                 <NavButton
                   key={item.id}

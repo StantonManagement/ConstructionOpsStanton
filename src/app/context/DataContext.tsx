@@ -201,17 +201,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Timeout wrapper to prevent infinite hangs
-  const withTimeout = <T,>(promise: Promise<T>, timeoutMs: number, queryName: string): Promise<T> => {
-    return Promise.race([
-      promise,
-      new Promise<T>((_, reject) =>
-        setTimeout(() => reject(new Error(`Query timeout: ${queryName} took longer than ${timeoutMs}ms`)), timeoutMs)
-      ),
-    ]);
-  };
-
-  // Internal data fetching function
+  // Internal data fetching function using API
   const performDataFetch = useCallback(async (shouldSetLoading = true) => {
     if (shouldSetLoading) {
       setLoading(true);
@@ -219,116 +209,56 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     setError(null); // Clear previous errors
     
     try {
-      console.log('[DataContext] Starting data fetch...');
-      const startTime = performance.now();
-      
-      // Fetch with individual timeouts and detailed logging
-      console.log('[DataContext] Fetching projects...');
-      const projectsQuery = Promise.resolve(supabase.from('projects').select('*'));
-      
-      console.log('[DataContext] Fetching contractors...');
-      const contractorsQuery = Promise.resolve(supabase.from('contractors').select('*'));
-      
-      console.log('[DataContext] Fetching contracts...');
-      const contractsQuery = Promise.resolve(
-        supabase
-          .from('project_contractors')
-          .select(`
-            *,
-            projects (id, name, client_name),
-            contractors (id, name, trade)
-          `)
-      );
-      
-      const [projectsResponse, contractorsResponse, contractsResponse] = await Promise.all([
-        withTimeout(projectsQuery, 10000, 'projects'),
-        withTimeout(contractorsQuery, 10000, 'contractors'),
-        withTimeout(contractsQuery, 10000, 'contracts')
-      ]) as any[];
-      
-      const fetchTime = performance.now() - startTime;
-      console.log(`[DataContext] Data fetch completed in ${fetchTime.toFixed(0)}ms`);
+      console.log('[DataContext] Fetching data from API...');
+      const startTime = Date.now();
 
-        // Handle projects with proper error checking
-        if (projectsResponse.error) {
-          console.error('[DataContext] ❌ Error fetching projects:', {
-            code: projectsResponse.error.code,
-            message: projectsResponse.error.message,
-            details: projectsResponse.error.details,
-            hint: projectsResponse.error.hint
-          });
-          dispatch({ type: 'SET_PROJECTS', payload: [] });
-        } else if (projectsResponse.data) {
-          console.log(`[DataContext] ✓ Fetched ${projectsResponse.data.length} projects`);
-          dispatch({ type: 'SET_PROJECTS', payload: projectsResponse.data });
-        }
+      // Get auth token for API call
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('Authentication required');
+      }
 
-        // Handle contractors
-        if (contractorsResponse.error) {
-          console.error('[DataContext] ❌ Error fetching contractors:', {
-            code: contractorsResponse.error.code,
-            message: contractorsResponse.error.message,
-            details: contractorsResponse.error.details,
-            hint: contractorsResponse.error.hint
-          });
-          dispatch({ type: 'SET_SUBCONTRACTORS', payload: [] });
-        } else if (contractorsResponse.data) {
-          console.log(`[DataContext] ✓ Fetched ${contractorsResponse.data.length} contractors`);
-          const mapped = contractorsResponse.data.map((c: ContractorDB) => ({
-            id: c.id,
-            name: c.name,
-            trade: c.trade,
-            contractAmount: 0,
-            paidToDate: 0,
-            lastPayment: '',
-            status: c.status ?? 'active',
-            changeOrdersPending: false,
-            lineItemCount: 0,
-            phone: c.phone ?? '',
-            email: c.email ?? '',
-            hasOpenPaymentApp: false,
-            compliance: {
-              insurance: 'valid',
-              license: 'valid'
-            },
-          }));
-          dispatch({ type: 'SET_SUBCONTRACTORS', payload: mapped });
+      // Single API call to fetch all data
+      const response = await fetch('/api/dashboard/data-context', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
         }
+      });
 
-        // Handle contracts
-        if (contractsResponse.error) {
-          console.error('[DataContext] ❌ Error fetching contracts:', {
-            code: contractsResponse.error.code,
-            message: contractsResponse.error.message,
-            details: contractsResponse.error.details,
-            hint: contractsResponse.error.hint
-          });
-          // If relationship error, provide helpful message
-          if (contractsResponse.error.message?.includes('relationship') || 
-              contractsResponse.error.message?.includes('Could not find a relationship')) {
-            console.warn('[DataContext] 💡 Relationship query failed. Run scripts/check-and-fix-relationships.sql in Supabase SQL Editor.');
-          }
-          dispatch({ type: 'SET_CONTRACTS', payload: [] });
-        } else if (contractsResponse.data) {
-          console.log(`[DataContext] ✓ Fetched ${contractsResponse.data.length} contracts`);
-          const mapped = contractsResponse.data.map((c: any) => ({
-            id: c.id,
-            project_id: c.project_id,
-            subcontractor_id: c.subcontractor_id,
-            contract_amount: c.contract_amount,
-            contract_nickname: c.contract_nickname,
-            start_date: c.start_date,
-            end_date: c.end_date,
-            status: c.status ?? 'active',
-            project: c.projects,
-            subcontractor: c.contractors,
-          }));
-          dispatch({ type: 'SET_CONTRACTS', payload: mapped });
+      if (!response.ok) {
+        let errorMessage = 'Failed to load dashboard data';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch (e) {
+          errorMessage = `${errorMessage} (${response.status}: ${response.statusText})`;
         }
+        throw new Error(errorMessage);
+      }
+
+      const result = await response.json();
+      const fetchTime = Date.now() - startTime;
+      console.log(`[DataContext] Data loaded in ${fetchTime}ms`);
+
+      if (!result.success || !result.data) {
+        throw new Error('Invalid API response');
+      }
+
+      const { projects, subcontractors, contracts, paymentApplications } = result.data;
+
+      // Dispatch data to state
+      dispatch({ type: 'SET_PROJECTS', payload: projects || [] });
+      dispatch({ type: 'SET_SUBCONTRACTORS', payload: subcontractors || [] });
+      dispatch({ type: 'SET_CONTRACTS', payload: contracts || [] });
+      // paymentApplications are included in the API response but not currently used by DataContext
+
+      console.log(`[DataContext] ✓ Loaded ${projects?.length || 0} projects, ${subcontractors?.length || 0} contractors, ${contracts?.length || 0} contracts`);
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      console.error('[DataContext] ❌ Critical error during data fetch:', error);
+      console.error('[DataContext] ❌ Error during data fetch:', error);
       
       // Set error state for UI to display
       setError(errorMessage);

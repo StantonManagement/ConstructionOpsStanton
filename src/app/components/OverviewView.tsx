@@ -1,6 +1,7 @@
 
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useData } from '../context/DataContext';
+import { useAuth } from '@/providers/AuthProvider';
 import ProjectCard from '../../components/ProjectCard';
 import { supabase } from '@/lib/supabaseClient';
 import { Project } from '../context/DataContext';
@@ -405,7 +406,7 @@ const DecisionQueueCards: React.FC<{ role: string | null, setError: (msg: string
 
 const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchToPayments, searchQuery = '' }) => {
   const { projects } = useData();
-  const [role, setRole] = useState<string | null>(null);
+  const { role } = useAuth(); // Use centralized auth instead of fetching role independently
   const [lastActiveProject, setLastActiveProject] = useState<Project | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -419,63 +420,6 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
       project.current_phase?.toLowerCase().includes(searchLower)
     );
   }, [projects, searchQuery]);
-
-  useEffect(() => {
-    const getRole = async () => {
-      try {
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-
-        if (sessionError) {
-          console.error("Session error:", sessionError);
-          setRole("unknown");
-          return;
-        }
-
-        if (session?.user) {
-          const { data, error } = await supabase
-            .from("user_role")
-            .select("role")
-            .eq("user_id", session.user.id)
-            .single();
-
-          // Handle role: default to 'staff' if no role found (expected) or error
-          // Only log actual errors (not "no rows found" which is PGRST116)
-          if (error) {
-            // PGRST116 is "no rows found" - expected when user has no role entry yet
-            if (error.code !== 'PGRST116') {
-              console.error("Role fetch error:", {
-                message: error.message,
-                code: error.code,
-                details: error.details,
-                hint: error.hint
-              });
-            }
-            // Default to 'staff' when no role found or on error
-            setRole('staff');
-          } else {
-            setRole(data?.role || 'staff');
-          }
-        } else {
-          setRole("unauthenticated");
-        }
-      } catch (err) {
-        console.error("Error fetching user role:", err);
-        setRole("unknown");
-      }
-    };
-
-    getRole();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        getRole();
-      } else if (event === 'SIGNED_OUT') {
-        setRole("unauthenticated");
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
 
   // Load last active project from localStorage
   useEffect(() => {
@@ -503,7 +447,11 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
 
   // Fetch enhanced project data with contractor stats and approved payments
   const fetchEnhancedProjectData = useCallback(async () => {
-    if (projects.length === 0) return;
+    if (projects.length === 0) {
+      setStatsLoading(false);
+      setEnhancedProjects([]);
+      return;
+    }
     
     setStatsLoading(true);
     try {

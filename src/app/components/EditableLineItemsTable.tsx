@@ -480,23 +480,36 @@ export const EditableLineItemsTable: React.FC<EditableLineItemsTableProps> = ({
 
       {/* Delete Confirmation Dialog */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-2">Delete Line Items</h3>
-            <p className="text-gray-600 mb-4">
-              Are you sure you want to delete {selectedIds.length} line item{selectedIds.length !== 1 ? 's' : ''}?
-              This action cannot be undone.
-            </p>
+        <div 
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50"
+          onClick={() => setShowDeleteConfirm(false)}
+        >
+          <div 
+            className="bg-card border border-border rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 rounded-xl bg-[var(--status-critical-bg)] flex items-center justify-center">
+                <Trash2 className="w-6 h-6 text-[var(--status-critical-icon)]" />
+              </div>
+              <h3 className="text-lg font-semibold text-foreground">Delete Line Items</h3>
+            </div>
+            <div className="bg-[var(--status-critical-bg)] border border-[var(--status-critical-border)] rounded-lg p-4 mb-4">
+              <p className="text-[var(--status-critical-text)] font-medium">
+                Are you sure you want to delete {selectedIds.length} line item{selectedIds.length !== 1 ? 's' : ''}?
+                This action cannot be undone.
+              </p>
+            </div>
             <div className="flex gap-3 justify-end">
               <button
                 onClick={() => setShowDeleteConfirm(false)}
-                className="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50"
+                className="px-4 py-2 text-sm border border-border rounded-lg bg-muted text-muted-foreground hover:bg-muted/80 transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={confirmDelete}
-                className="px-4 py-2 text-sm bg-red-600 text-white rounded hover:bg-red-700"
+                className="px-4 py-2 text-sm bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white rounded-lg shadow-lg transition-colors"
               >
                 Delete
               </button>

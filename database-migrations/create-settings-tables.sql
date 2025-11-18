@@ -115,3 +115,5 @@ COMMENT ON TABLE integration_credentials IS 'Stores encrypted credentials for ex
 COMMENT ON TABLE payment_reminders IS 'Tracks history of reminders sent for payment applications';
 COMMENT ON TABLE change_orders IS 'Tracks change orders for contracts with approval workflow';
 
+
+

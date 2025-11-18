@@ -150,6 +150,34 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       }
     }
 
+    // Update project_line_items baselines after approval
+    const { data: lineItemProgress, error: progressError } = await supabase
+      .from('payment_line_item_progress')
+      .select('line_item_id, pm_verified_percent')
+      .eq('payment_app_id', paymentAppId);
+
+    if (!progressError && lineItemProgress && lineItemProgress.length > 0) {
+      // Update each line item's baseline with the approved percentage
+      for (const progress of lineItemProgress) {
+        const { error: updateError } = await supabase
+          .from('project_line_items')
+          .update({
+            from_previous_application: progress.pm_verified_percent,
+            percent_completed: progress.pm_verified_percent,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', progress.line_item_id);
+
+        if (updateError) {
+          console.error(`Error updating line item ${progress.line_item_id} baseline:`, updateError);
+        }
+      }
+      
+      console.log(`Updated ${lineItemProgress.length} line item baselines after approval of payment ${paymentAppId}`);
+    } else if (progressError) {
+      console.error('Error fetching line item progress for baseline update:', progressError);
+    }
+
     // Log the approval action (if table exists)
     try {
       await supabase

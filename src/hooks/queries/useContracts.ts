@@ -13,6 +13,10 @@ export interface Contract {
   description: string | null;
   created_at: string;
   updated_at: string;
+  contract_nickname?: string;
+  // Optional relationship properties for expanded queries
+  project?: { id: string; name: string; client_name?: string };
+  subcontractor?: { id: string; name: string; trade?: string };
 }
 
 async function fetchContracts(): Promise<Contract[]> {

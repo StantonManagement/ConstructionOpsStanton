@@ -269,6 +269,8 @@ export async function POST(req: NextRequest) {
         .from('payment_sms_conversations')
         .insert({
           payment_app_id: paymentApp.id,
+          project_id: projectIdNum,
+          contractor_id: contractorIdNum,
           contractor_phone: contractor.phone || '',
           conversation_state: 'awaiting_start',
           responses: [],

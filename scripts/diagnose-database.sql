@@ -58,6 +58,26 @@ SELECT
         ELSE '✗ MISSING'
     END AS status;
 
+SELECT 
+    'project_contractors' AS table_name,
+    CASE 
+        WHEN EXISTS (
+            SELECT 1 FROM information_schema.tables 
+            WHERE table_schema = 'public' AND table_name = 'project_contractors'
+        ) THEN '✓ EXISTS'
+        ELSE '✗ MISSING'
+    END AS status;
+
+SELECT 
+    'payment_applications' AS table_name,
+    CASE 
+        WHEN EXISTS (
+            SELECT 1 FROM information_schema.tables 
+            WHERE table_schema = 'public' AND table_name = 'payment_applications'
+        ) THEN '✓ EXISTS'
+        ELSE '✗ MISSING'
+    END AS status;
+
 \echo ''
 
 -- ============================================================================
@@ -75,7 +95,7 @@ SELECT
     END AS rls_status
 FROM pg_tables
 WHERE schemaname = 'public' 
-    AND tablename IN ('projects', 'contractors', 'contracts', 'user_role')
+    AND tablename IN ('projects', 'contractors', 'project_contractors', 'payment_applications', 'user_role')
 ORDER BY tablename;
 
 \echo ''
@@ -95,7 +115,7 @@ SELECT
     with_check AS check_expression
 FROM pg_policies
 WHERE schemaname = 'public' 
-    AND tablename IN ('projects', 'contractors', 'contracts', 'user_role')
+    AND tablename IN ('projects', 'contractors', 'project_contractors', 'payment_applications', 'user_role')
 ORDER BY tablename, policyname;
 
 \echo ''
@@ -210,4 +230,5 @@ END $$;
 \echo '  - scripts/create-user-role-table.sql (for user_role table)'
 \echo '  - Your main database schema setup scripts (for projects, contractors, contracts)'
 \echo ''
+
 

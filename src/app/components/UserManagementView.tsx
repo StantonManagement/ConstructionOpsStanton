@@ -47,25 +47,7 @@ interface AlertState {
   message: string;
 }
 
-type Permission = 'create' | 'read' | 'update' | 'delete';
-
-const ROLE_PERMISSIONS: Record<string, Permission[]> = {
-  admin: ['create', 'read', 'update', 'delete'],
-  pm: ['read'],
-  staff: []
-};
-
-const hasPermission = (role: string | null, permission: Permission): boolean => {
-  if (!role) return false;
-  const permissions = ROLE_PERMISSIONS[role.toLowerCase()];
-  return permissions ? permissions.includes(permission) : false;
-};
-
-const ROLE_OPTIONS = [
-  { value: 'staff', label: 'Staff' },
-  { value: 'pm', label: 'Project Manager' },
-  { value: 'admin', label: 'Admin' }
-] as const;
+import { ROLE_OPTIONS, hasPermission, canAccessUserManagement } from '@/lib/permissions';
 
 // Helper function to get auth headers
 const getAuthHeaders = async () => {
@@ -802,8 +784,8 @@ const UserManagementView: React.FC = () => {
     );
   }
 
-  // Permission check
-  if (!userRole || !['admin', 'pm'].includes(userRole.toLowerCase())) {
+  // Permission check using centralized permission system
+  if (!canAccessUserManagement(userRole)) {
     return (
       <div className="p-4">
         <div className="bg-[var(--status-warning-bg)] border border-[var(--status-warning-border)] rounded-lg p-4">

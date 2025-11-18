@@ -3,8 +3,10 @@
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/providers/AuthProvider";
 import Header from "./Header";
 import UserProfile from "./UserProfile";
+import { useModal } from "../context/ModalContext";
 
 // Utility functions
 const formatDate = (dateString: string) => {
@@ -205,7 +207,7 @@ function ProjectOverview({ project, onCreatePaymentApps, onStatsPaymentAppClick 
   const handlePaymentAppClick = (appId: number) => {
     // Pass the current context as URL parameters for proper back navigation
     const returnTo = `/pm-dashboard?tab=projects&projectId=${project.id}`;
-    router.push(`/payments/${appId}/verify?returnTo=${encodeURIComponent(returnTo)}&projectId=${project.id}`);
+    router.push(`/payments/${appId}/verify?returnTo=${returnTo}&projectId=${project.id}`);
   };
 
   // Function to refresh project stats
@@ -1190,6 +1192,9 @@ function ProjectOverview({ project, onCreatePaymentApps, onStatsPaymentAppClick 
 
 // PM Notes Component
 function DailyLogRequests({ projects }: { projects: any[] }) {
+  const modalContext = useModal();
+  const showToast = modalContext?.showToast || (() => {});
+  const showConfirm = modalContext?.showConfirm || (async () => ({ confirmed: false }));
   const [loading, setLoading] = useState(false);
   const [requests, setRequests] = useState<any[]>([]);
   const [showAddRequest, setShowAddRequest] = useState(false);
@@ -1266,20 +1271,26 @@ function DailyLogRequests({ projects }: { projects: any[] }) {
         setRequestTime('18:00'); // Reset to default
         setShowAddRequest(false);
         await fetchRequests();
-        alert(`Daily log request added successfully! The system will automatically request notes from the PM daily at ${requestTime} EST.`);
+        showToast({ message: `Daily log request added successfully! The system will automatically request notes from the PM daily at ${requestTime} EST.`, type: 'success', duration: 7000 });
       } else {
-        alert('Failed to add request: ' + (error?.message || 'Unknown error'));
+        showToast({ message: 'Failed to add request: ' + (error?.message || 'Unknown error'), type: 'error' });
       }
     } catch (error) {
       console.error('Error adding request:', error);
-      alert('Failed to add request');
+      showToast({ message: 'Failed to add request', type: 'error' });
     } finally {
       setLoading(false);
     }
   };
 
   const handleDeleteRequest = async (requestId: number) => {
-    if (!confirm('Are you sure you want to delete this daily log request?')) return;
+    const { confirmed } = await showConfirm({
+      title: 'Delete Daily Log Request',
+      message: 'Are you sure you want to delete this daily log request?',
+      confirmText: 'Delete',
+      variant: 'delete'
+    });
+    if (!confirmed) return;
 
     try {
       const { error } = await supabase
@@ -1289,13 +1300,13 @@ function DailyLogRequests({ projects }: { projects: any[] }) {
 
       if (!error) {
         await fetchRequests();
-        alert('Request deleted successfully');
+        showToast({ message: 'Request deleted successfully', type: 'success' });
       } else {
-        alert('Failed to delete request: ' + error.message);
+        showToast({ message: 'Failed to delete request: ' + error.message, type: 'error' });
       }
     } catch (error) {
       console.error('Error deleting request:', error);
-      alert('Failed to delete request');
+      showToast({ message: 'Failed to delete request', type: 'error' });
     }
   };
 
@@ -1930,12 +1941,18 @@ function PaymentRow({ application, isSelected, onSelect, onVerify, getDocumentFo
   return (
     <>
       <tr className={`hover:bg-muted transition-colors ${isSelected ? 'bg-blue-50' : ''}`}>
-        <td className="px-4 py-3">
+        <td 
+          className="px-4 py-3"
+          onClick={(e) => {
+            e.stopPropagation();
+            onSelect(application.id, !isSelected);
+          }}
+        >
           <input
             type="checkbox"
             checked={isSelected}
             onChange={(e) => onSelect(application.id, e.target.checked)}
-            className="w-4 h-4 text-primary rounded focus:ring-primary"
+            className="w-4 h-4 text-primary rounded focus:ring-primary cursor-pointer"
           />
         </td>
         <td className="px-4 py-3">
@@ -2681,8 +2698,10 @@ function FilterSidebar({ statusFilter, setStatusFilter, projectFilter, setProjec
 
 export default function PMDashboard() {
   const router = useRouter();
-  const [session, setSession] = useState<any>(null);
-  const [role, setRole] = useState<string | null>(null);
+  const modalContext = useModal();
+  const showToast = modalContext?.showToast || (() => {});
+  const showConfirm = modalContext?.showConfirm || (async () => ({ confirmed: false }));
+  const { user: authUser, role, isLoading: authLoading } = useAuth(); // Use centralized auth
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
   const [userData, setUserData] = useState<{name: string; email: string; avatar_url: string; role: string} | null>(null);
@@ -2771,202 +2790,70 @@ export default function PMDashboard() {
     }
   }, []);
 
-  // Fetch dashboard data
+  // Fetch dashboard data from API
   const loadDashboardData = useCallback(async () => {
     setLoading(true);
     setError(null);
     setIsRefreshing(true);
+    
     try {
       const userData = await fetchUser();
       setUser(userData);
-      // Try relationship query first, with fallback
-      let appsRaw: any[] | null = null;
-      let useFallback = false;
 
-      const { data, error: appsError } = await supabase
-        .from("payment_applications")
-        .select(`
-          id,
-          status,
-          current_payment,
-          current_period_value,
-          created_at,
-          project:projects(id, name, client_name),
-          contractor:contractors(id, name, trade),
-          line_item_progress:payment_line_item_progress(
-            id,
-            line_item:project_line_items(id, description_of_work)
-          )
-        `)
-        .order("created_at", { ascending: false });
-      
-      // Check if error is related to relationships
-      if (appsError) {
-        const isRelationshipError = appsError.message?.includes('relationship') || 
-                                   appsError.message?.includes('Could not find a relationship');
-        
-        if (isRelationshipError) {
-          console.warn('[PMDashboard] Relationship query failed, using fallback:', appsError.message);
-          console.warn('[PMDashboard] Make sure SUPABASE_SERVICE_ROLE_KEY is set in .env');
-          useFallback = true;
-        } else {
-          throw new Error(appsError.message);
+      // Get auth token for API call
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('Authentication required');
+      }
+
+      console.log('[PMDashboard] Fetching data from API...');
+      const startTime = Date.now();
+
+      // Single API call to fetch all dashboard data
+      const response = await fetch('/api/dashboard/pm', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
         }
-      } else {
-        appsRaw = data;
+      });
+
+      if (!response.ok) {
+        let errorMessage = 'Failed to load dashboard data';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch (e) {
+          errorMessage = `${errorMessage} (${response.status}: ${response.statusText})`;
+        }
+        throw new Error(errorMessage);
       }
 
-      // Fallback: Manual queries if relationship syntax failed
-      if (useFallback || !appsRaw) {
-        console.log('[PMDashboard] Using fallback query pattern');
-        
-        const { data: appsData, error: appsError2 } = await supabase
-          .from("payment_applications")
-          .select("id, status, current_payment, current_period_value, created_at, project_id, contractor_id")
-          .order("created_at", { ascending: false });
+      const result = await response.json();
+      const fetchTime = Date.now() - startTime;
+      console.log(`[PMDashboard] Data loaded in ${fetchTime}ms`);
 
-        if (appsError2) throw new Error(appsError2.message);
-        
-        const projectIds = [...new Set((appsData || []).map((a: any) => a.project_id).filter(Boolean))];
-        const contractorIds = [...new Set((appsData || []).map((a: any) => a.contractor_id).filter(Boolean))];
-
-        const [projectsResult, contractorsResult] = await Promise.all([
-          projectIds.length > 0 ? supabase
-            .from("projects")
-            .select("id, name, client_name")
-            .in("id", projectIds) : { data: [], error: null },
-          contractorIds.length > 0 ? supabase
-            .from("contractors")
-            .select("id, name, trade")
-            .in("id", contractorIds) : { data: [], error: null }
-        ]);
-
-        const projectsMap = new Map((projectsResult.data || []).map((p: any) => [p.id, p]));
-        const contractorsMap = new Map((contractorsResult.data || []).map((c: any) => [c.id, c]));
-
-        appsRaw = (appsData || []).map((app: any) => ({
-          ...app,
-          project: projectsMap.get(app.project_id) || { id: app.project_id, name: 'Unknown Project', client_name: '' },
-          contractor: contractorsMap.get(app.contractor_id) || { id: app.contractor_id, name: 'Unknown Contractor', trade: '' },
-          line_item_progress: []
-        }));
+      if (!result.success || !result.data) {
+        throw new Error('Invalid API response');
       }
 
-      const sortedApps = (appsRaw || []).sort((a, b) => {
-        if (a.status === "submitted" && b.status !== "submitted") return -1;
-        if (a.status !== "submitted" && b.status === "submitted") return 1;
-        const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
-        const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
-        return dateB - dateA;
-      });
-      setPaymentApps(sortedApps);
+      const { paymentApps, projects, stats } = result.data;
 
-      const { data: projectsRaw, error: projectsError } = await supabase
-        .from("projects")
-        .select("*, id, name, client_name, current_phase, at_risk, target_completion_date, budget, spent")
-        .eq("status", "active");
-      if (projectsError) throw new Error(projectsError.message);
-      setProjects(projectsRaw || []);
-
-      // Calculate overall project statistics
-      const { data: projectStats } = await supabase
-        .from("projects")
-        .select("id, status, at_risk, budget, spent");
-      
-      const { data: contractorStats } = await supabase
-        .from("project_contractors")
-        .select("contract_amount, paid_to_date")
-        .eq("contract_status", "active");
-      
-      const { data: approvedPayments } = await supabase
-        .from("payment_applications")
-        .select("current_period_value")
-        .eq("status", "approved");
-
-      // Calculate totals
-      const totalProjects = (projectStats || []).length;
-      const activeProjects = (projectStats || []).filter((p: any) => p.status === "active").length;
-      const atRiskProjects = (projectStats || []).filter((p: any) => p.at_risk).length;
-      const totalBudget = (contractorStats || []).reduce((sum: number, c: any) => sum + (Number(c.contract_amount) || 0), 0);
-      const totalSpent = (approvedPayments || []).reduce((sum: number, p: any) => sum + (Number(p.current_period_value) || 0), 0);
-      const completionPercentage = totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0;
-
-      const { data: smsConvos } = await supabase
-        .from("payment_sms_conversations")
-        .select("id, conversation_state");
-      const pendingSMS = (smsConvos || []).filter(
-        (c: any) => c.conversation_state !== "completed"
-      ).length;
-      const reviewQueue = (appsRaw || []).filter((app: any) =>
-        app.status === "submitted"
-      ).length;
-      const readyChecks = (appsRaw || []).filter((app: any) =>
-        app.status === "sms_sent"
-      ).length;
-      const now = new Date();
-      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      const weeklyTotal = (appsRaw || [])
-        .filter((a: any) => a.created_at && new Date(a.created_at) >= weekAgo && a.status === 'approved')
-        .reduce((sum: number, a: any) => sum + (a.current_period_value || 0), 0);
-      
-      setStats({
-        pending_sms: pendingSMS,
-        review_queue: reviewQueue,
-        ready_checks: readyChecks,
-        weekly_total: weeklyTotal,
-        total_projects: totalProjects,
-        active_projects: activeProjects,
-        at_risk_projects: atRiskProjects,
-        total_budget: totalBudget,
-        total_spent: totalSpent,
-        completion_percentage: completionPercentage,
-      });
+      setPaymentApps(paymentApps);
+      setProjects(projects);
+      setStats(stats);
       setLastRefresh(new Date());
+
     } catch (err: any) {
-      console.error('Dashboard data loading error:', err);
-      setError(err.message || "Failed to load dashboard data. Please try refreshing the page.");
+      console.error('[PMDashboard] Error loading dashboard data:', err);
+      setError(err.message || 'Failed to load dashboard data. Please try refreshing the page.');
     } finally {
       setLoading(false);
       setIsRefreshing(false);
     }
   }, [fetchUser]);
 
-  useEffect(() => {
-    const getSessionAndRole = async () => {
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      setSession(session);
-      if (session?.user) {
-        const { data, error } = await supabase
-          .from("users")
-          .select("role")
-          .eq("uuid", session.user.id)
-          .single();
-        setRole(data?.role || "unknown");
-      } else {
-        setRole("unknown");
-      }
-      setLoading(false);
-    };
-    getSessionAndRole();
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      if (session?.user) {
-        supabase
-          .from("users")
-          .select("role")
-          .eq("uuid", session.user.id)
-          .single()
-          .then(({ data, error }) => {
-            setRole(data?.role || "unknown");
-          });
-      } else {
-        setRole("unknown");
-      }
-    });
-    return () => {
-      listener.subscription.unsubscribe();
-    };
-  }, []);
+  // Auth is now handled by AuthProvider - no redundant fetching needed
 
   useEffect(() => {
     loadDashboardData();
@@ -3004,20 +2891,20 @@ export default function PMDashboard() {
         } catch (e) {
           // Response is not JSON, use status text
         }
-        alert("Failed to send for signature: " + errorMessage);
+        showToast({ message: "Failed to send for signature: " + errorMessage, type: 'error' });
         return;
       }
-      alert("Payment request sent successfully");
+      showToast({ message: "Payment request sent successfully", type: 'success' });
     } catch (error) {
       console.error('Error sending for signature:', error);
-      alert("Failed to send for signature: Network error");
+      showToast({ message: "Failed to send for signature: Network error", type: 'error' });
     }
   }
 
   const handleVerifyPayment = (paymentAppId: number) => {
     // Pass the current context as URL parameters for proper back navigation
     const returnTo = `/pm-dashboard?tab=payments`;
-    router.push(`/payments/${paymentAppId}/verify?returnTo=${encodeURIComponent(returnTo)}`);
+    router.push(`/payments/${paymentAppId}/verify?returnTo=${returnTo}`);
   };
 
   const handleLogout = async () => {
@@ -3145,11 +3032,11 @@ export default function PMDashboard() {
       const errorCount = result.results.filter((r: any) => r.error).length;
 
       if (successCount > 0) {
-        alert(`Successfully created ${successCount} payment application(s)${errorCount > 0 ? ` (${errorCount} failed)` : ''}`);
+        showToast({ message: `Successfully created ${successCount} payment application(s)${errorCount > 0 ? ` (${errorCount} failed)` : ''}`, type: 'success' });
         // Refresh dashboard data
         await loadDashboardData();
       } else {
-        alert('Failed to create payment applications. Please try again.');
+        showToast({ message: 'Failed to create payment applications. Please try again.', type: 'error' });
       }
 
       // Close modal and reset state
@@ -3158,7 +3045,7 @@ export default function PMDashboard() {
       setSelectedProjectForPayment(null);
     } catch (error) {
       console.error('Error creating payment applications:', error);
-      alert('Failed to create payment applications: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      showToast({ message: 'Failed to create payment applications: ' + (error instanceof Error ? error.message : 'Unknown error'), type: 'error' });
     } finally {
       setCreatingPaymentApps(false);
     }
@@ -3167,7 +3054,12 @@ export default function PMDashboard() {
   const handleDeleteSelected = async () => {
     if (selectedItems.length === 0) return;
 
-    const confirmed = confirm(`Are you sure you want to delete ${selectedItems.length} payment application(s)?`);
+    const { confirmed } = await showConfirm({
+      title: 'Delete Payment Applications',
+      message: `Are you sure you want to delete ${selectedItems.length} payment application(s)?`,
+      confirmText: 'Delete',
+      variant: 'delete'
+    });
     if (!confirmed) return;
 
     try {
@@ -3180,17 +3072,22 @@ export default function PMDashboard() {
 
       await loadDashboardData();
       setSelectedItems([]);
-      alert(`${selectedItems.length} payment application(s) deleted successfully`);
+      showToast({ message: `${selectedItems.length} payment application(s) deleted successfully`, type: 'success' });
     } catch (error) {
       console.error('Error deleting applications:', error);
-      alert('Failed to delete applications');
+      showToast({ message: 'Failed to delete applications', type: 'error' });
     }
   };
 
   const handleApproveSelected = async () => {
     if (selectedItems.length === 0) return;
 
-    const confirmed = confirm(`Are you sure you want to approve ${selectedItems.length} payment application(s)?`);
+    const { confirmed } = await showConfirm({
+      title: 'Approve Payment Applications',
+      message: `Are you sure you want to approve ${selectedItems.length} payment application(s)?`,
+      confirmText: 'Approve All',
+      variant: 'success'
+    });
     if (!confirmed) return;
 
     try {
@@ -3203,10 +3100,10 @@ export default function PMDashboard() {
 
       await loadDashboardData();
       setSelectedItems([]);
-      alert(`${selectedItems.length} payment application(s) approved successfully`);
+      showToast({ message: `${selectedItems.length} payment application(s) approved successfully`, type: 'success' });
     } catch (error) {
       console.error('Error approving applications:', error);
-      alert('Failed to approve applications');
+      showToast({ message: 'Failed to approve applications', type: 'error' });
     }
   };
 
@@ -3324,7 +3221,7 @@ export default function PMDashboard() {
   const handleStatsPaymentAppClick = (appId: number) => {
     // Pass the current context as URL parameters for proper back navigation
     const returnTo = `/pm-dashboard?tab=payments`;
-    router.push(`/payments/${appId}/verify?returnTo=${encodeURIComponent(returnTo)}`);
+    router.push(`/payments/${appId}/verify?returnTo=${returnTo}`);
   };
 
   const filteredApps = useMemo(() => {

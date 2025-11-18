@@ -144,7 +144,10 @@ export const supabase = createClient(supabaseUrl!, supabaseAnonKey!, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
-    detectSessionInUrl: false
+    detectSessionInUrl: false,
+    // Keep session alive - Supabase tokens expire in 1 hour by default
+    // With autoRefreshToken enabled, tokens refresh automatically before expiring
+    // This keeps users logged in even if they walk away from the computer
   },
   db: {
     schema: 'public'

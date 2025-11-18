@@ -208,3 +208,5 @@ COMMENT ON POLICY "Users can update their own preferences" ON user_preferences
 -- AND tablename IN ('company_settings', 'user_preferences', 'integration_credentials', 'payment_reminders', 'change_orders')
 -- ORDER BY tablename, policyname;
 
+
+

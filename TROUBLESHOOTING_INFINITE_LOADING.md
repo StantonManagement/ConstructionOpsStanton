@@ -147,3 +147,5 @@ If you continue to experience loading issues:
 4. Verify your Supabase project status
 5. Check `.env.local` configuration
 
+
+
