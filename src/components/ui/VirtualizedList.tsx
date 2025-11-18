@@ -114,12 +114,12 @@ export function VirtualizedTable<T>({
   };
 
   return (
-    <div className={`border border-gray-200 rounded-lg overflow-hidden ${className}`}>
+    <div className={`border border-border rounded-lg overflow-hidden ${className}`}>
       {/* Fixed Header */}
-      <div className="bg-gray-50 border-b border-gray-200">
+      <div className="bg-muted border-b border-border">
         <div className="grid gap-4 px-4 py-3" style={{ gridTemplateColumns: columns.map(col => col.width || '1fr').join(' ') }}>
           {columns.map((column) => (
-            <div key={column.key} className="font-medium text-gray-900 text-sm">
+            <div key={column.key} className="font-medium text-foreground text-sm">
               {column.header}
             </div>
           ))}
@@ -145,7 +145,7 @@ export function VirtualizedTable<T>({
             {visibleItems.map((item, index) => (
               <div
                 key={visibleRange.startIndex + index}
-                className="border-b border-gray-100 hover:bg-gray-50"
+                className="border-b border-border hover:bg-muted"
                 style={{ height: rowHeight }}
               >
                 <div
@@ -153,7 +153,7 @@ export function VirtualizedTable<T>({
                   style={{ gridTemplateColumns: columns.map(col => col.width || '1fr').join(' ') }}
                 >
                   {columns.map((column) => (
-                    <div key={column.key} className="text-sm text-gray-900">
+                    <div key={column.key} className="text-sm text-foreground">
                       {column.render(item)}
                     </div>
                   ))}

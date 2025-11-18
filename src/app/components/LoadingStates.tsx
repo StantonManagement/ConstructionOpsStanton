@@ -20,8 +20,8 @@ export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
 
   return (
     <div className={`flex items-center justify-center gap-2 ${className}`}>
-      <Loader2 className={`${sizeClasses[size]} animate-spin text-blue-600`} />
-      {text && <span className="text-sm text-gray-600">{text}</span>}
+      <Loader2 className={`${sizeClasses[size]} animate-spin text-primary`} />
+      {text && <span className="text-sm text-muted-foreground">{text}</span>}
     </div>
   );
 };
@@ -38,12 +38,12 @@ export const LoadingCard: React.FC<LoadingCardProps> = ({
   className = ''
 }) => {
   return (
-    <div className={`bg-white border border-gray-200 rounded-lg p-6 ${className}`}>
+    <div className={`bg-card border border-border rounded-lg p-6 ${className}`}>
       <div className="flex items-center gap-3">
         <LoadingSpinner size="md" />
         <div>
-          <h3 className="font-medium text-gray-900">{title}</h3>
-          {subtitle && <p className="text-sm text-gray-600">{subtitle}</p>}
+          <h3 className="font-medium text-foreground">{title}</h3>
+          {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
         </div>
       </div>
     </div>
@@ -64,7 +64,7 @@ export const LoadingSkeleton: React.FC<LoadingSkeletonProps> = ({
       {Array.from({ length: lines }).map((_, i) => (
         <div
           key={i}
-          className={`h-4 bg-gray-200 rounded animate-pulse ${
+          className={`h-4 bg-muted rounded animate-pulse ${
             i === 0 ? 'w-3/4' : i === 1 ? 'w-1/2' : 'w-2/3'
           }`}
         />
@@ -89,8 +89,8 @@ export const StatusIndicator: React.FC<StatusIndicatorProps> = ({
       case 'loading':
         return {
           icon: <Loader2 className="w-4 h-4 animate-spin" />,
-          color: 'text-blue-600',
-          bgColor: 'bg-blue-50'
+          color: 'text-primary',
+          bgColor: 'bg-primary/10'
         };
       case 'success':
         return {
@@ -107,7 +107,7 @@ export const StatusIndicator: React.FC<StatusIndicatorProps> = ({
       default:
         return {
           icon: null,
-          color: 'text-gray-600',
+          color: 'text-muted-foreground',
           bgColor: 'bg-gray-50'
         };
     }
@@ -141,7 +141,7 @@ export const LoadingOverlay: React.FC<LoadingOverlayProps> = ({
       <div className="bg-white rounded-lg shadow-xl p-6 max-w-sm w-full mx-4">
         <div className="text-center">
           <LoadingSpinner size="lg" />
-          <h3 className="mt-4 text-lg font-medium text-gray-900">{text}</h3>
+          <h3 className="mt-4 text-lg font-medium text-foreground">{text}</h3>
           <p className="mt-2 text-sm text-gray-600">
             Please wait while we process your request...
           </p>

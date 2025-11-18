@@ -23,7 +23,7 @@ const Skeleton: React.FC<SkeletonProps> = ({
 
   return (
     <div 
-      className={`${width} ${height} ${roundedClasses[rounded]} bg-gray-200 animate-pulse ${className}`}
+      className={`${width} ${height} ${roundedClasses[rounded]} bg-secondary/80 animate-pulse ${className}`}
       aria-hidden="true"
     />
   );
@@ -61,7 +61,7 @@ const TableSkeleton: React.FC<TableSkeletonProps> = ({
   className = '' 
 }) => (
   <div className={`bg-white border rounded-lg overflow-hidden ${className}`}>
-    <div className="border-b bg-gray-50 px-6 py-3">
+    <div className="border-b bg-secondary px-6 py-3">
       <div className="flex space-x-4">
         {Array.from({ length: columns }).map((_, i) => (
           <Skeleton key={i} width="w-20" height="h-4" />

@@ -1,9 +1,13 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { DollarSign, Filter, Search, RefreshCw, CheckCircle, XCircle, Clock, AlertCircle, ChevronLeft, ChevronRight, Eye, Trash2 } from 'lucide-react';
 import { generateG703Pdf } from '@/lib/g703Pdf';
+import { Badge } from '@/components/ui/badge';
+import { getPaymentStatusBadge, getStatusLabel, getStatusIconColor, PaymentStatus } from '@/lib/statusColors';
+import { useModal } from '../context/ModalContext';
 
 // Utility functions
 const formatDate = (dateString: string) => {
@@ -27,11 +31,11 @@ const formatCurrency = (amount: number) => {
 function CompactStatCard({ icon, label, value, change, color, onClick, isActive }: any) {
   return (
     <div 
-      className={`bg-white border rounded-lg p-3 sm:p-4 cursor-pointer transition-all hover:shadow-md ${
+      className={`bg-card border rounded-lg p-3 sm:p-4 cursor-pointer transition-all duration-200 hover:shadow-md ${
         isActive 
-          ? 'border-blue-500 bg-blue-50 shadow-md' 
-          : 'border-gray-200 hover:border-blue-300'
-      } ${onClick ? 'hover:border-blue-300' : ''}`}
+          ? 'border-primary bg-primary/5 shadow-md' 
+          : 'border-border hover:border-primary/50'
+      } ${onClick ? 'hover:border-primary/50' : ''}`}
       onClick={onClick}
     >
       <div className="flex items-center justify-between">
@@ -40,8 +44,8 @@ function CompactStatCard({ icon, label, value, change, color, onClick, isActive 
             <span className="text-sm sm:text-lg">{icon}</span>
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">{label}</p>
-            <p className="text-lg sm:text-2xl font-bold text-gray-900 truncate">{value}</p>
+            <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">{label}</p>
+            <p className="text-lg sm:text-2xl font-bold text-foreground truncate">{value}</p>
           </div>
         </div>
         {change && (
@@ -126,6 +130,11 @@ function PaymentCard({ application, isSelected, onSelect, onVerify, getDocumentF
       priority: "PICKUP",
       icon: "💰"
     },
+    rejected: { 
+      color: "bg-red-100 text-red-800 border-red-200", 
+      priority: "REJECTED",
+      icon: "❌"
+    },
   };
 
   const config = statusConfig[application.status] || statusConfig.needs_review;
@@ -142,6 +151,7 @@ function PaymentCard({ application, isSelected, onSelect, onVerify, getDocumentF
             type="checkbox"
             checked={isSelected}
             onChange={(e) => onSelect(application.id, e.target.checked)}
+            onClick={(e) => e.stopPropagation()}
             className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 mt-1 flex-shrink-0"
           />
           <div className="min-w-0 flex-1">
@@ -186,12 +196,14 @@ function PaymentCard({ application, isSelected, onSelect, onVerify, getDocumentF
             className={`px-2 sm:px-3 py-1 rounded-md text-xs font-semibold transition-colors ${
               application.status === "approved"
                 ? "bg-green-600 text-white hover:bg-green-700"
+                : application.status === "rejected"
+                ? "bg-red-600 text-white hover:bg-red-700"
                 : config.priority === "URGENT" 
                 ? "bg-red-600 text-white hover:bg-red-700" 
                 : "bg-blue-600 text-white hover:bg-blue-700"
             }`}
           >
-            {application.status === "approved" ? "View" : config.priority === "URGENT" ? "URGENT" : "Verify"}
+            {application.status === "approved" || application.status === "rejected" ? "View" : config.priority === "URGENT" ? "URGENT" : "Verify"}
           </button>
           {doc && (
             <button
@@ -249,6 +261,11 @@ function PaymentRow({ application, isSelected, onSelect, onVerify, getDocumentFo
       priority: "PICKUP",
       icon: "💰"
     },
+    rejected: { 
+      color: "bg-red-100 text-red-800 border-red-200", 
+      priority: "REJECTED",
+      icon: "❌"
+    },
   };
 
   const config = statusConfig[application.status] || statusConfig.needs_review;
@@ -259,12 +276,18 @@ function PaymentRow({ application, isSelected, onSelect, onVerify, getDocumentFo
       className={`border-b border-gray-200 hover:bg-gray-50 cursor-pointer ${isSelected ? 'bg-blue-50' : ''}`}
       onClick={() => onCardClick && onCardClick(application)}
     >
-      <td className="px-4 py-3">
+      <td 
+        className="px-4 py-3"
+        onClick={(e) => {
+          e.stopPropagation();
+          onSelect(application.id, !isSelected);
+        }}
+      >
         <input
           type="checkbox"
           checked={isSelected}
           onChange={(e) => onSelect(application.id, e.target.checked)}
-          className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+          className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 cursor-pointer"
         />
       </td>
       <td className="px-4 py-3">
@@ -295,20 +318,28 @@ function PaymentRow({ application, isSelected, onSelect, onVerify, getDocumentFo
       <td className="px-4 py-3">
         <div className="flex items-center gap-2">
           <button
-            onClick={() => onVerify(application.id)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onVerify(application.id);
+            }}
             className={`px-3 py-1 rounded-md text-xs font-semibold transition-colors ${
               application.status === "approved"
                 ? "bg-green-600 text-white hover:bg-green-700"
+                : application.status === "rejected"
+                ? "bg-red-600 text-white hover:bg-red-700"
                 : config.priority === "URGENT" 
                 ? "bg-red-600 text-white hover:bg-red-700" 
                 : "bg-blue-600 text-white hover:bg-blue-700"
             }`}
           >
-            {application.status === "approved" ? "View" : config.priority === "URGENT" ? "URGENT" : "Verify"}
+            {application.status === "approved" || application.status === "rejected" ? "View" : config.priority === "URGENT" ? "URGENT" : "Verify"}
           </button>
           {doc && (
             <button
-              onClick={() => sendForSignature(application.id)}
+              onClick={(e) => {
+                e.stopPropagation();
+                sendForSignature(application.id);
+              }}
               className="px-3 py-1 bg-green-600 text-white rounded-md text-xs font-semibold hover:bg-green-700 transition-colors"
             >
               Sign
@@ -485,11 +516,11 @@ function PaymentTable({ applications, onVerify, getDocumentForApp, sendForSignat
 }
 
 // Bulk Actions Bar Component
-function BulkActionsBar({ selectedCount, onDeleteSelected, onApproveSelected, onClearSelection }: any) {
+function BulkActionsBar({ selectedCount, onDeleteSelected, onApproveSelected, onClearSelection, loading }: any) {
   if (selectedCount === 0) return null;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-3 sm:p-4 z-40 lg:static lg:border-t-0 lg:p-0 lg:bg-transparent">
+    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-3 sm:p-4 z-40 lg:static lg:border-t-0 lg:p-0 lg:bg-transparent shadow-lg lg:shadow-none">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
         <div className="flex items-center justify-center sm:justify-start gap-2 sm:gap-4">
           <span className="text-sm font-medium text-gray-700">
@@ -497,7 +528,8 @@ function BulkActionsBar({ selectedCount, onDeleteSelected, onApproveSelected, on
           </span>
           <button
             onClick={onClearSelection}
-            className="text-sm text-gray-500 hover:text-gray-700"
+            disabled={loading}
+            className="text-sm text-gray-500 hover:text-gray-700 disabled:opacity-50"
           >
             Clear selection
           </button>
@@ -506,15 +538,31 @@ function BulkActionsBar({ selectedCount, onDeleteSelected, onApproveSelected, on
         <div className="flex items-center justify-center sm:justify-end gap-2">
           <button
             onClick={onApproveSelected}
-            className="px-3 sm:px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 transition-colors"
+            disabled={loading}
+            className="px-3 sm:px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
-            Approve Selected
+            {loading ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                <span className="hidden sm:inline">Processing...</span>
+              </>
+            ) : (
+              'Approve Selected'
+            )}
           </button>
           <button
             onClick={onDeleteSelected}
-            className="px-3 sm:px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700 transition-colors"
+            disabled={loading}
+            className="px-3 sm:px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
-            Delete Selected
+            {loading ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                <span className="hidden sm:inline">Processing...</span>
+              </>
+            ) : (
+              'Delete Selected'
+            )}
           </button>
         </div>
       </div>
@@ -537,6 +585,7 @@ function FilterSidebar({ statusFilter, setStatusFilter, projectFilter, setProjec
             { value: 'submitted', label: 'Submitted' },
             { value: 'needs_review', label: 'Review' },
             { value: 'approved', label: 'Approved' },
+            { value: 'rejected', label: 'Rejected' },
             { value: 'check_ready', label: 'Ready' },
             { value: 'sms_sent', label: 'SMS Sent' }
           ].map((status) => (
@@ -665,10 +714,15 @@ interface PaymentApplicationsViewProps {
 }
 
 const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searchQuery = '' }) => {
+  const searchParams = useSearchParams();
+  const { showToast } = useModal();
   const [applications, setApplications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<string>('submitted'); // Changed default to 'submitted'
+  // Get statusFilter from URL params or default to 'submitted'
+  const [statusFilter, setStatusFilter] = useState<string>(
+    searchParams.get('statusFilter') || 'submitted'
+  );
   const [projectFilter, setProjectFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'status' | 'date' | 'amount'>('date');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
@@ -726,74 +780,79 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
 
   const itemsPerPage = 10;
 
-  // Fetch applications
+  // Fetch applications from API
   const fetchApplications = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
-      const { data: appsRaw, error: appsError } = await supabase
-        .from("payment_applications")
-        .select(`
-          id,
-          status,
-          current_payment,
-          current_period_value,
-          created_at,
-          project:projects(id, name, client_name),
-          contractor:contractors(id, name, trade),
-          line_item_progress:payment_line_item_progress(
-            id,
-            line_item:project_line_items(id, description_of_work)
-          )
-        `)
-        .order("created_at", { ascending: false });
+      // Get auth token
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('Authentication required');
+      }
 
-      if (appsError) throw new Error(appsError.message);
+      console.log('[PaymentApplicationsView] Fetching from API...');
+      const startTime = Date.now();
 
-      const sortedApps = (appsRaw || []).sort((a, b) => {
-        if (a.status === "submitted" && b.status !== "submitted") return -1;
-        if (a.status !== "submitted" && b.status === "submitted") return 1;
-        const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
-        const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
-        return dateB - dateA;
+      // Call API with filters (none for now, but could add status/project filters)
+      const response = await fetch('/api/payment-applications/list', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          // Add filters here if needed
+        })
       });
 
-      setApplications(sortedApps);
+      if (!response.ok) {
+        let errorMessage = 'Failed to load payment applications';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch (e) {
+          errorMessage = `${errorMessage} (${response.status}: ${response.statusText})`;
+        }
+        throw new Error(errorMessage);
+      }
 
-      // Fetch projects for filter
-      const { data: projectsRaw, error: projectsError } = await supabase
-        .from("projects")
-        .select("id, name, client_name")
-        .eq("status", "active");
+      const result = await response.json();
+      const fetchTime = Date.now() - startTime;
+      console.log(`[PaymentApplicationsView] Loaded in ${fetchTime}ms`);
 
-      if (projectsError) throw new Error(projectsError.message);
-      setProjects(projectsRaw || []);
+      if (!result.success || !result.data) {
+        throw new Error('Invalid API response');
+      }
 
-      // Calculate stats
-      const { data: smsConvos } = await supabase
-        .from("payment_sms_conversations")
-        .select("id, conversation_state");
+      const { applications: appsData, projects: projectsData } = result.data;
+
+      setApplications(appsData || []);
+      setProjects(projectsData || []);
+
+      // Calculate stats from fetched data
+      const apps = appsData || [];
 
       // SMS Pending: Applications with sms_sent status
-      const pendingSMS = (appsRaw || []).filter((app: any) =>
+      const pendingSMS = apps.filter((app: any) =>
         app.status === "sms_sent"
       ).length;
 
       // Review Queue: Applications with submitted or needs_review status
-      const reviewQueue = (appsRaw || []).filter((app: any) =>
+      const reviewQueue = apps.filter((app: any) =>
         app.status === "submitted" || app.status === "needs_review"
       ).length;
 
-      // Ready Checks: Approved applications (these are the "ready checks")
-      const readyChecks = (appsRaw || []).filter((app: any) =>
+      // Ready Checks: Approved applications
+      const readyChecks = apps.filter((app: any) =>
         app.status === "approved"
       ).length;
 
       // Weekly Total: Total amount of approved applications in the last 7 days
       const now = new Date();
       const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      const weeklyTotal = (appsRaw || [])
+      const weeklyTotal = apps
         .filter((a: any) => a.created_at && new Date(a.created_at) >= weekAgo && a.status === 'approved')
         .reduce((sum: number, a: any) => sum + (a.current_payment || 0), 0);
 
@@ -826,11 +885,27 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
     }
   }, []);
 
-  // Load data on mount
+  // Load data on mount and when statusFilter changes from URL
+  useEffect(() => {
+    const urlStatusFilter = searchParams?.get('statusFilter');
+    if (urlStatusFilter && urlStatusFilter !== statusFilter) {
+      setStatusFilter(urlStatusFilter);
+      // Clear selections when filter changes from URL
+      setSelectedItems([]);
+      setCurrentPage(1);
+    }
+  }, [searchParams]);
+
   useEffect(() => {
     fetchApplications();
     fetchDocuments();
   }, [fetchApplications, fetchDocuments]);
+
+  // Clear selections when filters change
+  useEffect(() => {
+    setSelectedItems([]);
+    setCurrentPage(1);
+  }, [statusFilter, projectFilter]);
 
   // Filter and sort applications
   const filteredApps = useMemo(() => {
@@ -947,58 +1022,50 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
   const confirmDelete = async () => {
     if (!deleteTarget) return;
 
+    // Set action loading to show feedback
+    setActionLoading(true);
+
     try {
       const paymentAppIds = Array.isArray(deleteTarget) ? deleteTarget : [deleteTarget];
       
-      for (const paymentAppId of paymentAppIds) {
-        // Delete related records first (foreign key constraints)
-        
-        // Delete payment_line_item_progress records
-        const { error: progressError } = await supabase
-          .from('payment_line_item_progress')
-          .delete()
-          .eq('payment_app_id', paymentAppId);
+      // Get auth token for API call
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('Authentication required. Please log in again.');
+      }
+      
+      // Call the API endpoint to delete payment applications
+      const response = await fetch('/api/payments/delete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ paymentAppIds }),
+      });
 
-        if (progressError) {
-          console.error('Error deleting payment line item progress:', progressError);
-          continue;
+      const result = await response.json();
+
+      if (!response.ok) {
+        // Show detailed permission error message if available
+        if (result.message) {
+          showToast({ 
+            message: result.message, 
+            type: 'error',
+            duration: 8000
+          });
+          throw new Error(result.message);
         }
+        throw new Error(result.error || 'Failed to delete payment applications');
+      }
 
-        // Delete payment_sms_conversations records
-        const { error: smsError } = await supabase
-          .from('payment_sms_conversations')
-          .delete()
-          .eq('payment_app_id', paymentAppId);
+      const successCount = result.successCount || 0;
+      const errorCount = result.failedCount || 0;
+      const errors = result.results?.failed?.map((f: any) => `#${f.id}: ${f.error}`) || [];
 
-        if (smsError) {
-          console.error('Error deleting SMS conversations:', smsError);
-          continue;
-        }
-
-        // Delete payment_documents records
-        const { error: docsError } = await supabase
-          .from('payment_documents')
-          .delete()
-          .eq('payment_application_id', paymentAppId);
-
-        if (docsError) {
-          console.error('Error deleting payment documents:', docsError);
-          continue;
-        }
-
-        // Finally, delete the payment application
-        const { error: appError } = await supabase
-          .from('payment_applications')
-          .delete()
-          .eq('id', paymentAppId);
-
-        if (appError) {
-          console.error('Error deleting payment application:', appError);
-          continue;
-        }
-
-        // Remove from selected items if it was selected
-        setSelectedItems(prev => prev.filter(id => id !== paymentAppId));
+      // Remove successfully deleted items from selectedItems
+      if (result.results?.success) {
+        setSelectedItems(prev => prev.filter(id => !result.results.success.includes(id)));
       }
 
       // Clear selected items if bulk delete
@@ -1006,23 +1073,43 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
         setSelectedItems([]);
       }
       
-      // Refresh the data
-      fetchApplications();
-      
-      // Show success message
-      const message = Array.isArray(deleteTarget) 
-        ? `${deleteTarget.length} payment application(s) deleted successfully.`
-        : 'Payment application deleted successfully.';
-      alert(message);
+      // Show appropriate message based on results
+      if (successCount > 0 && errorCount === 0) {
+        showToast({ 
+          message: `${successCount} payment application(s) deleted successfully.`, 
+          type: 'success' 
+        });
+      } else if (successCount > 0 && errorCount > 0) {
+        showToast({ 
+          message: `${successCount} deleted, ${errorCount} failed. Check console for details.`, 
+          type: 'warning',
+          duration: 8000
+        });
+        console.error('Deletion errors:', errors);
+      } else {
+        showToast({ 
+          message: `Failed to delete payment application(s). ${errors[0] || 'Check console for details.'}`, 
+          type: 'error',
+          duration: 8000
+        });
+        console.error('All deletions failed:', errors);
+      }
       
       // Reset state
       setDeleteTarget(null);
       setShowConfirmDialog(null);
+      
+      // Refresh the data (after state updates) - only if at least one succeeded
+      if (successCount > 0) {
+        await fetchApplications();
+      }
     } catch (error) {
       console.error('Error deleting payment application(s):', error);
-      alert('Error deleting payment application(s). Please try again.');
+      showToast({ message: 'Error deleting payment application(s). Please try again.', type: 'error' });
       setDeleteTarget(null);
       setShowConfirmDialog(null);
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -1038,6 +1125,10 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
   };
 
   const handleStatClick = async (type: string) => {
+    // Clear selections and reset page when changing filter via stat cards
+    setSelectedItems([]);
+    setCurrentPage(1);
+    
     switch (type) {
       case 'sms_pending':
         setStatusFilter('sms_sent');
@@ -1251,6 +1342,7 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
         onDeleteSelected={handleDeleteSelected}
         onApproveSelected={handleApproveSelected}
         onClearSelection={() => setSelectedItems([])}
+        loading={actionLoading}
       />
 
       {/* Mobile Filter Drawer */}
@@ -1289,14 +1381,9 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
                   Back to Payment Applications
                 </button>
                 <div className="flex items-center gap-3">
-                  <span className={`px-3 py-1 text-sm font-medium rounded-full border ${
-                    selectedPaymentForVerification?.status === 'approved' ? 'bg-green-100 text-green-800 border-green-200' :
-                    selectedPaymentForVerification?.status === 'rejected' ? 'bg-red-100 text-red-800 border-red-200' :
-                    selectedPaymentForVerification?.status === 'pending' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
-                    'bg-gray-100 text-gray-800 border-gray-200'
-                  }`}>
-                    {selectedPaymentForVerification?.status?.toUpperCase() || 'PENDING'}
-                  </span>
+                  <Badge variant={getPaymentStatusBadge(selectedPaymentForVerification?.status as PaymentStatus) as any}>
+                    {getStatusLabel(selectedPaymentForVerification?.status as PaymentStatus)}
+                  </Badge>
                 </div>
               </div>
             </div>
@@ -1442,32 +1529,56 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
 
       {/* Confirmation Dialogs */}
       {showConfirmDialog && (
-        <div className="fixed inset-0 bg-opacity-50 backdrop-blur-sm bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+        <div 
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50"
+          onClick={() => {
+            setShowConfirmDialog(null);
+            setDeleteTarget(null);
+          }}
+        >
+          <div 
+            className="bg-card border border-border rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
             {showConfirmDialog === 'delete' && (
               <>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Confirm Deletion</h3>
-                <p className="text-gray-600 mb-6">
-                  {Array.isArray(deleteTarget) 
-                    ? `Are you sure you want to delete ${deleteTarget.length} payment application(s)? This action cannot be undone.`
-                    : `Are you sure you want to delete payment application #${deleteTarget}? This action cannot be undone.`
-                  }
-                </p>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-12 h-12 rounded-xl bg-[var(--status-critical-bg)] flex items-center justify-center">
+                    <AlertCircle className="w-6 h-6 text-[var(--status-critical-icon)]" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-foreground">Confirm Deletion</h3>
+                </div>
+                <div className="bg-[var(--status-critical-bg)] border border-[var(--status-critical-border)] rounded-lg p-4 mb-6">
+                  <p className="text-[var(--status-critical-text)] font-medium">
+                    {Array.isArray(deleteTarget) 
+                      ? `Are you sure you want to delete ${deleteTarget.length} payment application(s)? This action cannot be undone.`
+                      : `Are you sure you want to delete payment application #${deleteTarget}? This action cannot be undone.`
+                    }
+                  </p>
+                </div>
                 <div className="flex gap-3 justify-end">
                   <button
                     onClick={() => {
                       setShowConfirmDialog(null);
                       setDeleteTarget(null);
                     }}
-                    className="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-md"
+                    className="px-4 py-2 text-muted-foreground hover:text-foreground border border-border rounded-lg bg-muted hover:bg-muted/80 transition-colors"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={confirmDelete}
-                    className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                    disabled={actionLoading}
+                    className="px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white rounded-lg shadow-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
-                    Delete
+                    {actionLoading ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        Deleting...
+                      </>
+                    ) : (
+                      'Delete'
+                    )}
                   </button>
                 </div>
               </>
@@ -1475,19 +1586,26 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
             
             {showConfirmDialog === 'approve' && (
               <>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Confirm Approval</h3>
-                <p className="text-gray-600 mb-4">Are you sure you want to approve this payment application?</p>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-12 h-12 rounded-xl bg-[var(--status-success-bg)] flex items-center justify-center">
+                    <CheckCircle className="w-6 h-6 text-[var(--status-success-icon)]" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-foreground">Confirm Approval</h3>
+                </div>
+                <div className="bg-[var(--status-success-bg)] border border-[var(--status-success-border)] rounded-lg p-4 mb-4">
+                  <p className="text-[var(--status-success-text)] font-medium">Are you sure you want to approve this payment application?</p>
+                </div>
                 <textarea
                   value={approvalNotes}
                   onChange={(e) => setApprovalNotes(e.target.value)}
                   placeholder="Add approval notes (optional)"
-                  className="w-full p-2 border border-gray-300 rounded-md mb-4 resize-none"
+                  className="w-full p-3 border border-border rounded-lg mb-4 resize-none bg-card text-foreground focus:ring-2 focus:ring-primary focus:border-primary transition-all"
                   rows={3}
                 />
                 <div className="flex gap-3 justify-end">
                   <button
                     onClick={() => setShowConfirmDialog(null)}
-                    className="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-md"
+                    className="px-4 py-2 text-muted-foreground hover:text-foreground border border-border rounded-lg bg-muted hover:bg-muted/80 transition-colors"
                   >
                     Cancel
                   </button>
@@ -1496,7 +1614,7 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
                       // TODO: Implement approval logic
                       setShowConfirmDialog(null);
                     }}
-                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                    className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white rounded-lg shadow-lg transition-colors"
                   >
                     Approve
                   </button>
@@ -1506,20 +1624,27 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
 
             {showConfirmDialog === 'reject' && (
               <>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Confirm Rejection</h3>
-                <p className="text-gray-600 mb-4">Are you sure you want to reject this payment application?</p>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-12 h-12 rounded-xl bg-[var(--status-warning-bg)] flex items-center justify-center">
+                    <XCircle className="w-6 h-6 text-[var(--status-warning-icon)]" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-foreground">Confirm Rejection</h3>
+                </div>
+                <div className="bg-[var(--status-warning-bg)] border border-[var(--status-warning-border)] rounded-lg p-4 mb-4">
+                  <p className="text-[var(--status-warning-text)] font-medium">Are you sure you want to reject this payment application?</p>
+                </div>
                 <textarea
                   value={rejectionNotes}
                   onChange={(e) => setRejectionNotes(e.target.value)}
                   placeholder="Add rejection reason (required)"
-                  className="w-full p-2 border border-gray-300 rounded-md mb-4 resize-none"
+                  className="w-full p-3 border border-border rounded-lg mb-4 resize-none bg-card text-foreground focus:ring-2 focus:ring-primary focus:border-primary transition-all"
                   rows={3}
                   required
                 />
                 <div className="flex gap-3 justify-end">
                   <button
                     onClick={() => setShowConfirmDialog(null)}
-                    className="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-md"
+                    className="px-4 py-2 text-muted-foreground hover:text-foreground border border-border rounded-lg bg-muted hover:bg-muted/80 transition-colors"
                   >
                     Cancel
                   </button>
@@ -1528,7 +1653,7 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
                       // TODO: Implement rejection logic
                       setShowConfirmDialog(null);
                     }}
-                    className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                    className="px-4 py-2 bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 text-white rounded-lg shadow-lg transition-colors"
                   >
                     Reject
                   </button>

@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import twilio from 'twilio';
-
-const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
-const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-const TWILIO_PHONE_NUMBER = process.env.TWILIO_PHONE_NUMBER;
+import { supabaseAdmin as supabase } from '@/lib/supabaseClient';
+import { twilioClient, TWILIO_PHONE_NUMBER } from '@/lib/twilioClient';
 
 export async function POST(req: NextRequest) {
+  if (!supabase) {
+    return NextResponse.json({ error: 'Service unavailable - Database' }, { status: 503 });
+  }
+
+  if (!twilioClient || !TWILIO_PHONE_NUMBER) {
+    return NextResponse.json({ error: 'Service unavailable - SMS' }, { status: 503 });
+  }
+
   // 1. Get all active projects and their managers
   const { data: projects } = await supabase.from('properties').select('property_id, property_name, manager_id, manager_phone');
   if (!projects) return NextResponse.json({ error: 'No projects found' }, { status: 404 });

@@ -83,7 +83,7 @@ const VirtualizedProjectList = memo<VirtualizedProjectListProps>(({
 
   if (filteredProjects.length === 0) {
     return (
-      <div className="flex items-center justify-center h-64 text-gray-500">
+      <div className="flex items-center justify-center h-64 text-muted-foreground">
         <div className="text-center">
           <p className="text-lg font-medium">No projects found</p>
           {searchQuery && <p className="text-sm">Try adjusting your search query</p>}

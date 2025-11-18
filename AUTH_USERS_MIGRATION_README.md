@@ -88,9 +88,24 @@ role: "staff|pm|admin"
 
 ## Migration Steps
 
-### 1. Run the Migration Script
+### 1. Create the user_role Table (Required First)
 
-Execute the migration script to ensure proper structure:
+**For fresh/new databases:**
+```sql
+-- Run the migration file: scripts/create-user-role-table.sql
+```
+
+This creates the `user_role` table with:
+- Proper structure and foreign keys
+- RLS policies that fix 406 errors
+- Admin bootstrap (first confirmed user becomes admin)
+- Performance optimizations
+
+**Important:** Run this BEFORE migrate-to-auth-users.sql
+
+### 2. Run the Auth Users Migration (If migrating from old structure)
+
+Execute the migration script if you're migrating from an old `public.users` table:
 
 ```sql
 -- Run the migration file: migrate-to-auth-users.sql
@@ -99,17 +114,19 @@ Execute the migration script to ensure proper structure:
 This will:
 - Create a backup of the current `users` table
 - Update existing auth users with metadata from `public.users`
-- Ensure all auth users have corresponding entries in `user_role` table
+- Preserve existing roles from the old users table
 - Create helper views and functions
 
-### 2. Test the Changes
+**Note:** For fresh setups, you can skip this and only run `scripts/create-user-role-table.sql`
+
+### 3. Test the Changes
 
 1. Test user creation through the admin interface
 2. Test user updates and role changes
 3. Test authentication flow
 4. Verify user data is properly stored in both tables
 
-### 3. Clean Up (Optional)
+### 4. Clean Up (Optional)
 
 After confirming everything works:
 

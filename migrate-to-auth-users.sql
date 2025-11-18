@@ -1,5 +1,8 @@
 -- Migration script to work with auth.users and user_role table
 -- This script helps ensure the system works correctly with the existing structure
+--
+-- ⚠️  IMPORTANT: Run scripts/create-user-role-table.sql FIRST to create the user_role table
+-- This migration assumes the user_role table already exists with proper RLS policies
 
 -- 1. First, let's create a backup of the current users table (if it exists)
 CREATE TABLE IF NOT EXISTS users_backup AS SELECT * FROM users;
@@ -32,13 +35,16 @@ END $$;
 
 -- 3. Ensure user_role table has entries for all auth users
 -- Insert missing role entries for users that exist in auth.users but not in user_role
+-- NOTE: This preserves existing roles from the old 'users' table during migration
+-- For fresh setups, scripts/create-user-role-table.sql handles this better (with admin bootstrap)
 INSERT INTO user_role (user_id, role)
 SELECT au.id, COALESCE(u.role, 'staff') as role
 FROM auth.users au
 LEFT JOIN users u ON au.id::text = u.uuid
 LEFT JOIN user_role ur ON au.id = ur.user_id
 WHERE ur.user_id IS NULL
-AND au.email_confirmed_at IS NOT NULL; -- Only confirmed users
+AND au.email_confirmed_at IS NOT NULL -- Only confirmed users
+ON CONFLICT (user_id) DO NOTHING; -- Skip if role already exists
 
 -- 4. Create a view to help with the transition (optional)
 CREATE OR REPLACE VIEW auth_users_view AS

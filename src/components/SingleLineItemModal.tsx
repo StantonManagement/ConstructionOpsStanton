@@ -65,88 +65,88 @@ const SingleLineItemModal: React.FC<SingleLineItemModalProps> = ({ open, onClose
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in">
-      <div className="bg-white rounded-xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+      <div className="bg-card rounded-xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl">
         <div className="flex justify-between items-center mb-6">
-          <h3 className="text-lg font-semibold text-gray-800">{initialValues ? 'Edit' : 'Add'} Line Item</h3>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-100">
+          <h3 className="text-lg font-semibold text-foreground">{initialValues ? 'Edit' : 'Add'} Line Item</h3>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground p-1 rounded-full hover:bg-secondary">
             <X className="w-6 h-6" />
           </button>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-black mb-1">Item No <span className="text-red-500">*</span></label>
+            <label className="block text-sm font-medium text-foreground mb-1">Item No <span className="text-[var(--status-critical-text)]">*</span></label>
             <input
               type="text"
               value={form.itemNo}
               onChange={handleChange('itemNo')}
-              className={`w-full px-3 py-2 border rounded-lg bg-gray-50 text-black ${errors.itemNo ? 'border-red-300' : 'border-gray-200'}`}
+              className={`w-full px-3 py-2 border rounded-lg bg-secondary text-foreground ${errors.itemNo ? 'border-[var(--status-critical-border)]' : 'border-border'}`}
               placeholder="Item number"
             />
-            {errors.itemNo && <p className="text-red-500 text-xs mt-1">{errors.itemNo}</p>}
+            {errors.itemNo && <p className="text-[var(--status-critical-text)] text-xs mt-1">{errors.itemNo}</p>}
           </div>
           <div>
-            <label className="block text-sm font-medium text-black mb-1">Description <span className="text-red-500">*</span></label>
+            <label className="block text-sm font-medium text-foreground mb-1">Description <span className="text-[var(--status-critical-text)]">*</span></label>
             <input
               type="text"
               value={form.description}
               onChange={handleChange('description')}
-              className={`w-full px-3 py-2 border rounded-lg bg-gray-50 text-black ${errors.description ? 'border-red-300' : 'border-gray-200'}`}
+              className={`w-full px-3 py-2 border rounded-lg bg-secondary text-foreground ${errors.description ? 'border-[var(--status-critical-border)]' : 'border-border'}`}
               placeholder="Description of work"
             />
-            {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description}</p>}
+            {errors.description && <p className="text-[var(--status-critical-text)] text-xs mt-1">{errors.description}</p>}
           </div>
           <div>
-            <label className="block text-sm font-medium text-black mb-1">Scheduled Value <span className="text-red-500">*</span></label>
+            <label className="block text-sm font-medium text-foreground mb-1">Scheduled Value <span className="text-[var(--status-critical-text)]">*</span></label>
             <input
               type="number"
               value={form.scheduledValue}
               onChange={handleNumberChange('scheduledValue')}
-              className={`w-full px-3 py-2 border rounded-lg bg-gray-50 text-black ${errors.scheduledValue ? 'border-red-300' : 'border-gray-200'}`}
+              className={`w-full px-3 py-2 border rounded-lg bg-secondary text-foreground ${errors.scheduledValue ? 'border-[var(--status-critical-border)]' : 'border-border'}`}
               placeholder="0.00"
               min={0}
             />
-            {errors.scheduledValue && <p className="text-red-500 text-xs mt-1">{errors.scheduledValue}</p>}
+            {errors.scheduledValue && <p className="text-[var(--status-critical-text)] text-xs mt-1">{errors.scheduledValue}</p>}
           </div>
           <div>
-            <label className="block text-sm font-medium text-black mb-1">From Previous Application</label>
+            <label className="block text-sm font-medium text-foreground mb-1">From Previous Application</label>
             <input
               type="number"
               value={form.fromPrevious}
               onChange={handleNumberChange('fromPrevious')}
-              className="w-full px-3 py-2 border rounded-lg bg-gray-50 border-gray-200 text-black"
+              className="w-full px-3 py-2 border rounded-lg bg-secondary border-border text-foreground"
               placeholder="0.00"
               min={0}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-black mb-1">This Period</label>
+            <label className="block text-sm font-medium text-foreground mb-1">This Period</label>
             <input
               type="number"
               value={form.thisPeriod}
               onChange={handleNumberChange('thisPeriod')}
-              className="w-full px-3 py-2 border rounded-lg bg-gray-50 border-gray-200 text-black"
+              className="w-full px-3 py-2 border rounded-lg bg-secondary border-border text-foreground"
               placeholder="0.00"
               min={0}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-black mb-1">Material Presently Stored</label>
+            <label className="block text-sm font-medium text-foreground mb-1">Material Presently Stored</label>
             <input
               type="number"
               value={form.materialStored}
               onChange={handleNumberChange('materialStored')}
-              className="w-full px-3 py-2 border rounded-lg bg-gray-50 border-gray-200 text-black"
+              className="w-full px-3 py-2 border rounded-lg bg-secondary border-border text-foreground"
               placeholder="0.00"
               min={0}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-black mb-1">% G/C</label>
+            <label className="block text-sm font-medium text-foreground mb-1">% G/C</label>
             <input
               type="number"
               value={form.percentGC}
               onChange={handleNumberChange('percentGC')}
-              className="w-full px-3 py-2 border rounded-lg bg-gray-50 border-gray-200 text-black"
+              className="w-full px-3 py-2 border rounded-lg bg-secondary border-border text-foreground"
               placeholder="0"
               min={0}
               max={100}
@@ -156,13 +156,13 @@ const SingleLineItemModal: React.FC<SingleLineItemModalProps> = ({ open, onClose
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+              className="px-4 py-2 text-muted-foreground bg-secondary rounded-lg hover:bg-secondary/80"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
             >
               Save
             </button>

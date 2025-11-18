@@ -79,33 +79,33 @@ const AddForm = ({ title, icon, fields, onSubmit, onClose, isLoading = false, in
   };
   const labelize = (str: string) => str.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
   return (
-    <div className="bg-white rounded-xl p-6 w-full shadow-2xl max-w-md mx-auto">
+    <div className="bg-card rounded-xl p-6 w-full shadow-2xl max-w-md mx-auto">
       <div className="flex justify-between items-center mb-6">
-        <h3 className="text-xl font-semibold text-gray-800 flex items-center gap-2">{icon}{title}</h3>
-        <button onClick={onClose} className="text-black-500 hover:text-black-700 p-1 rounded-full hover:bg-gray-100"><XCircle className="w-6 h-6" /></button>
+        <h3 className="text-xl font-semibold text-foreground flex items-center gap-2">{icon}{title}</h3>
+        <button onClick={onClose} className="text-muted-foreground hover:text-foreground p-1 rounded-full hover:bg-accent"><XCircle className="w-6 h-6" /></button>
       </div>
       <form onSubmit={handleSubmit} className="space-y-5">
         {fields.map(field => (
           <div key={field.name}>
-            <label className="block text-sm font-medium text-black mb-1.5">{labelize(field.name)}{field.required && <span className="text-red-500 ml-1">*</span>}</label>
+            <label className="block text-sm font-medium text-foreground mb-1.5">{labelize(field.name)}{field.required && <span className="text-[var(--status-critical-text)] ml-1">*</span>}</label>
             <input
               type={field.type || 'text'}
               name={field.name}
               value={formData[field.name] !== undefined ? formData[field.name] : (field.defaultValue || '')}
               onChange={handleChange}
               onBlur={handleBlur}
-              className={`w-full px-5 py-3 text-base border rounded-lg focus:ring-2 focus:ring-blue-500 transition-all duration-200 bg-gray-50 text-black placeholder-gray-400 ${errors[field.name] && touched[field.name] ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : 'border-gray-200 focus:border-blue-500'}`}
+              className={`w-full px-5 py-3 text-base border rounded-lg focus:ring-2 focus:ring-primary transition-all duration-200 bg-input text-foreground placeholder-muted-foreground ${errors[field.name] && touched[field.name] ? 'border-destructive focus:border-destructive focus:ring-destructive' : 'border-border focus:border-primary'}`}
               placeholder={field.placeholder}
               disabled={isLoading}
             />
             {errors[field.name] && touched[field.name] && (
-              <p className="text-red-500 text-sm mt-1 flex items-center gap-1"><AlertCircle className="w-4 h-4" />{errors[field.name]}</p>
+              <p className="text-[var(--status-critical-text)] text-sm mt-1 flex items-center gap-1"><AlertCircle className="w-4 h-4" />{errors[field.name]}</p>
             )}
           </div>
         ))}
         <div className="flex justify-end gap-3 pt-4">
-          <button type="button" onClick={onClose} className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors duration-200">Cancel</button>
-          <button type="submit" disabled={isLoading} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 disabled:bg-blue-400 flex items-center gap-2">{isLoading ? (<><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Saving...</>) : 'Save'}</button>
+          <button type="button" onClick={onClose} className="px-4 py-2 text-muted-foreground bg-secondary rounded-lg hover:bg-secondary/80 transition-colors duration-200">Cancel</button>
+          <button type="submit" disabled={isLoading} className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors duration-200 disabled:bg-primary/50 flex items-center gap-2">{isLoading ? (<><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Saving...</>) : 'Save'}</button>
         </div>
       </form>
     </div>
@@ -195,13 +195,13 @@ const SubcontractorsView: React.FC<SubcontractorsViewProps> = ({ searchQuery = '
     const getStatusIcon = (status: string) => {
         switch (status) {
             case 'active':
-                return <CheckCircle className="w-4 h-4 text-green-500" />;
+                return <CheckCircle className="w-4 h-4 text-[var(--status-success-text)]" />;
             case 'inactive':
-                return <XCircle className="w-4 h-4 text-red-500" />;
+                return <XCircle className="w-4 h-4 text-[var(--status-critical-text)]" />;
             case 'pending':
                 return <AlertCircle className="w-4 h-4 text-yellow-500" />;
             default:
-                return <AlertCircle className="w-4 h-4 text-gray-500" />;
+                return <AlertCircle className="w-4 h-4 text-muted-foreground" />;
         }
     };
 
@@ -217,14 +217,14 @@ const SubcontractorsView: React.FC<SubcontractorsViewProps> = ({ searchQuery = '
                 {[1, 2, 3, 4, 5].map((star) => (
                     <svg
                         key={star}
-                        className={`w-4 h-4 ${star <= rating ? 'text-yellow-400' : 'text-gray-300'}`}
+                        className={`w-4 h-4 ${star <= rating ? 'text-yellow-400' : 'text-muted-foreground'}`}
                         fill="currentColor"
                         viewBox="0 0 20 20"
                     >
                         <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                     </svg>
                 ))}
-                <span className="ml-2 text-sm text-gray-600">({rating}/5)</span>
+                <span className="ml-2 text-sm text-muted-foreground">({rating}/5)</span>
             </div>
         );
     };
@@ -298,9 +298,9 @@ const SubcontractorsView: React.FC<SubcontractorsViewProps> = ({ searchQuery = '
     };
 
     return (
-        <div className="bg-white rounded-lg border shadow-sm">
+        <div className="bg-card rounded-lg border shadow-sm">
             {/* Header */}
-            <div className="p-6 border-b border-gray-200">
+            <div className="p-6 border-b border-border">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                     <div>
                         <h3 className="text-lg font-semibold text-neutral-800">Subcontractor Directory</h3>
@@ -309,7 +309,7 @@ const SubcontractorsView: React.FC<SubcontractorsViewProps> = ({ searchQuery = '
                         </p>
                     </div>
                     <div className="mt-4 sm:mt-0">
-                        <button className="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-2" onClick={() => { setSelectedSub(null); setModal('add'); }}>
+                        <button className="bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-medium hover:bg-primary/90 transition-colors flex items-center gap-2" onClick={() => { setSelectedSub(null); setModal('add'); }}>
                           <UserPlus className="w-4 h-4" /> Add Subcontractor
                         </button>
                     </div>
@@ -322,36 +322,36 @@ const SubcontractorsView: React.FC<SubcontractorsViewProps> = ({ searchQuery = '
                         <input
                             type="text"
                             placeholder="Search subcontractors..."
-                            className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-neutral-700 placeholder-neutral-500"
+                            className="pl-10 pr-4 py-2 w-full border border-border rounded-md focus:ring-2 focus:ring-primary focus:border-transparent text-muted-foreground placeholder-neutral-500"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
                     
                     <select
-                        className="px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-neutral-700"
+                        className="px-4 py-2 border border-border rounded-md focus:ring-2 focus:ring-primary focus:border-transparent text-muted-foreground"
                         value={filterTrade}
                         onChange={(e) => setFilterTrade(e.target.value)}
                     >
-                        <option value="" className="text-neutral-700">All Trades</option>
+                        <option value="" className="text-muted-foreground">All Trades</option>
                         {uniqueTrades.map(trade => (
-                            <option key={trade} value={trade} className="text-neutral-700">{trade}</option>
+                            <option key={trade} value={trade} className="text-muted-foreground">{trade}</option>
                         ))}
                     </select>
 
                     <select
-                        className="px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-neutral-700"
+                        className="px-4 py-2 border border-border rounded-md focus:ring-2 focus:ring-primary focus:border-transparent text-muted-foreground"
                         value={filterStatus}
                         onChange={(e) => setFilterStatus(e.target.value)}
                     >
-                        <option value="" className="text-neutral-700">All Status</option>
-                        <option value="active" className="text-neutral-700">Active</option>
-                        <option value="inactive" className="text-neutral-700">Inactive</option>
-                        <option value="pending" className="text-neutral-700">Pending</option>
+                        <option value="" className="text-muted-foreground">All Status</option>
+                        <option value="active" className="text-muted-foreground">Active</option>
+                        <option value="inactive" className="text-muted-foreground">Inactive</option>
+                        <option value="pending" className="text-muted-foreground">Pending</option>
                     </select>
 
                     <select
-                        className="px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-neutral-700"
+                        className="px-4 py-2 border border-border rounded-md focus:ring-2 focus:ring-primary focus:border-transparent text-muted-foreground"
                         value={`${sortBy}-${sortOrder}`}
                         onChange={(e) => {
                             const [field, order] = e.target.value.split('-');
@@ -359,12 +359,12 @@ const SubcontractorsView: React.FC<SubcontractorsViewProps> = ({ searchQuery = '
                             setSortOrder(order as 'asc' | 'desc');
                         }}
                     >
-                        <option value="name-asc" className="text-neutral-700">Name A-Z</option>
-                        <option value="name-desc" className="text-neutral-700">Name Z-A</option>
-                        <option value="trade-asc" className="text-neutral-700">Trade A-Z</option>
-                        <option value="trade-desc" className="text-neutral-700">Trade Z-A</option>
-                        <option value="performance_score-desc" className="text-neutral-700">Highest Rated</option>
-                        <option value="performance_score-asc" className="text-neutral-700">Lowest Rated</option>
+                        <option value="name-asc" className="text-muted-foreground">Name A-Z</option>
+                        <option value="name-desc" className="text-muted-foreground">Name Z-A</option>
+                        <option value="trade-asc" className="text-muted-foreground">Trade A-Z</option>
+                        <option value="trade-desc" className="text-muted-foreground">Trade Z-A</option>
+                        <option value="performance_score-desc" className="text-muted-foreground">Highest Rated</option>
+                        <option value="performance_score-asc" className="text-muted-foreground">Lowest Rated</option>
                     </select>
                 </div>
             </div>
@@ -372,7 +372,7 @@ const SubcontractorsView: React.FC<SubcontractorsViewProps> = ({ searchQuery = '
             {/* Desktop Table View */}
             <div className="hidden lg:block overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
+                    <thead className="bg-muted">
                         <tr>
                             <th className="px-6 py-3 text-left text-xs font-medium text-neutral-600 uppercase tracking-wider">
                                 Subcontractor
@@ -394,14 +394,14 @@ const SubcontractorsView: React.FC<SubcontractorsViewProps> = ({ searchQuery = '
                             </th>
                         </tr>
                     </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
+                    <tbody className="bg-card divide-y divide-gray-200">
                         {filteredSubcontractors.map((sub) => {
                             const complianceScore = getComplianceScore(sub.compliance);
                             
                             return (
                                 <tr 
                                     key={sub.id} 
-                                    className="hover:bg-blue-50 hover:shadow-sm hover:border-l-4 hover:border-l-blue-500 transition-all duration-200 cursor-pointer group border-l-4 border-l-transparent"
+                                    className="hover:bg-primary/5 hover:shadow-sm hover:border-l-4 hover:border-l-primary transition-all duration-200 cursor-pointer group border-l-4 border-l-transparent"
                                     onClick={() => handleView(sub)}
                                     role="button"
                                     tabIndex={0}
@@ -415,20 +415,20 @@ const SubcontractorsView: React.FC<SubcontractorsViewProps> = ({ searchQuery = '
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="flex items-center">
                                             <div className="flex-shrink-0 h-10 w-10">
-                                                <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                                                    <span className="text-blue-800 font-medium text-sm">
+                                                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                                                    <span className="text-primary font-medium text-sm">
                                                         {sub.name.split(' ').map(n => n[0]).join('').substring(0, 2)}
                                                     </span>
                                                 </div>
                                             </div>
                                             <div className="ml-4">
-                                                <div className="text-sm font-medium text-neutral-800 group-hover:text-blue-700 transition-colors">
+                                                <div className="text-sm font-medium text-neutral-800 group-hover:text-primary transition-colors">
                                                     {sub.name}
-                                                    <span className="ml-2 text-xs text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <span className="ml-2 text-xs text-primary opacity-0 group-hover:opacity-100 transition-opacity">
                                                         Click to view →
                                                     </span>
                                                 </div>
-                                                <div className="text-sm text-neutral-700">
+                                                <div className="text-sm text-muted-foreground">
                                                     {sub.trade}
                                                 </div>
                                             </div>
@@ -445,10 +445,10 @@ const SubcontractorsView: React.FC<SubcontractorsViewProps> = ({ searchQuery = '
                                             {getStatusIcon(sub.status)}
                                             <span className={`ml-2 px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                                                 sub.status === 'active' 
-                                                    ? 'bg-green-100 text-green-800' 
+                                                    ? 'bg-[var(--status-success-bg)] text-[var(--status-success-text)]' 
                                                     : sub.status === 'inactive'
-                                                    ? 'bg-red-100 text-red-800'
-                                                    : 'bg-yellow-100 text-yellow-800'
+                                                    ? 'bg-[var(--status-critical-bg)] text-[var(--status-critical-text)]'
+                                                    : 'bg-[var(--status-warning-bg)] text-[var(--status-warning-text)]'
                                             }`}>
                                                 {sub.status}
                                             </span>
@@ -460,21 +460,21 @@ const SubcontractorsView: React.FC<SubcontractorsViewProps> = ({ searchQuery = '
                                             <div className="flex flex-col space-y-1">
                                                 <div className="flex items-center text-xs">
                                                     <span className={`w-2 h-2 rounded-full mr-2 ${
-                                                        sub.compliance.insurance === 'valid' ? 'bg-green-500' : 'bg-red-500'
+                                                        sub.compliance.insurance === 'valid' ? 'bg-[var(--status-success-text)]' : 'bg-[var(--status-critical-text)]'
                                                     }`}></span>
-                                                    <span className="text-neutral-700">Insurance</span>
+                                                    <span className="text-muted-foreground">Insurance</span>
                                                 </div>
                                                 <div className="flex items-center text-xs">
                                                     <span className={`w-2 h-2 rounded-full mr-2 ${
-                                                        sub.compliance.license === 'valid' ? 'bg-green-500' : 'bg-red-500'
+                                                        sub.compliance.license === 'valid' ? 'bg-[var(--status-success-text)]' : 'bg-[var(--status-critical-text)]'
                                                     }`}></span>
-                                                    <span className="text-neutral-700">License</span>
+                                                    <span className="text-muted-foreground">License</span>
                                                 </div>
                                             </div>
                                             <div className="ml-3">
                                                 <div className={`text-xs font-semibold ${
-                                                    complianceScore >= 80 ? 'text-green-600' :
-                                                    complianceScore >= 60 ? 'text-yellow-600' : 'text-red-600'
+                                                    complianceScore >= 80 ? 'text-[var(--status-success-text)]' :
+                                                    complianceScore >= 60 ? 'text-[var(--status-warning-text)]' : 'text-[var(--status-critical-text)]'
                                                 }`}>
                                                     {complianceScore}%
                                                 </div>
@@ -482,7 +482,7 @@ const SubcontractorsView: React.FC<SubcontractorsViewProps> = ({ searchQuery = '
                                         </div>
                                     </td>
                                     
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-700">
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                                         <div className="flex flex-col space-y-1">
                                             {sub.phone && (
                                                 <div className="flex items-center">
@@ -502,7 +502,7 @@ const SubcontractorsView: React.FC<SubcontractorsViewProps> = ({ searchQuery = '
                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                         <div className="flex space-x-2">
                                             <button 
-                                                className="text-blue-600 hover:text-blue-900 text-sm" 
+                                                className="text-primary hover:text-primary text-sm" 
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     handleView(sub);
@@ -511,7 +511,7 @@ const SubcontractorsView: React.FC<SubcontractorsViewProps> = ({ searchQuery = '
                                                 View
                                             </button>
                                             <button 
-                                                className="text-green-600 hover:text-green-900 text-sm" 
+                                                className="text-[var(--status-success-text)] hover:text-[var(--status-success-text)] text-sm" 
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     handleContact(sub);
@@ -520,7 +520,7 @@ const SubcontractorsView: React.FC<SubcontractorsViewProps> = ({ searchQuery = '
                                                 Contact
                                             </button>
                                             <button 
-                                                className="text-gray-600 hover:text-gray-900 text-sm" 
+                                                className="text-muted-foreground hover:text-foreground text-sm" 
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     setSelectedSub(sub);
@@ -551,8 +551,8 @@ const SubcontractorsView: React.FC<SubcontractorsViewProps> = ({ searchQuery = '
             <div className="lg:hidden space-y-4 p-4">
                 {filteredSubcontractors.length === 0 ? (
                     <div className="text-center py-8">
-                        <div className="text-gray-500 text-base mb-2">No subcontractors found</div>
-                        <div className="text-gray-400 text-sm">
+                        <div className="text-muted-foreground text-base mb-2">No subcontractors found</div>
+                        <div className="text-muted-foreground text-sm">
                             Try adjusting your search or filter criteria
                         </div>
                     </div>
@@ -563,30 +563,30 @@ const SubcontractorsView: React.FC<SubcontractorsViewProps> = ({ searchQuery = '
                         return (
                             <div 
                                 key={sub.id}
-                                className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-all cursor-pointer"
+                                className="bg-card border border-border rounded-lg p-4 shadow-sm hover:shadow-md transition-all cursor-pointer"
                                 onClick={() => handleView(sub)}
                             >
                                 {/* Header */}
                                 <div className="flex items-center justify-between mb-3">
                                     <div className="flex items-center gap-3">
-                                        <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
-                                            <span className="text-blue-800 font-medium text-sm">
+                                        <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                                            <span className="text-primary font-medium text-sm">
                                                 {sub.name.split(' ').map(n => n[0]).join('').substring(0, 2)}
                                             </span>
                                         </div>
                                         <div>
-                                            <h3 className="font-semibold text-gray-900 text-base">{sub.name}</h3>
-                                            <p className="text-sm text-gray-600">{sub.trade}</p>
+                                            <h3 className="font-semibold text-foreground text-base">{sub.name}</h3>
+                                            <p className="text-sm text-muted-foreground">{sub.trade}</p>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2">
                                         {getStatusIcon(sub.status)}
                                         <span className={`px-2 py-1 inline-flex text-xs font-semibold rounded-full ${
                                             sub.status === 'active' 
-                                                ? 'bg-green-100 text-green-800' 
+                                                ? 'bg-[var(--status-success-bg)] text-[var(--status-success-text)]' 
                                                 : sub.status === 'inactive'
-                                                ? 'bg-red-100 text-red-800'
-                                                : 'bg-yellow-100 text-yellow-800'
+                                                ? 'bg-[var(--status-critical-bg)] text-[var(--status-critical-text)]'
+                                                : 'bg-[var(--status-warning-bg)] text-[var(--status-warning-text)]'
                                         }`}>
                                             {sub.status}
                                         </span>
@@ -601,7 +601,7 @@ const SubcontractorsView: React.FC<SubcontractorsViewProps> = ({ searchQuery = '
                                                 {[1, 2, 3, 4, 5].map((star) => (
                                                     <svg
                                                         key={star}
-                                                        className={`w-4 h-4 ${star <= (sub as any).performance_score ? 'text-yellow-400' : 'text-gray-300'}`}
+                                                        className={`w-4 h-4 ${star <= (sub as any).performance_score ? 'text-yellow-400' : 'text-muted-foreground'}`}
                                                         fill="currentColor"
                                                         viewBox="0 0 20 20"
                                                     >
@@ -609,7 +609,7 @@ const SubcontractorsView: React.FC<SubcontractorsViewProps> = ({ searchQuery = '
                                                     </svg>
                                                 ))}
                                             </div>
-                                            <span className="text-sm text-gray-600">({(sub as any).performance_score}/5)</span>
+                                            <span className="text-sm text-muted-foreground">({(sub as any).performance_score}/5)</span>
                                         </div>
                                     </div>
                                 )}
@@ -620,20 +620,20 @@ const SubcontractorsView: React.FC<SubcontractorsViewProps> = ({ searchQuery = '
                                         <div className="flex flex-col space-y-1">
                                             <div className="flex items-center text-xs">
                                                 <span className={`w-2 h-2 rounded-full mr-2 ${
-                                                    sub.compliance.insurance === 'valid' ? 'bg-green-500' : 'bg-red-500'
+                                                    sub.compliance.insurance === 'valid' ? 'bg-[var(--status-success-text)]' : 'bg-[var(--status-critical-text)]'
                                                 }`}></span>
-                                                <span className="text-gray-700">Insurance</span>
+                                                <span className="text-muted-foreground">Insurance</span>
                                             </div>
                                             <div className="flex items-center text-xs">
                                                 <span className={`w-2 h-2 rounded-full mr-2 ${
-                                                    sub.compliance.license === 'valid' ? 'bg-green-500' : 'bg-red-500'
+                                                    sub.compliance.license === 'valid' ? 'bg-[var(--status-success-text)]' : 'bg-[var(--status-critical-text)]'
                                                 }`}></span>
-                                                <span className="text-gray-700">License</span>
+                                                <span className="text-muted-foreground">License</span>
                                             </div>
                                         </div>
                                         <div className={`text-sm font-semibold ${
-                                            complianceScore >= 80 ? 'text-green-600' :
-                                            complianceScore >= 60 ? 'text-yellow-600' : 'text-red-600'
+                                            complianceScore >= 80 ? 'text-[var(--status-success-text)]' :
+                                            complianceScore >= 60 ? 'text-[var(--status-warning-text)]' : 'text-[var(--status-critical-text)]'
                                         }`}>
                                             {complianceScore}%
                                         </div>
@@ -644,14 +644,14 @@ const SubcontractorsView: React.FC<SubcontractorsViewProps> = ({ searchQuery = '
                                 <div className="mb-4">
                                     <div className="space-y-2">
                                         {sub.phone && (
-                                            <div className="flex items-center text-sm text-gray-700">
-                                                <Phone className="w-4 h-4 mr-2 text-gray-500" />
+                                            <div className="flex items-center text-sm text-muted-foreground">
+                                                <Phone className="w-4 h-4 mr-2 text-muted-foreground" />
                                                 <span>{sub.phone}</span>
                                             </div>
                                         )}
                                         {sub.email && (
-                                            <div className="flex items-center text-sm text-gray-700">
-                                                <Mail className="w-4 h-4 mr-2 text-gray-500" />
+                                            <div className="flex items-center text-sm text-muted-foreground">
+                                                <Mail className="w-4 h-4 mr-2 text-muted-foreground" />
                                                 <span className="truncate">{sub.email}</span>
                                             </div>
                                         )}
@@ -661,7 +661,7 @@ const SubcontractorsView: React.FC<SubcontractorsViewProps> = ({ searchQuery = '
                                 {/* Actions */}
                                 <div className="flex gap-2">
                                     <button 
-                                        className="flex-1 px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors"
+                                        className="flex-1 px-3 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-md hover:bg-primary/90 transition-colors"
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             handleView(sub);
@@ -670,7 +670,7 @@ const SubcontractorsView: React.FC<SubcontractorsViewProps> = ({ searchQuery = '
                                         View Details
                                     </button>
                                     <button 
-                                        className="flex-1 px-3 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 transition-colors"
+                                        className="flex-1 px-3 py-2 bg-[var(--status-success-text)] text-[var(--status-success-bg)] text-sm font-medium rounded-md hover:bg-[var(--status-success-text)]/90 transition-colors"
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             handleContact(sub);
@@ -689,7 +689,7 @@ const SubcontractorsView: React.FC<SubcontractorsViewProps> = ({ searchQuery = '
               <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50">
                 <AddForm
                   title="Add Subcontractor"
-                  icon={<UserPlus className="w-6 h-6 text-blue-600" />}
+                  icon={<UserPlus className="w-6 h-6 text-primary" />}
                   fields={vendorFields}
                   onSubmit={handleAddSubcontractor}
                   onClose={() => setModal(null)}
@@ -702,7 +702,7 @@ const SubcontractorsView: React.FC<SubcontractorsViewProps> = ({ searchQuery = '
               <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50">
                 <AddForm
                   title="Edit Subcontractor"
-                  icon={<UserPlus className="w-6 h-6 text-blue-600" />}
+                  icon={<UserPlus className="w-6 h-6 text-primary" />}
                   fields={vendorFields}
                   onSubmit={handleEditSubcontractor}
                   onClose={() => setModal(null)}
@@ -719,34 +719,34 @@ const SubcontractorsView: React.FC<SubcontractorsViewProps> = ({ searchQuery = '
             {/* View Modal */}
             {modal === 'view' && selectedSub && (
               <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50">
-                <div className="relative bg-white rounded-2xl p-8 max-w-sm w-full shadow-2xl border border-gray-200 flex flex-col">
-                  <button onClick={() => setModal(null)} className="absolute top-3 right-3 text-gray-400 hover:text-gray-700 p-1 rounded-full hover:bg-gray-100 transition-colors"><XCircle className="w-6 h-6" /></button>
-                  <h3 className="text-2xl font-bold text-blue-900 mb-4 text-center">Subcontractor Details</h3>
-                  <div className="space-y-3 text-base text-gray-800">
+                <div className="relative bg-card rounded-2xl p-8 max-w-sm w-full shadow-2xl border border-border flex flex-col">
+                  <button onClick={() => setModal(null)} className="absolute top-3 right-3 text-muted-foreground hover:text-muted-foreground p-1 rounded-full hover:bg-secondary transition-colors"><XCircle className="w-6 h-6" /></button>
+                  <h3 className="text-2xl font-bold text-primary mb-4 text-center">Subcontractor Details</h3>
+                  <div className="space-y-3 text-base text-foreground">
                     <div><span className="font-semibold">Name:</span> {selectedSub.name}</div>
                     <div><span className="font-semibold">Trade:</span> {selectedSub.trade}</div>
                     <div><span className="font-semibold">Status:</span> <span className={`capitalize px-2 py-1 rounded-full text-xs font-semibold ml-1 ${
-                      selectedSub.status === 'active' ? 'bg-green-100 text-green-800' : 
-                      selectedSub.status === 'inactive' ? 'bg-red-100 text-red-800' : 
-                      'bg-yellow-100 text-yellow-800'
+                      selectedSub.status === 'active' ? 'bg-[var(--status-success-bg)] text-[var(--status-success-text)]' : 
+                      selectedSub.status === 'inactive' ? 'bg-[var(--status-critical-bg)] text-[var(--status-critical-text)]' : 
+                      'bg-[var(--status-warning-bg)] text-[var(--status-warning-text)]'
                     }`}>
                       {selectedSub.status}
                     </span></div>
-                    <div><span className="font-semibold">Phone:</span> {selectedSub.phone || <span className="text-gray-400">N/A</span>}</div>
-                    <div><span className="font-semibold">Email:</span> {selectedSub.email || <span className="text-gray-400">N/A</span>}</div>
+                    <div><span className="font-semibold">Phone:</span> {selectedSub.phone || <span className="text-muted-foreground">N/A</span>}</div>
+                    <div><span className="font-semibold">Email:</span> {selectedSub.email || <span className="text-muted-foreground">N/A</span>}</div>
                     <div><span className="font-semibold">Trade:</span> {selectedSub.trade}</div>
                   </div>
-                  <div className="my-4 border-t border-gray-200" />
+                  <div className="my-4 border-t border-border" />
                   <div>
-                    <div className="font-semibold text-gray-700 mb-2">Compliance</div>
+                    <div className="font-semibold text-muted-foreground mb-2">Compliance</div>
                     <div className="flex gap-4">
                       <div className="flex items-center gap-2">
-                        <span className={`w-3 h-3 rounded-full ${selectedSub.compliance.insurance === 'valid' ? 'bg-green-500' : 'bg-red-500'}`}></span>
-                        <span className="text-sm text-gray-700">Insurance</span>
+                        <span className={`w-3 h-3 rounded-full ${selectedSub.compliance.insurance === 'valid' ? 'bg-[var(--status-success-text)]' : 'bg-[var(--status-critical-text)]'}`}></span>
+                        <span className="text-sm text-muted-foreground">Insurance</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className={`w-3 h-3 rounded-full ${selectedSub.compliance.license === 'valid' ? 'bg-green-500' : 'bg-red-500'}`}></span>
-                        <span className="text-sm text-gray-700">License</span>
+                        <span className={`w-3 h-3 rounded-full ${selectedSub.compliance.license === 'valid' ? 'bg-[var(--status-success-text)]' : 'bg-[var(--status-critical-text)]'}`}></span>
+                        <span className="text-sm text-muted-foreground">License</span>
                       </div>
                     </div>
                   </div>
@@ -756,15 +756,15 @@ const SubcontractorsView: React.FC<SubcontractorsViewProps> = ({ searchQuery = '
             {/* Contact Modal */}
             {contactModal && (
               <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50">
-                <div className="bg-white rounded-xl p-8 max-w-md w-full shadow-2xl border border-gray-200">
+                <div className="bg-card rounded-xl p-8 max-w-md w-full shadow-2xl border border-border">
                   <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-xl font-semibold text-gray-800">Send SMS to {contactModal.name}</h3>
-                    <button onClick={() => setContactModal(null)} className="text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-100"><XCircle className="w-6 h-6" /></button>
+                    <h3 className="text-xl font-semibold text-foreground">Send SMS to {contactModal.name}</h3>
+                    <button onClick={() => setContactModal(null)} className="text-muted-foreground hover:text-muted-foreground p-1 rounded-full hover:bg-secondary"><XCircle className="w-6 h-6" /></button>
                   </div>
                   <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Message</label>
+                    <label className="block text-sm font-medium text-muted-foreground mb-1">Message</label>
                     <textarea
-                      className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-neutral-700"
+                      className="w-full border border-border rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary focus:border-primary transition-all text-muted-foreground"
                       rows={4}
                       value={contactMessage}
                       onChange={e => setContactMessage(e.target.value)}
@@ -773,20 +773,20 @@ const SubcontractorsView: React.FC<SubcontractorsViewProps> = ({ searchQuery = '
                     />
                   </div>
                   {contactStatus === 'error' && (
-                    <div className="text-red-600 text-sm mb-2">{contactError}</div>
+                    <div className="text-[var(--status-critical-text)] text-sm mb-2">{contactError}</div>
                   )}
                   {contactStatus === 'success' && (
-                    <div className="text-green-600 text-sm mb-2">Message sent successfully!</div>
+                    <div className="text-[var(--status-success-text)] text-sm mb-2">Message sent successfully!</div>
                   )}
                   <div className="flex justify-end gap-2">
                     <button
                       onClick={() => setContactModal(null)}
-                      className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                      className="px-4 py-2 text-muted-foreground bg-secondary rounded-lg hover:bg-secondary/80 transition-colors"
                       disabled={contactStatus === 'sending'}
                     >Cancel</button>
                     <button
                       onClick={handleSendContact}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                      className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
                       disabled={contactStatus === 'sending' || !contactMessage.trim()}
                     >{contactStatus === 'sending' ? 'Sending...' : 'Send SMS'}</button>
                   </div>

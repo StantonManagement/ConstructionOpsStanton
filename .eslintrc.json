@@ -1,0 +1,18 @@
+{
+  "extends": [
+    "next/core-web-vitals"
+  ],
+  "rules": {
+    "no-restricted-syntax": [
+      "error",
+      {
+        "selector": "CallExpression[callee.name='cn'] > Literal[value=/^(bg|text|border)-(blue|gray|red|green|yellow|amber|emerald|indigo|purple|pink|rose|orange|teal|cyan|sky|violet|fuchsia|lime|stone|zinc|neutral|slate)-[0-9]+$/]",
+        "message": "Use semantic CSS variables instead of hardcoded Tailwind colors. Use bg-primary, text-foreground, border-border, etc."
+      },
+      {
+        "selector": "TemplateLiteral > TemplateElement[value.raw=/^(bg|text|border)-(blue|gray|red|green|yellow|amber|emerald|indigo|purple|pink|rose|orange|teal|cyan|sky|violet|fuchsia|lime|stone|zinc|neutral|slate)-[0-9]+$/]",
+        "message": "Use semantic CSS variables instead of hardcoded Tailwind colors. Use bg-primary, text-foreground, border-border, etc."
+      }
+    ]
+  }
+}

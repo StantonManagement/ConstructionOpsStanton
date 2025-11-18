@@ -1,0 +1,11 @@
+[build]
+builder = "NIXPACKS"
+buildCommand = "npm install"
+
+[deploy]
+startCommand = "node scripts/railway-cron-runner.js"
+restartPolicyType = "ALWAYS"
+
+[env]
+NODE_VERSION = "20"
+

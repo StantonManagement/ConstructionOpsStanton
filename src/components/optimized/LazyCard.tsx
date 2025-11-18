@@ -58,15 +58,15 @@ const LazyCard = memo<LazyCardProps>(({
 
   const DefaultPlaceholder = () => (
     <div
-      className={`bg-gray-100 rounded-lg animate-pulse ${className}`}
+      className={`bg-secondary rounded-lg animate-pulse ${className}`}
       style={{ height: `${height}px` }}
     >
       <div className="p-4 space-y-3">
-        <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-        <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+        <div className="h-4 bg-secondary/80 rounded w-3/4"></div>
+        <div className="h-3 bg-secondary/80 rounded w-1/2"></div>
         <div className="space-y-2">
-          <div className="h-2 bg-gray-200 rounded"></div>
-          <div className="h-2 bg-gray-200 rounded w-5/6"></div>
+          <div className="h-2 bg-secondary/80 rounded"></div>
+          <div className="h-2 bg-secondary/80 rounded w-5/6"></div>
         </div>
       </div>
     </div>

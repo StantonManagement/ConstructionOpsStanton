@@ -1,22 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import twilio from 'twilio';
-
-// Validate environment variables
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-if (!supabaseUrl || !supabaseServiceKey) {
-  throw new Error('Missing required Supabase environment variables');
-}
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
-const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-const TWILIO_PHONE_NUMBER = process.env.TWILIO_PHONE_NUMBER;
+import { supabaseAdmin as supabase } from '@/lib/supabaseClient';
+import { twilioClient, TWILIO_PHONE_NUMBER } from '@/lib/twilioClient';
 
 // POST: Create payment applications for selected contractors
 export async function POST(req: NextRequest) {
   try {
+    if (!supabase) {
+      return NextResponse.json({ error: 'Service unavailable - Database' }, { status: 503 });
+    }
+
+    if (!twilioClient || !TWILIO_PHONE_NUMBER) {
+      return NextResponse.json({ error: 'Service unavailable - SMS' }, { status: 503 });
+    }
+
     const { projectId, contractorIds } = await req.json();
     if (!projectId || !Array.isArray(contractorIds) || contractorIds.length === 0) {
       return NextResponse.json({ error: 'Missing projectId or contractorIds' }, { status: 400 });
@@ -273,6 +269,8 @@ export async function POST(req: NextRequest) {
         .from('payment_sms_conversations')
         .insert({
           payment_app_id: paymentApp.id,
+          project_id: projectIdNum,
+          contractor_id: contractorIdNum,
           contractor_phone: contractor.phone || '',
           conversation_state: 'awaiting_start',
           responses: [],

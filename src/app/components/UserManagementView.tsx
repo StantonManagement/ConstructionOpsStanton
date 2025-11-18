@@ -47,25 +47,7 @@ interface AlertState {
   message: string;
 }
 
-type Permission = 'create' | 'read' | 'update' | 'delete';
-
-const ROLE_PERMISSIONS: Record<string, Permission[]> = {
-  admin: ['create', 'read', 'update', 'delete'],
-  pm: ['read'],
-  staff: []
-};
-
-const hasPermission = (role: string | null, permission: Permission): boolean => {
-  if (!role) return false;
-  const permissions = ROLE_PERMISSIONS[role.toLowerCase()];
-  return permissions ? permissions.includes(permission) : false;
-};
-
-const ROLE_OPTIONS = [
-  { value: 'staff', label: 'Staff' },
-  { value: 'pm', label: 'Project Manager' },
-  { value: 'admin', label: 'Admin' }
-] as const;
+import { ROLE_OPTIONS, hasPermission, canAccessUserManagement } from '@/lib/permissions';
 
 // Helper function to get auth headers
 const getAuthHeaders = async () => {
@@ -186,17 +168,17 @@ const useUsers = () => {
 // Alert component for better UX
 const Alert: React.FC<{ alert: AlertState; onClose: () => void }> = ({ alert, onClose }) => (
   <div className={`mb-4 p-4 rounded-lg flex items-start justify-between ${
-    alert.type === 'error' ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-green-50 text-green-700 border border-green-200'
+    alert.type === 'error' ? 'bg-[var(--status-critical-bg)] text-[var(--status-critical-text)] border border-[var(--status-critical-border)]' : 'bg-[var(--status-success-bg)] text-[var(--status-success-text)] border border-[var(--status-success-border)]'
   }`}>
     <div className="flex items-start">
-      <AlertCircle className={`w-5 h-5 mr-2 mt-0.5 ${alert.type === 'error' ? 'text-red-400' : 'text-green-400'}`} />
+      <AlertCircle className={`w-5 h-5 mr-2 mt-0.5 ${alert.type === 'error' ? 'text-[var(--status-critical-text)]' : 'text-[var(--status-success-text)]'}`} />
       <span>{alert.message}</span>
     </div>
     <Button 
       variant="ghost"
       size="sm"
       onClick={onClose}
-      className={`ml-4 h-auto p-1 ${alert.type === 'error' ? 'text-red-400 hover:text-red-600' : 'text-green-400 hover:text-green-600'}`}
+      className={`ml-4 h-auto p-1 ${alert.type === 'error' ? 'text-[var(--status-critical-text)] hover:text-[var(--status-critical-text)]' : 'text-[var(--status-success-text)] hover:text-[var(--status-success-text)]'}`}
       aria-label="Close alert"
     >
       ✕
@@ -207,8 +189,8 @@ const Alert: React.FC<{ alert: AlertState; onClose: () => void }> = ({ alert, on
 // Loading component
 const LoadingSpinner: React.FC<{ message?: string }> = ({ message = 'Loading...' }) => (
   <div className="p-8 text-center">
-    <Loader2 className="animate-spin h-8 w-8 text-blue-500 mx-auto" />
-    <p className="mt-2 text-sm text-gray-600">{message}</p>
+    <Loader2 className="animate-spin h-8 w-8 text-primary mx-auto" />
+    <p className="mt-2 text-sm text-muted-foreground">{message}</p>
   </div>
 );
 
@@ -285,10 +267,10 @@ const AddUserModal: React.FC<{
               value={formData.email}
               onChange={e => setFormData({ ...formData, email: e.target.value })}
               disabled={isSubmitting}
-              className={validationErrors.email ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : ''}
+              className={validationErrors.email ? 'border-[var(--status-critical-border)] focus:border-[var(--status-critical-border)] focus:ring-[var(--status-critical-border)]' : ''}
             />
             {validationErrors.email && (
-              <p className="text-sm text-red-600">{validationErrors.email}</p>
+              <p className="text-sm text-[var(--status-critical-text)]">{validationErrors.email}</p>
             )}
           </div>
 
@@ -301,10 +283,10 @@ const AddUserModal: React.FC<{
               value={formData.name}
               onChange={e => setFormData({ ...formData, name: e.target.value })}
               disabled={isSubmitting}
-              className={validationErrors.name ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : ''}
+              className={validationErrors.name ? 'border-[var(--status-critical-border)] focus:border-[var(--status-critical-border)] focus:ring-[var(--status-critical-border)]' : ''}
             />
             {validationErrors.name && (
-              <p className="text-sm text-red-600">{validationErrors.name}</p>
+              <p className="text-sm text-[var(--status-critical-text)]">{validationErrors.name}</p>
             )}
           </div>
 
@@ -338,7 +320,7 @@ const AddUserModal: React.FC<{
                 value={formData.password}
                 onChange={e => setFormData({ ...formData, password: e.target.value })}
                 disabled={isSubmitting}
-                className={`pr-10 ${validationErrors.password ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : ''}`}
+                className={`pr-10 ${validationErrors.password ? 'border-[var(--status-critical-border)] focus:border-[var(--status-critical-border)] focus:ring-[var(--status-critical-border)]' : ''}`}
                 minLength={6}
               />
               <Button
@@ -350,9 +332,9 @@ const AddUserModal: React.FC<{
                 disabled={isSubmitting}
               >
                 {showPassword ? (
-                  <EyeOff className="h-4 w-4 text-gray-500" />
+                  <EyeOff className="h-4 w-4 text-muted-foreground" />
                 ) : (
-                  <Eye className="h-4 w-4 text-gray-500" />
+                  <Eye className="h-4 w-4 text-muted-foreground" />
                 )}
                 <span className="sr-only">
                   {showPassword ? 'Hide password' : 'Show password'}
@@ -360,7 +342,7 @@ const AddUserModal: React.FC<{
               </Button>
             </div>
             {validationErrors.password && (
-              <p className="text-sm text-red-600">{validationErrors.password}</p>
+              <p className="text-sm text-[var(--status-critical-text)]">{validationErrors.password}</p>
             )}
           </div>
 
@@ -409,10 +391,10 @@ const PasswordResetModal: React.FC<{
           <DialogTitle>Reset Password</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-muted-foreground">
             Are you sure you want to reset the password for <strong>{user?.name}</strong>?
           </p>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-muted-foreground">
             This will send a password reset email to <strong>{user?.email}</strong>.
           </p>
         </div>
@@ -462,10 +444,10 @@ const DeleteUserModal: React.FC<{
           <DialogTitle>Delete User</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-muted-foreground">
             Are you sure you want to delete user <strong>{user?.name}</strong>?
           </p>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-muted-foreground">
             This action cannot be undone. The user will be permanently removed from the system.
           </p>
         </div>
@@ -556,9 +538,9 @@ const EditUserModal: React.FC<{
               type="email"
               value={formData.email ?? ''}
               disabled={true}
-              className="bg-gray-50 cursor-not-allowed"
+              className="bg-muted cursor-not-allowed"
             />
-            <p className="text-xs text-gray-500">Email cannot be changed</p>
+            <p className="text-xs text-muted-foreground">Email cannot be changed</p>
           </div>
 
           <div className="space-y-2">
@@ -802,17 +784,17 @@ const UserManagementView: React.FC = () => {
     );
   }
 
-  // Permission check
-  if (!userRole || !['admin', 'pm'].includes(userRole.toLowerCase())) {
+  // Permission check using centralized permission system
+  if (!canAccessUserManagement(userRole)) {
     return (
       <div className="p-4">
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+        <div className="bg-[var(--status-warning-bg)] border border-[var(--status-warning-border)] rounded-lg p-4">
           <div className="flex">
             <AlertCircle className="w-5 h-5 text-yellow-400 mr-2" />
             <div>
-              <h3 className="text-sm font-medium text-yellow-800">Access Denied</h3>
-              <p className="text-sm text-yellow-700 mt-1">
-                You don't have permission to access this page. Contact your administrator for access.
+              <h3 className="text-sm font-medium text-[var(--status-warning-text)]">Access Denied</h3>
+              <p className="text-sm text-[var(--status-warning-text)] mt-1">
+                You don&apos;t have permission to access this page. Contact your administrator for access.
               </p>
             </div>
           </div>
@@ -826,8 +808,8 @@ const UserManagementView: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
         <div>
-          <h2 className="text-3xl font-bold text-gray-900">User Management</h2>
-          <p className="mt-1 text-sm text-gray-500">
+          <h2 className="text-3xl font-bold text-foreground">User Management</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
             Manage users and their roles in the system
           </p>
         </div>
@@ -891,7 +873,7 @@ const UserManagementView: React.FC = () => {
       {/* Search */}
       <div className="mb-6">
         <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
           <Input
             type="text"
             placeholder="Search users..."
@@ -903,12 +885,12 @@ const UserManagementView: React.FC = () => {
       </div>
 
       {/* Users Table */}
-      <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+      <div className="bg-card rounded-lg shadow-sm border overflow-hidden">
         {loading ? (
           <LoadingSpinner message="Loading users..." />
         ) : filteredUsers.length === 0 ? (
           <div className="p-8 text-center">
-            <div className="text-gray-400 mb-2">
+            <div className="text-muted-foreground mb-2">
               {searchTerm ? (
                 <>
                   <Search className="w-12 h-12 mx-auto mb-2" />
@@ -927,54 +909,54 @@ const UserManagementView: React.FC = () => {
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+              <thead className="bg-muted">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     Name
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     Email
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     Role
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     Created
                   </th>
                   {(canUpdateUsers || canDeleteUsers || userRole?.toLowerCase() === 'admin') && (
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
                       Actions
                     </th>
                   )}
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-card divide-y divide-border">
                 {filteredUsers.map(user => (
-                  <tr key={user.id} className="hover:bg-gray-50">
+                  <tr key={user.id} className="hover:bg-muted">
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{user.name}</div>
+                      <div className="text-sm font-medium text-foreground">{user.name}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-600">{user.email}</div>
+                      <div className="text-sm text-muted-foreground">{user.email}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                      <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-primary/10 text-primary">
                         {ROLE_OPTIONS.find(r => r.value === user.role)?.label || user.role}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                         user.is_active 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-red-100 text-red-800'
+                          ? 'bg-[var(--status-success-bg)] text-[var(--status-success-text)]' 
+                          : 'bg-[var(--status-critical-bg)] text-[var(--status-critical-text)]'
                       }`}>
                         {user.is_active ? 'Active' : 'Inactive'}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                       {new Date(user.created_at).toLocaleDateString()}
                     </td>
                     {(canUpdateUsers || canDeleteUsers || userRole?.toLowerCase() === 'admin') && (
@@ -985,7 +967,7 @@ const UserManagementView: React.FC = () => {
                               variant="ghost"
                               size="sm"
                               onClick={() => toggleEdit(user)}
-                              className="text-blue-600 hover:text-blue-900 h-8 w-8 p-0"
+                              className="text-primary hover:text-primary h-8 w-8 p-0"
                               title="Edit user"
                             >
                               <Edit2 className="w-4 h-4" />
@@ -996,7 +978,7 @@ const UserManagementView: React.FC = () => {
                                variant="ghost"
                                size="sm"
                                onClick={() => openPasswordResetModal(user)}
-                               className="text-orange-600 hover:text-orange-900 h-8 w-8 p-0"
+                               className="text-[var(--status-warning-text)] hover:text-[var(--status-warning-text)] h-8 w-8 p-0"
                                title="Reset password"
                              >
                                <Key className="w-4 h-4" />
@@ -1007,7 +989,7 @@ const UserManagementView: React.FC = () => {
                               variant="ghost"
                               size="sm"
                               onClick={() => openDeleteModal(user)}
-                              className="text-red-600 hover:text-red-900 h-8 w-8 p-0"
+                              className="text-[var(--status-critical-text)] hover:text-[var(--status-critical-text)] h-8 w-8 p-0"
                               title="Delete user"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -1026,7 +1008,7 @@ const UserManagementView: React.FC = () => {
 
       {/* Summary */}
       {!loading && filteredUsers.length > 0 && (
-        <div className="mt-4 text-sm text-gray-500">
+        <div className="mt-4 text-sm text-muted-foreground">
           Showing {filteredUsers.length} of {users.length} users
           {searchTerm && ` matching "${searchTerm}"`}
         </div>

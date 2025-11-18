@@ -1,10 +1,14 @@
 import React, { useState, ChangeEvent, FormEvent, ReactNode, useCallback, useMemo, useEffect } from 'react';
-import { useData } from '../context/DataContext';
 import { supabase } from '@/lib/supabaseClient';
 import { Building, UserPlus, FilePlus, AlertCircle, CheckCircle, X, Search, Filter, Plus, Edit3, Eye, Trash2, Archive, Star, Calendar, DollarSign } from 'lucide-react';
-import LineItemFormModal from '@/components/LineItemFormModal';
-import LineItemEditor, { LineItem } from '@/components/LineItemEditor';
+import { useProjects } from '@/hooks/queries/useProjects';
+import { useContractors } from '@/hooks/queries/useContractors';
+import { useContracts } from '@/hooks/queries/useContracts';
+import { useCreateProject, useUpdateProject, useDeleteProject } from '@/hooks/mutations/useProjectMutations';
+import { useCreateContractor, useUpdateContractor, useDeleteContractor } from '@/hooks/mutations/useContractorMutations';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useLineItemsState, LineItem } from '@/hooks/useLineItemsState';
+import { EditableLineItemsTable } from '@/app/components/EditableLineItemsTable';
 
 // Enhanced notification system
 type NotificationType = 'success' | 'error' | 'warning' | 'info';
@@ -54,10 +58,10 @@ const NotificationManager: React.FC<{
           key={notification.id}
           className={`
             px-4 py-3 rounded-lg shadow-lg animate-slide-in flex items-center gap-3 min-w-80 backdrop-blur-sm
-            ${notification.type === 'success' ? 'bg-green-500/90 text-white' : ''}
-            ${notification.type === 'error' ? 'bg-red-500/90 text-white' : ''}
-            ${notification.type === 'warning' ? 'bg-yellow-500/90 text-white' : ''}
-            ${notification.type === 'info' ? 'bg-blue-500/90 text-white' : ''}
+            ${notification.type === 'success' ? 'bg-[var(--status-success-bg)] text-[var(--status-success-text)]' : ''}
+            ${notification.type === 'error' ? 'bg-[var(--status-critical-bg)] text-[var(--status-critical-text)]' : ''}
+            ${notification.type === 'warning' ? 'bg-[var(--status-warning-bg)] text-[var(--status-warning-text)]' : ''}
+            ${notification.type === 'info' ? 'bg-primary text-primary-foreground' : ''}
           `}
         >
           {notification.type === 'success' && <CheckCircle className="w-5 h-5 flex-shrink-0" />}
@@ -98,22 +102,22 @@ const QuickActions: React.FC<{
   return (
     <div className="flex flex-wrap items-center gap-2 sm:gap-3">
       {selectedCount > 0 && (
-        <div className="flex items-center gap-3 px-4 py-3 bg-red-50 border-2 border-red-200 rounded-lg shadow-sm">
+        <div className="flex items-center gap-3 px-4 py-3 bg-destructive/10 border-2 border-destructive/20 rounded-lg shadow-sm">
           <div className="flex items-center gap-2">
-            <AlertCircle className="w-5 h-5 text-red-600" />
-            <span className="text-sm font-semibold text-red-700">
+            <AlertCircle className="w-5 h-5 text-destructive" />
+            <span className="text-sm font-semibold text-destructive">
               {selectedCount} item{selectedCount > 1 ? 's' : ''} selected
             </span>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={onBulkDelete}
-              className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all duration-200 font-medium shadow-sm hover:shadow-md transform hover:scale-105"
+              className="flex items-center gap-2 px-4 py-2 bg-destructive text-destructive-foreground rounded-lg hover:bg-destructive/90 transition-all duration-200 font-medium shadow-sm hover:shadow-md transform hover:scale-105"
             >
               <Trash2 className="w-4 h-4" />
               Delete {selectedCount > 1 ? `${selectedCount} Items` : 'Item'}
             </button>
-            <span className="text-xs text-red-600 bg-red-100 px-2 py-1 rounded-full">
+            <span className="text-xs text-destructive bg-destructive/10 px-2 py-1 rounded-full">
               ⚠️ Permanent
             </span>
           </div>
@@ -122,14 +126,14 @@ const QuickActions: React.FC<{
 
       <button
         onClick={onSelectAll}
-        className="flex items-center gap-2 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
+        className="flex items-center gap-2 px-3 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors text-sm font-medium"
       >
         {selectedCount === totalCount && totalCount > 0 ? 'Deselect All' : 'Select All'}
       </button>
 
       <button
         onClick={onAddNew}
-        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-sm"
+        className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium shadow-sm"
       >
         {getIcon()}
         <span className="hidden sm:inline">{getAddLabel()}</span>
@@ -139,7 +143,7 @@ const QuickActions: React.FC<{
       {onExport && (
         <button
           onClick={onExport}
-          className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
+          className="flex items-center gap-2 px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors font-medium"
         >
           <Archive className="w-4 h-4" />
           <span className="hidden sm:inline">Export</span>
@@ -182,14 +186,14 @@ const SearchFilterBar: React.FC<{
           onClick={() => setShowFilters(!showFilters)}
           className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors ${
             hasActiveFilters 
-              ? 'bg-blue-50 border-blue-200 text-blue-700' 
-              : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+              ? 'bg-primary/10 border-primary text-primary' 
+              : 'bg-card border-border text-foreground hover:bg-accent'
           }`}
         >
           <Filter className="w-4 h-4" />
           <span className="text-sm font-medium">Filters</span>
           {hasActiveFilters && (
-            <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">
+            <span className="px-1.5 py-0.5 bg-primary/10 text-primary text-xs rounded-full">
               Active
             </span>
           )}
@@ -361,7 +365,7 @@ const ItemCard: React.FC<{
   item: any;
   type: 'project' | 'vendor' | 'contract';
   selected: boolean;
-  onSelect: (id: number) => void;
+  onSelect: (id: string) => void;
   onView: (item: any) => void;
   onEdit: (item: any) => void;
   onDelete: (item: any) => void;
@@ -376,11 +380,11 @@ const ItemCard: React.FC<{
 
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
-      case 'active': return 'bg-green-100 text-green-800 border-green-200';
-      case 'completed': return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'pending': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'cancelled': return 'bg-red-100 text-red-800 border-red-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+      case 'active': return 'bg-[var(--status-success-bg)] text-[var(--status-success-text)] border-[var(--status-success-border)]';
+      case 'completed': return 'bg-primary/10 text-primary border-primary';
+      case 'pending': return 'bg-[var(--status-warning-bg)] text-[var(--status-warning-text)] border-[var(--status-warning-border)]';
+      case 'cancelled': return 'bg-[var(--status-critical-bg)] text-[var(--status-critical-text)] border-[var(--status-critical-border)]';
+      default: return 'bg-[var(--status-neutral-bg)] text-[var(--status-neutral-text)] border-[var(--status-neutral-border)]';
     }
   };
 
@@ -785,8 +789,9 @@ const AddContractForm: React.FC<{
   setDirty: (dirty: boolean) => void;
   initialData?: any;
   isEdit?: boolean;
-}> = ({ onClose, onSuccess, onError, setDirty, initialData, isEdit = false }) => {
-  const { projects, subcontractors } = useData();
+  projects: any[];
+  subcontractors: any[];
+}> = ({ onClose, onSuccess, onError, setDirty, initialData, isEdit = false, projects, subcontractors }) => {
   const [formData, setFormData] = useState({
     projectId: initialData?.project_id?.toString() || "",
     subcontractorId: initialData?.subcontractor_id?.toString() || "",
@@ -795,50 +800,81 @@ const AddContractForm: React.FC<{
     startDate: initialData?.start_date || "",
     endDate: initialData?.end_date || "",
   });
-  const [lineItems, setLineItems] = useState<LineItem[]>([]);
+  
+  // Use the new line items state management hook
+  const lineItemsHook = useLineItemsState([]);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [lineItemForm, setLineItemForm] = useState({ itemNo: '', description: '', scheduledValue: '', fromPrevious: '', thisPeriod: '', materialStored: '', percentGC: '' });
-  const [editingLineItemIndex, setEditingLineItemIndex] = useState<number | null>(null);
-  const [showLineItemForm, setShowLineItemForm] = useState(false);
+  const [isContractLocked, setIsContractLocked] = useState(false);
+  const [validationError, setValidationError] = useState('');
 
-  const totalScheduledValue = lineItems.reduce((sum, item) => sum + (typeof item.scheduledValue === 'number' ? item.scheduledValue : Number(item.scheduledValue) || 0), 0);
+  // Initialize empty rows for new contracts, load existing for edits
+  useEffect(() => {
+    if (!isEdit) {
+      lineItemsHook.initializeEmptyRows(5);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEdit]);
 
-  // Load existing line items when editing
+  // Load existing line items and check for locking when editing
   useEffect(() => {
     if (isEdit && initialData?.id) {
-      const loadLineItems = async () => {
+      const loadData = async () => {
         try {
-          const { data: lineItemsData, error } = await supabase
+          // Check if contract is locked (has payment applications)
+          const { data: paymentApps, error: paymentError } = await supabase
+            .from('payment_applications')
+            .select('id, status')
+            .eq('project_id', initialData.project_id)
+            .eq('contractor_id', initialData.subcontractor_id);
+
+          if (paymentError) {
+            console.error('Error checking payment applications:', paymentError);
+            setIsContractLocked(false);
+          } else if (paymentApps && paymentApps.length > 0) {
+            const hasNonDraftPayments = paymentApps.some(app => app.status !== 'draft');
+            setIsContractLocked(hasNonDraftPayments);
+          } else {
+            setIsContractLocked(false);
+          }
+
+          // Load line items
+          const { data: lineItemsData, error: lineItemsError } = await supabase
             .from('project_line_items')
             .select('*')
             .eq('contract_id', initialData.id)
             .order('display_order', { ascending: true });
 
-          if (error) {
-            console.error('Error loading line items:', error);
+          if (lineItemsError) {
+            console.error('Error loading line items:', lineItemsError);
+            lineItemsHook.initializeEmptyRows(5);
             return;
           }
 
-          if (lineItemsData) {
-            const formattedLineItems = lineItemsData.map(item => ({
-              itemNo: item.item_no || '',
+          if (lineItemsData && lineItemsData.length > 0) {
+            const formattedLineItems: LineItem[] = lineItemsData.map((item, index) => ({
+              id: crypto.randomUUID(),
+              itemNo: index + 1,
               description: item.description_of_work || '',
               scheduledValue: item.scheduled_value?.toString() || '',
-              fromPrevious: item.from_previous_application?.toString() || '',
-              thisPeriod: item.this_period?.toString() || '',
-              materialStored: item.material_presently_stored?.toString() || '',
-              percentGC: item.percent_gc?.toString() || '',
+              fromPrevious: item.from_previous_application?.toString() || '0.00',
+              thisPeriod: item.this_period?.toString() || '0.00',
+              materialStored: item.material_presently_stored?.toString() || '0.00',
+              percentGC: item.percent_gc?.toString() || '0.00',
             }));
-            setLineItems(formattedLineItems);
+            lineItemsHook.setAllItems(formattedLineItems);
+          } else {
+            lineItemsHook.initializeEmptyRows(5);
           }
         } catch (error) {
-          console.error('Error loading line items:', error);
+          console.error('Error loading contract data:', error);
+          setIsContractLocked(false);
+          lineItemsHook.initializeEmptyRows(5);
         }
       };
-
-      loadLineItems();
+      loadData();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEdit, initialData?.id]);
 
   const validateForm = () => {
@@ -853,8 +889,17 @@ const AddContractForm: React.FC<{
     }
     if (!formData.contractNickname.trim()) newErrors.contractNickname = 'Contract nickname is required';
 
+    // Validate line items using the hook
+    if (lineItemsHook.hasEmptyRows) {
+      setValidationError('Some line items are incomplete. Please fill in both description and value, or remove the row.');
+    } else if (Math.abs(lineItemsHook.totalScheduledValue - Number(formData.contractAmount)) > 0.01) {
+      setValidationError(`Total Scheduled Value ($${lineItemsHook.totalScheduledValue.toFixed(2)}) must equal Contract Amount ($${Number(formData.contractAmount).toFixed(2)})`);
+    } else {
+      setValidationError('');
+    }
+
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    return Object.keys(newErrors).length === 0 && !validationError;
   };
 
   const validateLineItemField = (value: string, fieldName: string): string => {
@@ -960,8 +1005,20 @@ const AddContractForm: React.FC<{
         }
       }
 
-      if (lineItems.length > 0) {
-        const itemsToInsert = lineItems.map(item => ({
+      // Save line items using items from the hook
+      const itemsToSave = lineItemsHook.itemsWithData;
+      
+      if (itemsToSave.length > 0) {
+        // Delete existing line items if editing
+        if (isEdit && initialData?.id) {
+          await supabase
+            .from('project_line_items')
+            .delete()
+            .eq('contract_id', initialData.id);
+        }
+
+        // Insert all line items
+        const itemsToInsert = itemsToSave.map((item, index) => ({
           contract_id: contractId,
           project_id: Number(formData.projectId),
           contractor_id: Number(formData.subcontractorId),
@@ -972,30 +1029,19 @@ const AddContractForm: React.FC<{
           this_period: Number(item.thisPeriod) || 0,
           material_presently_stored: Number(item.materialStored) || 0,
           percent_gc: Number(item.percentGC) || 0,
+          display_order: index + 1,
           status: 'active',
         }));
 
-        if (isEdit && initialData?.id) {
-          // For edit mode, we might want to update existing line items or add new ones
-          const { error: lineItemsError } = await supabase
-            .from('project_line_items')
-            .insert(itemsToInsert);
+        const { error: lineItemsError } = await supabase
+          .from('project_line_items')
+          .insert(itemsToInsert);
 
-          if (lineItemsError) {
-            throw new Error(`Failed to update line items: ${lineItemsError.message}`);
+        if (lineItemsError) {
+          if (!isEdit) {
+            await supabase.from('contracts').delete().eq('id', contractId);
           }
-        } else {
-          // Create mode
-          const { error: lineItemsError } = await supabase
-            .from('project_line_items')
-            .insert(itemsToInsert);
-
-          if (lineItemsError) {
-            if (!isEdit) {
-              await supabase.from('contracts').delete().eq('id', contractId);
-            }
-            throw new Error(`Failed to create line items: ${lineItemsError.message}`);
-          }
+          throw new Error(`Failed to save line items: ${lineItemsError.message}`);
         }
       }
 
@@ -1008,7 +1054,7 @@ const AddContractForm: React.FC<{
           startDate: "",
           endDate: "",
         });
-        setLineItems([]);
+        lineItemsHook.setAllItems([]);
       }
 
       if (onSuccess) onSuccess();
@@ -1031,63 +1077,6 @@ const AddContractForm: React.FC<{
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
     setDirty(true);
-  };
-
-  const handleLineItemChange = (field: keyof LineItem) => (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setLineItemForm(prev => ({ ...prev, [field]: value }));
-
-    // Clear any existing error for this field
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
-    }
-  };
-
-  const handleSaveLineItem = () => {
-    if (!lineItemForm.itemNo || !lineItemForm.description || !lineItemForm.scheduledValue) {
-      alert('Please fill in all required fields');
-      return;
-    }
-
-    // Validate From Previous and This Period fields
-    const fromPreviousError = validateLineItemField(lineItemForm.fromPrevious, 'From Previous');
-    const thisPeriodError = validateLineItemField(lineItemForm.thisPeriod, 'This Period');
-    const materialStoredError = validateLineItemField(lineItemForm.materialStored, 'Material Stored');
-    const percentGCError = validateLineItemField(lineItemForm.percentGC, '% G/C');
-
-    if (fromPreviousError || thisPeriodError || materialStoredError || percentGCError) {
-      setErrors({
-        ...errors,
-        fromPrevious: fromPreviousError,
-        thisPeriod: thisPeriodError,
-        materialStored: materialStoredError,
-        percentGC: percentGCError
-      });
-      return;
-    }
-
-    const newItem: LineItem = {
-      ...lineItemForm,
-      scheduledValue: lineItemForm.scheduledValue,
-      fromPrevious: lineItemForm.fromPrevious,
-      thisPeriod: lineItemForm.thisPeriod,
-      materialStored: lineItemForm.materialStored,
-      percentGC: lineItemForm.percentGC,
-    };
-
-    if (editingLineItemIndex !== null) {
-      const updatedItems = [...lineItems];
-      updatedItems[editingLineItemIndex] = newItem;
-      setLineItems(updatedItems);
-      setEditingLineItemIndex(null);
-    } else {
-      setLineItems([...lineItems, newItem]);
-    }
-
-    setLineItemForm({ itemNo: '', description: '', scheduledValue: '', fromPrevious: '', thisPeriod: '', materialStored: '', percentGC: '' });
-    setShowLineItemForm(false);
-    // Clear any validation errors
-    setErrors({});
   };
 
   return (
@@ -1251,223 +1240,57 @@ const AddContractForm: React.FC<{
           </div>
         </div>
 
+        {/* Contract Locking Warning */}
+        {isContractLocked && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+            <div className="flex items-center gap-2 text-yellow-800">
+              <AlertCircle className="w-5 h-5" />
+              <p className="font-medium">Contract Locked</p>
+            </div>
+            <p className="text-sm text-yellow-700 mt-1">
+              Line items cannot be edited after a payment application has been submitted.
+            </p>
+          </div>
+        )}
+
+        {/* Line Items Section */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Line Items</label>
-          <div className="border rounded-lg p-4 bg-gray-50 mb-4">
-            {showLineItemForm ? (
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end mb-4">
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Item No</label>
-                  <input
-                    type="text"
-                    name="itemNo"
-                    value={lineItemForm.itemNo}
-                    onChange={handleLineItemChange('itemNo')}
-                    className="w-full px-3 py-2 text-base border rounded-lg bg-white text-gray-900"
-                    required
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Description</label>
-                  <input
-                    type="text"
-                    name="description"
-                    value={lineItemForm.description}
-                    onChange={handleLineItemChange('description')}
-                    className="w-full px-3 py-2 text-base border rounded-lg bg-white text-gray-900"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Scheduled Value</label>
-                  <input
-                    type="number"
-                    name="scheduledValue"
-                    value={lineItemForm.scheduledValue}
-                    onChange={handleLineItemChange('scheduledValue')}
-                    className="w-full px-3 py-2 text-base border rounded-lg bg-white text-gray-900"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">From Previous Application</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    max="100"
-                    value={lineItemForm.fromPrevious}
-                    onChange={handleLineItemChange('fromPrevious')}
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                      errors.fromPrevious ? 'border-red-300' : 'border-gray-300'
-                    }`}
-                    placeholder="0.00"
-                  />
-                  {errors.fromPrevious && (
-                    <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
-                      <AlertCircle className="w-4 h-4" />
-                      {errors.fromPrevious}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">This Period</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    max="100"
-                    value={lineItemForm.thisPeriod}
-                    onChange={handleLineItemChange('thisPeriod')}
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                      errors.thisPeriod ? 'border-red-300' : 'border-gray-300'
-                    }`}
-                    placeholder="0.00"
-                  />
-                  {errors.thisPeriod && (
-                    <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
-                      <AlertCircle className="w-4 h-4" />
-                      {errors.thisPeriod}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Material Presently Stored</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    max="100"
-                    value={lineItemForm.materialStored}
-                    onChange={handleLineItemChange('materialStored')}
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                      errors.materialStored ? 'border-red-300' : 'border-gray-300'
-                    }`}
-                    placeholder="0.00"
-                  />
-                  {errors.materialStored && (
-                    <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
-                      <AlertCircle className="w-4 h-4" />
-                      {errors.materialStored}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">% G/C</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    max="100"
-                    value={lineItemForm.percentGC}
-                    onChange={handleLineItemChange('percentGC')}
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                      errors.percentGC ? 'border-red-300' : 'border-gray-300'
-                    }`}
-                    placeholder="0.00"
-                  />
-                  {errors.percentGC && (
-                    <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
-                      <AlertCircle className="w-4 h-4" />
-                      {errors.percentGC}
-                    </p>
-                  )}
-                </div>
-                <div className="md:col-span-4 flex gap-2">
-                  <button
-                    type="button"
-                    onClick={handleSaveLineItem}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                  >
-                    {editingLineItemIndex === null ? 'Add' : 'Update'}
-                  </button>
-                  {editingLineItemIndex !== null && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setLineItemForm({ itemNo: '', description: '', scheduledValue: '', fromPrevious: '', thisPeriod: '', materialStored: '', percentGC: '' });
-                        setEditingLineItemIndex(null);
-                        setShowLineItemForm(false);
-                        setErrors({});
-                      }}
-                      className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300"
-                    >
-                      Cancel
-                    </button>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <div className="flex justify-end mt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowLineItemForm(true)}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold shadow flex items-center gap-2"
-                >
-                  <Plus className="w-4 h-4" />
-                  Add Line Item
-                </button>
-              </div>
-            )}
-            <table className="min-w-full text-sm border">
-              <thead>
-                <tr>
-                  <th className="border px-2 py-1 text-gray-700">Item No</th>
-                  <th className="border px-2 py-1 text-gray-700">Description</th>
-                  <th className="border px-2 py-1 text-gray-700">Scheduled Value</th>
-                  <th className="border px-2 py-1 text-gray-700">From Previous</th>
-                  <th className="border px-2 py-1 text-gray-700">This Period</th>
-                  <th className="border px-2 py-1 text-gray-700">Material Stored</th>
-                  <th className="border px-2 py-1 text-gray-700">% G/C</th>
-                  <th className="border px-2 py-1 text-gray-700">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {lineItems.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} className="text-center text-gray-500 py-2">No line items added.</td>
-                  </tr>
-                ) : (
-                  lineItems.map((item, idx) => (
-                    <tr key={idx}>
-                      <td className="border px-2 py-1 text-gray-700">{item.itemNo}</td>
-                      <td className="border px-2 py-1 text-gray-700">{item.description}</td>
-                      <td className="border px-2 py-1 text-gray-700">{item.scheduledValue}</td>
-                      <td className="border px-2 py-1 text-gray-700">{item.fromPrevious}</td>
-                      <td className="border px-2 py-1 text-gray-700">{item.thisPeriod}</td>
-                      <td className="border px-2 py-1 text-gray-700">{item.materialStored}</td>
-                      <td className="border px-2 py-1 text-gray-700">{item.percentGC}</td>
-                      <td className="border px-2 py-1 text-gray-700 flex gap-2">
-                        <button
-                          type="button"
-                          className="text-blue-600 hover:underline"
-                          onClick={() => {
-                            setLineItemForm(item);
-                            setEditingLineItemIndex(idx);
-                            setShowLineItemForm(true);
-                          }}
-                        >
-                          Edit
-                        </button>
-                        <button
-                          type="button"
-                          className="text-red-600 hover:underline"
-                          onClick={() => {
-                            setLineItems(prev => prev.filter((_, i) => i !== idx));
-                            setErrors({}); // Clear errors when removing item
-                          }}
-                        >
-                          Remove
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-            <div className="text-right mt-2 text-sm text-gray-700">
-              Total Scheduled Value: <span className="font-semibold">${totalScheduledValue.toLocaleString()}</span>
+          
+          <EditableLineItemsTable
+            items={lineItemsHook.items}
+            contractAmount={Number(formData.contractAmount) || 0}
+            emptyRowIds={lineItemsHook.emptyRowIds}
+            onAdd={lineItemsHook.addItem}
+            onUpdate={lineItemsHook.updateItem}
+            onDelete={lineItemsHook.deleteItems}
+            onReorder={lineItemsHook.reorderItem}
+            isEditable={!isContractLocked}
+            maxItems={100}
+          />
+          
+          {/* Validation Messages */}
+          {validationError && (
+            <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-sm text-red-700 flex items-center gap-2">
+                <AlertCircle className="w-4 h-4" />
+                {validationError}
+              </p>
             </div>
+          )}
+          
+          {/* Total Display */}
+          <div className="mt-3 text-right">
+            <p className="text-sm text-gray-600">
+              Total Scheduled Value:{' '}
+              <span className={`font-semibold ${
+                Math.abs(lineItemsHook.totalScheduledValue - Number(formData.contractAmount)) < 0.01
+                  ? 'text-green-600'
+                  : 'text-red-600'
+              }`}>
+                ${lineItemsHook.totalScheduledValue.toFixed(2)}
+              </span>
+            </p>
           </div>
         </div>
 
@@ -1506,7 +1329,11 @@ interface ManageViewProps {
 }
 
 const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
-  const { dispatch, projects, subcontractors, contracts = [], refreshData } = useData();
+  // Use React Query hooks instead of DataContext
+  const { data: projects = [], isLoading: projectsLoading, refetch: refetchProjects } = useProjects();
+  const { data: subcontractors = [], isLoading: contractorsLoading, refetch: refetchContractors } = useContractors();
+  const { data: contracts = [], isLoading: contractsLoading, refetch: refetchContracts } = useContracts();
+  
   const router = useRouter();
   const searchParams = useSearchParams();
   const [notifications, setNotifications] = useState<NotificationData[]>([]);
@@ -1524,7 +1351,7 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
     contractValue: 'all',
     expiry: 'all'
   });
-  const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [viewModal, setViewModal] = useState<'contract' | null>(null);
   const [editModal, setEditModal] = useState<'contract' | null>(null);
   const [selectedItem, setSelectedItem] = useState<any>(null);
@@ -1573,63 +1400,26 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
     setNotifications(prev => prev.filter(n => n.id !== id));
   }, []);
 
+  // React Query handles data refreshing automatically
   const refreshContracts = useCallback(async () => {
     try {
-      const { data } = await supabase
-        .from('contracts')
-        .select(`
-          *,
-          projects (id, name, client_name),
-          contractors (id, name, trade)
-        `);
-      if (data) {
-        const mapped = data.map((c: any) => ({
-          id: c.id,
-          project_id: c.project_id,
-          subcontractor_id: c.subcontractor_id,
-          contract_amount: c.contract_amount,
-          contract_nickname: c.contract_nickname,
-          start_date: c.start_date,
-          end_date: c.end_date,
-          status: c.status ?? 'active',
-          project: c.projects,
-          subcontractor: c.contractors,
-        }));
-        dispatch({ type: 'SET_CONTRACTS', payload: mapped });
-      }
+      await refetchContracts();
+      addNotification('success', 'Contracts refreshed');
     } catch (error) {
       console.error('Error refreshing contracts:', error);
       addNotification('error', 'Failed to refresh contracts data');
     }
-  }, [dispatch, addNotification]);
+  }, [refetchContracts, addNotification]);
 
   const refreshSubcontractors = useCallback(async () => {
     try {
-      const { data } = await supabase.from('contractors').select('*');
-      if (data) {
-        // Map DB fields to Subcontractor interface as needed
-        const mapped = data.map((c: any) => ({
-          id: c.id,
-          name: c.name,
-          trade: c.trade,
-          contractAmount: c.contract_amount ?? 0,
-          paidToDate: c.paid_to_date ?? 0,
-          lastPayment: c.last_payment ?? '',
-          status: c.status ?? 'active',
-          changeOrdersPending: c.change_orders_pending ?? false,
-          lineItemCount: c.line_item_count ?? 0,
-          phone: c.phone ?? '',
-          email: c.email ?? '',
-          hasOpenPaymentApp: c.has_open_payment_app ?? false,
-          compliance: { insurance: c.insurance_status ?? 'valid', license: c.license_status ?? 'valid' },
-        }));
-        dispatch({ type: 'SET_SUBCONTRACTORS', payload: mapped });
-      }
+      await refetchContractors();
+      addNotification('success', 'Contractors refreshed');
     } catch (error) {
       console.error('Error refreshing subcontractors:', error);
       addNotification('error', 'Failed to refresh subcontractors data');
     }
-  }, [dispatch, addNotification]);
+  }, [refetchContractors, addNotification]);
 
 
 
@@ -1716,7 +1506,7 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
     }
   };
 
-  const handleItemSelect = (id: number) => {
+  const handleItemSelect = (id: string) => {
     const newSelected = new Set(selectedItems);
     if (newSelected.has(id)) {
       newSelected.delete(id);
@@ -1729,6 +1519,78 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
   const handleBulkDelete = () => {
     if (selectedItems.size === 0) return;
     setShowDeleteConfirmation(true);
+  };
+
+  const handleExport = () => {
+    try {
+      const data = currentData;
+      
+      if (data.length === 0) {
+        addNotification('info', 'No data to export');
+        return;
+      }
+      
+      // Prepare CSV headers
+      const headers = [
+        'ID',
+        'Project',
+        'Contractor',
+        'Trade',
+        'Original Amount',
+        'Change Orders',
+        'Current Amount',
+        'Paid to Date',
+        'Remaining',
+        'Status',
+        'Start Date',
+        'End Date',
+      ];
+      
+      // Prepare CSV rows
+      const rows = data.map((contract: any) => {
+        const changeOrders = (contract.contract_amount || 0) - (contract.original_contract_amount || 0);
+        const remaining = (contract.contract_amount || 0) - (contract.paid_to_date || 0);
+        
+        // Get project and contractor names from the contract object if available
+        const projectName = contract.project?.name || contract.project_name || 'Unknown';
+        const contractorName = contract.contractor?.name || contract.contractor_name || 'Unknown';
+        const contractorTrade = contract.contractor?.trade || contract.contractor_trade || 'N/A';
+        
+        return [
+          contract.id,
+          `"${projectName}"`,
+          `"${contractorName}"`,
+          `"${contractorTrade}"`,
+          contract.original_contract_amount || 0,
+          changeOrders,
+          contract.contract_amount || 0,
+          contract.paid_to_date || 0,
+          remaining,
+          `"${contract.contract_status || 'active'}"`,
+          contract.start_date || '',
+          contract.end_date || '',
+        ].join(',');
+      });
+      
+      // Create CSV content
+      const csv = [headers.join(','), ...rows].join('\n');
+      
+      // Create blob and download
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `contracts_export_${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      addNotification('success', `Exported ${data.length} contract(s) successfully!`);
+    } catch (error) {
+      console.error('Error exporting data:', error);
+      addNotification('error', 'Failed to export data. Please try again.');
+    }
   };
 
   const confirmBulkDelete = async () => {
@@ -1744,8 +1606,8 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
 
       if (error) throw error;
 
-      // Update local state with optimistic updates
-      dispatch({ type: 'SET_CONTRACTS', payload: contracts.filter(c => !selectedItems.has(c.id)) });
+      // React Query will automatically refetch contracts after mutation
+      // No need for manual dispatch - the query will update automatically
 
       addNotification('success', `Successfully deleted ${selectedItems.size} item(s)`);
       setSelectedItems(new Set());
@@ -1845,7 +1707,7 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
             onAddNew={() => handleOpenForm('contract')}
             selectedCount={selectedItems.size}
             onBulkDelete={handleBulkDelete}
-            onExport={() => addNotification('info', 'Export feature coming soon!')}
+            onExport={handleExport}
             onSelectAll={handleSelectAll}
             totalCount={currentData.length}
           />
@@ -1917,10 +1779,12 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
               onSuccess={async () => {
                 addNotification('success', 'Contract added successfully!');
                 // Refresh contracts data
-                refreshData();
+                await refetchContracts();
               }}
               onError={(message) => addNotification('error', message)}
               setDirty={setFormDirty}
+              projects={projects}
+              subcontractors={subcontractors}
             />
           </div>
         </div>
@@ -1971,12 +1835,14 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
               onSuccess={async () => {
                 addNotification('success', 'Contract updated successfully!');
                 // Refresh contracts data
-                refreshData();
+                await refetchContracts();
               }}
               onError={(message) => addNotification('error', message)}
               setDirty={setFormDirty}
               initialData={selectedItem}
               isEdit={true}
+              projects={projects}
+              subcontractors={subcontractors}
             />
           </div>
         </div>
@@ -1984,30 +1850,36 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirmation && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full p-6">
+        <div 
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          onClick={() => setShowDeleteConfirmation(false)}
+        >
+          <div 
+            className="bg-card rounded-xl shadow-2xl max-w-lg w-full p-6 border border-border"
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Header with Warning Icon */}
             <div className="flex items-center gap-4 mb-6">
-              <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
-                <AlertCircle className="w-8 h-8 text-red-600" />
+              <div className="w-16 h-16 rounded-2xl bg-[var(--status-critical-bg)] flex items-center justify-center flex-shrink-0">
+                <AlertCircle className="w-8 h-8 text-[var(--status-critical-icon)]" />
               </div>
               <div>
-                <h3 className="text-xl font-bold text-gray-900">Delete Confirmation</h3>
-                <p className="text-sm text-gray-600 mt-1">This action cannot be undone</p>
+                <h3 className="text-xl font-bold text-foreground">Delete Confirmation</h3>
+                <p className="text-sm text-muted-foreground mt-1">This action cannot be undone</p>
               </div>
             </div>
 
             {/* Warning Message */}
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+            <div className="bg-[var(--status-critical-bg)] border border-[var(--status-critical-border)] rounded-lg p-4 mb-6">
               <div className="flex items-start gap-3">
-                <div className="w-6 h-6 rounded-full bg-red-200 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <span className="text-red-600 text-sm font-bold">!</span>
+                <div className="w-6 h-6 rounded-full bg-[var(--status-critical-border)] flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-[var(--status-critical-icon)] text-sm font-bold">!</span>
                 </div>
                 <div>
-                  <p className="text-red-800 font-medium mb-2">
+                  <p className="text-[var(--status-critical-text)] font-medium mb-2">
                     Are you sure you want to delete {selectedItems.size} contract{selectedItems.size > 1 ? 's' : ''}?
                   </p>
-                  <ul className="text-red-700 text-sm space-y-1">
+                  <ul className="text-[var(--status-critical-text)] text-sm space-y-1">
                     <li>• This will permanently remove {selectedItems.size > 1 ? 'them' : 'it'} from your system</li>
                     <li>• All associated data will be lost</li>
                     <li>• This action cannot be reversed</li>
@@ -2020,14 +1892,14 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
             <div className="flex flex-col sm:flex-row gap-3 sm:justify-end">
               <button 
                 onClick={() => setShowDeleteConfirmation(false)} 
-                className="flex-1 sm:flex-none px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium border border-gray-300"
+                className="flex-1 sm:flex-none px-6 py-3 bg-muted text-muted-foreground rounded-lg hover:bg-muted/80 transition-colors font-medium border border-border"
                 disabled={deleteLoading}
               >
                 Cancel
               </button>
               <button 
                 onClick={confirmBulkDelete} 
-                className="flex-1 sm:flex-none px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:bg-red-400 font-medium flex items-center justify-center gap-2 shadow-sm"
+                className="flex-1 sm:flex-none px-6 py-3 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white rounded-lg transition-colors disabled:opacity-50 font-medium flex items-center justify-center gap-2 shadow-lg"
                 disabled={deleteLoading}
               >
                 {deleteLoading ? (
@@ -2046,7 +1918,7 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
 
             {/* Additional Safety Note */}
             <div className="mt-4 text-center">
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-muted-foreground">
                 💡 Tip: You can always recreate items if needed, but historical data will be lost.
               </p>
             </div>
@@ -2056,25 +1928,33 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
 
       {/* Unsaved Warning Modal */}
       {showUnsavedWarning && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+        <div 
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          onClick={handleCancelSwitch}
+        >
+          <div 
+            className="bg-card rounded-xl shadow-2xl max-w-md w-full p-6 border border-border"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center gap-3 mb-4">
-              <AlertCircle className="w-8 h-8 text-yellow-500" />
-              <h3 className="text-lg font-semibold text-gray-800">Unsaved Changes</h3>
+              <div className="w-12 h-12 rounded-xl bg-[var(--status-warning-bg)] flex items-center justify-center">
+                <AlertCircle className="w-7 h-7 text-[var(--status-warning-icon)]" />
+              </div>
+              <h3 className="text-lg font-semibold text-foreground">Unsaved Changes</h3>
             </div>
-            <p className="text-gray-600 mb-6">
+            <p className="text-muted-foreground mb-6">
               You have unsaved changes. Are you sure you want to switch forms? Your current changes will be lost.
             </p>
             <div className="flex justify-end gap-3">
               <button 
                 onClick={handleCancelSwitch} 
-                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+                className="px-4 py-2 bg-muted text-muted-foreground rounded-lg hover:bg-muted/80 transition-colors border border-border"
               >
                 Cancel
               </button>
               <button 
                 onClick={handleConfirmSwitch} 
-                className="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors"
+                className="px-4 py-2 bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 text-white rounded-lg transition-colors shadow-lg"
               >
                 Discard Changes
               </button>

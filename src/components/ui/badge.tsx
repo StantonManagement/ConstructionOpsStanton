@@ -17,6 +17,37 @@ const badgeVariants = cva(
           "border-transparent bg-destructive text-white [a&]:hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
         outline:
           "text-foreground [a&]:hover:bg-accent [a&]:hover:text-accent-foreground",
+        // Priority variants using CSS variables
+        emergency:
+          "border-transparent bg-[var(--status-critical-bg)] text-[var(--status-critical-text)] dark:bg-[var(--status-critical-bg)] dark:text-[var(--status-critical-text)]",
+        high:
+          "border-transparent bg-[var(--status-warning-bg)] text-[var(--status-warning-text)] dark:bg-[var(--status-warning-bg)] dark:text-[var(--status-warning-text)]",
+        normal:
+          "border-transparent bg-[var(--status-neutral-bg)] text-[var(--status-neutral-text)] dark:bg-[var(--status-neutral-bg)] dark:text-[var(--status-neutral-text)]",
+        low:
+          "border-transparent bg-[var(--priority-low-bg)] text-[var(--priority-low-text)] dark:bg-[var(--priority-low-bg)] dark:text-[var(--priority-low-text)]",
+        // Status variants using CSS variables
+        new:
+          "border-transparent bg-[var(--status-warning-bg)] text-[var(--status-warning-text)] dark:bg-[var(--status-warning-bg)] dark:text-[var(--status-warning-text)]",
+        "in-progress":
+          "border-transparent bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary",
+        completed:
+          "border-transparent bg-[var(--status-success-bg)] text-[var(--status-success-text)] dark:bg-[var(--status-success-bg)] dark:text-[var(--status-success-text)]",
+        waiting:
+          "border-transparent bg-[var(--status-warning-bg)] text-[var(--status-warning-text)] dark:bg-[var(--status-warning-bg)] dark:text-[var(--status-warning-text)]",
+        // Construction-specific status variants using CSS variables
+        "sms-sent":
+          "border-transparent bg-[var(--status-warning-bg)] text-[var(--status-warning-text)] dark:bg-[var(--status-warning-bg)] dark:text-[var(--status-warning-text)]",
+        "review-queue":
+          "border-transparent bg-[var(--status-critical-bg)] text-[var(--status-critical-text)] dark:bg-[var(--status-critical-bg)] dark:text-[var(--status-critical-text)]",
+        "ready-checks":
+          "border-transparent bg-[var(--status-success-bg)] text-[var(--status-success-text)] dark:bg-[var(--status-success-bg)] dark:text-[var(--status-success-text)]",
+        "paid":
+          "border-transparent bg-[var(--status-success-bg)] text-[var(--status-success-text)] dark:bg-[var(--status-success-bg)] dark:text-[var(--status-success-text)]",
+        "pending":
+          "border-transparent bg-[var(--status-warning-bg)] text-[var(--status-warning-text)] dark:bg-[var(--status-warning-bg)] dark:text-[var(--status-warning-text)]",
+        "rejected":
+          "border-transparent bg-[var(--status-critical-bg)] text-[var(--status-critical-text)] dark:bg-[var(--status-critical-bg)] dark:text-[var(--status-critical-text)]",
       },
     },
     defaultVariants: {

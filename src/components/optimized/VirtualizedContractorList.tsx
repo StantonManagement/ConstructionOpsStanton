@@ -73,7 +73,7 @@ const VirtualizedContractorList = memo<VirtualizedContractorListProps>(({
 
   if (filteredContractors.length === 0) {
     return (
-      <div className="flex items-center justify-center h-64 text-gray-500">
+      <div className="flex items-center justify-center h-64 text-muted-foreground">
         <div className="text-center">
           <p className="text-lg font-medium">No contractors found</p>
           {searchQuery && <p className="text-sm">Try adjusting your search query</p>}
@@ -83,7 +83,7 @@ const VirtualizedContractorList = memo<VirtualizedContractorListProps>(({
   }
 
   return (
-    <div className="bg-gray-50 rounded-lg p-2">
+    <div className="bg-secondary rounded-lg p-2">
       <List
         height={height}
         itemCount={filteredContractors.length}

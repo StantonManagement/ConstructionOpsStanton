@@ -59,6 +59,7 @@ export interface DataContextType {
   dispatch: Dispatch<{ type: string; payload?: unknown }>;
   refreshData: () => Promise<void>;
   loading: boolean;
+  error: string | null;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -85,18 +86,12 @@ type ContractorDB = {
   id: number;
   name: string;
   trade: string;
-  contract_amount?: number;
-  paid_to_date?: number;
-  last_payment?: string;
-  status?: string;
-  change_orders_pending?: boolean;
-  line_item_count?: number;
-  phone?: string;
+  phone: string;
   email?: string;
-  has_open_payment_app?: boolean;
-  insurance_status?: string;
-  license_status?: string;
+  status?: string;
   performance_score?: number;
+  created_at?: string;
+  updated_at?: string;
 };
 
 function dataReducer(state: InitialDataType, action: { type: string; payload?: unknown }) {
@@ -204,106 +199,98 @@ function dataReducer(state: InitialDataType, action: { type: string; payload?: u
 export const DataProvider = ({ children }: { children: React.ReactNode }) => {
   const [state, dispatch] = useReducer(dataReducer, initialData);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Internal data fetching function
-  const performDataFetch = async (shouldSetLoading = true) => {
+  // Internal data fetching function using API
+  const performDataFetch = useCallback(async (shouldSetLoading = true) => {
     if (shouldSetLoading) {
       setLoading(true);
     }
+    setError(null); // Clear previous errors
+    
     try {
-      // Simple Promise.all without timeouts that cause issues
-      const [projectsResponse, contractorsResponse, contractsResponse] = await Promise.all([
-        supabase.from('projects').select('*'),
-        supabase.from('contractors').select('*'),
-        supabase
-          .from('contracts')
-          .select(`
-            *,
-            projects (id, name, client_name),
-            contractors (id, name, trade)
-          `)
-      ]);
+      console.log('[DataContext] Fetching data from API...');
+      const startTime = Date.now();
 
-        // Handle projects
-        if (projectsResponse.data) {
-          dispatch({ type: 'SET_PROJECTS', payload: projectsResponse.data });
-        }
+      // Get auth token for API call
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('Authentication required');
+      }
 
-        // Handle contractors
-        if (contractorsResponse.data && !contractorsResponse.error) {
-          const mapped = contractorsResponse.data.map((c: ContractorDB) => ({
-            id: c.id,
-            name: c.name,
-            trade: c.trade,
-            contractAmount: c.contract_amount ?? 0,
-            paidToDate: c.paid_to_date ?? 0,
-            lastPayment: c.last_payment ?? '',
-            status: c.status ?? 'active',
-            changeOrdersPending: c.change_orders_pending ?? false,
-            lineItemCount: c.line_item_count ?? 0,
-            phone: c.phone ?? '',
-            email: c.email ?? '',
-            hasOpenPaymentApp: c.has_open_payment_app ?? false,
-            compliance: {
-              insurance: c.insurance_status ?? 'valid',
-              license: c.license_status ?? 'valid'
-            },
-          }));
-          dispatch({ type: 'SET_SUBCONTRACTORS', payload: mapped });
+      // Single API call to fetch all data
+      const response = await fetch('/api/dashboard/data-context', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
         }
+      });
 
-        // Handle contracts
-        if (contractsResponse.data && !contractsResponse.error) {
-          const mapped = contractsResponse.data.map((c: any) => ({
-            id: c.id,
-            project_id: c.project_id,
-            subcontractor_id: c.subcontractor_id,
-            contract_amount: c.contract_amount,
-            contract_nickname: c.contract_nickname,
-            start_date: c.start_date,
-            end_date: c.end_date,
-            status: c.status ?? 'active',
-            project: c.projects,
-            subcontractor: c.contractors,
-          }));
-          dispatch({ type: 'SET_CONTRACTS', payload: mapped });
+      if (!response.ok) {
+        let errorMessage = 'Failed to load dashboard data';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch (e) {
+          errorMessage = `${errorMessage} (${response.status}: ${response.statusText})`;
         }
+        throw new Error(errorMessage);
+      }
 
-        // Log any errors
-        if (contractorsResponse.error) {
-          console.error('Error fetching contractors:', contractorsResponse.error);
-        }
-        if (contractsResponse.error) {
-          console.error('Error fetching contracts:', contractsResponse.error);
-        }
+      const result = await response.json();
+      const fetchTime = Date.now() - startTime;
+      console.log(`[DataContext] Data loaded in ${fetchTime}ms`);
+
+      if (!result.success || !result.data) {
+        throw new Error('Invalid API response');
+      }
+
+      const { projects, subcontractors, contracts, paymentApplications } = result.data;
+
+      // Dispatch data to state
+      dispatch({ type: 'SET_PROJECTS', payload: projects || [] });
+      dispatch({ type: 'SET_SUBCONTRACTORS', payload: subcontractors || [] });
+      dispatch({ type: 'SET_CONTRACTS', payload: contracts || [] });
+      // paymentApplications are included in the API response but not currently used by DataContext
+
+      console.log(`[DataContext] ✓ Loaded ${projects?.length || 0} projects, ${subcontractors?.length || 0} contractors, ${contracts?.length || 0} contracts`);
 
     } catch (error) {
-      console.error('Error fetching data:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      console.error('[DataContext] ❌ Error during data fetch:', error);
+      
+      // Set error state for UI to display
+      setError(errorMessage);
+      
       // Set empty arrays on error
       dispatch({ type: 'SET_PROJECTS', payload: [] });
       dispatch({ type: 'SET_SUBCONTRACTORS', payload: [] });
       dispatch({ type: 'SET_CONTRACTS', payload: [] });
     } finally {
+      // Always clear loading state, even on error or timeout
+      console.log('[DataContext] Setting loading to false');
       if (shouldSetLoading) {
         setLoading(false);
       }
     }
-  };
+  }, []);
 
   // Initial data fetch with loading state
   const fetchAllData = useCallback(async () => {
     await performDataFetch(true);
-  }, []);
+  }, [performDataFetch]);
 
   // Refresh data without showing loading state
   const refreshData = useCallback(async () => {
     await performDataFetch(false);
-  }, []);
+  }, [performDataFetch]);
 
   // Initialize data on mount - only once
   useEffect(() => {
     fetchAllData();
-  }, [fetchAllData]); // Run only on mount, not when fetchAllData changes
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run ONLY on mount, ignore fetchAllData changes
 
   // Memoize context value to prevent unnecessary re-renders
   const value: DataContextType = useMemo(() => ({
@@ -311,7 +298,8 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     dispatch,
     refreshData,
     loading,
-  }), [state, refreshData, loading]);
+    error,
+  }), [state, refreshData, loading, error]);
 
   return (
     <DataContext.Provider value={value}>

@@ -61,6 +61,88 @@ export async function POST(
       return NextResponse.json({ error: 'Failed to recall payment application' }, { status: 500, headers: CORS_HEADERS });
     }
 
+    // Rollback project budget and contractor paid_to_date
+    if (paymentApp.current_period_value) {
+      // Recalculate project spent excluding the recalled payment
+      const { data: approvedPayments } = await supabase
+        .from('payment_applications')
+        .select('current_period_value')
+        .eq('project_id', paymentApp.project_id)
+        .eq('status', 'approved')
+        .neq('id', paymentAppId);
+
+      const totalSpent = (approvedPayments || []).reduce((sum, p) => sum + (p.current_period_value || 0), 0);
+      
+      await supabase
+        .from('projects')
+        .update({ spent: totalSpent })
+        .eq('id', paymentApp.project_id);
+
+      // Recalculate contractor paid_to_date excluding the recalled payment
+      const { data: contractorPayments } = await supabase
+        .from('payment_applications')
+        .select('current_period_value')
+        .eq('project_id', paymentApp.project_id)
+        .eq('contractor_id', paymentApp.contractor_id)
+        .eq('status', 'approved')
+        .neq('id', paymentAppId);
+
+      const contractorTotalPaid = (contractorPayments || []).reduce((sum, p) => sum + (p.current_period_value || 0), 0);
+      
+      await supabase
+        .from('project_contractors')
+        .update({ paid_to_date: contractorTotalPaid })
+        .eq('project_id', paymentApp.project_id)
+        .eq('contractor_id', paymentApp.contractor_id);
+
+      console.log(`Rolled back budget for recalled payment ${paymentAppId}: project spent=${totalSpent}, contractor paid=${contractorTotalPaid}`);
+    }
+
+    // Rollback line item baselines to previous approved state
+    const { data: lineItemProgress } = await supabase
+      .from('payment_line_item_progress')
+      .select('line_item_id')
+      .eq('payment_app_id', paymentAppId);
+
+    if (lineItemProgress && lineItemProgress.length > 0) {
+      // For each line item, find the previous approved percentage
+      for (const progress of lineItemProgress) {
+        const { data: approvedPayments } = await supabase
+          .from('payment_applications')
+          .select('id, approved_at')
+          .eq('project_id', paymentApp.project_id)
+          .eq('contractor_id', paymentApp.contractor_id)
+          .eq('status', 'approved')
+          .neq('id', paymentAppId)
+          .order('approved_at', { ascending: false })
+          .limit(1);
+
+        let previousPercent = 0;
+        if (approvedPayments && approvedPayments.length > 0) {
+          const { data: prevProgress } = await supabase
+            .from('payment_line_item_progress')
+            .select('pm_verified_percent')
+            .eq('payment_app_id', approvedPayments[0].id)
+            .eq('line_item_id', progress.line_item_id)
+            .single();
+          
+          previousPercent = Number(prevProgress?.pm_verified_percent) || 0;
+        }
+
+        // Revert line item to previous approved state
+        await supabase
+          .from('project_line_items')
+          .update({
+            from_previous_application: previousPercent,
+            percent_completed: previousPercent,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', progress.line_item_id);
+      }
+      
+      console.log(`Rolled back ${lineItemProgress.length} line item baselines for recalled payment ${paymentAppId}`);
+    }
+
     return NextResponse.json({
       message: 'Payment application recalled successfully',
       paymentApp: updatedApp

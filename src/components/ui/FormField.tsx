@@ -44,14 +44,14 @@ const FormField: React.FC<FormFieldProps> = ({
 
   const baseInputClasses = `
     w-full px-3 py-2 sm:px-4 sm:py-3 border rounded-lg sm:rounded-xl 
-    text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent 
-    transition-all duration-200 bg-white/70 backdrop-blur-sm text-sm sm:text-base
+    text-foreground focus:ring-2 focus:ring-primary focus:border-transparent 
+    transition-all duration-200 bg-card/70 backdrop-blur-sm text-sm sm:text-base
     disabled:opacity-50 disabled:cursor-not-allowed
   `;
 
   const inputClasses = `
     ${baseInputClasses}
-    ${error ? 'border-red-300 focus:ring-red-500' : success ? 'border-green-300 focus:ring-green-500' : 'border-gray-300'}
+    ${error ? 'border-[var(--status-critical-border)] focus:ring-[var(--status-critical-border)]' : success ? 'border-[var(--status-success-border)] focus:ring-[var(--status-success-border)]' : 'border-border'}
     ${className}
   `;
 
@@ -101,10 +101,10 @@ const FormField: React.FC<FormFieldProps> = ({
     <div className="space-y-1 sm:space-y-2">
       <label 
         htmlFor={inputId} 
-        className="block text-sm font-semibold text-gray-700"
+        className="block text-sm font-semibold text-foreground"
       >
         {label} 
-        {required && <span className="text-red-500 ml-1" aria-label="required">*</span>}
+        {required && <span className="text-[var(--status-critical-text)] ml-1" aria-label="required">*</span>}
       </label>
       
       <div className="relative">
@@ -113,19 +113,19 @@ const FormField: React.FC<FormFieldProps> = ({
         {/* Status Icons */}
         {error && (
           <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-            <AlertCircle className="h-5 w-5 text-red-500" aria-hidden="true" />
+            <AlertCircle className="h-5 w-5 text-[var(--status-critical-text)]" aria-hidden="true" />
           </div>
         )}
         {success && !error && (
           <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-            <CheckCircle className="h-5 w-5 text-green-500" aria-hidden="true" />
+            <CheckCircle className="h-5 w-5 text-[var(--status-success-text)]" aria-hidden="true" />
           </div>
         )}
       </div>
 
       {/* Error Message */}
       {error && (
-        <p id={errorId} className="text-red-500 text-xs sm:text-sm mt-1 flex items-center gap-1">
+        <p id={errorId} className="text-[var(--status-critical-text)] text-xs sm:text-sm mt-1 flex items-center gap-1">
           <AlertCircle className="h-3 w-3 flex-shrink-0" />
           {error}
         </p>
@@ -133,7 +133,7 @@ const FormField: React.FC<FormFieldProps> = ({
 
       {/* Success Message */}
       {success && !error && (
-        <p id={successId} className="text-green-500 text-xs sm:text-sm mt-1 flex items-center gap-1">
+        <p id={successId} className="text-[var(--status-success-text)] text-xs sm:text-sm mt-1 flex items-center gap-1">
           <CheckCircle className="h-3 w-3 flex-shrink-0" />
           {success}
         </p>
@@ -141,7 +141,7 @@ const FormField: React.FC<FormFieldProps> = ({
 
       {/* Character Count */}
       {maxLength && (
-        <p className="text-xs text-gray-500 mt-1 text-right">
+        <p className="text-xs text-muted-foreground mt-1 text-right">
           {value.length}/{maxLength}
         </p>
       )}

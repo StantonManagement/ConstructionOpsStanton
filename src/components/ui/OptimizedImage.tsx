@@ -70,7 +70,7 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
     return (
       <div 
         ref={containerRef}
-        className={`flex items-center justify-center bg-gray-100 rounded-full ${className}`}
+        className={`flex items-center justify-center bg-secondary rounded-full ${className}`}
         role="img"
         aria-label={alt}
       >
@@ -83,7 +83,7 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
     <div ref={containerRef} className={`relative ${className}`}>
       {/* Placeholder/skeleton */}
       {isLoading && (
-        <div className="absolute inset-0 bg-gray-200 animate-pulse rounded-full">
+        <div className="absolute inset-0 bg-secondary/80 animate-pulse rounded-full">
           {placeholder && (
             <img
               src={placeholder}

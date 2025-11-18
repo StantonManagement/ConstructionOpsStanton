@@ -1,21 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-// Create admin client with service role key
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!, // Use service role key for admin operations
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  }
-);
+import { supabaseAdmin } from '@/lib/supabaseClient';
+import { canAccessUserManagement } from '@/lib/permissions';
 
 // GET - Fetch all users from auth.users with their roles from user_role table
 export async function GET(request: NextRequest) {
   try {
+    if (!supabaseAdmin) {
+      return NextResponse.json({ error: 'Service unavailable' }, { status: 503 });
+    }
+
     // Get the authorization header
     const authHeader = request.headers.get('authorization');
     
@@ -32,14 +25,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized - Invalid token' }, { status: 401 });
     }
 
-    // Check if the user has admin role
+    // Check if the user has permission to access user management
     const { data: userRole, error: roleError } = await supabaseAdmin
       .from('user_role')
       .select('role')
       .eq('user_id', user.id)
       .single();
 
-    if (roleError || !userRole || !['admin', 'pm'].includes(userRole.role)) {
+    if (roleError || !userRole || !canAccessUserManagement(userRole.role)) {
       return NextResponse.json({ error: 'Unauthorized - Insufficient permissions' }, { status: 403 });
     }
 
@@ -87,6 +80,10 @@ export async function GET(request: NextRequest) {
 // POST - Create new user in auth.users and user_role table
 export async function POST(request: NextRequest) {
   try {
+    if (!supabaseAdmin) {
+      return NextResponse.json({ error: 'Service unavailable' }, { status: 503 });
+    }
+
     const { email, password, name, role } = await request.json();
 
     // Validate required fields
@@ -94,14 +91,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ 
         error: 'All fields (email, password, name, role) are required' 
       }, { status: 400 });
-    }
-
-    // Check if service role key is available
-    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      console.error('SUPABASE_SERVICE_ROLE_KEY is not configured');
-      return NextResponse.json({ 
-        error: 'Server configuration error. Please contact administrator.' 
-      }, { status: 500 });
     }
 
     console.log('Creating user in Supabase Auth:', { email, name, role });
@@ -184,6 +173,10 @@ export async function POST(request: NextRequest) {
 // DELETE - Delete user from auth.users and user_role table
 export async function DELETE(request: NextRequest) {
   try {
+    if (!supabaseAdmin) {
+      return NextResponse.json({ error: 'Service unavailable' }, { status: 503 });
+    }
+
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('id');
 
@@ -221,6 +214,10 @@ export async function DELETE(request: NextRequest) {
 // PUT - Update user in auth.users and user_role table
 export async function PUT(request: NextRequest) {
   try {
+    if (!supabaseAdmin) {
+      return NextResponse.json({ error: 'Service unavailable' }, { status: 503 });
+    }
+
     const { id, name, role, is_active } = await request.json();
 
     if (!id) {

@@ -45,8 +45,8 @@ const NavButton: React.FC<NavButtonProps> = ({ id, activeTab, setActiveTab, icon
       className={`
         w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-200
         ${isActive 
-          ? 'bg-blue-100 text-blue-700 border-r-2 border-blue-500' 
-          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+          ? 'bg-primary/10 text-primary border-r-2 border-primary' 
+          : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
         }
       `}
     >
@@ -103,14 +103,28 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab, setSel
             .eq("user_id", session.user.id)
             .single();
           
+          // Handle role: default to 'staff' if no role found (expected) or error
+          // Only log actual errors (not "no rows found" which is PGRST116)
           if (error) {
-            console.error('Error fetching user role:', error);
+            // PGRST116 is "no rows found" - expected when user has no role entry yet
+            if (error.code !== 'PGRST116') {
+              console.error('Error fetching user role:', {
+                message: error.message,
+                code: error.code,
+                details: error.details,
+                hint: error.hint
+              });
+            }
+            // Default to 'staff' when no role found or on error
+            setUserRole('staff');
           } else {
-            setUserRole(data?.role || null);
+            setUserRole(data?.role || 'staff');
           }
         }
       } catch (error) {
         console.error('Error in getRole:', error);
+        // Default to 'staff' on unexpected errors
+        setUserRole('staff');
       }
     };
     getRole();
@@ -144,61 +158,36 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab, setSel
       id: 'overview',
       icon: <Home className="w-5 h-5"/>,
       label: 'Overview',
-      href: '/?tab=overview'
+      href: '/?tab=overview',
+      canAccess: true // All users can access
     },
     {
       id: 'projects',
       icon: <Building className="w-5 h-5"/>,
       label: 'Projects',
-      href: '/?tab=projects'
+      href: '/?tab=projects',
+      canAccess: true // All users can access
     },
-    // {
-    //   id: 'payment',
-    //   icon: <DollarSign className="w-5 h-5"/>,
-    //   label: 'Payments',
-    //   href: '/?tab=payment'
-    // },
     {
-      id: 'payment-applications',
+      id: 'payments',
       icon: <DollarSign className="w-5 h-5"/>,
-      label: 'Payments Apps',
-      href: '/?tab=payment-applications'
+      label: 'Payments',
+      href: '/?tab=payments',
+      canAccess: true // All users can access
     },
     {
-      id: 'subcontractors',
-      icon: <Users className="w-5 h-5"/>,
-      label: 'Contractors',
-      href: '/?tab=subcontractors'
+      id: 'settings',
+      icon: <Settings className="w-5 h-5"/>,
+      label: 'Settings',
+      href: '/?tab=settings',
+      canAccess: true // All users can access
     },
     {
       id: 'daily-logs',
       icon: <FileText className="w-5 h-5"/>,
       label: 'Daily Logs',
-      href: '/?tab=daily-logs'
-    },
-    // {
-    //   id: 'compliance',
-    //   icon: <ShieldCheck className="w-5 h-5"/>,
-    //   label: 'Compliance',
-    //   href: '/?tab=compliance'
-    // },
-    {
-      id: 'metrics',
-      icon: <BarChart2 className="w-5 h-5"/>,
-      label: 'Reports',
-      href: '/?tab=metrics'
-    },
-    {
-      id: 'contracts',
-      icon: <Settings className="w-5 h-5"/>,
-      label: 'Contracts',
-      href: '/?tab=contracts'
-    },
-    {
-      id: 'user-management',
-      icon: <UserCog className="w-5 h-5"/>,
-      label: 'User Management',
-      roles: ['admin', 'pm']
+      href: '/?tab=daily-logs',
+      canAccess: userRole && ['admin', 'staff'].includes(userRole.toLowerCase()) // Admin and Staff only
     }
   ];
 
@@ -225,7 +214,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab, setSel
 
       {/* Navigation sidebar */}
       <nav className={`
-        fixed top-0 left-0 h-full w-64 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out z-40
+        fixed top-0 left-0 h-full w-64 bg-sidebar border-r border-sidebar-border transform transition-transform duration-300 ease-in-out z-40
         ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
         <div className="flex flex-col h-full">
@@ -247,7 +236,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab, setSel
           <div className="flex-1 overflow-y-auto py-4">
             <div className="space-y-2 px-4">
               {navigationItems
-                .filter(item => !item.roles || (userRole && item.roles.map(r => r.toLowerCase()).includes(userRole.toLowerCase())))
+                .filter(item => item.canAccess)
                 .map((item) => (
                 <NavButton
                   key={item.id}
