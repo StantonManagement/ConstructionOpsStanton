@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import UserManagementView from './UserManagementView';
 import PermissionsManagement from './PermissionsManagement';
 import { useAuth } from '@/providers/AuthProvider';
+import { ToastContainer, Toast } from './ui/Toast';
 
 import { hasRoleAccess, canAccessUserManagement, canAccessPermissionsManagement } from '@/lib/permissions';
 
@@ -75,7 +76,7 @@ function SettingsTabNavigation({ activeTab, onTabChange, userRole }: { activeTab
 }
 
 // Company Settings Tab
-function CompanySettingsTab() {
+function CompanySettingsTab({ showToast }: { showToast: (message: string, type: 'success' | 'error') => void }) {
   const [companySettings, setCompanySettings] = useState({
     company_name: '',
     address: '',
@@ -112,6 +113,7 @@ function CompanySettingsTab() {
         }
       } catch (e) {
         console.error('localStorage fallback also failed:', e);
+        showToast('Failed to load company settings', 'error');
       }
     } finally {
       setLoading(false);
@@ -138,10 +140,10 @@ function CompanySettingsTab() {
       // Also save to localStorage as backup
       localStorage.setItem('company_settings', JSON.stringify(savedSettings));
       
-      alert('Company settings saved successfully!');
+      showToast('Company settings saved successfully!', 'success');
     } catch (error) {
       console.error('Error saving company settings:', error);
-      alert(error instanceof Error ? error.message : 'Failed to save company settings. Please try again.');
+      showToast(error instanceof Error ? error.message : 'Failed to save company settings. Please try again.', 'error');
     } finally {
       setSaving(false);
     }
@@ -235,13 +237,13 @@ function CompanySettingsTab() {
   );
 }
 
-// Integrations Tab (Placeholder)
+// Integrations Tab
 function IntegrationsTab() {
   const integrations = [
     { name: 'Twilio SMS', icon: '📱', description: 'Send SMS notifications to contractors', status: 'configured' },
     { name: 'AWS S3', icon: '☁️', description: 'Store documents and files securely', status: 'configured' },
-    { name: 'DocuSign', icon: '📝', description: 'Electronic signature integration', status: 'available' },
-    { name: 'QuickBooks', icon: '💼', description: 'Accounting and invoicing', status: 'available' },
+    { name: 'DocuSign', icon: '📝', description: 'Electronic signature integration', status: 'coming_soon' },
+    { name: 'QuickBooks', icon: '💼', description: 'Accounting and invoicing', status: 'coming_soon' },
   ];
 
   return (
@@ -252,10 +254,19 @@ function IntegrationsTab() {
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {integrations.map((integration) => (
-            <div key={integration.name} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-              <div className="flex items-start justify-between mb-2">
+            <div 
+              key={integration.name} 
+              className={`border rounded-lg p-4 transition-all ${
+                integration.status === 'configured' 
+                  ? 'border-green-200 bg-green-50/30 hover:shadow-md' 
+                  : 'border-gray-200 bg-gray-50/50'
+              }`}
+            >
+              <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center text-2xl">
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-2xl ${
+                    integration.status === 'configured' ? 'bg-green-100' : 'bg-gray-200'
+                  }`}>
                     {integration.icon}
                   </div>
                   <div>
@@ -266,24 +277,37 @@ function IntegrationsTab() {
               </div>
               <div className="mt-3">
                 {integration.status === 'configured' ? (
-                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                    ✓ Configured
+                  <span className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-green-100 text-green-800 border border-green-200">
+                    <svg className="w-3 h-3 mr-1.5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
+                    </svg>
+                    Active & Configured
                   </span>
                 ) : (
-                  <button
-                    disabled
-                    className="text-sm text-blue-600 hover:text-blue-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Connect
-                  </button>
+                  <span className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-600 border border-gray-200">
+                    <svg className="w-3 h-3 mr-1.5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd"/>
+                    </svg>
+                    Coming Soon
+                  </span>
                 )}
               </div>
             </div>
           ))}
         </div>
         
-        <div className="mt-6 pt-4 border-t border-gray-200">
-          <p className="text-sm text-gray-500 italic">Coming soon - Additional integrations and configuration options will be available in a future update.</p>
+        <div className="mt-6 pt-6 border-t border-gray-200 bg-blue-50/30 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0">
+              <svg className="w-5 h-5 text-blue-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd"/>
+              </svg>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-900 mb-1">Need additional integrations?</p>
+              <p className="text-sm text-gray-600">Contact your system administrator to configure additional integrations or request new integration features.</p>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -291,7 +315,7 @@ function IntegrationsTab() {
 }
 
 // Preferences Tab
-function PreferencesTab() {
+function PreferencesTab({ showToast }: { showToast: (message: string, type: 'success' | 'error') => void }) {
   const [preferences, setPreferences] = useState({
     emailNotifications: false,
     smsNotifications: false,
@@ -333,6 +357,7 @@ function PreferencesTab() {
         }
       } catch (e) {
         console.error('localStorage fallback also failed:', e);
+        showToast('Failed to load preferences', 'error');
       }
     } finally {
       setLoading(false);
@@ -365,6 +390,7 @@ function PreferencesTab() {
       
       // Also save to localStorage as backup
       localStorage.setItem('user_preferences', JSON.stringify(newPreferences));
+      showToast('Preference updated successfully!', 'success');
     } catch (error) {
       console.error('Error saving preferences:', error);
       // Revert on error
@@ -376,6 +402,7 @@ function PreferencesTab() {
           document.documentElement.classList.remove('dark');
         }
       }
+      showToast('Failed to save preference', 'error');
     }
   };
   
@@ -458,6 +485,9 @@ const SettingsView: React.FC = () => {
   const searchParams = useSearchParams();
   const { role } = useAuth();
   
+  // Toast state
+  const [toasts, setToasts] = useState<Toast[]>([]);
+  
   // Default tab based on role
   const getDefaultTab = (): SettingsTab => {
     if (role === 'admin') return 'users';
@@ -465,6 +495,16 @@ const SettingsView: React.FC = () => {
   };
   
   const [activeTab, setActiveTab] = useState<SettingsTab>(getDefaultTab());
+
+  // Toast functions
+  const showToast = (message: string, type: 'success' | 'error') => {
+    const id = Date.now().toString();
+    setToasts(prev => [...prev, { id, message, type, duration: 5000 }]);
+  };
+
+  const closeToast = (id: string) => {
+    setToasts(prev => prev.filter(toast => toast.id !== id));
+  };
 
   // URL-based tab management
   useEffect(() => {
@@ -494,25 +534,30 @@ const SettingsView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
-        <p className="text-gray-600 mt-1">Manage your account and application settings</p>
-      </div>
+    <>
+      <div className="space-y-6">
+        {/* Header */}
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
+          <p className="text-gray-600 mt-1">Manage your account and application settings</p>
+        </div>
 
-      {/* Tab Navigation */}
-      <SettingsTabNavigation activeTab={activeTab} onTabChange={handleTabChange} userRole={role || undefined} />
+        {/* Tab Navigation */}
+        <SettingsTabNavigation activeTab={activeTab} onTabChange={handleTabChange} userRole={role || undefined} />
 
-      {/* Tab Content */}
-      <div>
-        {activeTab === 'users' && <UserManagementView />}
-        {activeTab === 'permissions' && <PermissionsManagement />}
-        {activeTab === 'company' && <CompanySettingsTab />}
-        {activeTab === 'integrations' && <IntegrationsTab />}
-        {activeTab === 'preferences' && <PreferencesTab />}
+        {/* Tab Content */}
+        <div>
+          {activeTab === 'users' && <UserManagementView />}
+          {activeTab === 'permissions' && <PermissionsManagement />}
+          {activeTab === 'company' && <CompanySettingsTab showToast={showToast} />}
+          {activeTab === 'integrations' && <IntegrationsTab />}
+          {activeTab === 'preferences' && <PreferencesTab showToast={showToast} />}
+        </div>
       </div>
-    </div>
+      
+      {/* Toast Container */}
+      <ToastContainer toasts={toasts} onClose={closeToast} />
+    </>
   );
 };
 

@@ -182,23 +182,33 @@ const ContractorDetailView: React.FC<ContractorDetailViewProps> = ({ contract, c
   const fetchLineItems = useCallback(async () => {
     setLoading(true);
     try {
-      // First, find the contracts record that matches this project + contractor
-      // Note: contracts table uses 'subcontractor_id' not 'contractor_id'
+      // Get the contractor ID - handle both contractor_id and subcontractor_id fields
+      const contractorId = (contract as any).contractor_id || (contract as any).subcontractor_id || contractor?.id;
+      
+      if (!contractorId || !contract.project_id) {
+        console.error('Missing contractor ID or project ID', { contractorId, project_id: contract.project_id });
+        setLineItems([]);
+        setLoading(false);
+        return;
+      }
+
+      // First, try to find the contracts record that matches this project + contractor
+      // Note: contracts table uses 'subcontractor_id', project_contractors uses 'contractor_id'
       const { data: contractRecord, error: contractError } = await supabase
         .from('contracts')
         .select('id')
         .eq('project_id', contract.project_id)
-        .eq('subcontractor_id', contract.subcontractor_id)
+        .eq('subcontractor_id', contractorId)
         .single();
 
       if (contractError) {
-        console.error('Error fetching contract record:', contractError);
-        // If no contract found, try querying by project_id + contractor_id directly
+        console.log('No contract record found in contracts table, trying project_line_items directly');
+        // If no contract found, query project_line_items by project_id + contractor_id directly
         const { data: fallbackData, error: fallbackError } = await supabase
           .from('project_line_items')
           .select('*')
           .eq('project_id', contract.project_id)
-          .eq('contractor_id', contract.subcontractor_id)
+          .eq('contractor_id', contractorId)
           .order('display_order', { ascending: true });
         
         if (fallbackError) {
@@ -215,7 +225,7 @@ const ContractorDetailView: React.FC<ContractorDetailViewProps> = ({ contract, c
         .from('project_line_items')
         .select('*')
         .eq('contract_id', contractRecord.id)
-        .order('display_order', { ascending: true });
+        .order('display_order', { ascending: true});
 
       if (error) {
         console.error('Error fetching line items:', error);
@@ -229,7 +239,7 @@ const ContractorDetailView: React.FC<ContractorDetailViewProps> = ({ contract, c
     } finally {
       setLoading(false);
     }
-  }, [contract.id, contract.project_id, contract.subcontractor_id]);
+  }, [contract.id, contract.project_id, (contract as any).contractor_id, (contract as any).subcontractor_id, contractor?.id]);
 
   useEffect(() => {
     fetchLineItems();
@@ -332,11 +342,14 @@ const ContractorDetailView: React.FC<ContractorDetailViewProps> = ({ contract, c
       // First, find or create the contracts record
       let contractRecordId = null;
       
+      // Get the contractor ID - handle both contractor_id and subcontractor_id fields
+      const contractorId = (contract as any).contractor_id || (contract as any).subcontractor_id || contractor?.id;
+      
       const { data: existingContract, error: contractError } = await supabase
         .from('contracts')
         .select('id')
         .eq('project_id', contract.project_id)
-        .eq('subcontractor_id', contract.subcontractor_id)
+        .eq('subcontractor_id', contractorId)
         .single();
       
       if (contractError && contractError.code === 'PGRST116') {
@@ -345,7 +358,7 @@ const ContractorDetailView: React.FC<ContractorDetailViewProps> = ({ contract, c
           .from('contracts')
           .insert({
             project_id: contract.project_id,
-            subcontractor_id: contract.subcontractor_id,
+            subcontractor_id: contractorId,
             contract_amount: contract.contract_amount || 0,
             original_contract_amount: contract.original_contract_amount || contract.contract_amount || 0,
             start_date: new Date().toISOString().split('T')[0],
@@ -374,7 +387,7 @@ const ContractorDetailView: React.FC<ContractorDetailViewProps> = ({ contract, c
         .insert({
           contract_id: contractRecordId,
           project_id: contract.project_id,
-          contractor_id: contract.subcontractor_id,
+          contractor_id: contractorId,
           description_of_work: newLineItem.description_of_work,
           scheduled_value: newLineItem.scheduled_value,
           item_no: newLineItem.item_no || null,

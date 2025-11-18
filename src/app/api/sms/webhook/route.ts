@@ -143,27 +143,14 @@ export async function POST(req: NextRequest) {
       if (numLineItems > 0) {
         const firstLineItemId = lineItems[0].id;
         
-        // Get most recent APPROVED payment's percentage
-        const { data: approvedPayments } = await supabase
-          .from('payment_applications')
-          .select('id')
-          .eq('project_id', conv.project_id)
-          .eq('contractor_id', conv.contractor_id)
-          .eq('status', 'approved')
-          .order('approved_at', { ascending: false })
-          .limit(1);
+        // Get previous percentage from project_line_items (source of truth)
+        const { data: lineItemData } = await supabase
+          .from('project_line_items')
+          .select('from_previous_application')
+          .eq('id', firstLineItemId)
+          .single();
         
-        let prevPercent = 0;
-        if (approvedPayments && approvedPayments.length > 0) {
-          const { data: progress } = await supabase
-            .from('payment_line_item_progress')
-            .select('pm_verified_percent')
-            .eq('payment_app_id', approvedPayments[0].id)
-            .eq('line_item_id', firstLineItemId)
-            .single();
-          
-          prevPercent = Number(progress?.pm_verified_percent) || 0;
-        }
+        const prevPercent = Number(lineItemData?.from_previous_application) || 0;
         
         twiml.message(`What percent complete is your work for: ${lineItems[0].description_of_work}? (Previous: ${prevPercent}%)`);
       } else {
@@ -186,33 +173,20 @@ export async function POST(req: NextRequest) {
         return new Response(twiml.toString(), { headers: { 'Content-Type': 'text/xml' } });
       }
 
-      // Get previous approved progress only
-      const { data: approvedPayments } = await supabase
-        .from('payment_applications')
-        .select('id')
-        .eq('project_id', conv.project_id)
-        .eq('contractor_id', conv.contractor_id)
-        .eq('status', 'approved')
-        .order('approved_at', { ascending: false })
-        .limit(1);
+      // Get previous percentage from project_line_items (source of truth)
+      const { data: lineItemData, error: prevError } = await supabase
+        .from('project_line_items')
+        .select('from_previous_application')
+        .eq('id', lineItemId)
+        .single();
       
-      let prevPercent = 0;
-      if (approvedPayments && approvedPayments.length > 0) {
-        const { data: progress, error: prevError } = await supabase
-          .from('payment_line_item_progress')
-          .select('pm_verified_percent')
-          .eq('payment_app_id', approvedPayments[0].id)
-          .eq('line_item_id', lineItemId)
-          .single();
-        
-        if (prevError && prevError.code !== 'PGRST116') {
-          console.error('[Percent Validation] Database error fetching previous progress:', prevError);
-          twiml.message('System error occurred. Please try again later.');
-          return new Response(twiml.toString(), { headers: { 'Content-Type': 'text/xml' } });
-        }
-        
-        prevPercent = Number(progress?.pm_verified_percent) || 0;
+      if (prevError) {
+        console.error('[Percent Validation] Database error fetching line item:', prevError);
+        twiml.message('System error occurred. Please try again later.');
+        return new Response(twiml.toString(), { headers: { 'Content-Type': 'text/xml' } });
       }
+      
+      const prevPercent = Number(lineItemData?.from_previous_application) || 0;
       const currentPercent = Number(percent);
       
       console.error(`[Percent Validation] Line Item ${lineItemId}: Previous=${prevPercent}%, Current=${currentPercent}%, PaymentApp=${conv.payment_app_id}`);
@@ -257,29 +231,17 @@ export async function POST(req: NextRequest) {
       let shouldShowSummary = false;
 
       if (idx < numLineItems) {
-        // Get next line item question with previous approved percentage
+        // Get next line item question with previous percentage
         const nextLineItemId = lineItems[idx].id;
         
-        const { data: approvedPayments } = await supabase
-          .from('payment_applications')
-          .select('id')
-          .eq('project_id', conv.project_id)
-          .eq('contractor_id', conv.contractor_id)
-          .eq('status', 'approved')
-          .order('approved_at', { ascending: false })
-          .limit(1);
+        // Get previous percentage from project_line_items (source of truth)
+        const { data: lineItemData } = await supabase
+          .from('project_line_items')
+          .select('from_previous_application')
+          .eq('id', nextLineItemId)
+          .single();
         
-        let prevPercent = 0;
-        if (approvedPayments && approvedPayments.length > 0) {
-          const { data: progress } = await supabase
-            .from('payment_line_item_progress')
-            .select('pm_verified_percent')
-            .eq('payment_app_id', approvedPayments[0].id)
-            .eq('line_item_id', nextLineItemId)
-            .single();
-          
-          prevPercent = Number(progress?.pm_verified_percent) || 0;
-        }
+        const prevPercent = Number(lineItemData?.from_previous_application) || 0;
         
         nextQuestion = `What percent complete is your work for: ${lineItems[idx].description_of_work}? (Previous: ${prevPercent}%)`;
       } else if (idx - numLineItems < ADDITIONAL_QUESTIONS.length) {
@@ -434,16 +396,15 @@ export async function POST(req: NextRequest) {
       
       if (numLineItems > 0) {
         const firstLineItemId = lineItems[0].id;
-        const { data: allPrevProgress } = await supabase
-          .from('payment_line_item_progress')
-          .select('submitted_percent, payment_app_id')
-          .eq('line_item_id', firstLineItemId)
-          .gt('submitted_percent', 0)
-          .neq('payment_app_id', conv.payment_app_id)
-          .order('payment_app_id', { ascending: false })
-          .limit(1);
         
-        const prevPercent = allPrevProgress && allPrevProgress.length > 0 ? Number(allPrevProgress[0].submitted_percent) : 0;
+        // Get previous percentage from project_line_items (source of truth)
+        const { data: lineItemData } = await supabase
+          .from('project_line_items')
+          .select('from_previous_application')
+          .eq('id', firstLineItemId)
+          .single();
+        
+        const prevPercent = Number(lineItemData?.from_previous_application) || 0;
         const desc = lineItems[0].description_of_work || '';
         twiml.message(`What percent complete is your work for: ${desc}? (Previous: ${prevPercent}%)`);
       } else {

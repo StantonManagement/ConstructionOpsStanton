@@ -4,7 +4,6 @@ import React, { createContext, useContext, useEffect, useState, useCallback, use
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabaseClient';
 import { withTimeout } from '@/lib/queryHelpers';
-import { useInactivityLogout } from '@/hooks/useInactivityLogout';
 
 interface AuthContextType {
   user: User | null;
@@ -27,7 +26,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Track if we're currently fetching role to prevent race conditions
   const isFetchingRole = useRef(false);
 
-  // Define signOut early so we can use it in the inactivity hook
+  // Define signOut function
   const signOut = useCallback(async () => {
     try {
       // Clear role cache from sessionStorage
@@ -43,9 +42,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error('[Auth] Sign out error:', err);
     }
   }, [user?.id]);
-
-  // Auto-logout after 30 minutes of inactivity
-  useInactivityLogout(30, signOut);
 
   // Move fetchUserRole outside useEffect to fix stale closure bug
   const fetchUserRole = useCallback(async (userId: string, forceRefresh: boolean = false) => {
