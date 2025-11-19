@@ -56,7 +56,7 @@ export async function POST(
     // Rollback project budget and contractor paid_to_date BEFORE deletion
     if (paymentAppData.current_period_value) {
       // Recalculate project spent excluding this payment
-      const { data: approvedPayments } = await supabaseAdmin
+      const { data: approvedPayments } = await supabaseAdmin!
         .from('payment_applications')
         .select('current_period_value')
         .eq('project_id', paymentAppData.project_id)
@@ -65,13 +65,13 @@ export async function POST(
 
       const totalSpent = (approvedPayments || []).reduce((sum, p) => sum + (p.current_period_value || 0), 0);
       
-      await supabaseAdmin
+      await supabaseAdmin!
         .from('projects')
         .update({ spent: totalSpent })
         .eq('id', paymentAppData.project_id);
 
       // Recalculate contractor paid_to_date excluding this payment
-      const { data: contractorPayments } = await supabaseAdmin
+      const { data: contractorPayments } = await supabaseAdmin!
         .from('payment_applications')
         .select('current_period_value')
         .eq('project_id', paymentAppData.project_id)
@@ -81,7 +81,7 @@ export async function POST(
 
       const contractorTotalPaid = (contractorPayments || []).reduce((sum, p) => sum + (p.current_period_value || 0), 0);
       
-      await supabaseAdmin
+      await supabaseAdmin!
         .from('project_contractors')
         .update({ paid_to_date: contractorTotalPaid })
         .eq('project_id', paymentAppData.project_id)
@@ -91,7 +91,7 @@ export async function POST(
     }
 
     // Rollback line item baselines to previous approved state
-    const { data: lineItemProgress, error: lineItemError } = await supabaseAdmin
+    const { data: lineItemProgress, error: lineItemError } = await supabaseAdmin!
       .from('payment_line_item_progress')
       .select('line_item_id')
       .eq('payment_app_id', paymentAppId);
@@ -103,7 +103,7 @@ export async function POST(
       // For each line item, find the previous approved percentage
       for (const progress of lineItemProgress) {
         try {
-          const { data: approvedPayments, error: paymentsError } = await supabaseAdmin
+          const { data: approvedPayments, error: paymentsError } = await supabaseAdmin!
             .from('payment_applications')
             .select('id, approved_at')
             .eq('project_id', paymentAppData.project_id)
@@ -120,7 +120,7 @@ export async function POST(
 
           let previousPercent = 0;
           if (approvedPayments && approvedPayments.length > 0) {
-            const { data: prevProgress, error: prevError } = await supabaseAdmin
+            const { data: prevProgress, error: prevError } = await supabaseAdmin!
               .from('payment_line_item_progress')
               .select('pm_verified_percent')
               .eq('payment_app_id', approvedPayments[0].id)
@@ -135,7 +135,7 @@ export async function POST(
           }
 
           // Revert line item to previous approved state
-          const { error: updateError } = await supabaseAdmin
+          const { error: updateError } = await supabaseAdmin!
             .from('project_line_items')
             .update({
               from_previous_application: previousPercent,
@@ -159,7 +159,7 @@ export async function POST(
     }
 
     // Delete payment_line_item_progress records first (foreign key constraint)
-    const { error: progressDeleteError } = await supabaseAdmin
+    const { error: progressDeleteError } = await supabaseAdmin!
       .from('payment_line_item_progress')
       .delete()
       .eq('payment_app_id', paymentAppId);
@@ -170,7 +170,7 @@ export async function POST(
     }
 
     // Finally, delete the payment application itself
-    const { error: deleteError } = await supabaseAdmin
+    const { error: deleteError } = await supabaseAdmin!
       .from('payment_applications')
       .delete()
       .eq('id', paymentAppId);

@@ -63,13 +63,13 @@ export async function GET(request: NextRequest) {
       const entitiesWithStats = await Promise.all(
         entities.map(async (entity) => {
           // Count properties
-          const { count: propertyCount, error: countError } = await supabaseAdmin
+          const { count: propertyCount, error: countError } = await supabaseAdmin!
             .from('projects')
             .select('id', { count: 'exact', head: true })
             .eq('owner_entity_id', entity.id);
 
           // Sum budgets (active projects only)
-          const { data: budgetData, error: budgetError } = await supabaseAdmin
+          const { data: budgetData, error: budgetError } = await supabaseAdmin!
             .from('projects')
             .select('budget, spent')
             .eq('owner_entity_id', entity.id)

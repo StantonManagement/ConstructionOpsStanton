@@ -8,7 +8,7 @@ export interface PaymentApplication {
   id: number;
   status: string;
   created_at: string;
-  project?: { id: number; name: string };
+  project?: { id: number; name: string; owner_entity_id?: number };
   contractor?: { id: number; name: string };
   total_amount?: number;
   current_period_amount?: number;

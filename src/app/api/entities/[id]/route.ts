@@ -60,18 +60,18 @@ export async function GET(
     }
 
     // Calculate aggregated stats
+    const total_budget = properties?.reduce((sum, p) => sum + (Number(p.budget) || 0), 0) || 0;
+    const total_spent = properties?.reduce((sum, p) => sum + (Number(p.spent) || 0), 0) || 0;
+
     const stats = {
       total_properties: properties?.length || 0,
       active_properties: properties?.filter(p => p.status === 'active').length || 0,
       completed_properties: properties?.filter(p => p.status === 'completed').length || 0,
-      total_budget: properties?.reduce((sum, p) => sum + (Number(p.budget) || 0), 0) || 0,
-      total_spent: properties?.reduce((sum, p) => sum + (Number(p.spent) || 0), 0) || 0,
+      total_budget,
+      total_spent,
+      total_remaining: total_budget - total_spent,
+      percent_spent: total_budget > 0 ? Math.round((total_spent / total_budget) * 100) : 0,
     };
-
-    stats['total_remaining'] = stats.total_budget - stats.total_spent;
-    stats['percent_spent'] = stats.total_budget > 0 
-      ? Math.round((stats.total_spent / stats.total_budget) * 100) 
-      : 0;
 
     return NextResponse.json({ 
       entity, 
