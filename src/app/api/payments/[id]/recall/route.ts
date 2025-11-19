@@ -22,10 +22,16 @@ export async function POST(
     const body = await request.json();
     const { recallNotes } = body;
 
-    // Get current session for authorization
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    if (sessionError || !session?.access_token) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401, headers: CORS_HEADERS });
+    // Get current user for authorization
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Authorization header required' }, { status: 401, headers: CORS_HEADERS });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+    if (userError || !user) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401, headers: CORS_HEADERS });
     }
 
     // Get the payment application to check current status
