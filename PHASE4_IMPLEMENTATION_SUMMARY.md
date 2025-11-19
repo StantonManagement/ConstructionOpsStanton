@@ -232,6 +232,27 @@ The following features are designed but not fully implemented (marked as complet
 3. System tracks expiration and sends reminders
 4. File claims when issues arise
 
+## ⚠️ CRITICAL SETUP REQUIRED
+
+### Before Using Phase 4 Features:
+
+1. **Create Supabase Storage Bucket** (BLOCKING)
+   - Photo upload uses **Supabase Storage** (NOT AWS S3)
+   - Bucket must be named exactly: `construction-photos`
+   - See `SETUP_SUPABASE_STORAGE.md` for detailed instructions
+   - Without this, photo uploads will fail with "Bucket not found"
+
+2. **Run Database Migration** (BLOCKING)
+   - Execute `database-migrations/phase4-field-ops.sql` in Supabase SQL Editor
+   - Creates all tables, RLS policies, helper functions
+   - Without this, all Phase 4 API endpoints will fail
+
+3. **Verify Sharp Installation** (Windows)
+   - Run: `npm rebuild sharp`
+   - Required for image compression to work on Windows
+
+See `ERROR_CHECKING_PHASE4.md` for complete validation checklist.
+
 ## Next Steps
 
 To complete Phase 4 fully:
