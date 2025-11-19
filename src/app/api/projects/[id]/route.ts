@@ -11,13 +11,14 @@ import {
  * GET /api/projects/[id]
  * Fetch single project with full details
  */
-export const GET = withAuth(async (request: NextRequest, context: { params: { id: string } }, user: any) => {
+export const GET = withAuth(async (request: NextRequest, context: { params: Promise<{ id: string }> }, user: any) => {
   try {
     if (!supabaseAdmin) {
       throw new APIError('Service role client not available', 500, 'SERVER_ERROR');
     }
 
-    const projectId = parseInt(context.params.id);
+    const params = await context.params;
+    const projectId = parseInt(params.id);
 
     if (isNaN(projectId)) {
       throw new APIError('Invalid project ID', 400, 'VALIDATION_ERROR');
@@ -86,13 +87,14 @@ export const GET = withAuth(async (request: NextRequest, context: { params: { id
  * PUT /api/projects/[id]
  * Update project details
  */
-export const PUT = withAuth(async (request: NextRequest, context: { params: { id: string } }, user: any) => {
+export const PUT = withAuth(async (request: NextRequest, context: { params: Promise<{ id: string }> }, user: any) => {
   try {
     if (!supabaseAdmin) {
       throw new APIError('Service role client not available', 500, 'SERVER_ERROR');
     }
 
-    const projectId = parseInt(context.params.id);
+    const params = await context.params;
+    const projectId = parseInt(params.id);
 
     if (isNaN(projectId)) {
       throw new APIError('Invalid project ID', 400, 'VALIDATION_ERROR');
@@ -164,13 +166,14 @@ export const PUT = withAuth(async (request: NextRequest, context: { params: { id
  * DELETE /api/projects/[id]
  * Delete project (soft delete - sets status to 'deleted')
  */
-export const DELETE = withAuth(async (request: NextRequest, context: { params: { id: string } }, user: any) => {
+export const DELETE = withAuth(async (request: NextRequest, context: { params: Promise<{ id: string }> }, user: any) => {
   try {
     if (!supabaseAdmin) {
       throw new APIError('Service role client not available', 500, 'SERVER_ERROR');
     }
 
-    const projectId = parseInt(context.params.id);
+    const params = await context.params;
+    const projectId = parseInt(params.id);
 
     if (isNaN(projectId)) {
       throw new APIError('Invalid project ID', 400, 'VALIDATION_ERROR');
