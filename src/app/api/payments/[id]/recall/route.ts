@@ -50,33 +50,16 @@ export async function POST(
       return NextResponse.json({ error: 'Only approved payment applications can be recalled' }, { status: 400, headers: CORS_HEADERS });
     }
 
-    // Update the payment application status to 'recalled' (use admin client to bypass RLS)
-    const { data: updatedApp, error: updateError } = await supabaseAdmin
-      .from('payment_applications')
-      .update({
-        status: 'recalled',
-        pm_notes: recallNotes || null,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', paymentAppId)
-      .select()
-      .single();
+    // Store payment app data before deletion for rollback calculations
+    const paymentAppData = { ...paymentApp };
 
-    if (updateError) {
-      console.error('Error recalling payment application:', updateError);
-      return NextResponse.json({ 
-        error: 'Failed to recall payment application', 
-        details: updateError.message || updateError.toString() 
-      }, { status: 500, headers: CORS_HEADERS });
-    }
-
-    // Rollback project budget and contractor paid_to_date
-    if (paymentApp.current_period_value) {
-      // Recalculate project spent excluding the recalled payment
+    // Rollback project budget and contractor paid_to_date BEFORE deletion
+    if (paymentAppData.current_period_value) {
+      // Recalculate project spent excluding this payment
       const { data: approvedPayments } = await supabaseAdmin
         .from('payment_applications')
         .select('current_period_value')
-        .eq('project_id', paymentApp.project_id)
+        .eq('project_id', paymentAppData.project_id)
         .eq('status', 'approved')
         .neq('id', paymentAppId);
 
@@ -85,14 +68,14 @@ export async function POST(
       await supabaseAdmin
         .from('projects')
         .update({ spent: totalSpent })
-        .eq('id', paymentApp.project_id);
+        .eq('id', paymentAppData.project_id);
 
-      // Recalculate contractor paid_to_date excluding the recalled payment
+      // Recalculate contractor paid_to_date excluding this payment
       const { data: contractorPayments } = await supabaseAdmin
         .from('payment_applications')
         .select('current_period_value')
-        .eq('project_id', paymentApp.project_id)
-        .eq('contractor_id', paymentApp.contractor_id)
+        .eq('project_id', paymentAppData.project_id)
+        .eq('contractor_id', paymentAppData.contractor_id)
         .eq('status', 'approved')
         .neq('id', paymentAppId);
 
@@ -101,10 +84,10 @@ export async function POST(
       await supabaseAdmin
         .from('project_contractors')
         .update({ paid_to_date: contractorTotalPaid })
-        .eq('project_id', paymentApp.project_id)
-        .eq('contractor_id', paymentApp.contractor_id);
+        .eq('project_id', paymentAppData.project_id)
+        .eq('contractor_id', paymentAppData.contractor_id);
 
-      console.log(`Rolled back budget for recalled payment ${paymentAppId}: project spent=${totalSpent}, contractor paid=${contractorTotalPaid}`);
+      console.log(`Rolled back budget for payment ${paymentAppId}: project spent=${totalSpent}, contractor paid=${contractorTotalPaid}`);
     }
 
     // Rollback line item baselines to previous approved state
@@ -123,8 +106,8 @@ export async function POST(
           const { data: approvedPayments, error: paymentsError } = await supabaseAdmin
             .from('payment_applications')
             .select('id, approved_at')
-            .eq('project_id', paymentApp.project_id)
-            .eq('contractor_id', paymentApp.contractor_id)
+            .eq('project_id', paymentAppData.project_id)
+            .eq('contractor_id', paymentAppData.contractor_id)
             .eq('status', 'approved')
             .neq('id', paymentAppId)
             .order('approved_at', { ascending: false })
@@ -170,14 +153,41 @@ export async function POST(
         }
       }
       
-      console.log(`Rolled back ${lineItemProgress.length} line item baselines for recalled payment ${paymentAppId}`);
+      console.log(`Rolled back ${lineItemProgress.length} line item baselines for payment ${paymentAppId}`);
     } else {
       console.log(`No line item progress found for payment ${paymentAppId} (possibly $0 payment app)`);
     }
 
+    // Delete payment_line_item_progress records first (foreign key constraint)
+    const { error: progressDeleteError } = await supabaseAdmin
+      .from('payment_line_item_progress')
+      .delete()
+      .eq('payment_app_id', paymentAppId);
+
+    if (progressDeleteError) {
+      console.error('Error deleting line item progress:', progressDeleteError);
+      // Continue with payment app deletion even if this fails
+    }
+
+    // Finally, delete the payment application itself
+    const { error: deleteError } = await supabaseAdmin
+      .from('payment_applications')
+      .delete()
+      .eq('id', paymentAppId);
+
+    if (deleteError) {
+      console.error('Error deleting payment application:', deleteError);
+      return NextResponse.json({ 
+        error: 'Failed to delete payment application', 
+        details: deleteError.message || deleteError.toString() 
+      }, { status: 500, headers: CORS_HEADERS });
+    }
+
+    console.log(`Payment application ${paymentAppId} recalled and deleted successfully`);
+
     return NextResponse.json({
-      message: 'Payment application recalled successfully',
-      paymentApp: updatedApp
+      message: 'Payment application recalled and deleted successfully',
+      paymentAppId: paymentAppId
     }, { headers: CORS_HEADERS });
 
   } catch (error) {
