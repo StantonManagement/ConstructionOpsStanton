@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase, supabaseAdmin } from '@/lib/supabaseClient';
 
 export const runtime = 'nodejs';
 
@@ -50,8 +50,8 @@ export async function POST(
       return NextResponse.json({ error: 'Only approved payment applications can be recalled' }, { status: 400, headers: CORS_HEADERS });
     }
 
-    // Update the payment application status to 'recalled'
-    const { data: updatedApp, error: updateError } = await supabase
+    // Update the payment application status to 'recalled' (use admin client to bypass RLS)
+    const { data: updatedApp, error: updateError } = await supabaseAdmin
       .from('payment_applications')
       .update({
         status: 'recalled',
@@ -73,7 +73,7 @@ export async function POST(
     // Rollback project budget and contractor paid_to_date
     if (paymentApp.current_period_value) {
       // Recalculate project spent excluding the recalled payment
-      const { data: approvedPayments } = await supabase
+      const { data: approvedPayments } = await supabaseAdmin
         .from('payment_applications')
         .select('current_period_value')
         .eq('project_id', paymentApp.project_id)
@@ -82,13 +82,13 @@ export async function POST(
 
       const totalSpent = (approvedPayments || []).reduce((sum, p) => sum + (p.current_period_value || 0), 0);
       
-      await supabase
+      await supabaseAdmin
         .from('projects')
         .update({ spent: totalSpent })
         .eq('id', paymentApp.project_id);
 
       // Recalculate contractor paid_to_date excluding the recalled payment
-      const { data: contractorPayments } = await supabase
+      const { data: contractorPayments } = await supabaseAdmin
         .from('payment_applications')
         .select('current_period_value')
         .eq('project_id', paymentApp.project_id)
@@ -98,7 +98,7 @@ export async function POST(
 
       const contractorTotalPaid = (contractorPayments || []).reduce((sum, p) => sum + (p.current_period_value || 0), 0);
       
-      await supabase
+      await supabaseAdmin
         .from('project_contractors')
         .update({ paid_to_date: contractorTotalPaid })
         .eq('project_id', paymentApp.project_id)
@@ -108,7 +108,7 @@ export async function POST(
     }
 
     // Rollback line item baselines to previous approved state
-    const { data: lineItemProgress, error: lineItemError } = await supabase
+    const { data: lineItemProgress, error: lineItemError } = await supabaseAdmin
       .from('payment_line_item_progress')
       .select('line_item_id')
       .eq('payment_app_id', paymentAppId);
@@ -120,7 +120,7 @@ export async function POST(
       // For each line item, find the previous approved percentage
       for (const progress of lineItemProgress) {
         try {
-          const { data: approvedPayments, error: paymentsError } = await supabase
+          const { data: approvedPayments, error: paymentsError } = await supabaseAdmin
             .from('payment_applications')
             .select('id, approved_at')
             .eq('project_id', paymentApp.project_id)
@@ -137,7 +137,7 @@ export async function POST(
 
           let previousPercent = 0;
           if (approvedPayments && approvedPayments.length > 0) {
-            const { data: prevProgress, error: prevError } = await supabase
+            const { data: prevProgress, error: prevError } = await supabaseAdmin
               .from('payment_line_item_progress')
               .select('pm_verified_percent')
               .eq('payment_app_id', approvedPayments[0].id)
@@ -152,7 +152,7 @@ export async function POST(
           }
 
           // Revert line item to previous approved state
-          const { error: updateError } = await supabase
+          const { error: updateError } = await supabaseAdmin
             .from('project_line_items')
             .update({
               from_previous_application: previousPercent,
