@@ -21,10 +21,10 @@ This feature allows PMs and Admins to create payment applications by manually en
    - Creates payment_line_item_progress records
    - Validates all inputs and business rules
 
-3. **MODIFIED: `src/app/components/SubcontractorSelectionView.tsx`**
-   - Added "Create Payment App Manually" button (appears when exactly 1 contractor selected)
-   - Button shown alongside "Send via SMS" option
-   - Opens ManualPaymentEntryModal with selected contractor context
+3. **MODIFIED: `src/app/components/ContractorDetailView.tsx`**
+   - Added "Create Payment App" button next to "Request Payment" button
+   - Green button with Edit icon
+   - Opens ManualPaymentEntryModal with contractor context
 
 ## Testing Checklist
 
@@ -32,13 +32,16 @@ This feature allows PMs and Admins to create payment applications by manually en
 - [ ] Login as Admin or PM user
 - [ ] Navigate to Projects tab
 - [ ] Select a project with contractors and line items
-- [ ] Click on project to initiate payment application flow
-- [ ] Verify you see contractor selection screen
+- [ ] Click on the project to open Project Detail View
+- [ ] Navigate to the "Contractors" tab within the project
+- [ ] Click on a contractor card to open Contractor Detail View
+- [ ] Verify you see the contractor's line items and two action buttons
 
 ### Phase 2: Manual Entry UI
-- [ ] Select **exactly one contractor** from the list
-- [ ] Verify "Create Payment App Manually" button appears (green button with ✏️ icon)
-- [ ] Click the "Create Payment App Manually" button
+- [ ] Verify two buttons are visible:
+  - **"Request Payment"** (blue, SMS flow)
+  - **"Create Payment App"** (green, manual entry)
+- [ ] Click the "Create Payment App" button (green button with ✏️ icon)
 - [ ] Modal should open with title "Create Payment Application"
 - [ ] Verify modal shows: Project Name • Contractor Name
 
@@ -152,15 +155,15 @@ This feature allows PMs and Admins to create payment applications by manually en
 ### Phase 12: Edge Cases
 
 #### No Line Items
-- [ ] Select contractor with no line items
-- [ ] Click "Create Payment App Manually"
+- [ ] Navigate to a contractor with no line items
+- [ ] Click "Create Payment App" button
 - [ ] Should show error: "No line items found"
 - [ ] Should not allow submission
 
-#### Multiple Contractors Selected
-- [ ] Select 2 or more contractors
-- [ ] Verify "Create Payment App Manually" button is hidden
-- [ ] Only "Send via SMS" button should be available
+#### Button Always Visible
+- [ ] "Create Payment App" button should always be visible on contractor detail page
+- [ ] Both "Request Payment" and "Create Payment App" buttons should be available
+- [ ] No dependencies on multiple selections (this is single contractor view)
 
 #### Modal Dismissal
 - [ ] Open modal

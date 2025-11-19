@@ -757,6 +757,7 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
   const [deleteTarget, setDeleteTarget] = useState<number | number[] | null>(null);
   const [rejectionNotes, setRejectionNotes] = useState('');
   const [approvalNotes, setApprovalNotes] = useState('');
+  const [sendContractorNotification, setSendContractorNotification] = useState(true);
   const [projectLineItems, setProjectLineItems] = useState<any[]>([]);
   const [editingLineItem, setEditingLineItem] = useState<number | null>(null);
   const [editedPercentages, setEditedPercentages] = useState<Record<number, {
@@ -1602,6 +1603,21 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
                   className="w-full p-3 border border-border rounded-lg mb-4 resize-none bg-card text-foreground focus:ring-2 focus:ring-primary focus:border-primary transition-all"
                   rows={3}
                 />
+                
+                {/* Notification Checkbox */}
+                <div className="flex items-center gap-3 p-4 bg-blue-50 border border-blue-200 rounded-lg mb-4">
+                  <input
+                    type="checkbox"
+                    id="notify-contractor-apps"
+                    checked={sendContractorNotification}
+                    onChange={(e) => setSendContractorNotification(e.target.checked)}
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                  />
+                  <label htmlFor="notify-contractor-apps" className="text-sm text-gray-700 cursor-pointer select-none">
+                    Send notification to contractor about this approval
+                  </label>
+                </div>
+                
                 <div className="flex gap-3 justify-end">
                   <button
                     onClick={() => setShowConfirmDialog(null)}

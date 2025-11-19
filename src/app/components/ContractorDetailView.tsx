@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { ArrowLeft, DollarSign, TrendingUp, AlertCircle, Send, Plus, FileSpreadsheet, GripVertical } from 'lucide-react';
+import { ArrowLeft, DollarSign, TrendingUp, AlertCircle, Send, Plus, FileSpreadsheet, GripVertical, Edit } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
+import ManualPaymentEntryModal from './ManualPaymentEntryModal';
 import {
   DndContext,
   closestCenter,
@@ -153,6 +154,8 @@ const ContractorDetailView: React.FC<ContractorDetailViewProps> = ({ contract, c
   const [showChangeOrderModal, setShowChangeOrderModal] = useState(false);
   const [exportingToExcel, setExportingToExcel] = useState(false);
   const [requestingPayment, setRequestingPayment] = useState(false);
+  const [showManualEntryModal, setShowManualEntryModal] = useState(false);
+  const [projectName, setProjectName] = useState<string>('');
   const [newLineItem, setNewLineItem] = useState({
     description_of_work: '',
     scheduled_value: 0,
@@ -244,6 +247,24 @@ const ContractorDetailView: React.FC<ContractorDetailViewProps> = ({ contract, c
   useEffect(() => {
     fetchLineItems();
   }, [fetchLineItems]);
+
+  useEffect(() => {
+    const fetchProjectName = async () => {
+      if (contract.project_id) {
+        const { data } = await supabase
+          .from('projects')
+          .select('name')
+          .eq('id', contract.project_id)
+          .single();
+        
+        if (data) {
+          setProjectName(data.name);
+        }
+      }
+    };
+    
+    fetchProjectName();
+  }, [contract.project_id]);
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
@@ -717,6 +738,13 @@ const ContractorDetailView: React.FC<ContractorDetailViewProps> = ({ contract, c
           <span>{requestingPayment ? 'Sending...' : 'Request Payment'}</span>
         </button>
         <button 
+          onClick={() => setShowManualEntryModal(true)}
+          className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+        >
+          <Edit className="w-5 h-5" />
+          <span>Create Payment App</span>
+        </button>
+        <button 
           onClick={() => setShowChangeOrderModal(true)}
           className="inline-flex items-center gap-2 px-6 py-3 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
         >
@@ -846,6 +874,17 @@ const ContractorDetailView: React.FC<ContractorDetailViewProps> = ({ contract, c
             </div>
           </div>
         </div>
+      )}
+
+      {/* Manual Payment Entry Modal */}
+      {showManualEntryModal && (
+        <ManualPaymentEntryModal
+          projectId={contract.project_id}
+          projectName={projectName || 'Project'}
+          contractorId={contractor.id}
+          contractorName={contractor.name}
+          onClose={() => setShowManualEntryModal(false)}
+        />
       )}
     </div>
   );
