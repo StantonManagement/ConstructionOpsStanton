@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { RefreshCw, FileText, Eye } from 'lucide-react';
+import { RefreshCw, FileText, Eye, Trash2 } from 'lucide-react';
 import PaymentStatusBadge from './PaymentStatusBadge';
 import type { PaymentApplication } from './PaymentApplicationRow';
 
@@ -9,6 +9,7 @@ interface PaymentApplicationListProps {
   applications: PaymentApplication[];
   loading?: boolean;
   onReview?: (id: number) => void;
+  onDelete?: (id: number) => void;
   onRefresh?: () => void;
   showSummary?: boolean;
   emptyMessage?: string;
@@ -18,6 +19,7 @@ const PaymentApplicationList: React.FC<PaymentApplicationListProps> = ({
   applications,
   loading = false,
   onReview,
+  onDelete,
   onRefresh,
   showSummary = true,
   emptyMessage = 'No payment applications yet'
@@ -150,7 +152,7 @@ const PaymentApplicationList: React.FC<PaymentApplicationListProps> = ({
                     Amount
                   </th>
                   <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Action
+                    Actions
                   </th>
                 </tr>
               </thead>
@@ -169,8 +171,23 @@ const PaymentApplicationList: React.FC<PaymentApplicationListProps> = ({
                     <td className="px-3 py-3 text-sm text-right font-semibold text-gray-900">
                       {formatCurrency(app.current_period_amount || app.total_amount || 0)}
                     </td>
-                    <td className="px-3 py-3 text-center">
-                      {getActionButton(app)}
+                    <td className="px-3 py-3">
+                      <div className="flex items-center justify-center gap-2">
+                        {getActionButton(app)}
+                        {onDelete && (
+                          <button
+                            onClick={() => {
+                              if (confirm(`Delete payment application #${app.id}?`)) {
+                                onDelete(app.id);
+                              }
+                            }}
+                            className="inline-flex items-center gap-1 px-2 py-1.5 bg-red-600 text-white rounded-md text-xs font-semibold hover:bg-red-700 transition-colors"
+                            title="Delete payment application"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}

@@ -279,6 +279,44 @@ const ContractorDetailView: React.FC<ContractorDetailViewProps> = ({ contract, c
     fetchPaymentApplications();
   }, [fetchPaymentApplications]);
 
+  // Delete payment application
+  const handleDeletePaymentApp = async (paymentAppId: number) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        alert('Authentication required');
+        return;
+      }
+
+      const response = await fetch('/api/payments/delete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          paymentAppIds: [paymentAppId]
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete payment application');
+      }
+
+      const result = await response.json();
+      if (result.success && result.success.length > 0) {
+        alert('Payment application deleted successfully!');
+        fetchPaymentApplications(); // Refresh the list
+      } else if (result.failed && result.failed.length > 0) {
+        alert(`Failed to delete: ${result.failed[0].error}`);
+      }
+    } catch (error) {
+      console.error('Error deleting payment application:', error);
+      alert(error instanceof Error ? error.message : 'Failed to delete payment application');
+    }
+  };
+
   useEffect(() => {
     const fetchProjectName = async () => {
       if (contract.project_id) {
@@ -645,6 +683,7 @@ const ContractorDetailView: React.FC<ContractorDetailViewProps> = ({ contract, c
         applications={paymentApplications}
         loading={loadingPaymentApps}
         onReview={(id) => router.push(`/payments/${id}/verify`)}
+        onDelete={handleDeletePaymentApp}
         onRefresh={fetchPaymentApplications}
         showSummary={true}
         emptyMessage="No payment applications yet. Create one using the button above."
