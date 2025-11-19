@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, ChangeEvent } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { Building, Users, DollarSign, Calendar, AlertCircle, CheckCircle, Clock, RefreshCw, Eye, Plus, X } from 'lucide-react';
+import { Building, Users, DollarSign, Calendar, AlertCircle, CheckCircle, Clock, RefreshCw, Eye, Plus, X, Edit2, Trash2 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { getProjectStatusBadge, getStatusLabel } from '@/lib/statusColors';
@@ -237,6 +237,16 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
   const [showNewProjectForm, setShowNewProjectForm] = useState(false);
   const [isCreatingProject, setIsCreatingProject] = useState(false);
 
+  // Edit project form state
+  const [showEditProjectForm, setShowEditProjectForm] = useState(false);
+  const [editingProject, setEditingProject] = useState<any>(null);
+  const [isEditingProject, setIsEditingProject] = useState(false);
+
+  // Delete confirmation state
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  const [deletingProject, setDeletingProject] = useState<any>(null);
+  const [isDeletingProject, setIsDeletingProject] = useState(false);
+
   // Fetch projects from API
   const fetchProjects = useCallback(async () => {
     setLoading(true);
@@ -355,6 +365,109 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
     } finally {
       setIsCreatingProject(false);
     }
+  };
+
+  // Handle editing a project
+  const handleEditProject = async (formData: Record<string, string>) => {
+    if (!editingProject) return;
+    
+    setIsEditingProject(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('Authentication required');
+      }
+
+      const updateData = {
+        name: formData.name,
+        client_name: formData.client_name,
+        address: formData.address,
+        budget: formData.budget ? parseFloat(formData.budget) : null,
+        start_date: formData.start_date || null,
+        target_completion_date: formData.target_completion_date || null,
+        end_date: formData.end_date || null,
+        current_phase: formData.current_phase,
+        status: formData.status,
+      };
+
+      const response = await fetch(`/api/projects/${editingProject.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify(updateData)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update project');
+      }
+
+      // Refresh the projects list
+      await fetchProjects();
+      
+      // Close the form
+      setShowEditProjectForm(false);
+      setEditingProject(null);
+      
+    } catch (err) {
+      console.error('Error updating project:', err);
+      setError(err instanceof Error ? err.message : 'Failed to update project');
+    } finally {
+      setIsEditingProject(false);
+    }
+  };
+
+  // Handle opening edit form
+  const handleOpenEditForm = (project: any) => {
+    setEditingProject(project);
+    setShowEditProjectForm(true);
+  };
+
+  // Handle delete project
+  const handleDeleteProject = async () => {
+    if (!deletingProject) return;
+    
+    setIsDeletingProject(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('Authentication required');
+      }
+
+      const response = await fetch(`/api/projects/${deletingProject.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete project');
+      }
+
+      // Refresh the projects list
+      await fetchProjects();
+      
+      // Close the confirmation modal
+      setShowDeleteConfirmation(false);
+      setDeletingProject(null);
+      
+    } catch (err) {
+      console.error('Error deleting project:', err);
+      setError(err instanceof Error ? err.message : 'Failed to delete project');
+      // Keep modal open to show error
+    } finally {
+      setIsDeletingProject(false);
+    }
+  };
+
+  // Handle opening delete confirmation
+  const handleOpenDeleteConfirmation = (project: any) => {
+    setDeletingProject(project);
+    setShowDeleteConfirmation(true);
   };
 
   const handleBudgetClick = async (projectId: number, type: 'spent' | 'remaining') => {
@@ -942,8 +1055,30 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
               )}
             </div>
 
-            {/* Action Button */}
-            <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-100">
+            {/* Action Buttons */}
+            <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-100 space-y-2">
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleOpenEditForm(project);
+                  }}
+                  className="flex items-center justify-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-xs sm:text-sm font-medium"
+                >
+                  <Edit2 className="w-3 h-3 sm:w-4 sm:h-4" />
+                  <span>Edit</span>
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleOpenDeleteConfirmation(project);
+                  }}
+                  className="flex items-center justify-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-xs sm:text-sm font-medium"
+                >
+                  <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
+                  <span>Delete</span>
+                </button>
+              </div>
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -1609,6 +1744,97 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
           onClose={() => setShowNewProjectForm(false)}
           isLoading={isCreatingProject}
         />
+      )}
+
+      {/* Edit Project Form Modal */}
+      {showEditProjectForm && editingProject && (
+        <ProjectFormWithEntity
+          onSubmit={handleEditProject}
+          onClose={() => {
+            setShowEditProjectForm(false);
+            setEditingProject(null);
+          }}
+          isLoading={isEditingProject}
+          initialData={{
+            id: editingProject.id,
+            name: editingProject.name || '',
+            client_name: editingProject.client_name || '',
+            address: editingProject.address || '',
+            budget: editingProject.budget?.toString() || '',
+            start_date: editingProject.start_date || '',
+            target_completion_date: editingProject.target_completion_date || '',
+            end_date: editingProject.end_date || '',
+            current_phase: editingProject.current_phase || '',
+            status: editingProject.status || 'active',
+            owner_entity_id: editingProject.owner_entity_id?.toString() || '',
+            portfolio_name: editingProject.portfolio_name || '',
+            total_units: editingProject.total_units?.toString() || '1',
+          }}
+        />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirmation && deletingProject && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-card rounded-lg shadow-xl w-full max-w-md">
+            <div className="p-6 border-b border-border">
+              <div className="flex items-center gap-3">
+                <div className="flex-shrink-0 w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                  <Trash2 className="w-6 h-6 text-red-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground">Delete Project</h3>
+                  <p className="text-sm text-muted-foreground">This action cannot be undone</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6">
+              <p className="text-foreground mb-4">
+                Are you sure you want to delete <span className="font-semibold">&quot;{deletingProject.name}&quot;</span>?
+              </p>
+              <p className="text-sm text-muted-foreground mb-4">
+                This will set the project status to &quot;deleted&quot;. You can only delete projects with no contractors or payment applications.
+              </p>
+              {error && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-sm text-red-600">{error}</p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center justify-end gap-3 p-6 border-t border-border">
+              <button
+                onClick={() => {
+                  setShowDeleteConfirmation(false);
+                  setDeletingProject(null);
+                  setError(null);
+                }}
+                disabled={isDeletingProject}
+                className="px-4 py-2 text-foreground bg-secondary rounded-lg hover:bg-secondary/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteProject}
+                disabled={isDeletingProject}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {isDeletingProject ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    <span>Delete Project</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
