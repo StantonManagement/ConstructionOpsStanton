@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { getProjectStatusBadge, getStatusLabel } from '@/lib/statusColors';
 import ProjectDetailView from './ProjectDetailView';
+import ProjectFormWithEntity from './ProjectFormWithEntity';
 
 // Form validation utilities
 const validators = {
@@ -1603,57 +1604,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
 
       {/* New Project Form Modal */}
       {showNewProjectForm && (
-        <AddForm
-          title="New Project"
-          icon={<Building className="w-5 h-5 text-primary" />}
-          fields={[
-            {
-              name: 'name',
-              placeholder: 'Enter project name',
-              required: true,
-              validators: [validators.required]
-            },
-            {
-              name: 'address',
-              placeholder: 'Enter project address',
-              required: true,
-              validators: [validators.required]
-            },
-            {
-              name: 'client_name',
-              placeholder: 'Enter client name',
-              required: true,
-              validators: [validators.required]
-            },
-            {
-              name: 'budget',
-              placeholder: 'Enter project budget',
-              type: 'number',
-              validators: [validators.number]
-            },
-            {
-              name: 'start_date',
-              placeholder: 'Enter start date',
-              type: 'date',
-              validators: [validators.date]
-            },
-            {
-              name: 'end_date',
-              placeholder: 'Enter end date',
-              type: 'date',
-              validators: [validators.date]
-            },
-            {
-              name: 'status',
-              placeholder: 'Enter status',
-              defaultValue: 'active'
-            },
-            {
-              name: 'current_phase',
-              placeholder: 'Enter current phase',
-              defaultValue: 'Planning'
-            }
-          ]}
+        <ProjectFormWithEntity
           onSubmit={handleCreateProject}
           onClose={() => setShowNewProjectForm(false)}
           isLoading={isCreatingProject}

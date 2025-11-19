@@ -1,16 +1,17 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Users, Building2, Plug, Settings as SettingsIcon, Shield } from 'lucide-react';
+import { Users, Building2, Plug, Settings as SettingsIcon, Shield, Briefcase } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import UserManagementView from './UserManagementView';
 import PermissionsManagement from './PermissionsManagement';
+import EntityManagementView from './EntityManagementView';
 import { useAuth } from '@/providers/AuthProvider';
 import { ToastContainer, Toast } from './ui/Toast';
 
 import { hasRoleAccess, canAccessUserManagement, canAccessPermissionsManagement } from '@/lib/permissions';
 
-type SettingsTab = 'users' | 'permissions' | 'company' | 'integrations' | 'preferences';
+type SettingsTab = 'users' | 'permissions' | 'entities' | 'company' | 'integrations' | 'preferences';
 
 // Sub-tab Navigation Component
 function SettingsTabNavigation({ activeTab, onTabChange, userRole }: { activeTab: SettingsTab; onTabChange: (tab: SettingsTab) => void; userRole?: string }) {
@@ -26,6 +27,12 @@ function SettingsTabNavigation({ activeTab, onTabChange, userRole }: { activeTab
       label: 'Permissions', 
       icon: Shield, 
       canAccess: () => canAccessPermissionsManagement(userRole)
+    },
+    { 
+      id: 'entities' as const, 
+      label: 'Entities', 
+      icon: Briefcase, 
+      canAccess: () => hasRoleAccess(userRole, 'admin')
     },
     { 
       id: 'company' as const, 
@@ -509,11 +516,13 @@ const SettingsView: React.FC = () => {
   // URL-based tab management
   useEffect(() => {
     const subtabFromUrl = searchParams.get('subtab') as SettingsTab;
-    if (subtabFromUrl && ['users', 'permissions', 'company', 'integrations', 'preferences'].includes(subtabFromUrl)) {
+    if (subtabFromUrl && ['users', 'permissions', 'entities', 'company', 'integrations', 'preferences'].includes(subtabFromUrl)) {
       // Check if user has access to this tab using centralized permission system
       if (subtabFromUrl === 'users' && !canAccessUserManagement(role)) {
         setActiveTab(getDefaultTab());
       } else if (subtabFromUrl === 'permissions' && !canAccessPermissionsManagement(role)) {
+        setActiveTab(getDefaultTab());
+      } else if (subtabFromUrl === 'entities' && !hasRoleAccess(role, 'admin')) {
         setActiveTab(getDefaultTab());
       } else if (subtabFromUrl === 'integrations' && !hasRoleAccess(role, 'admin')) {
         setActiveTab(getDefaultTab());
@@ -549,6 +558,7 @@ const SettingsView: React.FC = () => {
         <div>
           {activeTab === 'users' && <UserManagementView />}
           {activeTab === 'permissions' && <PermissionsManagement />}
+          {activeTab === 'entities' && <EntityManagementView />}
           {activeTab === 'company' && <CompanySettingsTab showToast={showToast} />}
           {activeTab === 'integrations' && <IntegrationsTab />}
           {activeTab === 'preferences' && <PreferencesTab showToast={showToast} />}

@@ -9,6 +9,11 @@ interface CreateProjectData {
   start_date: string;
   end_date?: string | null;
   budget: number;
+  owner_entity_id?: number | null;
+  portfolio_name?: string | null;
+  total_units?: number | null;
+  client_name?: string;
+  current_phase?: string;
 }
 
 interface UpdateProjectData extends Partial<CreateProjectData> {

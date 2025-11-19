@@ -2,7 +2,7 @@
 
 import React, { ReactNode, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { DollarSign, Users, Settings, Building, BarChart2, ShieldCheck, ChevronDown, Folder, Home, Menu, X, FileText, UserCog } from 'lucide-react';
+import { DollarSign, Users, Settings, Building, BarChart2, ShieldCheck, ChevronDown, Folder, Home, Menu, X, FileText, UserCog, GitBranch } from 'lucide-react';
 import { Project } from '../context/DataContext';
 import { supabase } from '@/lib/supabaseClient';
 
@@ -174,6 +174,20 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab, setSel
       label: 'Payments',
       href: '/?tab=payments',
       canAccess: true // All users can access
+    },
+    {
+      id: 'change-orders',
+      icon: <GitBranch className="w-5 h-5"/>,
+      label: 'Change Orders',
+      href: '/?tab=change-orders',
+      canAccess: userRole && ['admin', 'pm'].includes(userRole.toLowerCase()) // Admin and PM only
+    },
+    {
+      id: 'budget',
+      icon: <BarChart2 className="w-5 h-5"/>,
+      label: 'Budget Dashboard',
+      href: '/?tab=budget',
+      canAccess: userRole && ['admin', 'pm'].includes(userRole.toLowerCase()) // Admin and PM only
     },
     {
       id: 'settings',

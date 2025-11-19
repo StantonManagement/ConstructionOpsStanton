@@ -6,6 +6,7 @@ import { Project } from '../context/DataContext';
 import { supabase } from '@/lib/supabaseClient';
 import ProjectContractorsTab from './ProjectContractorsTab';
 import ContractorDetailView from './ContractorDetailView';
+import ProjectBudgetDetail from './ProjectBudgetDetail';
 import { useRouter } from 'next/navigation';
 
 interface ProjectDetailViewProps {
@@ -13,13 +14,14 @@ interface ProjectDetailViewProps {
   onBack: () => void;
 }
 
-type SubTab = 'details' | 'contractors' | 'payments' | 'documents';
+type SubTab = 'details' | 'contractors' | 'budget' | 'payments' | 'documents';
 
 // Sub-tab Navigation Component
 function SubTabNavigation({ activeSubTab, onSubTabChange }: { activeSubTab: SubTab; onSubTabChange: (tab: SubTab) => void }) {
   const subTabs = [
     { id: 'details' as const, label: 'Details', icon: Building },
     { id: 'contractors' as const, label: 'Contractors', icon: Users },
+    { id: 'budget' as const, label: 'Budget', icon: TrendingUp },
     { id: 'payments' as const, label: 'Payments', icon: DollarSign },
     { id: 'documents' as const, label: 'Documents', icon: FileText }
   ];
@@ -416,6 +418,12 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ project, onBack }
             onEditContract={handleEditContract}
             onViewLineItems={handleViewLineItems}
             onViewContractorDetail={handleViewContractorDetail}
+          />
+        )}
+        {activeSubTab === 'budget' && (
+          <ProjectBudgetDetail
+            projectId={project.id}
+            projectName={project.name}
           />
         )}
         {activeSubTab === 'payments' && <PaymentsTab project={project} />}

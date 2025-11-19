@@ -9,6 +9,9 @@ export interface Project {
   start_date: string;
   end_date: string | null;
   budget: number;
+  owner_entity_id?: number | null;
+  portfolio_name?: string | null;
+  total_units?: number | null;
   created_at: string;
   updated_at: string;
 }

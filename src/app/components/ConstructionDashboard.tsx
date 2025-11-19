@@ -14,6 +14,8 @@ const OverviewView = lazy(() => import('./OverviewView'));
 const PaymentsView = lazy(() => import('./PaymentsView'));
 const ProjectsView = lazy(() => import('./ProjectsView'));
 const DailyLogsView = lazy(() => import('./DailyLogsView'));
+const BudgetDashboard = lazy(() => import('./BudgetDashboard'));
+const ChangeOrdersView = lazy(() => import('./ChangeOrdersView'));
 const SettingsView = lazy(() => import('./SettingsView'));
 const UserProfile = lazy(() => import('./UserProfile'));
 
@@ -62,7 +64,7 @@ const ConstructionDashboard: React.FC = () => {
     }
     
     // Validate and set active tab (new tab names only)
-    if (tabFromUrl && ['overview', 'projects', 'payments', 'settings', 'daily-logs'].includes(tabFromUrl)) {
+    if (tabFromUrl && ['overview', 'projects', 'payments', 'change-orders', 'budget', 'settings', 'daily-logs'].includes(tabFromUrl)) {
       setActiveTab(tabFromUrl);
     }
     
@@ -208,6 +210,12 @@ const ConstructionDashboard: React.FC = () => {
             
             {/* Payments Tab */}
             {activeTab === 'payments' && <PaymentsView searchQuery={searchQuery} />}
+            
+            {/* Change Orders Tab */}
+            {activeTab === 'change-orders' && <ChangeOrdersView />}
+            
+            {/* Budget Dashboard Tab */}
+            {activeTab === 'budget' && <BudgetDashboard />}
             
             {/* Settings Tab */}
             {activeTab === 'settings' && <SettingsView />}

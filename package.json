@@ -50,6 +50,7 @@
     "react-dom": "^19.0.0",
     "react-window": "^2.1.1",
     "react-window-infinite-loader": "^2.0.0",
+    "recharts": "^3.4.1",
     "tailwind-merge": "^3.4.0",
     "twilio": "^5.10.5",
     "web-vitals": "^5.1.0"
