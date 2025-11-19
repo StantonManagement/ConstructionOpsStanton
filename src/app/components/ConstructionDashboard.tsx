@@ -13,6 +13,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 const OverviewView = lazy(() => import('./OverviewView'));
 const PaymentsView = lazy(() => import('./PaymentsView'));
 const ProjectsView = lazy(() => import('./ProjectsView'));
+const FieldOpsView = lazy(() => import('./FieldOpsView'));
 const DailyLogsView = lazy(() => import('./DailyLogsView'));
 const BudgetDashboard = lazy(() => import('./BudgetDashboard'));
 const ChangeOrdersView = lazy(() => import('./ChangeOrdersView'));
@@ -64,7 +65,7 @@ const ConstructionDashboard: React.FC = () => {
     }
     
     // Validate and set active tab (new tab names only)
-    if (tabFromUrl && ['overview', 'projects', 'payments', 'change-orders', 'budget', 'settings', 'daily-logs'].includes(tabFromUrl)) {
+    if (tabFromUrl && ['overview', 'projects', 'field-ops', 'payments', 'change-orders', 'budget', 'settings', 'daily-logs'].includes(tabFromUrl)) {
       setActiveTab(tabFromUrl);
     }
     
@@ -207,6 +208,9 @@ const ConstructionDashboard: React.FC = () => {
 
             {/* Projects Tab */}
             {activeTab === 'projects' && <ProjectsView searchQuery={searchQuery} />}
+            
+            {/* Field Ops Tab */}
+            {activeTab === 'field-ops' && <FieldOpsView />}
             
             {/* Payments Tab */}
             {activeTab === 'payments' && <PaymentsView searchQuery={searchQuery} />}

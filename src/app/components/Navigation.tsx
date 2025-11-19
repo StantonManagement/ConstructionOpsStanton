@@ -2,7 +2,7 @@
 
 import React, { ReactNode, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { DollarSign, Users, Settings, Building, BarChart2, ShieldCheck, ChevronDown, Folder, Home, Menu, X, FileText, UserCog, GitBranch } from 'lucide-react';
+import { DollarSign, Users, Settings, Building, BarChart2, ShieldCheck, ChevronDown, Folder, Home, Menu, X, FileText, UserCog, GitBranch, Clipboard } from 'lucide-react';
 import { Project } from '../context/DataContext';
 import { supabase } from '@/lib/supabaseClient';
 
@@ -166,6 +166,13 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab, setSel
       icon: <Building className="w-5 h-5"/>,
       label: 'Projects',
       href: '/?tab=projects',
+      canAccess: true // All users can access
+    },
+    {
+      id: 'field-ops',
+      icon: <Clipboard className="w-5 h-5"/>,
+      label: 'Field Ops',
+      href: '/?tab=field-ops',
       canAccess: true // All users can access
     },
     {
