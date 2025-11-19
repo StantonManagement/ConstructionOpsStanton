@@ -64,7 +64,10 @@ export async function POST(
 
     if (updateError) {
       console.error('Error recalling payment application:', updateError);
-      return NextResponse.json({ error: 'Failed to recall payment application' }, { status: 500, headers: CORS_HEADERS });
+      return NextResponse.json({ 
+        error: 'Failed to recall payment application', 
+        details: updateError.message || updateError.toString() 
+      }, { status: 500, headers: CORS_HEADERS });
     }
 
     // Rollback project budget and contractor paid_to_date
