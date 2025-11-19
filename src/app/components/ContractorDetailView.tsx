@@ -2,8 +2,11 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { ArrowLeft, DollarSign, TrendingUp, AlertCircle, Send, Plus, FileSpreadsheet, GripVertical, Edit } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import ManualPaymentEntryModal from './ManualPaymentEntryModal';
+import PaymentApplicationList from './shared/PaymentApplicationList';
+import type { PaymentApplication } from './shared/PaymentApplicationRow';
 import {
   DndContext,
   closestCenter,
@@ -148,6 +151,7 @@ function SortableLineItemRow({
 }
 
 const ContractorDetailView: React.FC<ContractorDetailViewProps> = ({ contract, contractor, onBack }) => {
+  const router = useRouter();
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddLineItemModal, setShowAddLineItemModal] = useState(false);
@@ -156,6 +160,8 @@ const ContractorDetailView: React.FC<ContractorDetailViewProps> = ({ contract, c
   const [requestingPayment, setRequestingPayment] = useState(false);
   const [showManualEntryModal, setShowManualEntryModal] = useState(false);
   const [projectName, setProjectName] = useState<string>('');
+  const [paymentApplications, setPaymentApplications] = useState<PaymentApplication[]>([]);
+  const [loadingPaymentApps, setLoadingPaymentApps] = useState(false);
   const [newLineItem, setNewLineItem] = useState({
     description_of_work: '',
     scheduled_value: 0,
@@ -247,6 +253,31 @@ const ContractorDetailView: React.FC<ContractorDetailViewProps> = ({ contract, c
   useEffect(() => {
     fetchLineItems();
   }, [fetchLineItems]);
+
+  // Fetch payment applications for this contractor on this project
+  const fetchPaymentApplications = useCallback(async () => {
+    setLoadingPaymentApps(true);
+    try {
+      const { data, error } = await supabase
+        .from('payment_applications')
+        .select('*')
+        .eq('project_id', contract.project_id)
+        .eq('contractor_id', contractor.id)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      setPaymentApplications(data || []);
+    } catch (error) {
+      console.error('Error fetching payment applications:', error);
+      setPaymentApplications([]);
+    } finally {
+      setLoadingPaymentApps(false);
+    }
+  }, [contract.project_id, contractor.id]);
+
+  useEffect(() => {
+    fetchPaymentApplications();
+  }, [fetchPaymentApplications]);
 
   useEffect(() => {
     const fetchProjectName = async () => {
@@ -609,6 +640,16 @@ const ContractorDetailView: React.FC<ContractorDetailViewProps> = ({ contract, c
         </div>
       </div>
 
+      {/* Payment Applications Section */}
+      <PaymentApplicationList
+        applications={paymentApplications}
+        loading={loadingPaymentApps}
+        onReview={(id) => router.push(`/payments/${id}/verify`)}
+        onRefresh={fetchPaymentApplications}
+        showSummary={true}
+        emptyMessage="No payment applications yet. Create one using the button above."
+      />
+
       {/* Line Items Table */}
       <div className="bg-white rounded-lg border border-gray-200">
         <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
@@ -884,6 +925,9 @@ const ContractorDetailView: React.FC<ContractorDetailViewProps> = ({ contract, c
           contractorId={contractor.id}
           contractorName={contractor.name}
           onClose={() => setShowManualEntryModal(false)}
+          onSuccess={(paymentAppId) => {
+            fetchPaymentApplications(); // Refresh the list to show new payment app
+          }}
         />
       )}
     </div>

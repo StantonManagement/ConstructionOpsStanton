@@ -22,6 +22,7 @@ interface ManualPaymentEntryModalProps {
   contractorId: number;
   contractorName: string;
   onClose: () => void;
+  onSuccess?: (paymentAppId: number) => void;
 }
 
 const ManualPaymentEntryModal: React.FC<ManualPaymentEntryModalProps> = ({
@@ -30,6 +31,7 @@ const ManualPaymentEntryModal: React.FC<ManualPaymentEntryModalProps> = ({
   contractorId,
   contractorName,
   onClose,
+  onSuccess,
 }) => {
   const router = useRouter();
   const [lineItems, setLineItems] = useState<LineItemData[]>([]);
@@ -193,6 +195,11 @@ const ManualPaymentEntryModal: React.FC<ManualPaymentEntryModalProps> = ({
       }
 
       const result = await response.json();
+
+      // Call onSuccess callback if provided
+      if (result.paymentAppId && onSuccess) {
+        onSuccess(result.paymentAppId);
+      }
 
       // Success! Redirect to verification page
       if (result.paymentAppId) {
