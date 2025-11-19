@@ -151,14 +151,29 @@ export function withErrorHandling(
 
 /**
  * Wrap API route handler with auth + error handling
+ * Supports dynamic routes by forwarding the context parameter
  */
-export function withAuth(
-  handler: (request: NextRequest, user: any) => Promise<NextResponse>
+export function withAuth<T = any>(
+  handler: (request: NextRequest, context: T, user: any) => Promise<NextResponse>
 ) {
-  return withErrorHandling(async (request: NextRequest) => {
-    const user = await validateAuth(request);
-    return handler(request, user);
-  });
+  return async (request: NextRequest, context: T) => {
+    try {
+      const user = await validateAuth(request);
+      return await handler(request, context, user);
+    } catch (err) {
+      console.error('[API Error]', err);
+      
+      if (err instanceof APIError) {
+        return errorResponse(err.message, err.statusCode, err.code);
+      }
+      
+      if (err instanceof Error) {
+        return errorResponse(err.message, 500, 'INTERNAL_ERROR');
+      }
+      
+      return errorResponse('An unexpected error occurred', 500, 'UNKNOWN_ERROR');
+    }
+  };
 }
 
 /**
