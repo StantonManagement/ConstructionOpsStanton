@@ -59,6 +59,7 @@ export default function PaymentVerificationPage() {
   const [showConfirmDialog, setShowConfirmDialog] = useState<'approve' | 'reject' | 'recall' | null>(null);
   const [rejectionNotes, setRejectionNotes] = useState('');
   const [approvalNotes, setApprovalNotes] = useState('');
+  const [sendContractorNotification, setSendContractorNotification] = useState(true);
 
   // Helper to get project_line_items for each line item
   const [projectLineItems, setProjectLineItems] = useState<any[]>([]);
@@ -661,19 +662,15 @@ const lineItemsForTable = lineItems.map((li, idx) => {
       const result = await response.json();
       console.log('Payment approved:', result);
       
-      // Ask if user wants to send notification to vendor
-      const sendNotification = confirm(
-        'Payment application approved successfully!\n\nWould you like to send a notification to the vendor/contractor about this approval?'
-      );
-
-      if (sendNotification) {
+      // Send notification if checkbox was checked
+      if (sendContractorNotification) {
         try {
           // Send notification to vendor
           await sendVendorNotification(result.paymentApp);
-          alert('Approval notification sent to vendor successfully!');
+          console.log('Approval notification sent to vendor successfully!');
         } catch (notificationError) {
           console.error('Failed to send vendor notification:', notificationError);
-          alert('Payment approved, but failed to send vendor notification. You may need to notify them manually.');
+          // Note: Payment is still approved even if notification fails
         }
       }
       
@@ -774,9 +771,21 @@ const lineItemsForTable = lineItems.map((li, idx) => {
       const result = await response.json();
       console.log('Payment recalled:', result);
       
-      // Show success message and redirect
-      alert('Payment application recalled successfully!');
-      router.push("/");
+      // Show success message and redirect back to contractor detail
+      alert('Payment application recalled and deleted successfully!');
+      
+      // Get return URL from query params or go to projects tab with the project
+      const searchParams = new URLSearchParams(window.location.search);
+      const returnTo = searchParams.get('returnTo');
+      
+      if (returnTo) {
+        router.push(returnTo);
+      } else if (paymentApp?.project?.id) {
+        // Redirect to the project's contractors tab
+        router.push(`/?tab=projects&projectId=${paymentApp.project.id}`);
+      } else {
+        router.push("/");
+      }
     } catch (err) {
       setError((err instanceof Error ? err.message : "Failed to recall"));
     } finally {
@@ -1604,18 +1613,34 @@ const lineItemsForTable = lineItems.map((li, idx) => {
               {/* Form fields */}
               <div className="space-y-6 mb-8">
                 {showConfirmDialog === 'approve' ? (
-                  <div>
-                    <label className="block text-sm font-bold text-foreground mb-3 uppercase tracking-wide">
-                      Approval Notes (Optional)
-                    </label>
-                    <textarea
-                      value={approvalNotes}
-                      onChange={(e) => setApprovalNotes(e.target.value)}
-                      placeholder="Add any final notes or conditions for this approval..."
-                      className="w-full px-4 py-3 border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-primary resize-none text-foreground text-base transition-all"
-                      rows={4}
-                    />
-                  </div>
+                  <>
+                    <div>
+                      <label className="block text-sm font-bold text-foreground mb-3 uppercase tracking-wide">
+                        Approval Notes (Optional)
+                      </label>
+                      <textarea
+                        value={approvalNotes}
+                        onChange={(e) => setApprovalNotes(e.target.value)}
+                        placeholder="Add any final notes or conditions for this approval..."
+                        className="w-full px-4 py-3 border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-primary resize-none text-foreground text-base transition-all"
+                        rows={4}
+                      />
+                    </div>
+                    
+                    {/* Notification Checkbox */}
+                    <div className="flex items-center gap-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                      <input
+                        type="checkbox"
+                        id="notify-contractor"
+                        checked={sendContractorNotification}
+                        onChange={(e) => setSendContractorNotification(e.target.checked)}
+                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                      />
+                      <label htmlFor="notify-contractor" className="text-sm text-gray-700 cursor-pointer select-none">
+                        Send notification to contractor about this approval
+                      </label>
+                    </div>
+                  </>
                 ) : (
                   <div>
                     <label className="block text-sm font-bold text-foreground mb-3 uppercase tracking-wide">
