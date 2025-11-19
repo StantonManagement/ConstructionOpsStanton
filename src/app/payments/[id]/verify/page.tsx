@@ -771,9 +771,21 @@ const lineItemsForTable = lineItems.map((li, idx) => {
       const result = await response.json();
       console.log('Payment recalled:', result);
       
-      // Show success message and redirect
-      alert('Payment application recalled successfully!');
-      router.push("/");
+      // Show success message and redirect back to contractor detail
+      alert('Payment application recalled and deleted successfully!');
+      
+      // Get return URL from query params or go to projects tab with the project
+      const searchParams = new URLSearchParams(window.location.search);
+      const returnTo = searchParams.get('returnTo');
+      
+      if (returnTo) {
+        router.push(returnTo);
+      } else if (paymentApp?.project?.id) {
+        // Redirect to the project's contractors tab
+        router.push(`/?tab=projects&projectId=${paymentApp.project.id}`);
+      } else {
+        router.push("/");
+      }
     } catch (err) {
       setError((err instanceof Error ? err.message : "Failed to recall"));
     } finally {
