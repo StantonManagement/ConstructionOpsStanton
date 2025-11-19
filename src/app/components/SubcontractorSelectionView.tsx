@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Project } from '../context/DataContext';
 import { supabase } from '@/lib/supabaseClient';
 import { useRouter, useSearchParams } from 'next/navigation';
+import ManualPaymentEntryModal from './ManualPaymentEntryModal';
 
 type Props = {
   selectedProject: Project;
@@ -191,11 +192,12 @@ const ActionBar: React.FC<{
   selectedCount: number;
   onCancel: () => void;
   onSend: () => void;
+  onManualEntry: () => void;
   sending: boolean;
   error: string | null;
   success: string | null;
   router: any;
-}> = ({ selectedCount, onCancel, onSend, sending, error, success, router }) => (
+}> = ({ selectedCount, onCancel, onSend, onManualEntry, sending, error, success, router }) => (
   <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
     {/* Status Messages */}
     {error && (
@@ -224,12 +226,12 @@ const ActionBar: React.FC<{
     <div className="flex items-center justify-between mb-4">
       <div>
         <h3 className="text-lg font-semibold text-gray-900">
-          {selectedCount > 0 ? 'Ready to Send Pay Applications' : 'Select Contractors'}
+          {selectedCount > 0 ? 'Ready to Create Payment Applications' : 'Select Contractors'}
         </h3>
         <p className="text-gray-600 text-sm">
           {selectedCount > 0 
             ? `${selectedCount} contractor${selectedCount > 1 ? 's' : ''} selected`
-            : 'Choose contractors to send payment requests to'
+            : 'Choose contractors to create payment applications for'
           }
         </p>
       </div>
@@ -241,7 +243,7 @@ const ActionBar: React.FC<{
     </div>
 
     {/* Action Buttons */}
-    <div className="flex items-center gap-4">
+    <div className="flex items-center gap-3">
       <button
         onClick={() => {
           const params = new URLSearchParams();
@@ -249,14 +251,26 @@ const ActionBar: React.FC<{
           router.replace(`/?${params.toString()}`, { scroll: false });
         }}
         disabled={sending}
-        className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-3 px-6 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-3 px-6 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         Cancel
       </button>
+      
+      {selectedCount === 1 && (
+        <button
+          onClick={onManualEntry}
+          disabled={sending}
+          className="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-6 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+        >
+          <span>✏️</span>
+          <span>Create Payment App Manually</span>
+        </button>
+      )}
+      
       <button
         onClick={onSend}
         disabled={selectedCount === 0 || sending}
-        className="flex-2 bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+        className={`${selectedCount === 1 ? 'flex-1' : 'flex-2'} bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center space-x-2`}
       >
         {sending ? (
           <>
@@ -269,11 +283,19 @@ const ActionBar: React.FC<{
         ) : (
           <>
             <span>📧</span>
-            <span>Send Payment Requests {selectedCount > 0 && `(${selectedCount})`}</span>
+            <span>Send via SMS {selectedCount > 0 && `(${selectedCount})`}</span>
           </>
         )}
       </button>
     </div>
+    
+    {selectedCount === 1 && (
+      <div className="mt-4 pt-4 border-t border-gray-200">
+        <p className="text-sm text-gray-600 text-center">
+          💡 <strong>Manual Entry:</strong> Enter line item percentages yourself, or <strong>SMS:</strong> Send request to contractor
+        </p>
+      </div>
+    )}
   </div>
 );
 
@@ -303,6 +325,7 @@ const SubcontractorSelectionView: React.FC<Props> = ({ selectedProject, setSelec
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const [sendSuccess, setSendSuccess] = useState<string | null>(null);
+  const [showManualEntryModal, setShowManualEntryModal] = useState(false);
 
   useEffect(() => {
     if (!selectedProject) return;
@@ -379,6 +402,12 @@ const SubcontractorSelectionView: React.FC<Props> = ({ selectedProject, setSelec
       setSendError('Network error. Please try again.');
     }
     setSending(false);
+  };
+
+  const handleManualEntry = () => {
+    if (selectedSubs.length === 1) {
+      setShowManualEntryModal(true);
+    }
   };
 
   if (sendSuccess) {
@@ -488,11 +517,26 @@ const SubcontractorSelectionView: React.FC<Props> = ({ selectedProject, setSelec
         selectedCount={selectedSubs.length}
         onCancel={() => setSelectedProject(null)}
         onSend={handleSendPaymentRequests}
+        onManualEntry={handleManualEntry}
         sending={sending}
         error={sendError}
         success={sendSuccess}
         router={router}
       />
+
+      {/* Manual Entry Modal */}
+      {showManualEntryModal && selectedSubs.length === 1 && (() => {
+        const selectedContract = contracts.find(c => c.subcontractor_id === selectedSubs[0]);
+        return selectedContract ? (
+          <ManualPaymentEntryModal
+            projectId={selectedProject.id}
+            projectName={selectedProject.name}
+            contractorId={selectedContract.subcontractor_id}
+            contractorName={selectedContract.contractors.name}
+            onClose={() => setShowManualEntryModal(false)}
+          />
+        ) : null;
+      })()}
     </div>
   );
 };
