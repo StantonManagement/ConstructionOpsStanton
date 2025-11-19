@@ -105,48 +105,71 @@ export async function POST(
     }
 
     // Rollback line item baselines to previous approved state
-    const { data: lineItemProgress } = await supabase
+    const { data: lineItemProgress, error: lineItemError } = await supabase
       .from('payment_line_item_progress')
       .select('line_item_id')
       .eq('payment_app_id', paymentAppId);
 
-    if (lineItemProgress && lineItemProgress.length > 0) {
+    if (lineItemError) {
+      console.error('Error fetching line item progress:', lineItemError);
+      // Don't fail the recall if line item fetch fails, just log it
+    } else if (lineItemProgress && lineItemProgress.length > 0) {
       // For each line item, find the previous approved percentage
       for (const progress of lineItemProgress) {
-        const { data: approvedPayments } = await supabase
-          .from('payment_applications')
-          .select('id, approved_at')
-          .eq('project_id', paymentApp.project_id)
-          .eq('contractor_id', paymentApp.contractor_id)
-          .eq('status', 'approved')
-          .neq('id', paymentAppId)
-          .order('approved_at', { ascending: false })
-          .limit(1);
+        try {
+          const { data: approvedPayments, error: paymentsError } = await supabase
+            .from('payment_applications')
+            .select('id, approved_at')
+            .eq('project_id', paymentApp.project_id)
+            .eq('contractor_id', paymentApp.contractor_id)
+            .eq('status', 'approved')
+            .neq('id', paymentAppId)
+            .order('approved_at', { ascending: false })
+            .limit(1);
 
-        let previousPercent = 0;
-        if (approvedPayments && approvedPayments.length > 0) {
-          const { data: prevProgress } = await supabase
-            .from('payment_line_item_progress')
-            .select('pm_verified_percent')
-            .eq('payment_app_id', approvedPayments[0].id)
-            .eq('line_item_id', progress.line_item_id)
-            .single();
-          
-          previousPercent = Number(prevProgress?.pm_verified_percent) || 0;
+          if (paymentsError) {
+            console.error(`Error fetching previous payments for line item ${progress.line_item_id}:`, paymentsError);
+            continue;
+          }
+
+          let previousPercent = 0;
+          if (approvedPayments && approvedPayments.length > 0) {
+            const { data: prevProgress, error: prevError } = await supabase
+              .from('payment_line_item_progress')
+              .select('pm_verified_percent')
+              .eq('payment_app_id', approvedPayments[0].id)
+              .eq('line_item_id', progress.line_item_id)
+              .single();
+            
+            if (prevError) {
+              console.error(`Error fetching previous progress for line item ${progress.line_item_id}:`, prevError);
+            } else {
+              previousPercent = Number(prevProgress?.pm_verified_percent) || 0;
+            }
+          }
+
+          // Revert line item to previous approved state
+          const { error: updateError } = await supabase
+            .from('project_line_items')
+            .update({
+              from_previous_application: previousPercent,
+              percent_completed: previousPercent,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', progress.line_item_id);
+
+          if (updateError) {
+            console.error(`Error updating line item ${progress.line_item_id}:`, updateError);
+          }
+        } catch (itemError) {
+          console.error(`Exception processing line item ${progress.line_item_id}:`, itemError);
+          // Continue with other line items
         }
-
-        // Revert line item to previous approved state
-        await supabase
-          .from('project_line_items')
-          .update({
-            from_previous_application: previousPercent,
-            percent_completed: previousPercent,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', progress.line_item_id);
       }
       
       console.log(`Rolled back ${lineItemProgress.length} line item baselines for recalled payment ${paymentAppId}`);
+    } else {
+      console.log(`No line item progress found for payment ${paymentAppId} (possibly $0 payment app)`);
     }
 
     return NextResponse.json({
@@ -156,8 +179,9 @@ export async function POST(
 
   } catch (error) {
     console.error('Error in recall payment application:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal server error', details: errorMessage },
       { status: 500, headers: CORS_HEADERS }
     );
   }
