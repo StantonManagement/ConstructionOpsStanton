@@ -1,20 +1,23 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { ArrowLeft, Building, Users, DollarSign, FileText, CheckCircle, XCircle, TrendingUp, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Building, Users, DollarSign, FileText, CheckCircle, XCircle, TrendingUp, AlertCircle, ListChecks, Edit2 } from 'lucide-react';
 import { Project } from '../context/DataContext';
 import { supabase } from '@/lib/supabaseClient';
 import ProjectContractorsTab from './ProjectContractorsTab';
 import ContractorDetailView from './ContractorDetailView';
 import ProjectBudgetDetail from './ProjectBudgetDetail';
+import PunchListsTab from './PunchListsTab';
+import CreatePunchListModal from './CreatePunchListModal';
 import { useRouter } from 'next/navigation';
 
 interface ProjectDetailViewProps {
   project: Project;
   onBack: () => void;
+  onEdit?: (project: Project) => void;
 }
 
-type SubTab = 'details' | 'contractors' | 'budget' | 'payments' | 'documents';
+type SubTab = 'details' | 'contractors' | 'budget' | 'payments' | 'documents' | 'punchlists';
 
 // Sub-tab Navigation Component
 function SubTabNavigation({ activeSubTab, onSubTabChange }: { activeSubTab: SubTab; onSubTabChange: (tab: SubTab) => void }) {
@@ -23,19 +26,20 @@ function SubTabNavigation({ activeSubTab, onSubTabChange }: { activeSubTab: SubT
     { id: 'contractors' as const, label: 'Contractors', icon: Users },
     { id: 'budget' as const, label: 'Budget', icon: TrendingUp },
     { id: 'payments' as const, label: 'Payments', icon: DollarSign },
+    { id: 'punchlists' as const, label: 'Punch Lists', icon: ListChecks },
     { id: 'documents' as const, label: 'Documents', icon: FileText }
   ];
 
   return (
     <div className="border-b border-gray-200 mb-6">
-      <nav className="-mb-px flex space-x-8">
+      <nav className="-mb-px flex space-x-8 overflow-x-auto">
         {subTabs.map((tab) => {
           const Icon = tab.icon;
           return (
             <button
               key={tab.id}
               onClick={() => onSubTabChange(tab.id)}
-              className={`py-3 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors ${
+              className={`py-3 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors whitespace-nowrap ${
                 activeSubTab === tab.id
                   ? 'border-primary text-primary'
                   : 'border-transparent text-muted-foreground hover:text-foreground hover:border-gray-300'
@@ -88,7 +92,7 @@ function DetailsTab({ project }: { project: Project }) {
           </div>
           <div>
             <label className="text-sm font-medium text-gray-500">Location</label>
-            <p className="mt-1 text-base text-gray-900">{projectExt.location || 'N/A'}</p>
+            <p className="mt-1 text-base text-gray-900">{projectExt.location || project.address || 'N/A'}</p>
           </div>
           <div>
             <label className="text-sm font-medium text-gray-500">Phase</label>
@@ -100,22 +104,16 @@ function DetailsTab({ project }: { project: Project }) {
               <p className="mt-1 text-base text-gray-900">{formatDate(projectExt.start_date)}</p>
             </div>
           )}
-          {projectExt.end_date && (
+          {projectExt.target_completion_date && (
             <div>
-              <label className="text-sm font-medium text-gray-500">End Date</label>
-              <p className="mt-1 text-base text-gray-900">{formatDate(projectExt.end_date)}</p>
+              <label className="text-sm font-medium text-gray-500">Target Completion</label>
+              <p className="mt-1 text-base text-gray-900">{formatDate(projectExt.target_completion_date)}</p>
             </div>
           )}
           {project.budget && (
             <div>
               <label className="text-sm font-medium text-gray-500">Budget</label>
               <p className="mt-1 text-base text-gray-900">{formatCurrency(project.budget)}</p>
-            </div>
-          )}
-          {project.spent !== undefined && (
-            <div>
-              <label className="text-sm font-medium text-gray-500">Total Spent</label>
-              <p className="mt-1 text-base text-gray-900">{formatCurrency(project.spent)}</p>
             </div>
           )}
         </div>
@@ -150,7 +148,7 @@ function DocumentsTab({ project }: { project: Project }) {
   );
 }
 
-const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ project, onBack }) => {
+const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ project, onBack, onEdit }) => {
   const router = useRouter();
   const [activeSubTab, setActiveSubTab] = useState<SubTab>('contractors');
   const [paymentSuccess, setPaymentSuccess] = useState<string | null>(null);
@@ -158,6 +156,18 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ project, onBack }
   const [selectedContract, setSelectedContract] = useState<any>(null);
   const [selectedContractor, setSelectedContractor] = useState<any>(null);
   const [showContractorDetail, setShowContractorDetail] = useState(false);
+  const [showPunchListModal, setShowPunchListModal] = useState(false);
+  const [punchListRefreshKey, setPunchListRefreshKey] = useState(0);
+
+  // Debug logging
+  useEffect(() => {
+    console.log('[ProjectDetailView] Project loaded:', {
+      id: project.id,
+      name: project.name,
+      idType: typeof project.id,
+      fullProject: project
+    });
+  }, [project]);
   
   // Budget stats
   const [budgetStats, setBudgetStats] = useState({
@@ -319,6 +329,15 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ project, onBack }
             <span className="text-sm font-medium">Back to Projects</span>
           </button>
         </div>
+        {onEdit && (
+          <button
+            onClick={() => onEdit(project)}
+            className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
+          >
+            <Edit2 className="w-4 h-4" />
+            <span>Edit Project</span>
+          </button>
+        )}
       </div>
 
       {/* Project Header */}
@@ -427,11 +446,41 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ project, onBack }
           />
         )}
         {activeSubTab === 'payments' && <PaymentsTab project={project} />}
+        {activeSubTab === 'punchlists' && (
+          <>
+            {project.id ? (
+              <PunchListsTab
+                key={punchListRefreshKey}
+                projectId={project.id}
+                onCreatePunchList={() => setShowPunchListModal(true)}
+              />
+            ) : (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <p className="text-yellow-800">Project ID is missing. Please refresh the page.</p>
+                <p className="text-xs text-yellow-600 mt-2">Debug: project.id = {JSON.stringify(project.id)}</p>
+              </div>
+            )}
+          </>
+        )}
         {activeSubTab === 'documents' && <DocumentsTab project={project} />}
       </div>
+
+      {/* Punch List Modal */}
+      {showPunchListModal && project.id && (
+        <CreatePunchListModal
+          projectId={project.id}
+          projectName={project.name}
+          onClose={() => setShowPunchListModal(false)}
+          onSuccess={() => {
+            setShowPunchListModal(false);
+            setPunchListRefreshKey(prev => prev + 1);
+            setPaymentSuccess('Punch list created and sent to contractor successfully!');
+            setTimeout(() => setPaymentSuccess(null), 5000);
+          }}
+        />
+      )}
     </div>
   );
 };
 
 export default ProjectDetailView;
-

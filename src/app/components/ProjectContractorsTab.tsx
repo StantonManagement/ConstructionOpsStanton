@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { Plus, Phone, Mail, DollarSign, FileText, Send, Eye, Edit, Loader2, Users, GripVertical } from 'lucide-react';
+import { Plus, Phone, Mail, DollarSign, FileText, Send, Eye, Edit, Loader2, Users, GripVertical, Tag } from 'lucide-react';
 import { Project } from '../context/DataContext';
 import {
   DndContext,
@@ -30,6 +30,12 @@ interface Contractor {
   email?: string;
 }
 
+interface BudgetLineItem {
+  id: number;
+  category_name: string;
+  original_amount: number;
+}
+
 interface Contract {
   id: number;
   contract_amount: number;
@@ -37,12 +43,14 @@ interface Contract {
   paid_to_date: number;
   display_order: number;
   contract_status?: string;
+  budget_item_id?: number | null;
 }
 
 interface ContractWithContractor extends Contract {
   contractor_id: number;
   contractors: Contractor;
   line_items?: any[];
+  property_budgets?: BudgetLineItem;
 }
 
 interface ContractorCardProps {
@@ -70,6 +78,8 @@ function SortableContractorCard({ contract, onRequestPayment, onEditContract, on
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
+    position: 'relative' as const,
+    zIndex: isDragging ? 10 : 1,
   };
 
   return (
@@ -87,7 +97,8 @@ function SortableContractorCard({ contract, onRequestPayment, onEditContract, on
       <div
         {...attributes}
         {...listeners}
-        className="absolute top-4 left-4 cursor-grab active:cursor-grabbing p-1 hover:bg-gray-100 rounded"
+        className="absolute top-4 left-4 cursor-grab active:cursor-grabbing p-2 hover:bg-gray-100 rounded touch-none"
+        style={{ touchAction: 'none' }} // Important for mobile drag
       >
         <GripVertical className="w-5 h-5 text-gray-400" />
       </div>
@@ -132,7 +143,7 @@ function ContractorCard({ contract, onRequestPayment, onEditContract, onViewLine
 
   return (
     <div 
-      className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-lg transition-shadow cursor-pointer relative"
+      className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-lg transition-shadow cursor-pointer relative pl-12"
       onClick={() => onViewDetails(contract)}
     >
       {/* Header */}
@@ -150,6 +161,21 @@ function ContractorCard({ contract, onRequestPayment, onEditContract, onViewLine
             </span>
           </div>
         </div>
+      </div>
+
+      {/* Budget Link Badge */}
+      <div className="mb-4">
+        {contract.property_budgets ? (
+          <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-purple-50 text-purple-700 border border-purple-100">
+            <Tag className="w-3 h-3" />
+            Budget: {contract.property_budgets.category_name}
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-gray-50 text-gray-500 border border-gray-100 italic">
+            <Tag className="w-3 h-3" />
+            No Budget Item Linked
+          </span>
+        )}
       </div>
 
       {/* Contact Info */}
@@ -323,14 +349,20 @@ const ProjectContractorsTab: React.FC<ProjectContractorsTabProps> = ({
   const [requestingPayment, setRequestingPayment] = useState<number | null>(null);
   const [showAddContractorModal, setShowAddContractorModal] = useState(false);
   const [availableContractors, setAvailableContractors] = useState<Contractor[]>([]);
+  const [budgetItems, setBudgetItems] = useState<BudgetLineItem[]>([]);
   const [loadingContractors, setLoadingContractors] = useState(false);
   const [selectedContractorId, setSelectedContractorId] = useState<number | null>(null);
   const [newContract, setNewContract] = useState({
     contract_amount: 0,
+    budget_item_id: ''
   });
 
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
@@ -350,12 +382,18 @@ const ProjectContractorsTab: React.FC<ProjectContractorsTabProps> = ({
           display_order,
           contract_status,
           contractor_id,
+          budget_item_id,
           contractors (
             id,
             name,
             trade,
             phone,
             email
+          ),
+          property_budgets (
+            id,
+            category_name,
+            original_amount
           )
         `)
         .eq('project_id', project.id)
@@ -366,21 +404,20 @@ const ProjectContractorsTab: React.FC<ProjectContractorsTabProps> = ({
         throw error;
       }
 
-      console.log('Fetched contracts data:', data);
-
       // Fix the data structure (contractors might be an array)
       const fixedData = (data || []).map((contract) => ({
         ...contract,
         contractors: Array.isArray(contract.contractors) 
           ? contract.contractors[0] 
           : contract.contractors,
+        property_budgets: Array.isArray(contract.property_budgets)
+          ? contract.property_budgets[0]
+          : contract.property_budgets
       })) as ContractWithContractor[];
 
-      console.log('Fixed contracts data:', fixedData);
       setContracts(fixedData);
     } catch (error) {
       console.error('Error fetching contractors:', error);
-      console.error('Error details:', JSON.stringify(error, null, 2));
     } finally {
       setLoading(false);
     }
@@ -450,12 +487,12 @@ const ProjectContractorsTab: React.FC<ProjectContractorsTabProps> = ({
     setLoadingContractors(true);
     try {
       // Get all contractors
-      const { data: allContractors, error } = await supabase
+      const { data: allContractors, error: contractorsError } = await supabase
         .from('contractors')
         .select('id, name, trade, phone, email')
         .order('name');
       
-      if (error) throw error;
+      if (contractorsError) throw contractorsError;
       
       // Filter out contractors already on this project
       const existingContractorIds = contracts.map(c => c.contractor_id);
@@ -464,9 +501,21 @@ const ProjectContractorsTab: React.FC<ProjectContractorsTabProps> = ({
       );
       
       setAvailableContractors(available);
+
+      // Get budget line items for this project
+      const { data: budgetData, error: budgetError } = await supabase
+        .from('property_budgets')
+        .select('id, category_name, original_amount')
+        .eq('project_id', project.id)
+        .eq('is_active', true)
+        .order('category_name');
+
+      if (budgetError) throw budgetError;
+      setBudgetItems(budgetData || []);
+
     } catch (error) {
-      console.error('Error fetching available contractors:', error);
-      alert('Failed to load contractors. Please try again.');
+      console.error('Error fetching data:', error);
+      alert('Failed to load data. Please try again.');
     } finally {
       setLoadingContractors(false);
     }
@@ -499,6 +548,7 @@ const ProjectContractorsTab: React.FC<ProjectContractorsTabProps> = ({
           paid_to_date: 0,
           display_order: maxOrder + 1,
           contract_status: 'active',
+          budget_item_id: newContract.budget_item_id ? parseInt(newContract.budget_item_id) : null
         })
         .select()
         .single();
@@ -510,7 +560,7 @@ const ProjectContractorsTab: React.FC<ProjectContractorsTabProps> = ({
       
       // Reset form and close modal
       setSelectedContractorId(null);
-      setNewContract({ contract_amount: 0 });
+      setNewContract({ contract_amount: 0, budget_item_id: '' });
       setShowAddContractorModal(false);
       alert('Contractor added to project successfully!');
     } catch (error) {
@@ -607,11 +657,6 @@ const ProjectContractorsTab: React.FC<ProjectContractorsTabProps> = ({
                 <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
                 <span className="ml-2 text-gray-600">Loading contractors...</span>
               </div>
-            ) : availableContractors.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-gray-600 mb-4">No available contractors to add.</p>
-                <p className="text-sm text-gray-500">All contractors have already been added to this project, or you need to create new contractors first.</p>
-              </div>
             ) : (
               <div className="space-y-4">
                 <div>
@@ -629,6 +674,9 @@ const ProjectContractorsTab: React.FC<ProjectContractorsTabProps> = ({
                       </option>
                     ))}
                   </select>
+                  {availableContractors.length === 0 && (
+                    <p className="text-xs text-orange-600 mt-1">No new contractors available. Create one first.</p>
+                  )}
                 </div>
                 
                 <div>
@@ -644,6 +692,23 @@ const ProjectContractorsTab: React.FC<ProjectContractorsTabProps> = ({
                     required
                   />
                 </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Budget Line Item</label>
+                  <select
+                    value={newContract.budget_item_id}
+                    onChange={(e) => setNewContract({ ...newContract, budget_item_id: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="">-- Unassigned --</option>
+                    {budgetItems.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.category_name} (${item.original_amount.toLocaleString()})
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">Link this contract to a budget category for automatic tracking.</p>
+                </div>
               </div>
             )}
             
@@ -652,13 +717,13 @@ const ProjectContractorsTab: React.FC<ProjectContractorsTabProps> = ({
                 onClick={() => {
                   setShowAddContractorModal(false);
                   setSelectedContractorId(null);
-                  setNewContract({ contract_amount: 0 });
+                  setNewContract({ contract_amount: 0, budget_item_id: '' });
                 }}
                 className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
               >
                 Cancel
               </button>
-              {!loadingContractors && availableContractors.length > 0 && (
+              {!loadingContractors && (
                 <button
                   onClick={handleAddContractor}
                   disabled={!selectedContractorId || newContract.contract_amount <= 0}
@@ -676,4 +741,3 @@ const ProjectContractorsTab: React.FC<ProjectContractorsTabProps> = ({
 };
 
 export default ProjectContractorsTab;
-

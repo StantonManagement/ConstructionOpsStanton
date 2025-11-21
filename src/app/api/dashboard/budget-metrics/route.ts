@@ -3,8 +3,11 @@ import { supabaseAdmin } from '@/lib/supabaseClient';
 
 /**
  * Budget Dashboard Metrics API
- * Provides aggregated financial data across all properties
+ * Provides aggregated financial data across all properties using raw tables
+ * to avoid dependencies on fragile views or missing columns.
  */
+
+export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
@@ -12,180 +15,236 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Service unavailable' }, { status: 503 });
     }
 
-    const client = supabaseAdmin; // Store reference for type safety
+    const client = supabaseAdmin;
 
+    // 1. Auth Check
     const authHeader = request.headers.get('authorization');
-    
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Unauthorized - No token provided' }, { status: 401 });
     }
 
     const token = authHeader.substring(7);
-    
     const { data: { user }, error: authError } = await client.auth.getUser(token);
     
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized - Invalid token' }, { status: 401 });
     }
 
-    // Parse query parameters
+    // 2. Parse Query Parameters
     const { searchParams } = new URL(request.url);
-    const entityId = searchParams.get('entity_id');
-    const portfolioName = searchParams.get('portfolio_name');
+    const projectIdParam = searchParams.get('project');
+    
+    // 3. Fetch Raw Data in Parallel
+    
+    // A. Projects
+    let projectsQuery = client
+      .from('projects')
+      .select('id, name, status')
+      .eq('status', 'active');
 
-    // ============================================================
-    // 1. Hero Metrics - Overall Budget Summary
-    // ============================================================
-    let budgetQuery = client
-      .from('property_budgets_summary')
-      .select('original_amount, revised_amount, actual_spend, committed_costs, remaining_amount, budget_status');
-
-    // Apply filters
-    if (entityId) {
-      budgetQuery = budgetQuery.eq('owner_entity_id', parseInt(entityId));
-    }
-    if (portfolioName) {
-      budgetQuery = budgetQuery.eq('portfolio_name', portfolioName);
+    if (projectIdParam && projectIdParam !== 'all') {
+      projectsQuery = projectsQuery.eq('id', projectIdParam);
     }
 
-    const { data: budgets, error: budgetError } = await budgetQuery;
-
-    if (budgetError) {
-      console.error('[Budget Metrics API] Error fetching budgets:', budgetError);
-      return NextResponse.json({ error: budgetError.message }, { status: 500 });
+    // B. Budgets (Property Budgets)
+    let budgetsQuery = client
+      .from('property_budgets')
+      .select('id, project_id, category_name, original_amount, revised_amount, actual_spend, committed_costs');
+      
+    if (projectIdParam && projectIdParam !== 'all') {
+      budgetsQuery = budgetsQuery.eq('project_id', projectIdParam);
     }
 
-    // Calculate totals
-    const totals = (budgets || []).reduce((acc, budget) => {
-      acc.totalBudget += Number(budget.original_amount) || 0;
-      acc.totalRevised += Number(budget.revised_amount) || 0;
-      acc.totalSpent += Number(budget.actual_spend) || 0;
-      acc.totalCommitted += Number(budget.committed_costs) || 0;
-      acc.totalRemaining += Number(budget.remaining_amount) || 0;
-      return acc;
-    }, {
+    // C. Change Orders
+    let coQuery = client
+      .from('change_orders')
+      .select('project_id, status, cost_impact');
+
+    if (projectIdParam && projectIdParam !== 'all') {
+      coQuery = coQuery.eq('project_id', projectIdParam);
+    }
+
+    // D. Linked Contracts (Committed Costs)
+    let contractsQuery = client
+      .from('project_contractors')
+      .select('project_id, budget_item_id, contract_amount')
+      .not('budget_item_id', 'is', null); // Only fetch linked contracts
+
+    if (projectIdParam && projectIdParam !== 'all') {
+      contractsQuery = contractsQuery.eq('project_id', projectIdParam);
+    }
+
+    // Execute queries
+    const [projectsRes, budgetsRes, coRes, contractsRes] = await Promise.all([
+      projectsQuery,
+      budgetsQuery,
+      coQuery,
+      contractsQuery
+    ]);
+
+    if (projectsRes.error) throw new Error(`Projects error: ${projectsRes.error.message}`);
+    
+    const budgets = budgetsRes.data || [];
+    const changeOrders = coRes.data || [];
+    const projects = projectsRes.data || [];
+    const contracts = contractsRes.data || []; // Fetch linked contracts
+
+    // 4. Aggregation Logic
+
+    // Calculate Actual Committed Costs per Budget Item from Linked Contracts
+    const committedCostsMap = new Map<number, number>(); // budget_item_id -> total_contract_amount
+    contracts.forEach((c: any) => {
+      if (c.budget_item_id) {
+        const current = committedCostsMap.get(c.budget_item_id) || 0;
+        committedCostsMap.set(c.budget_item_id, current + (Number(c.contract_amount) || 0));
+      }
+    });
+
+    // Initialize Global Totals
+    const heroMetrics = {
       totalBudget: 0,
       totalRevised: 0,
       totalSpent: 0,
       totalCommitted: 0,
-      totalRemaining: 0
-    });
+      totalRemaining: 0,
+      percentSpent: 0
+    };
 
-    // Calculate percentage
-    const percentSpent = totals.totalRevised > 0 
-      ? (totals.totalSpent / totals.totalRevised * 100) 
-      : 0;
+    const statusSummary = {
+      onTrack: 0,
+      warning: 0,
+      critical: 0,
+      overBudget: 0
+    };
 
-    // ============================================================
-    // 2. Status Summary - Property Counts by Status
-    // ============================================================
-    const statusCounts = (budgets || []).reduce((acc, budget) => {
-      const status = budget.budget_status || 'Unknown';
-      acc[status] = (acc[status] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-
-    // ============================================================
-    // 3. Change Orders Summary
-    // ============================================================
-    let coQuery = client
-      .from('change_orders_detail')
-      .select('status, cost_impact, project_id, owner_entity_id');
-
-    if (entityId) {
-      coQuery = coQuery.eq('owner_entity_id', parseInt(entityId));
-    }
-
-    const { data: changeOrders, error: coError } = await coQuery;
-
-    const coSummary = (changeOrders || []).reduce((acc, co) => {
-      acc.total++;
-      if (co.status === 'pending') acc.pending++;
-      if (co.status === 'approved') {
-        acc.approved++;
-        acc.approvedAmount += Number(co.cost_impact) || 0;
-      }
-      if (co.status === 'pending') {
-        acc.pendingAmount += Number(co.cost_impact) || 0;
-      }
-      return acc;
-    }, {
+    const coSummary = {
       total: 0,
       pending: 0,
       approved: 0,
       pendingAmount: 0,
       approvedAmount: 0
+    };
+
+    // Helper to aggregate budgets by project
+    const projectBudgetsMap = new Map<number, {
+      original: number;
+      revised: number;
+      actual: number;
+      committed: number;
+    }>();
+
+    // Also aggregate budgets by category within project to avoid duplicates in line items list
+    const categoryBudgetsMap = new Map<string, {
+      id: number;
+      project_id: number;
+      category_name: string;
+      original: number;
+      revised: number;
+      actual: number;
+      committed: number;
+    }>();
+
+    budgets.forEach((b: any) => {
+      // Override manual committed_costs with calculated value if linked contracts exist
+      // Otherwise fallback to manual entry
+      const calculatedCommitted = committedCostsMap.get(b.id);
+      const effectiveCommitted = calculatedCommitted !== undefined ? calculatedCommitted : (Number(b.committed_costs) || 0);
+
+      // Project Level Aggregation
+      const pid = b.project_id;
+      if (!projectBudgetsMap.has(pid)) {
+        projectBudgetsMap.set(pid, { original: 0, revised: 0, actual: 0, committed: 0 });
+      }
+      const projectEntry = projectBudgetsMap.get(pid)!;
+      projectEntry.original += Number(b.original_amount) || 0;
+      projectEntry.revised += Number(b.revised_amount) || 0;
+      projectEntry.actual += Number(b.actual_spend) || 0;
+      projectEntry.committed += effectiveCommitted;
+
+      // Category Level Aggregation
+      const categoryKey = `${b.project_id}-${b.category_name}`;
+      if (!categoryBudgetsMap.has(categoryKey)) {
+        categoryBudgetsMap.set(categoryKey, {
+          id: b.id,
+          project_id: b.project_id,
+          category_name: b.category_name,
+          original: 0,
+          revised: 0,
+          actual: 0,
+          committed: 0
+        });
+      }
+      const categoryEntry = categoryBudgetsMap.get(categoryKey)!;
+      categoryEntry.original += Number(b.original_amount) || 0;
+      categoryEntry.revised += Number(b.revised_amount) || 0;
+      categoryEntry.actual += Number(b.actual_spend) || 0;
+      categoryEntry.committed += effectiveCommitted;
     });
 
-    // ============================================================
-    // 4. Property Performance Grid
-    // ============================================================
-    let projectsQuery = client
-      .from('projects')
-      .select(`
-        id,
-        name,
-        owner_entity_id,
-        portfolio_name,
-        status,
-        budget,
-        spent,
-        start_date,
-        target_completion_date
-      `)
-      .eq('status', 'active');
+    // Process Change Orders Global Summary
+    changeOrders.forEach((co: any) => {
+      coSummary.total++;
+      const cost = Number(co.cost_impact) || 0;
+      
+      if (co.status === 'pending') {
+        coSummary.pending++;
+        coSummary.pendingAmount += cost;
+      } else if (co.status === 'approved') {
+        coSummary.approved++;
+        coSummary.approvedAmount += cost;
+      }
+    });
 
-    if (entityId) {
-      projectsQuery = projectsQuery.eq('owner_entity_id', parseInt(entityId));
-    }
-    if (portfolioName) {
-      projectsQuery = projectsQuery.eq('portfolio_name', portfolioName);
-    }
+    // 5. Build Enhanced Project List
+    const enhancedProjects = projects.map(project => {
+      const budgetData = projectBudgetsMap.get(project.id) || { original: 0, revised: 0, actual: 0, committed: 0 };
+      
+      // Calculate derived values
+      const remaining = budgetData.revised - budgetData.actual - budgetData.committed;
+      const percentSpent = budgetData.revised > 0 
+        ? (budgetData.actual / budgetData.revised * 100) 
+        : 0;
 
-    const { data: projects, error: projectsError } = await projectsQuery;
+      // Determine Status
+      let budgetStatus = 'On Track';
+      if (percentSpent >= 100) budgetStatus = 'Over Budget';
+      else if (percentSpent >= 95) budgetStatus = 'Critical';
+      else if (percentSpent >= 85) budgetStatus = 'Warning';
 
-    // Enhance projects with budget data
-    const enhancedProjects = await Promise.all(
-      (projects || []).map(async (project) => {
-        // Get budget summary for this project
-        const { data: projectBudgets } = await client
-          .from('property_budgets_summary')
-          .select('original_amount, revised_amount, actual_spend, remaining_amount, percent_spent, budget_status')
-          .eq('project_id', project.id);
+      // Add to Global Totals
+      heroMetrics.totalBudget += budgetData.original;
+      heroMetrics.totalRevised += budgetData.revised;
+      heroMetrics.totalSpent += budgetData.actual;
+      heroMetrics.totalCommitted += budgetData.committed;
+      heroMetrics.totalRemaining += remaining;
 
-        const budgetTotals = (projectBudgets || []).reduce((acc, b) => {
-          acc.original += Number(b.original_amount) || 0;
-          acc.revised += Number(b.revised_amount) || 0;
-          acc.actual += Number(b.actual_spend) || 0;
-          acc.remaining += Number(b.remaining_amount) || 0;
-          return acc;
-        }, { original: 0, revised: 0, actual: 0, remaining: 0 });
+      // Add to Status Counts
+      if (budgetStatus === 'On Track') statusSummary.onTrack++;
+      else if (budgetStatus === 'Warning') statusSummary.warning++;
+      else if (budgetStatus === 'Critical') statusSummary.critical++;
+      else if (budgetStatus === 'Over Budget') statusSummary.overBudget++;
 
-        const percentSpent = budgetTotals.revised > 0 
-          ? (budgetTotals.actual / budgetTotals.revised * 100) 
-          : 0;
+      return {
+        id: project.id,
+        name: project.name,
+        owner_entity_id: null, 
+        portfolio_name: null,
+        status: project.status,
+        budgetOriginal: budgetData.original,
+        budgetRevised: budgetData.revised,
+        actualSpend: budgetData.actual,
+        remaining: remaining,
+        percentSpent: percentSpent,
+        budgetStatus: budgetStatus
+      };
+    });
 
-        // Determine status
-        let budgetStatus = 'On Track';
-        if (percentSpent >= 100) budgetStatus = 'Over Budget';
-        else if (percentSpent >= 95) budgetStatus = 'Critical';
-        else if (percentSpent >= 85) budgetStatus = 'Warning';
+    // Final Global Calculation
+    heroMetrics.percentSpent = heroMetrics.totalRevised > 0 
+      ? (heroMetrics.totalSpent / heroMetrics.totalRevised * 100) 
+      : 0;
 
-        return {
-          ...project,
-          budgetOriginal: budgetTotals.original,
-          budgetRevised: budgetTotals.revised,
-          actualSpend: budgetTotals.actual,
-          remaining: budgetTotals.remaining,
-          percentSpent: percentSpent,
-          budgetStatus: budgetStatus
-        };
-      })
-    );
-
-    // ============================================================
-    // 5. Alerts - Budget Warnings
-    // ============================================================
+    // 6. Generate Alerts
     const alerts = enhancedProjects
       .filter(p => p.budgetStatus === 'Critical' || p.budgetStatus === 'Over Budget')
       .map(p => ({
@@ -195,42 +254,51 @@ export async function GET(request: NextRequest) {
         projectName: p.name
       }));
 
-    // Add CO alerts
     if (coSummary.pending > 0) {
       alerts.push({
         type: 'info',
         message: `${coSummary.pending} change orders pending approval ($${coSummary.pendingAmount.toLocaleString()})`,
         projectId: null,
         projectName: null
-      });
+      } as any);
     }
 
-    // ============================================================
-    // 6. Response
-    // ============================================================
+    // 7. Budget Items (Line Items)
+    const enhancedBudgetItems = Array.from(categoryBudgetsMap.values()).map((b) => {
+        const remaining = b.revised - b.actual - b.committed;
+        const percentSpent = b.revised > 0 ? (b.actual / b.revised * 100) : 0;
+
+        let status = 'On Track';
+        if (percentSpent >= 100) status = 'Over Budget';
+        else if (percentSpent >= 95) status = 'Critical';
+        else if (percentSpent >= 85) status = 'Warning';
+
+        return {
+            id: b.id,
+            project_id: b.project_id,
+            category_name: b.category_name,
+            original: b.original,
+            revised: b.revised,
+            actual: b.actual,
+            committed: b.committed,
+            remaining,
+            percentSpent,
+            status
+        };
+    });
+
+    // 8. Return Response
     return NextResponse.json({
-      heroMetrics: {
-        totalBudget: totals.totalBudget,
-        totalRevised: totals.totalRevised,
-        totalSpent: totals.totalSpent,
-        totalCommitted: totals.totalCommitted,
-        totalRemaining: totals.totalRemaining,
-        percentSpent: percentSpent
-      },
-      statusSummary: {
-        onTrack: statusCounts['On Track'] || 0,
-        warning: statusCounts['Warning'] || 0,
-        critical: statusCounts['Critical'] || 0,
-        overBudget: statusCounts['Over Budget'] || 0
-      },
+      heroMetrics,
+      statusSummary,
       changeOrdersSummary: coSummary,
       projects: enhancedProjects,
-      alerts: alerts
+      alerts,
+      budgetItems: enhancedBudgetItems
     }, { status: 200 });
 
   } catch (error: any) {
     console.error('[Budget Metrics API] Unexpected error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error', details: error.message }, { status: 500 });
   }
 }
-
