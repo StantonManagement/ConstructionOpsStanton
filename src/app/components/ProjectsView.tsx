@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect, useCallback, ChangeEvent, useMemo } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { Building, Users, DollarSign, Calendar, AlertCircle, CheckCircle, Clock, RefreshCw, Eye, Plus, X, Edit2, Trash2 } from 'lucide-react';
+import { Building, Users, DollarSign, Calendar, AlertCircle, CheckCircle, Clock, RefreshCw, Eye, Plus, X, Edit2, Trash2, FolderKanban } from 'lucide-react';
+import { EmptyState } from './ui/EmptyState';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { getProjectStatusBadge, getStatusLabel } from '@/lib/statusColors';
@@ -446,9 +447,8 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
         start_date: formData.start_date || null,
         target_completion_date: formData.target_completion_date || null,
         status: formData.status || 'active',
-        current_phase: formData.current_phase || 'Planning',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        current_phase: formData.current_phase || 'Planning'
+        // created_at and updated_at are handled by database DEFAULT values
       };
 
       const { data, error } = await supabase
@@ -987,6 +987,17 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
             <div className="flex items-center justify-center py-12">
               <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
               <span className="ml-3 text-muted-foreground">Loading projects...</span>
+            </div>
+          ) : projects.length === 0 ? (
+            /* Empty State */
+            <div className="bg-card border border-border rounded-lg">
+              <EmptyState
+                icon={FolderKanban}
+                title="No projects yet"
+                description="Create your first project to start tracking budgets and payments. Projects help you organize contractors and manage construction progress."
+                actionLabel="New Project"
+                onAction={() => setShowProjectModal(true)}
+              />
             </div>
           ) : (
             /* Projects Grid */

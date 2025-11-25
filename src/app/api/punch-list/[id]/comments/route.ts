@@ -11,12 +11,13 @@ import {
  * GET /api/punch-list/[id]/comments
  * Get all comments for a punch list item
  */
-export const GET = withAuth(async (request: NextRequest, { params }: { params: { id: string } }, user: any) => {
+export const GET = withAuth(async (request: NextRequest, context: { params: Promise<{ id: string }> }, user: any) => {
   try {
     if (!supabaseAdmin) {
       throw new APIError('Service role client not available', 500, 'SERVER_ERROR');
     }
 
+    const params = await context.params;
     const itemId = parseInt(params.id);
 
     const { data: comments, error } = await supabaseAdmin
@@ -44,12 +45,13 @@ export const GET = withAuth(async (request: NextRequest, { params }: { params: {
  * POST /api/punch-list/[id]/comments
  * Add a comment to a punch list item
  */
-export const POST = withAuth(async (request: NextRequest, { params }: { params: { id: string } }, user: any) => {
+export const POST = withAuth(async (request: NextRequest, context: { params: Promise<{ id: string }> }, user: any) => {
   try {
     if (!supabaseAdmin) {
       throw new APIError('Service role client not available', 500, 'SERVER_ERROR');
     }
 
+    const params = await context.params;
     const itemId = parseInt(params.id);
     const body = await request.json();
     const { comment_text, attachment_url } = body;

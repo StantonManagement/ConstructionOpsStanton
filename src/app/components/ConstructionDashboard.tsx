@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, memo, useCallback, Suspense, lazy } from 'react';
+import { BarChart2 } from 'lucide-react';
 import Header from './Header';
 import Navigation from './Navigation';
 import { LoadingSpinner } from './LoadingStates';
@@ -18,6 +19,7 @@ const DailyLogsView = lazy(() => import('./DailyLogsView'));
 const BudgetDashboard = lazy(() => import('./BudgetDashboard'));
 const ChangeOrdersView = lazy(() => import('./ChangeOrdersView'));
 const SettingsView = lazy(() => import('./SettingsView'));
+const ContractorsView = lazy(() => import('./ContractorsView'));
 const UserProfile = lazy(() => import('./UserProfile'));
 
 interface UserData {
@@ -65,7 +67,7 @@ const ConstructionDashboard: React.FC = () => {
     }
     
     // Validate and set active tab (new tab names only)
-    if (tabFromUrl && ['overview', 'projects', 'field-ops', 'payments', 'change-orders', 'budget', 'settings', 'daily-logs'].includes(tabFromUrl)) {
+    if (tabFromUrl && ['overview', 'projects', 'field-ops', 'payments', 'contractors', 'change-orders', 'budget', 'settings', 'daily-logs'].includes(tabFromUrl)) {
       setActiveTab(tabFromUrl);
     }
     
@@ -82,7 +84,7 @@ const ConstructionDashboard: React.FC = () => {
     params.set('tab', tab);
     
     // Clear irrelevant parameters based on the tab
-    if (tab !== 'payments' && tab !== 'settings') {
+    if (tab !== 'payments' && tab !== 'settings' && tab !== 'budget' && tab !== 'projects') {
       params.delete('subtab');
       params.delete('project');
     }
@@ -144,13 +146,13 @@ const ConstructionDashboard: React.FC = () => {
     fetchUserData();
   }, []);
 
-  // Handle project selection and redirect to payments tab
+  // Handle project selection and redirect to projects tab with project detail view
   const handleProjectSelect = useCallback((project: Project) => {
     setSelectedProject(project);
-    setActiveTab('payments');
+    setActiveTab('projects');
     // Update URL with project parameter
     const params = new URLSearchParams();
-    params.set('tab', 'payments');
+    params.set('tab', 'projects');
     params.set('project', project.id.toString());
     router.replace(`/?${params.toString()}`, { scroll: false });
   }, [router]);
@@ -215,10 +217,13 @@ const ConstructionDashboard: React.FC = () => {
             {/* Payments Tab */}
             {activeTab === 'payments' && <PaymentsView searchQuery={searchQuery} />}
             
+            {/* Contractors Tab */}
+            {activeTab === 'contractors' && <ContractorsView searchQuery={searchQuery} />}
+            
             {/* Change Orders Tab */}
             {activeTab === 'change-orders' && <ChangeOrdersView />}
             
-            {/* Budget Dashboard Tab */}
+            {/* Budget Dashboard Tab - Phase 3 Feature */}
             {activeTab === 'budget' && <BudgetDashboard />}
             
             {/* Settings Tab */}

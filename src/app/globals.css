@@ -41,6 +41,12 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+
+  /* New System Colors */
+  --color-status-critical: var(--status-critical);
+  --color-status-warning: var(--status-warning);
+  --color-status-success: var(--status-success);
+  --color-status-neutral: var(--status-neutral);
 }
 
 :root {
@@ -76,7 +82,13 @@
   --input: #F9FAFB; /* Input background */
   --ring: #2563EB; /* Focus ring */
   
-  /* Status colors for construction operations */
+  /* Status colors for construction operations (New System) */
+  --status-critical: #DC2626;
+  --status-warning: #F59E0B;
+  --status-success: #10B981;
+  --status-neutral: #6B7280;
+
+  /* Legacy Status colors (keeping for backward compatibility) */
   --status-success-bg: #D1FAE5;
   --status-success-border: #6EE7B7;
   --status-success-text: #059669;
@@ -166,7 +178,13 @@
   --input: #1F2937;
   --ring: #3B82F6;
   
-  /* Status colors - adjusted for dark mode */
+  /* Status colors - adjusted for dark mode (New System) */
+  --status-critical: #EF4444;
+  --status-warning: #F59E0B;
+  --status-success: #10B981;
+  --status-neutral: #9CA3AF;
+
+  /* Legacy Status colors */
   --status-success-bg: #064E3B;
   --status-success-border: #10B981;
   --status-success-text: #6EE7B7;

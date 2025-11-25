@@ -29,6 +29,7 @@ interface EditableLineItemsTableProps {
   isEditable: boolean;
   maxItems?: number;
   emptyRowIds: string[];
+  onMaxItemsReached?: () => void;
 }
 
 interface EditableCellProps {
@@ -285,6 +286,7 @@ export const EditableLineItemsTable: React.FC<EditableLineItemsTableProps> = ({
   isEditable,
   maxItems = 15,
   emptyRowIds,
+  onMaxItemsReached,
 }) => {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -339,9 +341,9 @@ export const EditableLineItemsTable: React.FC<EditableLineItemsTableProps> = ({
       // At last row, add new row if under max
       if (items.length < maxItems) {
         onAdd();
-      } else {
-        // Show max items message
-        alert(`Maximum ${maxItems} line items reached. Contact admin for more.`);
+      } else if (onMaxItemsReached) {
+        // Show max items message via callback
+        onMaxItemsReached();
       }
     }
   };

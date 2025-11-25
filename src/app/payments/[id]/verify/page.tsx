@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { generateG703Pdf } from '@/lib/g703Pdf';
+import { DataTable, Column } from '@/components/ui/DataTable';
+import { SignalBadge } from '@/components/ui/SignalBadge';
+import { formatCurrency } from '@/lib/theme';
 
 // Define types for fetched data
 interface Project {
@@ -315,7 +318,7 @@ export default function PaymentVerificationPage() {
         try {
           const queryPromise = supabase
             .from("payment_applications")
-            .select("*, project:projects(*), contractor:contractors(*), line_item_progress:payment_line_item_progress(*, line_item:project_line_items(*))")
+            .select("*, project:projects(*, owner_entities(name)), contractor:contractors(*), line_item_progress:payment_line_item_progress(*, line_item:project_line_items(*))")
             .eq("id", appId)
             .single() as any as Promise<any>;
           
@@ -383,7 +386,7 @@ export default function PaymentVerificationPage() {
             const { data: projectData, error: projectError } = await withTimeout(
               supabase
                 .from("projects")
-                .select("*")
+                .select("*, owner_entities(name)")
                 .eq("id", app.project_id)
                 .single() as any as Promise<any>,
               30000
@@ -1087,14 +1090,49 @@ const lineItemsForTable = lineItems.map((li, idx) => {
                 setError('Missing required data to generate PDF.');
                 return;
               }
+              
+              // Fetch the last approved payment application for this contractor and project
+              let previousDate = '';
+              let period = '';
+              try {
+                const { data: prevPayment } = await supabase
+                  .from('payment_applications')
+                  .select('approved_at')
+                  .eq('project_id', paymentApp.project_id)
+                  .eq('contractor_id', paymentApp.contractor_id)
+                  .eq('status', 'approved')
+                  .neq('id', paymentApp.id)
+                  .order('approved_at', { ascending: false })
+                  .limit(1)
+                  .single();
+                
+                if (prevPayment?.approved_at) {
+                  const prevDate = new Date(prevPayment.approved_at);
+                  previousDate = prevDate.toLocaleDateString();
+                  const today = new Date();
+                  period = `${prevDate.toLocaleDateString()} - ${today.toLocaleDateString()}`;
+                }
+              } catch (err) {
+                console.log('No previous payment found, using default period');
+              }
+              
               const { pdfBytes, filename } = await generateG703Pdf({
                 project: { name: project.name || '', address: (project as any).address || '' },
-                contractor: { name: contractor.name || '' },
+                contractor: { name: contractor.name || '', trade: contractor.trade || '' },
+                ownerName: (project as any).owner_entities?.name || 'SREP Hartford I LLC',
+                clientName: (project as any).client_name || 'Stanton Management LLC',
+                contractorContact: (contractor as any).contact_name || '',
+                contractorAddress: {
+                  street: (contractor as any).address,
+                  city: (contractor as any).city,
+                  state: (contractor as any).state,
+                  zip: (contractor as any).zip
+                },
                 applicationNumber: paymentApp.id,
                 invoiceDate: paymentApp.created_at ? new Date(paymentApp.created_at).toLocaleDateString() : '',
-                period: '',
+                period: period,
                 dateSubmitted: paymentApp.created_at ? new Date(paymentApp.created_at).toLocaleDateString() : '',
-                previousDate: '',
+                previousDate: previousDate,
                 lineItems: lineItemsForTable,
                 changeOrders: changeOrders,
                 includeChangeOrderPage: includeChangeOrderPageInPdf,

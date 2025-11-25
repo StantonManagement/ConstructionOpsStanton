@@ -2,8 +2,10 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { Plus, Phone, Mail, DollarSign, FileText, Send, Eye, Edit, Loader2, Users, GripVertical, Tag } from 'lucide-react';
+import { Plus, Phone, Mail, DollarSign, FileText, Send, Eye, Edit, Loader2, Users, GripVertical, Tag, Trash2, AlertCircle, LayoutGrid, Table as TableIcon, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { Project } from '../context/DataContext';
+import { DataTable } from '@/components/ui/DataTable';
+import { SignalBadge } from '@/components/ui/SignalBadge';
 import {
   DndContext,
   closestCenter,
@@ -59,12 +61,13 @@ interface ContractorCardProps {
   onEditContract: (contract: ContractWithContractor) => void;
   onViewLineItems: (contract: ContractWithContractor) => void;
   onViewDetails: (contract: ContractWithContractor) => void;
+  onDelete: (contract: ContractWithContractor) => void;
   isRequesting: boolean;
   isDragging?: boolean;
 }
 
 // Sortable Contractor Card Component
-function SortableContractorCard({ contract, onRequestPayment, onEditContract, onViewLineItems, onViewDetails, isRequesting }: ContractorCardProps) {
+function SortableContractorCard({ contract, onRequestPayment, onEditContract, onViewLineItems, onViewDetails, onDelete, isRequesting }: ContractorCardProps) {
   const {
     attributes,
     listeners,
@@ -90,6 +93,7 @@ function SortableContractorCard({ contract, onRequestPayment, onEditContract, on
         onEditContract={onEditContract}
         onViewLineItems={onViewLineItems}
         onViewDetails={onViewDetails}
+        onDelete={onDelete}
         isRequesting={isRequesting}
         isDragging={isDragging}
       />
@@ -107,7 +111,7 @@ function SortableContractorCard({ contract, onRequestPayment, onEditContract, on
 }
 
 // Contractor Card Component
-function ContractorCard({ contract, onRequestPayment, onEditContract, onViewLineItems, onViewDetails, isRequesting, isDragging }: ContractorCardProps) {
+function ContractorCard({ contract, onRequestPayment, onEditContract, onViewLineItems, onViewDetails, onDelete, isRequesting, isDragging }: ContractorCardProps) {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -310,7 +314,7 @@ function ContractorCard({ contract, onRequestPayment, onEditContract, onViewLine
             className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
           >
             <Edit className="w-4 h-4" />
-            <span className="text-sm">Edit Contract</span>
+            <span className="text-sm">Edit</span>
           </button>
           <button
             onClick={(e) => {
@@ -320,7 +324,17 @@ function ContractorCard({ contract, onRequestPayment, onEditContract, onViewLine
             className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
           >
             <Eye className="w-4 h-4" />
-            <span className="text-sm">View Details</span>
+            <span className="text-sm">Details</span>
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(contract);
+            }}
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
+          >
+            <Trash2 className="w-4 h-4" />
+            <span className="text-sm">Remove from Project</span>
           </button>
         </div>
       </div>
@@ -356,6 +370,14 @@ const ProjectContractorsTab: React.FC<ProjectContractorsTabProps> = ({
     contract_amount: 0,
     budget_item_id: ''
   });
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [contractToDelete, setContractToDelete] = useState<ContractWithContractor | null>(null);
+  
+  // View mode and sorting state
+  const [viewMode, setViewMode] = useState<'card' | 'table'>('card');
+  const [sortColumn, setSortColumn] = useState<string>('display_order');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -483,6 +505,56 @@ const ProjectContractorsTab: React.FC<ProjectContractorsTabProps> = ({
     }
   };
 
+  const handleDeleteClick = (contract: ContractWithContractor) => {
+    setContractToDelete(contract);
+    setShowDeleteConfirmation(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!contractToDelete) return;
+
+    setDeleteLoading(true);
+    try {
+      // Check for dependent payment applications
+      const { data: paymentApps, error: checkError } = await supabase
+        .from('payment_applications')
+        .select('id, status')
+        .eq('project_id', project.id)
+        .eq('contractor_id', contractToDelete.contractor_id);
+
+      if (checkError) throw checkError;
+
+      // Check if there are any approved or pending payment applications
+      const hasActivePayments = paymentApps && paymentApps.some(
+        app => app.status === 'approved' || app.status === 'submitted' || app.status === 'pending'
+      );
+
+      if (hasActivePayments) {
+        alert('Cannot delete contract with active or approved payment applications. Please archive or reject them first.');
+        setDeleteLoading(false);
+        return;
+      }
+
+      // Delete the contract
+      const { error } = await supabase
+        .from('project_contractors')
+        .delete()
+        .eq('id', contractToDelete.id);
+
+      if (error) throw error;
+
+      // Refresh the list
+      await fetchContractors();
+      setShowDeleteConfirmation(false);
+      setContractToDelete(null);
+    } catch (error) {
+      console.error('Error deleting contract:', error);
+      alert(error instanceof Error ? error.message : 'Failed to delete contract');
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
   const fetchAvailableContractors = async () => {
     setLoadingContractors(true);
     try {
@@ -574,6 +646,80 @@ const ProjectContractorsTab: React.FC<ProjectContractorsTabProps> = ({
     setShowAddContractorModal(true);
   };
 
+  // Sorting logic for table view
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      // Toggle direction if clicking the same column
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // New column, default to ascending
+      setSortColumn(column);
+      setSortDirection('asc');
+    }
+  };
+
+  // Sort contracts based on current sort state
+  const sortedContracts = React.useMemo(() => {
+    const sorted = [...contracts];
+    
+    if (viewMode === 'card') {
+      // In card view, always sort by display_order
+      return sorted.sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
+    }
+    
+    // In table view, sort by selected column
+    sorted.sort((a, b) => {
+      let aValue: any;
+      let bValue: any;
+      
+      switch (sortColumn) {
+        case 'name':
+          aValue = a.contractors?.name?.toLowerCase() || '';
+          bValue = b.contractors?.name?.toLowerCase() || '';
+          break;
+        case 'trade':
+          aValue = a.contractors?.trade?.toLowerCase() || '';
+          bValue = b.contractors?.trade?.toLowerCase() || '';
+          break;
+        case 'contract_amount':
+          aValue = a.contract_amount || 0;
+          bValue = b.contract_amount || 0;
+          break;
+        case 'paid_to_date':
+          aValue = a.paid_to_date || 0;
+          bValue = b.paid_to_date || 0;
+          break;
+        case 'remaining':
+          aValue = (a.contract_amount || 0) - (a.paid_to_date || 0);
+          bValue = (b.contract_amount || 0) - (b.paid_to_date || 0);
+          break;
+        case 'status':
+          aValue = a.contract_status || '';
+          bValue = b.contract_status || '';
+          break;
+        default:
+          aValue = a.display_order || 0;
+          bValue = b.display_order || 0;
+      }
+      
+      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+    
+    return sorted;
+  }, [contracts, sortColumn, sortDirection, viewMode]);
+
+  // Format currency helper
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -609,42 +755,305 @@ const ProjectContractorsTab: React.FC<ProjectContractorsTabProps> = ({
         <div>
           <h2 className="text-lg font-semibold text-gray-900">Project Contractors</h2>
           <p className="text-sm text-gray-600 mt-1">
-          {contracts.length} contractor{contracts.length !== 1 ? 's' : ''} on this project • Drag to reorder
+          {contracts.length} contractor{contracts.length !== 1 ? 's' : ''} on this project
+          {viewMode === 'card' && ' • Drag to reorder'}
         </p>
         </div>
-        <button 
-          onClick={openAddContractorModal}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Add Contractor</span>
-        </button>
+        <div className="flex items-center gap-3">
+          {/* View Toggle */}
+          <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+            <button
+              onClick={() => setViewMode('card')}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-md transition-colors ${
+                viewMode === 'card'
+                  ? 'bg-white text-blue-600 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+              title="Card View"
+            >
+              <LayoutGrid className="w-4 h-4" />
+              <span className="text-sm font-medium">Cards</span>
+            </button>
+            <button
+              onClick={() => setViewMode('table')}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-md transition-colors ${
+                viewMode === 'table'
+                  ? 'bg-white text-blue-600 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+              title="Table View"
+            >
+              <TableIcon className="w-4 h-4" />
+              <span className="text-sm font-medium">Table</span>
+            </button>
+          </div>
+          <button 
+            onClick={openAddContractorModal}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Add Contractor</span>
+          </button>
+        </div>
       </div>
 
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragEnd={handleDragEnd}
-      >
-        <SortableContext
-          items={contracts.map((c) => c.id)}
-          strategy={verticalListSortingStrategy}
+      {/* Card View with Drag and Drop */}
+      {viewMode === 'card' && (
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
         >
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {contracts.map((contract) => (
-              <SortableContractorCard
-                key={contract.id}
-                contract={contract}
-                onRequestPayment={handleRequestPayment}
-                onEditContract={onEditContract}
-                onViewLineItems={onViewLineItems}
-                onViewDetails={handleViewDetails}
-                isRequesting={requestingPayment === contract.id}
-              />
-            ))}
-          </div>
-        </SortableContext>
-      </DndContext>
+          <SortableContext
+            items={sortedContracts.map((c) => c.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              {sortedContracts.map((contract) => (
+                <SortableContractorCard
+                  key={contract.id}
+                  contract={contract}
+                  onRequestPayment={handleRequestPayment}
+                  onEditContract={onEditContract}
+                  onViewLineItems={onViewLineItems}
+                  onViewDetails={handleViewDetails}
+                  onDelete={handleDeleteClick}
+                  isRequesting={requestingPayment === contract.id}
+                />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
+      )}
+
+      {/* Table View with Sorting */}
+      {viewMode === 'table' && (
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <DataTable
+            data={sortedContracts}
+            columns={[
+              {
+                header: (
+                  <button
+                    onClick={() => handleSort('name')}
+                    className="flex items-center gap-1 hover:text-gray-900 transition-colors"
+                  >
+                    <span>Contractor</span>
+                    {sortColumn === 'name' && (
+                      sortDirection === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+                    )}
+                    {sortColumn !== 'name' && <ArrowUpDown className="w-3 h-3 opacity-40" />}
+                  </button>
+                ),
+                accessor: (row: ContractWithContractor) => (
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center text-xl flex-shrink-0">
+                      {row.contractors?.trade ? 
+                        (row.contractors.trade.toLowerCase() === 'electrical' ? '⚡' :
+                         row.contractors.trade.toLowerCase() === 'plumbing' ? '🚰' :
+                         row.contractors.trade.toLowerCase() === 'hvac' ? '❄️' :
+                         row.contractors.trade.toLowerCase() === 'carpentry' ? '🔨' :
+                         row.contractors.trade.toLowerCase() === 'concrete' ? '🧱' :
+                         row.contractors.trade.toLowerCase() === 'painting' ? '🎨' :
+                         row.contractors.trade.toLowerCase() === 'roofing' ? '🏠' :
+                         row.contractors.trade.toLowerCase() === 'landscaping' ? '🌳' :
+                         row.contractors.trade.toLowerCase() === 'flooring' ? '📐' : '🔧')
+                        : '🔧'
+                      }
+                    </div>
+                    <div>
+                      <div className="font-medium text-gray-900">{row.contractors?.name}</div>
+                      <div className="text-xs text-gray-500">{row.contractors?.trade}</div>
+                    </div>
+                  </div>
+                )
+              },
+              {
+                header: 'Budget Link',
+                accessor: (row: ContractWithContractor) => (
+                  row.property_budgets ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-purple-50 text-purple-700 border border-purple-100">
+                      <Tag className="w-3 h-3" />
+                      {row.property_budgets.category_name}
+                    </span>
+                  ) : (
+                    <span className="text-xs text-gray-400 italic">Unlinked</span>
+                  )
+                )
+              },
+              {
+                header: 'Contact',
+                accessor: (row: ContractWithContractor) => (
+                  <div className="text-xs text-gray-600 space-y-0.5">
+                    {row.contractors?.phone && (
+                      <div className="flex items-center gap-1">
+                        <Phone className="w-3 h-3" />
+                        {row.contractors.phone}
+                      </div>
+                    )}
+                    {row.contractors?.email && (
+                      <div className="flex items-center gap-1">
+                        <Mail className="w-3 h-3" />
+                        {row.contractors.email}
+                      </div>
+                    )}
+                    {!row.contractors?.phone && !row.contractors?.email && (
+                      <span className="text-gray-400 italic">No contact</span>
+                    )}
+                  </div>
+                )
+              },
+              {
+                header: (
+                  <button
+                    onClick={() => handleSort('contract_amount')}
+                    className="flex items-center gap-1 hover:text-gray-900 transition-colors"
+                  >
+                    <span>Contract Amount</span>
+                    {sortColumn === 'contract_amount' && (
+                      sortDirection === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+                    )}
+                    {sortColumn !== 'contract_amount' && <ArrowUpDown className="w-3 h-3 opacity-40" />}
+                  </button>
+                ),
+                accessor: (row: ContractWithContractor) => {
+                  const original = row.original_contract_amount || 0;
+                  const current = row.contract_amount || 0;
+                  const changeOrders = current - original;
+                  return (
+                    <div className="space-y-1">
+                      <div className="font-semibold text-gray-900">{formatCurrency(current)}</div>
+                      {changeOrders !== 0 && (
+                        <div className={`text-xs ${changeOrders > 0 ? 'text-orange-600' : 'text-red-600'}`}>
+                          {changeOrders > 0 && '+'}{formatCurrency(changeOrders)} CO
+                        </div>
+                      )}
+                    </div>
+                  );
+                },
+                align: 'right' as const
+              },
+              {
+                header: (
+                  <button
+                    onClick={() => handleSort('paid_to_date')}
+                    className="flex items-center gap-1 hover:text-gray-900 transition-colors"
+                  >
+                    <span>Paid to Date</span>
+                    {sortColumn === 'paid_to_date' && (
+                      sortDirection === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+                    )}
+                    {sortColumn !== 'paid_to_date' && <ArrowUpDown className="w-3 h-3 opacity-40" />}
+                  </button>
+                ),
+                accessor: (row: ContractWithContractor) => (
+                  <div className="font-medium text-green-600">
+                    {formatCurrency(row.paid_to_date || 0)}
+                  </div>
+                ),
+                align: 'right' as const
+              },
+              {
+                header: (
+                  <button
+                    onClick={() => handleSort('remaining')}
+                    className="flex items-center gap-1 hover:text-gray-900 transition-colors"
+                  >
+                    <span>Remaining</span>
+                    {sortColumn === 'remaining' && (
+                      sortDirection === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+                    )}
+                    {sortColumn !== 'remaining' && <ArrowUpDown className="w-3 h-3 opacity-40" />}
+                  </button>
+                ),
+                accessor: (row: ContractWithContractor) => {
+                  const remaining = (row.contract_amount || 0) - (row.paid_to_date || 0);
+                  return (
+                    <div className="font-medium text-orange-600">
+                      {formatCurrency(remaining)}
+                    </div>
+                  );
+                },
+                align: 'right' as const
+              },
+              {
+                header: (
+                  <button
+                    onClick={() => handleSort('status')}
+                    className="flex items-center gap-1 hover:text-gray-900 transition-colors"
+                  >
+                    <span>Status</span>
+                    {sortColumn === 'status' && (
+                      sortDirection === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+                    )}
+                    {sortColumn !== 'status' && <ArrowUpDown className="w-3 h-3 opacity-40" />}
+                  </button>
+                ),
+                accessor: (row: ContractWithContractor) => (
+                  <SignalBadge status={row.contract_status === 'active' ? 'success' : 'neutral'}>
+                    {row.contract_status || 'N/A'}
+                  </SignalBadge>
+                )
+              },
+              {
+                header: 'Actions',
+                accessor: (row: ContractWithContractor) => (
+                  <div className="flex items-center gap-2 justify-end" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRequestPayment(row.contractor_id, row.id);
+                      }}
+                      disabled={requestingPayment === row.id}
+                      className="px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-xs font-medium flex items-center gap-1"
+                      title="Request Payment"
+                    >
+                      {requestingPayment === row.id ? (
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                      ) : (
+                        <Send className="w-3 h-3" />
+                      )}
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEditContract(row);
+                      }}
+                      className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors"
+                      title="Edit Contract"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onViewLineItems(row);
+                      }}
+                      className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors"
+                      title="View Details"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteClick(row);
+                      }}
+                      className="p-1.5 text-orange-600 hover:text-orange-900 hover:bg-orange-50 rounded transition-colors"
+                      title="Remove from Project"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ),
+                align: 'right' as const
+              }
+            ]}
+            emptyMessage="No contractors assigned to this project"
+            onRowClick={handleViewDetails}
+          />
+        </div>
+      )}
 
       {/* Add Contractor Modal */}
       {showAddContractorModal && (
@@ -663,7 +1072,10 @@ const ProjectContractorsTab: React.FC<ProjectContractorsTabProps> = ({
                   <label className="block text-sm font-medium text-gray-700 mb-2">Select Contractor *</label>
                   <select
                     value={selectedContractorId || ''}
-                    onChange={(e) => setSelectedContractorId(parseInt(e.target.value))}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setSelectedContractorId(value ? parseInt(value) : null);
+                    }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     required
                   >
@@ -732,6 +1144,81 @@ const ProjectContractorsTab: React.FC<ProjectContractorsTabProps> = ({
                   Add to Project
                 </button>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Remove from Project Confirmation Modal */}
+      {showDeleteConfirmation && contractToDelete && (
+        <div 
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          onClick={() => setShowDeleteConfirmation(false)}
+        >
+          <div 
+            className="bg-white rounded-xl shadow-2xl max-w-lg w-full p-6 border border-gray-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header with Warning Icon */}
+            <div className="flex items-center gap-4 mb-6">
+              <div className="w-16 h-16 rounded-2xl bg-orange-50 flex items-center justify-center flex-shrink-0">
+                <AlertCircle className="w-8 h-8 text-orange-600" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">Remove from Project</h3>
+                <p className="text-sm text-gray-600 mt-1">This will remove the contractor from this project only</p>
+              </div>
+            </div>
+
+            {/* Warning Message */}
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-6">
+              <div className="flex items-start gap-3">
+                <div className="w-6 h-6 rounded-full bg-orange-200 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-orange-700 text-sm font-bold">!</span>
+                </div>
+                <div>
+                  <p className="text-orange-800 font-medium mb-2">
+                    Remove {contractToDelete.contractors.name} from this project?
+                  </p>
+                  <ul className="text-orange-700 text-sm space-y-1">
+                    <li>• Contract amount: ${contractToDelete.contract_amount.toLocaleString()}</li>
+                    <li>• This will remove the contract and all associated line items from this project</li>
+                    <li>• <span className="font-semibold text-green-700">The contractor will remain in your system for other projects</span></li>
+                    <li>• This action cannot be reversed</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-3 sm:justify-end">
+              <button 
+                onClick={() => {
+                  setShowDeleteConfirmation(false);
+                  setContractToDelete(null);
+                }} 
+                className="flex-1 sm:flex-none px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium border border-gray-300"
+                disabled={deleteLoading}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={confirmDelete} 
+                className="flex-1 sm:flex-none px-6 py-3 bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 text-white rounded-lg transition-colors disabled:opacity-50 font-medium flex items-center justify-center gap-2 shadow-lg"
+                disabled={deleteLoading}
+              >
+                {deleteLoading ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Removing...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-5 h-5" />
+                    Remove from Project
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </div>

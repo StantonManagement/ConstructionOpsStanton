@@ -3,11 +3,15 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
-import { DollarSign, Filter, Search, RefreshCw, CheckCircle, CheckCircle2, XCircle, Clock, AlertCircle, ChevronLeft, ChevronRight, Eye, Trash2 } from 'lucide-react';
+import { DollarSign, Filter, Search, RefreshCw, CheckCircle, CheckCircle2, XCircle, Clock, AlertCircle, ChevronLeft, ChevronRight, Eye, Trash2, Building } from 'lucide-react';
+import { EmptyState } from './ui/EmptyState';
 import { generateG703Pdf } from '@/lib/g703Pdf';
 import { Badge } from '@/components/ui/badge';
 import { getPaymentStatusBadge, getStatusLabel, getStatusIconColor, PaymentStatus } from '@/lib/statusColors';
 import { useModal } from '../context/ModalContext';
+import { DataTable } from '@/components/ui/DataTable';
+import { SignalBadge } from '@/components/ui/SignalBadge';
+import { SystemStatus } from '@/lib/theme';
 
 // Utility functions
 const formatDate = (dateString: string) => {
@@ -232,135 +236,6 @@ function PaymentCard({ application, isSelected, onSelect, onVerify, getDocumentF
   );
 }
 
-// Payment Row Component (for table view)
-function PaymentRow({ application, isSelected, onSelect, onVerify, getDocumentForApp, sendForSignature, onCardClick, onDelete }: any) {
-
-  const statusConfig: any = {
-    submitted: { 
-      color: "bg-red-100 text-red-800 border-red-200", 
-      priority: "URGENT",
-      icon: "🚨"
-    },
-    needs_review: { 
-      color: "bg-yellow-100 text-yellow-800 border-yellow-200", 
-      priority: "HIGH",
-      icon: "⚠️"
-    },
-    sms_complete: { 
-      color: "bg-blue-100 text-blue-800 border-blue-200", 
-      priority: "READY",
-      icon: "📱"
-    },
-    approved: { 
-      color: "bg-green-100 text-green-800 border-green-200", 
-      priority: "DONE",
-      icon: "✅"
-    },
-    check_ready: { 
-      color: "bg-purple-100 text-purple-800 border-purple-200", 
-      priority: "PICKUP",
-      icon: "💰"
-    },
-    rejected: { 
-      color: "bg-red-100 text-red-800 border-red-200", 
-      priority: "REJECTED",
-      icon: "❌"
-    },
-  };
-
-  const config = statusConfig[application.status] || statusConfig.needs_review;
-  const doc = getDocumentForApp(application.id);
-
-  return (
-    <tr 
-      className={`border-b border-gray-200 hover:bg-gray-50 cursor-pointer ${isSelected ? 'bg-blue-50' : ''}`}
-      onClick={() => onCardClick && onCardClick(application)}
-    >
-      <td 
-        className="px-4 py-3"
-        onClick={(e) => {
-          e.stopPropagation();
-          onSelect(application.id, !isSelected);
-        }}
-      >
-        <input
-          type="checkbox"
-          checked={isSelected}
-          onChange={(e) => onSelect(application.id, e.target.checked)}
-          className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 cursor-pointer"
-        />
-      </td>
-      <td className="px-4 py-3">
-        <div className="min-w-0">
-          <p className="font-semibold text-gray-900 text-sm truncate">{application.project?.name}</p>
-          <p className="text-xs text-gray-500">#{application.id}</p>
-        </div>
-      </td>
-      <td className="px-4 py-3">
-        <div className="min-w-0">
-          <p className="text-sm font-medium text-gray-900 truncate">{application.contractor?.name}</p>
-          {application.contractor?.trade && (
-            <p className="text-xs text-gray-500">{application.contractor.trade}</p>
-          )}
-        </div>
-      </td>
-      <td className="px-4 py-3">
-        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold border ${config.color}`}>
-      {config.icon}
-    </span>
-      </td>
-      <td className="px-4 py-3 text-right">
-        <p className="text-sm font-bold text-green-600">{formatCurrency(application.current_period_value || 0)}</p>
-      </td>
-      <td className="px-4 py-3 text-sm text-gray-500">
-        {application.created_at ? formatDate(application.created_at) : "-"}
-      </td>
-      <td className="px-4 py-3">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onVerify(application.id);
-            }}
-            className={`px-3 py-1 rounded-md text-xs font-semibold transition-colors ${
-              application.status === "approved"
-                ? "bg-green-600 text-white hover:bg-green-700"
-                : application.status === "rejected"
-                ? "bg-red-600 text-white hover:bg-red-700"
-                : config.priority === "URGENT" 
-                ? "bg-red-600 text-white hover:bg-red-700" 
-                : "bg-blue-600 text-white hover:bg-blue-700"
-            }`}
-          >
-            {application.status === "approved" || application.status === "rejected" ? "View" : config.priority === "URGENT" ? "URGENT" : "Verify"}
-          </button>
-          {doc && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                sendForSignature(application.id);
-              }}
-              className="px-3 py-1 bg-green-600 text-white rounded-md text-xs font-semibold hover:bg-green-700 transition-colors"
-            >
-              Sign
-            </button>
-          )}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete(application.id);
-            }}
-            className="px-3 py-1 bg-red-600 text-white rounded-md text-xs font-semibold hover:bg-red-700 transition-colors"
-            title="Delete payment application"
-          >
-            <Trash2 className="w-3 h-3" />
-          </button>
-        </div>
-      </td>
-    </tr>
-  );
-}
-
 // Pagination Component
 function Pagination({ currentPage, totalPages, onPageChange, totalItems, itemsPerPage }: any) {
   const getPageNumbers = () => {
@@ -434,6 +309,128 @@ function PaymentTable({ applications, onVerify, getDocumentForApp, sendForSignat
   const allSelected = applications.length > 0 && selectedOnPage.length === applications.length;
   const someSelected = selectedOnPage.length > 0 && selectedOnPage.length < applications.length;
 
+  const columns = [
+    {
+      header: (
+        <input
+          type="checkbox"
+          checked={allSelected}
+          ref={(input) => { if (input) input.indeterminate = someSelected; }}
+          onChange={(e) => onSelectAll(e.target.checked)}
+          className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+        />
+      ),
+      accessor: (row: any) => (
+        <div onClick={(e) => e.stopPropagation()} className="flex items-center justify-center">
+          <input
+            type="checkbox"
+            checked={selectedItems.includes(row.id)}
+            onChange={(e) => onSelectItem(row.id, e.target.checked)}
+            className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 cursor-pointer"
+          />
+        </div>
+      ),
+      className: "w-10 px-2"
+    },
+    {
+      header: 'Project',
+      accessor: (row: any) => (
+        <div className="min-w-0">
+          <p className="font-medium text-foreground text-sm truncate">{row.project?.name}</p>
+          <p className="text-xs text-muted-foreground">#{row.id}</p>
+        </div>
+      )
+    },
+    {
+      header: 'Contractor',
+      accessor: (row: any) => (
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-foreground truncate">{row.contractor?.name}</p>
+          {row.contractor?.trade && (
+            <p className="text-xs text-muted-foreground">{row.contractor.trade}</p>
+          )}
+        </div>
+      )
+    },
+    {
+      header: 'Status',
+      accessor: (row: any) => {
+        const statusMap: Record<string, SystemStatus> = {
+          'approved': 'success',
+          'submitted': 'critical',
+          'needs_review': 'warning',
+          'rejected': 'critical',
+          'check_ready': 'success',
+          'sms_sent': 'neutral'
+        };
+        return (
+          <SignalBadge status={statusMap[row.status] || 'neutral'}>
+            {getStatusLabel(row.status)}
+          </SignalBadge>
+        );
+      }
+    },
+    {
+      header: 'Current Value',
+      accessor: (row: any) => <span className="font-bold text-foreground">{formatCurrency(row.current_period_value || 0)}</span>,
+      align: 'right' as const
+    },
+    {
+      header: 'Created',
+      accessor: (row: any) => <span className="text-muted-foreground">{row.created_at ? formatDate(row.created_at) : "-"}</span>,
+    },
+    {
+      header: 'Actions',
+      accessor: (row: any) => {
+        const doc = getDocumentForApp(row.id);
+        const statusConfig: any = {
+            submitted: { priority: "URGENT" },
+            needs_review: { priority: "HIGH" },
+            sms_complete: { priority: "READY" },
+            approved: { priority: "DONE" },
+            check_ready: { priority: "PICKUP" },
+            rejected: { priority: "REJECTED" },
+        };
+        const config = statusConfig[row.status] || statusConfig.needs_review;
+
+        return (
+          <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => onVerify(row.id)}
+              className={`px-3 py-1 rounded-md text-xs font-semibold transition-colors ${
+                row.status === "approved"
+                  ? "bg-green-600 text-white hover:bg-green-700"
+                  : row.status === "rejected"
+                  ? "bg-red-600 text-white hover:bg-red-700"
+                  : config.priority === "URGENT" 
+                  ? "bg-red-600 text-white hover:bg-red-700" 
+                  : "bg-blue-600 text-white hover:bg-blue-700"
+              }`}
+            >
+              {row.status === "approved" || row.status === "rejected" ? "View" : config.priority === "URGENT" ? "URGENT" : "Verify"}
+            </button>
+            {doc && (
+              <button
+                onClick={() => sendForSignature(row.id)}
+                className="px-3 py-1 bg-green-600 text-white rounded-md text-xs font-semibold hover:bg-green-700 transition-colors"
+              >
+                Sign
+              </button>
+            )}
+            <button
+              onClick={() => onDelete(row.id)}
+              className="px-3 py-1 bg-red-600 text-white rounded-md text-xs font-semibold hover:bg-red-700 transition-colors"
+              title="Delete payment application"
+            >
+              <Trash2 className="w-3 h-3" />
+            </button>
+          </div>
+        );
+      },
+      align: 'right' as const
+    }
+  ];
+
   return (
     <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
       {/* Mobile Card View */}
@@ -454,57 +451,14 @@ function PaymentTable({ applications, onVerify, getDocumentForApp, sendForSignat
       </div>
 
       {/* Desktop Table View */}
-      <div className="hidden lg:block overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-4 py-3 text-left">
-                <input
-                  type="checkbox"
-                  checked={allSelected}
-                  ref={(input) => {
-                    if (input) input.indeterminate = someSelected;
-                  }}
-                  onChange={(e) => onSelectAll(e.target.checked)}
-                  className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                />
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Project
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Contractor
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Status
-              </th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Current Value
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Created
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {applications.map((application: any) => (
-              <PaymentRow
-                key={application.id}
-                application={application}
-                isSelected={selectedItems.includes(application.id)}
-                onSelect={onSelectItem}
-                onVerify={onVerify}
-                getDocumentForApp={getDocumentForApp}
-                sendForSignature={sendForSignature}
-                onCardClick={onCardClick}
-                onDelete={onDelete}
-              />
-            ))}
-          </tbody>
-        </table>
+      <div className="hidden lg:block">
+        <DataTable
+            data={applications}
+            columns={columns}
+            onRowClick={onCardClick}
+            className="border-none rounded-none shadow-none"
+            emptyMessage="No payment applications found"
+        />
       </div>
 
       <Pagination
@@ -569,6 +523,134 @@ function BulkActionsBar({ selectedCount, onDeleteSelected, onApproveSelected, on
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+// Contractor Payment Group Component for "By Contractor" view
+function ContractorPaymentGroup({ 
+  group, 
+  onVerify, 
+  onPayReady,
+  formatCurrency,
+  formatDate,
+  getStatusLabel
+}: { 
+  group: { contractor: any; apps: any[]; totalPending: number; readyCount: number };
+  onVerify: (id: number) => void;
+  onPayReady: (contractorId: number, appIds: number[]) => void;
+  formatCurrency: (amount: number) => string;
+  formatDate: (dateString: string) => string;
+  getStatusLabel: (status: any) => string;
+}) {
+  const [isExpanded, setIsExpanded] = useState(true);
+  
+  const readyAppIds = group.apps
+    .filter(app => app.status === 'approved' || app.status === 'check_ready')
+    .map(app => app.id);
+  
+  const readyAmount = group.apps
+    .filter(app => app.status === 'approved' || app.status === 'check_ready')
+    .reduce((sum, app) => sum + (app.current_period_value || 0), 0);
+
+  return (
+    <div className="bg-card border border-border rounded-lg overflow-hidden mb-4">
+      {/* Contractor Header */}
+      <div 
+        className="px-4 py-3 bg-muted/30 border-b border-border cursor-pointer hover:bg-muted/50 transition-colors"
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button className="text-muted-foreground">
+              <svg 
+                className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-90' : ''}`} 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+            <div>
+              <h3 className="font-semibold text-foreground">
+                {group.contractor?.name || 'Unknown Contractor'}
+              </h3>
+              {group.contractor?.trade && (
+                <p className="text-xs text-muted-foreground">{group.contractor.trade}</p>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="text-right">
+              <p className="text-lg font-bold text-foreground">
+                {formatCurrency(group.totalPending)}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {group.apps.length} payment{group.apps.length !== 1 ? 's' : ''}
+              </p>
+            </div>
+            {readyAppIds.length > 0 && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onPayReady(group.contractor?.id, readyAppIds);
+                }}
+                className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors flex items-center gap-1"
+              >
+                <span className="hidden sm:inline">Pay Ready Items</span>
+                <span className="sm:hidden">Pay</span>
+                <span className="bg-white/20 px-1.5 py-0.5 rounded text-xs">
+                  {readyAppIds.length}
+                </span>
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Payment Apps List */}
+      {isExpanded && (
+        <div className="divide-y divide-border">
+          {group.apps.map((app, index) => (
+            <div 
+              key={app.id} 
+              className="px-4 py-3 flex items-center justify-between hover:bg-muted/20 transition-colors cursor-pointer"
+              onClick={() => onVerify(app.id)}
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-muted-foreground text-sm w-4">
+                  {index === group.apps.length - 1 ? '└' : '├'}
+                </span>
+                <div>
+                  <p className="font-medium text-foreground text-sm">
+                    {app.project?.name || 'Unknown Project'}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    #{app.id} • {app.created_at ? formatDate(app.created_at) : 'N/A'}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                  app.status === 'approved' || app.status === 'check_ready'
+                    ? 'bg-green-100 text-green-800'
+                    : app.status === 'submitted' || app.status === 'needs_review'
+                    ? 'bg-yellow-100 text-yellow-800'
+                    : app.status === 'rejected'
+                    ? 'bg-red-100 text-red-800'
+                    : 'bg-gray-100 text-gray-800'
+                }`}>
+                  {getStatusLabel(app.status)}
+                </span>
+                <span className="font-semibold text-foreground">
+                  {formatCurrency(app.current_period_value || 0)}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -726,7 +808,10 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
   const [statusFilter, setStatusFilter] = useState<string>(
     searchParams.get('statusFilter') || 'submitted'
   );
-  const [projectFilter, setProjectFilter] = useState<string>('all');
+  const [projectFilter, setProjectFilter] = useState<string>(
+    searchParams.get('project') || 'all'
+  );
+  const [groupBy, setGroupBy] = useState<'status' | 'contractor'>('status');
   const [sortBy, setSortBy] = useState<'status' | 'date' | 'amount'>('date');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [currentPage, setCurrentPage] = useState(1);
@@ -900,6 +985,17 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
     }
   }, [searchParams]);
 
+  // Sync project filter from URL (Header project selector)
+  useEffect(() => {
+    const urlProjectFilter = searchParams?.get('project') || 'all';
+    if (urlProjectFilter !== projectFilter) {
+      setProjectFilter(urlProjectFilter);
+      // Clear selections when project filter changes from URL
+      setSelectedItems([]);
+      setCurrentPage(1);
+    }
+  }, [searchParams]);
+
   useEffect(() => {
     fetchApplications();
     fetchDocuments();
@@ -977,6 +1073,37 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
 
     return filtered;
   }, [applications, statusFilter, projectFilter, searchQuery, sortBy, sortDir]);
+
+  // Group payments by contractor for "By Contractor" view
+  const groupedByContractor = useMemo(() => {
+    if (groupBy !== 'contractor') return null;
+    
+    const groups: Record<string, { 
+      contractor: any; 
+      apps: any[]; 
+      totalPending: number;
+      readyCount: number;
+    }> = {};
+    
+    filteredApps.forEach(app => {
+      const contractorId = app.contractor?.id?.toString() || 'unknown';
+      if (!groups[contractorId]) {
+        groups[contractorId] = { 
+          contractor: app.contractor, 
+          apps: [], 
+          totalPending: 0,
+          readyCount: 0
+        };
+      }
+      groups[contractorId].apps.push(app);
+      groups[contractorId].totalPending += app.current_period_value || 0;
+      if (app.status === 'approved' || app.status === 'check_ready') {
+        groups[contractorId].readyCount += 1;
+      }
+    });
+    
+    return Object.values(groups).sort((a, b) => b.totalPending - a.totalPending);
+  }, [filteredApps, groupBy]);
 
   // Pagination
   const totalPages = Math.ceil(filteredApps.length / itemsPerPage);
@@ -1292,7 +1419,56 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
     window.location.href = `/payments/${application.id}/verify?returnTo=${encodeURIComponent(returnTo)}`;
   };
 
-
+  // Handle "Pay Ready Items" for a contractor group
+  const handlePayReadyItems = async (contractorId: number, appIds: number[]) => {
+    if (appIds.length === 0) return;
+    
+    const { confirmed } = await showConfirm({
+      title: 'Process Ready Payments',
+      message: `Process ${appIds.length} ready payment(s) for this contractor? This will mark them as check ready.`,
+      confirmText: 'Process Payments',
+      variant: 'success'
+    });
+    
+    if (!confirmed) return;
+    
+    setIsRefreshing(true);
+    let successCount = 0;
+    let failCount = 0;
+    
+    for (const paymentId of appIds) {
+      try {
+        const res = await fetch(`/api/payments/${paymentId}/approve`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ notes: 'Batch approved via Pay Ready Items' }),
+        });
+        
+        const data = await res.json();
+        
+        if (!res.ok || data.error) {
+          failCount++;
+        } else {
+          successCount++;
+        }
+      } catch (error) {
+        failCount++;
+        console.error(`Error processing payment ${paymentId}:`, error);
+      }
+    }
+    
+    await fetchApplications();
+    setIsRefreshing(false);
+    
+    if (successCount > 0) {
+      showToast({ 
+        message: `${successCount} payment(s) processed successfully${failCount > 0 ? `, ${failCount} failed` : ''}`, 
+        type: failCount > 0 ? 'warning' : 'success' 
+      });
+    } else {
+      showToast({ message: 'Failed to process payments', type: 'error' });
+    }
+  };
 
   // Verification view functions
   const handleVerificationClose = () => {
@@ -1382,6 +1558,25 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
     );
   }
 
+  // Empty state when no payment applications exist
+  if (applications.length === 0 && !loading) {
+    return (
+      <div className="bg-card border border-border rounded-lg">
+        <EmptyState
+          icon={DollarSign}
+          title="No payment applications yet"
+          description="Start by selecting contractors from a project and requesting payment. Payment applications track progress billing for your construction projects."
+          actionLabel="Go to Projects"
+          onAction={() => {
+            const params = new URLSearchParams(window.location.search);
+            params.set('tab', 'projects');
+            window.location.href = `/?${params.toString()}`;
+          }}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -1434,42 +1629,92 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
           currentFilter={statusFilter}
         />
 
-      {/* Main Content - Emphasized Table */}
-      <div className="flex flex-col lg:flex-row gap-4">
-        {/* Compact Sidebar */}
-        <div className="hidden lg:block">
-          <FilterSidebar
-            statusFilter={statusFilter}
-            setStatusFilter={setStatusFilter}
-            projectFilter={projectFilter}
-            setProjectFilter={setProjectFilter}
-            projects={projects}
-            sortBy={sortBy}
-            setSortBy={setSortBy}
-            sortDir={sortDir}
-            setSortDir={setSortDir}
-            onFilterChange={handleFilterChange}
-          />
-        </div>
+      {/* Group By Toggle */}
+      <div className="flex gap-2 mb-4">
+        <button
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            groupBy === 'status'
+              ? 'bg-primary text-primary-foreground shadow-sm'
+              : 'bg-muted text-muted-foreground hover:bg-muted/80'
+          }`}
+          onClick={() => setGroupBy('status')}
+        >
+          By Status
+        </button>
+        <button
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            groupBy === 'contractor'
+              ? 'bg-primary text-primary-foreground shadow-sm'
+              : 'bg-muted text-muted-foreground hover:bg-muted/80'
+          }`}
+          onClick={() => setGroupBy('contractor')}
+        >
+          By Contractor
+        </button>
+      </div>
 
-        {/* Main Table - Emphasized */}
+      {/* Main Content */}
+      <div className="flex flex-col lg:flex-row gap-4">
+        {/* Compact Sidebar - Only show in status view */}
+        {groupBy === 'status' && (
+          <div className="hidden lg:block">
+            <FilterSidebar
+              statusFilter={statusFilter}
+              setStatusFilter={setStatusFilter}
+              projectFilter={projectFilter}
+              setProjectFilter={setProjectFilter}
+              projects={projects}
+              sortBy={sortBy}
+              setSortBy={setSortBy}
+              sortDir={sortDir}
+              setSortDir={setSortDir}
+              onFilterChange={handleFilterChange}
+            />
+          </div>
+        )}
+
+        {/* Main Content Area */}
         <div className="flex-1">
-          <PaymentTable
-            applications={paginatedApps}
-            onVerify={handleVerifyPayment}
-            getDocumentForApp={getDocumentForApp}
-            sendForSignature={sendForSignature}
-            selectedItems={selectedItems}
-            onSelectItem={handleSelectItem}
-            onSelectAll={handleSelectAll}
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={handlePageChange}
-            totalItems={filteredApps.length}
-            itemsPerPage={itemsPerPage}
-            onCardClick={handlePaymentCardClick}
-            onDelete={handleDeletePayment}
-          />
+          {groupBy === 'contractor' && groupedByContractor ? (
+            /* Contractor-Grouped View */
+            <div className="space-y-4">
+              {groupedByContractor.length === 0 ? (
+                <div className="bg-card border border-border rounded-lg p-8 text-center">
+                  <p className="text-muted-foreground">No payment applications found</p>
+                </div>
+              ) : (
+                groupedByContractor.map((group) => (
+                  <ContractorPaymentGroup
+                    key={group.contractor?.id || 'unknown'}
+                    group={group}
+                    onVerify={handleVerifyPayment}
+                    onPayReady={handlePayReadyItems}
+                    formatCurrency={formatCurrency}
+                    formatDate={formatDate}
+                    getStatusLabel={getStatusLabel}
+                  />
+                ))
+              )}
+            </div>
+          ) : (
+            /* Status-Based Table View */
+            <PaymentTable
+              applications={paginatedApps}
+              onVerify={handleVerifyPayment}
+              getDocumentForApp={getDocumentForApp}
+              sendForSignature={sendForSignature}
+              selectedItems={selectedItems}
+              onSelectItem={handleSelectItem}
+              onSelectAll={handleSelectAll}
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
+              totalItems={filteredApps.length}
+              itemsPerPage={itemsPerPage}
+              onCardClick={handlePaymentCardClick}
+              onDelete={handleDeletePayment}
+            />
+          )}
         </div>
       </div>
 

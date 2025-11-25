@@ -54,10 +54,11 @@ export async function GET(request: NextRequest) {
 
       return NextResponse.json({ budgets: budgets || [] }, { status: 200 });
     } else {
-      // Regular table query
+      // Regular table query (exclude inactive)
       let query = supabaseAdmin
         .from('property_budgets')
         .select('*')
+        .eq('is_active', true)
         .eq('is_active', true)
         .order('display_order', { ascending: true })
         .order('category_name', { ascending: true });

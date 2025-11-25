@@ -11,12 +11,13 @@ import {
  * GET /api/photos/[id]
  * Get single photo detail
  */
-export const GET = withAuth(async (request: NextRequest, { params }: { params: { id: string } }, user: any) => {
+export const GET = withAuth(async (request: NextRequest, context: { params: Promise<{ id: string }> }, user: any) => {
   try {
     if (!supabaseAdmin) {
       throw new APIError('Service role client not available', 500, 'SERVER_ERROR');
     }
 
+    const params = await context.params;
     const photoId = parseInt(params.id);
 
     const { data: photo, error } = await supabaseAdmin
@@ -64,12 +65,13 @@ export const GET = withAuth(async (request: NextRequest, { params }: { params: {
  * PUT /api/photos/[id]
  * Update photo metadata (caption, tags, visibility, etc.)
  */
-export const PUT = withAuth(async (request: NextRequest, { params }: { params: { id: string } }, user: any) => {
+export const PUT = withAuth(async (request: NextRequest, context: { params: Promise<{ id: string }> }, user: any) => {
   try {
     if (!supabaseAdmin) {
       throw new APIError('Service role client not available', 500, 'SERVER_ERROR');
     }
 
+    const params = await context.params;
     const photoId = parseInt(params.id);
     const body = await request.json();
 
@@ -125,12 +127,13 @@ export const PUT = withAuth(async (request: NextRequest, { params }: { params: {
  * DELETE /api/photos/[id]
  * Delete photo (removes from storage and database)
  */
-export const DELETE = withAuth(async (request: NextRequest, { params }: { params: { id: string } }, user: any) => {
+export const DELETE = withAuth(async (request: NextRequest, context: { params: Promise<{ id: string }> }, user: any) => {
   try {
     if (!supabaseAdmin) {
       throw new APIError('Service role client not available', 500, 'SERVER_ERROR');
     }
 
+    const params = await context.params;
     const photoId = parseInt(params.id);
 
     // Get photo details

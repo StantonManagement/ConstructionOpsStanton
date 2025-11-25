@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import {
   FileText,
@@ -19,9 +20,14 @@ import {
   Loader2,
   RefreshCw,
   Eye,
-  Trash2
+  Trash2,
+  GitBranch
 } from 'lucide-react';
 // import ChangeOrderForm from './ChangeOrderForm'; // TODO: Integrate properly
+import { DataTable } from '@/components/ui/DataTable';
+import { EmptyState } from './ui/EmptyState';
+import { SignalBadge } from '@/components/ui/SignalBadge';
+import { SystemStatus } from '@/lib/theme';
 
 // Types
 interface ChangeOrder {
@@ -64,6 +70,7 @@ const STATUS_CONFIG = {
 };
 
 const ChangeOrdersView: React.FC = () => {
+  const searchParams = useSearchParams();
   const [changeOrders, setChangeOrders] = useState<ChangeOrder[]>([]);
   const [filteredOrders, setFilteredOrders] = useState<ChangeOrder[]>([]);
   const [loading, setLoading] = useState(true);
@@ -72,6 +79,9 @@ const ChangeOrdersView: React.FC = () => {
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [projectFilter, setProjectFilter] = useState<string>(
+    searchParams.get('project') || 'all'
+  );
   
   // Modals
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -106,6 +116,240 @@ const ChangeOrdersView: React.FC = () => {
 
     fetchUserRole();
   }, []);
+
+  // Fetch photos for a change order
+  const fetchPhotos = useCallback(async (changeOrderId: number) => {
+    try {
+      const { data, error } = await supabase
+        .from('change_order_photos')
+        .select('*')
+        .eq('change_order_id', changeOrderId)
+        .order('uploaded_at', { ascending: false });
+
+      if (error) throw error;
+      setPhotos(data || []);
+    } catch (err) {
+      console.error('Error fetching photos:', err);
+      setPhotos([]);
+    }
+  }, []);
+
+  // Approve change order
+  const handleApprove = useCallback(async (order: ChangeOrder) => {
+    if (!confirm(`Approve change order ${order.co_number} for $${order.cost_impact.toLocaleString()}?`)) {
+      return;
+    }
+
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        throw new Error('Not authenticated');
+      }
+
+      const response = await fetch(`/api/change-orders/${order.id}/approve`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${sessionData.session.access_token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to approve change order');
+      }
+
+      alert('Change order approved successfully!');
+      // fetchChangeOrders will be called after it's defined
+      window.location.reload();
+    } catch (err: any) {
+      alert(`Error: ${err.message}`);
+    }
+  }, []);
+
+  // Reject change order
+  const handleReject = useCallback(async (order: ChangeOrder) => {
+    const reason = prompt(`Enter rejection reason for ${order.co_number}:`);
+    if (!reason) return;
+
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        throw new Error('Not authenticated');
+      }
+
+      const response = await fetch(`/api/change-orders/${order.id}/reject`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${sessionData.session.access_token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ reason })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to reject change order');
+      }
+
+      alert('Change order rejected.');
+      window.location.reload();
+    } catch (err: any) {
+      alert(`Error: ${err.message}`);
+    }
+  }, []);
+
+  // Delete change order
+  const handleDelete = useCallback(async (order: ChangeOrder) => {
+    if (!confirm(`Delete change order ${order.co_number}? This cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        throw new Error('Not authenticated');
+      }
+
+      const response = await fetch(`/api/change-orders/${order.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${sessionData.session.access_token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete change order');
+      }
+
+      alert('Change order deleted.');
+      window.location.reload();
+    } catch (err: any) {
+      alert(`Error: ${err.message}`);
+    }
+  }, []);
+
+  // View details
+  const handleViewDetails = useCallback((order: ChangeOrder) => {
+    setSelectedOrder(order);
+    setShowDetailModal(true);
+  }, []);
+
+  // View photos
+  const handleViewPhotos = useCallback(async (order: ChangeOrder) => {
+    setSelectedOrder(order);
+    await fetchPhotos(order.id);
+    setShowPhotoModal(true);
+  }, [fetchPhotos]);
+
+  const changeOrderColumns = React.useMemo(() => [
+    {
+      header: 'CO #',
+      accessor: (row: ChangeOrder) => (
+        <div>
+          <div className="text-sm font-medium text-gray-900">{row.co_number}</div>
+          <div className="text-xs text-gray-500">
+            {new Date(row.created_at).toLocaleDateString()}
+          </div>
+        </div>
+      )
+    },
+    { header: 'Project', accessor: 'project_name' },
+    { header: 'Contractor', accessor: 'contractor_name' },
+    {
+      header: 'Description',
+      accessor: (row: ChangeOrder) => (
+        <div className="text-sm text-gray-900 max-w-xs truncate" title={row.description}>
+          {row.description}
+        </div>
+      )
+    },
+    {
+      header: 'Cost Impact',
+      accessor: (row: ChangeOrder) => (
+        <span className={`text-sm font-semibold ${row.cost_impact >= 0 ? 'text-red-600' : 'text-green-600'}`}>
+          {row.cost_impact >= 0 ? '+' : ''}${row.cost_impact.toLocaleString()}
+        </span>
+      ),
+      align: 'right' as const
+    },
+    {
+      header: 'Status',
+      accessor: (row: ChangeOrder) => {
+        const statusMap: Record<string, SystemStatus> = {
+          'approved': 'success',
+          'rejected': 'critical',
+          'pending': 'warning',
+          'draft': 'neutral'
+        };
+        return (
+          <SignalBadge status={statusMap[row.status] || 'neutral'}>
+            {STATUS_CONFIG[row.status].label}
+          </SignalBadge>
+        );
+      },
+      align: 'center' as const
+    },
+    {
+      header: 'Photos',
+      accessor: (row: ChangeOrder) => (
+        row.photo_count > 0 ? (
+          <button
+            onClick={(e) => { e.stopPropagation(); handleViewPhotos(row); }}
+            className="text-blue-600 hover:text-blue-800 flex items-center gap-1 mx-auto"
+          >
+            <ImageIcon className="w-4 h-4" />
+            <span className="text-xs">{row.photo_count}</span>
+          </button>
+        ) : (
+          <span className="text-gray-400 text-xs">No photos</span>
+        )
+      ),
+      align: 'center' as const
+    },
+    {
+      header: 'Actions',
+      accessor: (row: ChangeOrder) => (
+        <div className="flex items-center justify-center gap-2" onClick={(e) => e.stopPropagation()}>
+          <button
+            onClick={() => handleViewDetails(row)}
+            className="text-blue-600 hover:text-blue-800"
+            title="View details"
+          >
+            <Eye className="w-4 h-4" />
+          </button>
+          {row.status === 'pending' && (userRole === 'admin' || userRole === 'pm') && (
+            <>
+              <button
+                onClick={() => handleApprove(row)}
+                className="text-green-600 hover:text-green-800"
+                title="Approve"
+              >
+                <CheckCircle className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => handleReject(row)}
+                className="text-red-600 hover:text-red-800"
+                title="Reject"
+              >
+                <XCircle className="w-4 h-4" />
+              </button>
+            </>
+          )}
+          {(row.status === 'draft' || userRole === 'admin') && (
+            <button
+              onClick={() => handleDelete(row)}
+              className="text-gray-600 hover:text-red-600"
+              title="Delete"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      ),
+      align: 'center' as const
+    }
+  ], [userRole, handleViewPhotos, handleViewDetails, handleApprove, handleReject, handleDelete]);
 
   // Fetch change orders
   const fetchChangeOrders = useCallback(async () => {
@@ -145,9 +389,22 @@ const ChangeOrdersView: React.FC = () => {
     fetchChangeOrders();
   }, [fetchChangeOrders]);
 
+  // Sync project filter from URL (Header project selector)
+  useEffect(() => {
+    const urlProjectFilter = searchParams?.get('project') || 'all';
+    if (urlProjectFilter !== projectFilter) {
+      setProjectFilter(urlProjectFilter);
+    }
+  }, [searchParams]);
+
   // Apply filters
   useEffect(() => {
     let filtered = [...changeOrders];
+
+    // Project filter (from Header selector)
+    if (projectFilter !== 'all') {
+      filtered = filtered.filter(co => co.project_id === parseInt(projectFilter));
+    }
 
     // Status filter
     if (statusFilter !== 'all') {
@@ -166,131 +423,7 @@ const ChangeOrdersView: React.FC = () => {
     }
 
     setFilteredOrders(filtered);
-  }, [searchQuery, statusFilter, changeOrders]);
-
-  // Fetch photos for a change order
-  const fetchPhotos = async (changeOrderId: number) => {
-    try {
-      const { data, error } = await supabase
-        .from('change_order_photos')
-        .select('*')
-        .eq('change_order_id', changeOrderId)
-        .order('uploaded_at', { ascending: false });
-
-      if (error) throw error;
-      setPhotos(data || []);
-    } catch (err) {
-      console.error('Error fetching photos:', err);
-      setPhotos([]);
-    }
-  };
-
-  // Approve change order
-  const handleApprove = async (order: ChangeOrder) => {
-    if (!confirm(`Approve change order ${order.co_number} for $${order.cost_impact.toLocaleString()}?`)) {
-      return;
-    }
-
-    try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData.session) {
-        throw new Error('Not authenticated');
-      }
-
-      const response = await fetch(`/api/change-orders/${order.id}/approve`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${sessionData.session.access_token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to approve change order');
-      }
-
-      alert('Change order approved successfully!');
-      fetchChangeOrders();
-    } catch (err: any) {
-      alert(`Error: ${err.message}`);
-    }
-  };
-
-  // Reject change order
-  const handleReject = async (order: ChangeOrder) => {
-    const reason = prompt(`Enter rejection reason for ${order.co_number}:`);
-    if (!reason) return;
-
-    try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData.session) {
-        throw new Error('Not authenticated');
-      }
-
-      const response = await fetch(`/api/change-orders/${order.id}/reject`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${sessionData.session.access_token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ reason })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to reject change order');
-      }
-
-      alert('Change order rejected.');
-      fetchChangeOrders();
-    } catch (err: any) {
-      alert(`Error: ${err.message}`);
-    }
-  };
-
-  // Delete change order
-  const handleDelete = async (order: ChangeOrder) => {
-    if (!confirm(`Delete change order ${order.co_number}? This cannot be undone.`)) {
-      return;
-    }
-
-    try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData.session) {
-        throw new Error('Not authenticated');
-      }
-
-      const response = await fetch(`/api/change-orders/${order.id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${sessionData.session.access_token}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete change order');
-      }
-
-      alert('Change order deleted.');
-      fetchChangeOrders();
-    } catch (err: any) {
-      alert(`Error: ${err.message}`);
-    }
-  };
-
-  // View details
-  const handleViewDetails = (order: ChangeOrder) => {
-    setSelectedOrder(order);
-    setShowDetailModal(true);
-  };
-
-  // View photos
-  const handleViewPhotos = async (order: ChangeOrder) => {
-    setSelectedOrder(order);
-    await fetchPhotos(order.id);
-    setShowPhotoModal(true);
-  };
+  }, [searchQuery, statusFilter, projectFilter, changeOrders]);
 
   // Summary stats
   const stats = {
@@ -321,6 +454,38 @@ const ChangeOrdersView: React.FC = () => {
         <button onClick={fetchChangeOrders} className="text-red-600 underline mt-2">
           Try Again
         </button>
+      </div>
+    );
+  }
+
+  // Empty state when no change orders exist
+  if (changeOrders.length === 0) {
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Change Orders</h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Manage scope changes and budget adjustments
+            </p>
+          </div>
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            <Plus className="w-4 h-4" />
+            New Change Order
+          </button>
+        </div>
+        <div className="bg-card border border-border rounded-lg">
+          <EmptyState
+            icon={GitBranch}
+            title="No change orders"
+            description="Change orders will appear here when scope changes on a project. Create a change order to document budget or schedule adjustments."
+            actionLabel="Create Change Order"
+            onAction={() => setShowCreateModal(true)}
+          />
+        </div>
       </div>
     );
   }
@@ -413,128 +578,29 @@ const ChangeOrdersView: React.FC = () => {
 
       {/* Change Orders Table */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">CO #</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Project</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Contractor</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Cost Impact</th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Photos</th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredOrders.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="px-6 py-12 text-center text-gray-500">
-                    <FileText className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-                    <p>No change orders found</p>
-                    {(searchQuery || statusFilter !== 'all') && (
-                      <button
-                        onClick={() => {
-                          setSearchQuery('');
-                          setStatusFilter('all');
-                        }}
-                        className="text-blue-600 underline mt-2"
-                      >
-                        Clear filters
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ) : (
-                filteredOrders.map((order) => {
-                  const StatusIcon = STATUS_CONFIG[order.status].icon;
-                  return (
-                    <tr key={order.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4">
-                        <div className="text-sm font-medium text-gray-900">{order.co_number}</div>
-                        <div className="text-xs text-gray-500">
-                          {new Date(order.created_at).toLocaleDateString()}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-900">{order.project_name}</td>
-                      <td className="px-6 py-4 text-sm text-gray-900">{order.contractor_name}</td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm text-gray-900 max-w-xs truncate">
-                          {order.description}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <span className={`text-sm font-semibold ${order.cost_impact >= 0 ? 'text-red-600' : 'text-green-600'}`}>
-                          {order.cost_impact >= 0 ? '+' : ''}${order.cost_impact.toLocaleString()}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <span
-                          className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full bg-${STATUS_CONFIG[order.status].color}-100 text-${STATUS_CONFIG[order.status].color}-800`}
-                        >
-                          <StatusIcon className="w-3 h-3" />
-                          {STATUS_CONFIG[order.status].label}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        {order.photo_count > 0 ? (
-                          <button
-                            onClick={() => handleViewPhotos(order)}
-                            className="text-blue-600 hover:text-blue-800 flex items-center gap-1 mx-auto"
-                          >
-                            <ImageIcon className="w-4 h-4" />
-                            <span className="text-xs">{order.photo_count}</span>
-                          </button>
-                        ) : (
-                          <span className="text-gray-400 text-xs">No photos</span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center justify-center gap-2">
-                          <button
-                            onClick={() => handleViewDetails(order)}
-                            className="text-blue-600 hover:text-blue-800"
-                            title="View details"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
-                          {order.status === 'pending' && (userRole === 'admin' || userRole === 'pm') && (
-                            <>
-                              <button
-                                onClick={() => handleApprove(order)}
-                                className="text-green-600 hover:text-green-800"
-                                title="Approve"
-                              >
-                                <CheckCircle className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => handleReject(order)}
-                                className="text-red-600 hover:text-red-800"
-                                title="Reject"
-                              >
-                                <XCircle className="w-4 h-4" />
-                              </button>
-                            </>
-                          )}
-                          {(order.status === 'draft' || userRole === 'admin') && (
-                            <button
-                              onClick={() => handleDelete(order)}
-                              className="text-gray-600 hover:text-red-600"
-                              title="Delete"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
+        {filteredOrders.length === 0 ? (
+            <div className="px-6 py-12 text-center text-gray-500 border-b">
+              <FileText className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+              <p>No change orders found</p>
+              {(searchQuery || statusFilter !== 'all') && (
+                <button
+                  onClick={() => {
+                    setSearchQuery('');
+                    setStatusFilter('all');
+                  }}
+                  className="text-blue-600 underline mt-2"
+                >
+                  Clear filters
+                </button>
               )}
-            </tbody>
-          </table>
-        </div>
+            </div>
+        ) : (
+          <DataTable
+            data={filteredOrders}
+            columns={changeOrderColumns}
+            className="border-none rounded-none shadow-none"
+          />
+        )}
       </div>
 
       {/* Create Modal - TODO: Implement inline form or integrate with existing ChangeOrderForm */}

@@ -3,6 +3,9 @@ import { Search, Filter, Phone, Mail, MapPin, Calendar, CheckCircle, XCircle, Al
 import { useData, Subcontractor } from '../context/DataContext';
 import { supabase } from '@/lib/supabaseClient';
 import { sendSMS } from '@/lib/sms';
+import { DataTable } from '@/components/ui/DataTable';
+import { SignalBadge } from '@/components/ui/SignalBadge';
+import { SystemStatus } from '@/lib/theme';
 
 // --- AddForm copied from ManageView for reuse ---
 interface AddFormField {
@@ -297,6 +300,128 @@ const SubcontractorsView: React.FC<SubcontractorsViewProps> = ({ searchQuery = '
       }
     };
 
+    const columns = useMemo(() => [
+        {
+            header: 'Subcontractor',
+            accessor: (row: Subcontractor) => (
+                <div className="flex items-center">
+                    <div className="flex-shrink-0 h-10 w-10">
+                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                            <span className="text-primary font-medium text-sm">
+                                {row.name.split(' ').map(n => n[0]).join('').substring(0, 2)}
+                            </span>
+                        </div>
+                    </div>
+                    <div className="ml-4">
+                        <div className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">
+                            {row.name}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                            {row.trade}
+                        </div>
+                    </div>
+                </div>
+            )
+        },
+        {
+            header: 'Trade & Rating',
+            accessor: (row: any) => (
+                <div>
+                    <div className="text-sm font-medium text-foreground">{row.trade}</div>
+                    {row.performance_score && renderStarRating(row.performance_score)}
+                </div>
+            )
+        },
+        {
+            header: 'Status',
+            accessor: (row: Subcontractor) => (
+                <SignalBadge status={row.status === 'active' ? 'success' : row.status === 'inactive' ? 'critical' : 'warning'}>
+                    {row.status}
+                </SignalBadge>
+            )
+        },
+        {
+            header: 'Compliance',
+            accessor: (row: Subcontractor) => {
+                const complianceScore = getComplianceScore(row.compliance);
+                return (
+                    <div className="flex items-center">
+                        <div className="flex flex-col space-y-1">
+                            <div className="flex items-center text-xs">
+                                <span className={`w-2 h-2 rounded-full mr-2 ${
+                                    row.compliance.insurance === 'valid' ? 'bg-[var(--status-success-text)]' : 'bg-[var(--status-critical-text)]'
+                                }`}></span>
+                                <span className="text-muted-foreground">Insurance</span>
+                            </div>
+                            <div className="flex items-center text-xs">
+                                <span className={`w-2 h-2 rounded-full mr-2 ${
+                                    row.compliance.license === 'valid' ? 'bg-[var(--status-success-text)]' : 'bg-[var(--status-critical-text)]'
+                                }`}></span>
+                                <span className="text-muted-foreground">License</span>
+                            </div>
+                        </div>
+                        <div className="ml-3">
+                            <div className={`text-xs font-semibold ${
+                                complianceScore >= 80 ? 'text-[var(--status-success-text)]' :
+                                complianceScore >= 60 ? 'text-[var(--status-warning-text)]' : 'text-[var(--status-critical-text)]'
+                            }`}>
+                                {complianceScore}%
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+        },
+        {
+            header: 'Contact',
+            accessor: (row: Subcontractor) => (
+                <div className="flex flex-col space-y-1 text-sm text-muted-foreground">
+                    {row.phone && (
+                        <div className="flex items-center">
+                            <Phone className="w-3 h-3 mr-2" />
+                            <span className="text-xs">{row.phone}</span>
+                        </div>
+                    )}
+                    {row.email && (
+                        <div className="flex items-center">
+                            <Mail className="w-3 h-3 mr-2" />
+                            <span className="text-xs">{row.email}</span>
+                        </div>
+                    )}
+                </div>
+            )
+        },
+        {
+            header: 'Actions',
+            accessor: (row: Subcontractor) => (
+                <div className="flex space-x-2 justify-end" onClick={(e) => e.stopPropagation()}>
+                    <button 
+                        className="text-primary hover:text-primary text-sm font-medium" 
+                        onClick={() => handleView(row)}
+                    >
+                        View
+                    </button>
+                    <button 
+                        className="text-[var(--status-success-text)] hover:text-[var(--status-success-text)] text-sm font-medium" 
+                        onClick={() => handleContact(row)}
+                    >
+                        Contact
+                    </button>
+                    <button 
+                        className="text-muted-foreground hover:text-foreground text-sm font-medium" 
+                        onClick={() => {
+                            setSelectedSub(row);
+                            setModal('edit');
+                        }}
+                    >
+                        Edit
+                    </button>
+                </div>
+            ),
+            align: 'right' as const
+        }
+    ], []);
+
     return (
         <div className="bg-card rounded-lg border shadow-sm">
             {/* Header */}
@@ -370,181 +495,13 @@ const SubcontractorsView: React.FC<SubcontractorsViewProps> = ({ searchQuery = '
             </div>
 
             {/* Desktop Table View */}
-            <div className="hidden lg:block overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-muted">
-                        <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-neutral-600 uppercase tracking-wider">
-                                Subcontractor
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-neutral-600 uppercase tracking-wider">
-                                Trade & Rating
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-neutral-600 uppercase tracking-wider">
-                                Status
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-neutral-600 uppercase tracking-wider">
-                                Compliance
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-neutral-600 uppercase tracking-wider">
-                                Contact
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-neutral-600 uppercase tracking-wider">
-                                Actions
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody className="bg-card divide-y divide-gray-200">
-                        {filteredSubcontractors.map((sub) => {
-                            const complianceScore = getComplianceScore(sub.compliance);
-                            
-                            return (
-                                <tr 
-                                    key={sub.id} 
-                                    className="hover:bg-primary/5 hover:shadow-sm hover:border-l-4 hover:border-l-primary transition-all duration-200 cursor-pointer group border-l-4 border-l-transparent"
-                                    onClick={() => handleView(sub)}
-                                    role="button"
-                                    tabIndex={0}
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter' || e.key === ' ') {
-                                            e.preventDefault();
-                                            handleView(sub);
-                                        }
-                                    }}
-                                >
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <div className="flex items-center">
-                                            <div className="flex-shrink-0 h-10 w-10">
-                                                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                                                    <span className="text-primary font-medium text-sm">
-                                                        {sub.name.split(' ').map(n => n[0]).join('').substring(0, 2)}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            <div className="ml-4">
-                                                <div className="text-sm font-medium text-neutral-800 group-hover:text-primary transition-colors">
-                                                    {sub.name}
-                                                    <span className="ml-2 text-xs text-primary opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        Click to view →
-                                                    </span>
-                                                </div>
-                                                <div className="text-sm text-muted-foreground">
-                                                    {sub.trade}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <div className="text-sm font-medium text-neutral-800">{sub.trade}</div>
-                                        {(sub as any).performance_score && renderStarRating((sub as any).performance_score)}
-                                    </td>
-                                    
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <div className="flex items-center">
-                                            {getStatusIcon(sub.status)}
-                                            <span className={`ml-2 px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                                sub.status === 'active' 
-                                                    ? 'bg-[var(--status-success-bg)] text-[var(--status-success-text)]' 
-                                                    : sub.status === 'inactive'
-                                                    ? 'bg-[var(--status-critical-bg)] text-[var(--status-critical-text)]'
-                                                    : 'bg-[var(--status-warning-bg)] text-[var(--status-warning-text)]'
-                                            }`}>
-                                                {sub.status}
-                                            </span>
-                                        </div>
-                                    </td>
-                                    
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <div className="flex items-center">
-                                            <div className="flex flex-col space-y-1">
-                                                <div className="flex items-center text-xs">
-                                                    <span className={`w-2 h-2 rounded-full mr-2 ${
-                                                        sub.compliance.insurance === 'valid' ? 'bg-[var(--status-success-text)]' : 'bg-[var(--status-critical-text)]'
-                                                    }`}></span>
-                                                    <span className="text-muted-foreground">Insurance</span>
-                                                </div>
-                                                <div className="flex items-center text-xs">
-                                                    <span className={`w-2 h-2 rounded-full mr-2 ${
-                                                        sub.compliance.license === 'valid' ? 'bg-[var(--status-success-text)]' : 'bg-[var(--status-critical-text)]'
-                                                    }`}></span>
-                                                    <span className="text-muted-foreground">License</span>
-                                                </div>
-                                            </div>
-                                            <div className="ml-3">
-                                                <div className={`text-xs font-semibold ${
-                                                    complianceScore >= 80 ? 'text-[var(--status-success-text)]' :
-                                                    complianceScore >= 60 ? 'text-[var(--status-warning-text)]' : 'text-[var(--status-critical-text)]'
-                                                }`}>
-                                                    {complianceScore}%
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                                        <div className="flex flex-col space-y-1">
-                                            {sub.phone && (
-                                                <div className="flex items-center">
-                                                    <Phone className="w-3 h-3 mr-2" />
-                                                    <span className="text-xs">{sub.phone}</span>
-                                                </div>
-                                            )}
-                                            {sub.email && (
-                                                <div className="flex items-center">
-                                                    <Mail className="w-3 h-3 mr-2" />
-                                                    <span className="text-xs">{sub.email}</span>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </td>
-                                    
-                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                        <div className="flex space-x-2">
-                                            <button 
-                                                className="text-primary hover:text-primary text-sm" 
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleView(sub);
-                                                }}
-                                            >
-                                                View
-                                            </button>
-                                            <button 
-                                                className="text-[var(--status-success-text)] hover:text-[var(--status-success-text)] text-sm" 
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleContact(sub);
-                                                }}
-                                            >
-                                                Contact
-                                            </button>
-                                            <button 
-                                                className="text-muted-foreground hover:text-foreground text-sm" 
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setSelectedSub(sub);
-                                                    setModal('edit');
-                                                }}
-                                            >
-                                                Edit
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            );
-                        })}
-                    </tbody>
-                </table>
-                
-                {filteredSubcontractors.length === 0 && (
-                    <div className="text-center py-12">
-                        <div className="text-neutral-500 text-lg mb-2">No subcontractors found</div>
-                        <div className="text-neutral-400 text-sm">
-                            Try adjusting your search or filter criteria
-                        </div>
-                    </div>
-                )}
+            <div className="hidden lg:block">
+                <DataTable
+                    data={filteredSubcontractors}
+                    columns={columns}
+                    onRowClick={handleView}
+                    emptyMessage="No subcontractors found"
+                />
             </div>
 
             {/* Mobile Card View */}

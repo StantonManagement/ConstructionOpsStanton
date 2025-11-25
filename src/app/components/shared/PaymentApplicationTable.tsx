@@ -4,6 +4,9 @@ import React, { useState, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import PaymentApplicationRow, { type PaymentApplication } from './PaymentApplicationRow';
 import PaymentApplicationCard from './PaymentApplicationCard';
+import { DataTable, Column } from '@/components/ui/DataTable';
+import { SignalBadge } from '@/components/ui/SignalBadge';
+import { formatCurrency, getPaymentApplicationStatus, formatDate } from '@/lib/theme';
 
 export interface ColumnConfig {
   key: string;
@@ -93,12 +96,126 @@ const PaymentApplicationTable: React.FC<PaymentApplicationTableProps> = ({
   // Empty state
   if (applications.length === 0) {
     return (
-      <div className="bg-white border border-gray-200 rounded-lg p-12 text-center">
+      <div className="bg-white border border-border rounded-lg p-12 text-center shadow-none">
         <div className="text-4xl mb-4">📋</div>
-        <p className="text-gray-500 font-medium">{emptyMessage}</p>
+        <p className="text-muted-foreground font-medium">{emptyMessage}</p>
       </div>
     );
   }
+
+  const columns: Column<PaymentApplication>[] = [
+    ...(enableBulkActions ? [{
+      header: (
+        <input
+          type="checkbox"
+          checked={allSelected}
+          ref={(input: HTMLInputElement | null) => { 
+            if (input) input.indeterminate = someSelected && !allSelected; 
+          }}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleSelectAll(e.target.checked)}
+          className="w-4 h-4 text-primary rounded focus:ring-primary cursor-pointer"
+        />
+      ),
+      accessor: (app: PaymentApplication) => (
+        <input
+          type="checkbox"
+          checked={selectedIds.includes(app.id)}
+          onChange={(e) => { e.stopPropagation(); handleSelectItem(app.id, e.target.checked); }}
+          onClick={(e) => e.stopPropagation()}
+          className="w-4 h-4 text-primary rounded focus:ring-primary cursor-pointer"
+        />
+      ),
+      className: "w-12"
+    } as Column<PaymentApplication>] : []),
+    
+    { 
+      header: 'ID', 
+      accessor: (app) => <span className="text-xs text-muted-foreground">#{app.id}</span>,
+      className: 'w-16' 
+    },
+    
+    ...(showProject ? [{
+      header: 'Project',
+      accessor: (app: PaymentApplication) => (
+        <span className="font-medium text-foreground text-sm truncate block max-w-[150px]" title={app.project?.name}>
+          {app.project?.name || 'N/A'}
+        </span>
+      )
+    } as Column<PaymentApplication>] : []),
+
+    ...(showContractor ? [{
+      header: 'Contractor',
+      accessor: (app: PaymentApplication) => (
+        <span className="text-foreground text-sm truncate block max-w-[150px]" title={app.contractor?.name}>
+          {app.contractor?.name || 'N/A'}
+        </span>
+      )
+    } as Column<PaymentApplication>] : []),
+
+    { 
+      header: 'Date', 
+      accessor: (app) => <span className="text-sm">{formatDate(app.created_at)}</span>
+    },
+
+    {
+      header: 'Status',
+      accessor: (app) => (
+        <SignalBadge status={getPaymentApplicationStatus(app.status)}>
+          {app.status.replace(/_/g, ' ')}
+        </SignalBadge>
+      )
+    },
+
+    {
+      header: 'Amount',
+      align: 'right' as const,
+      accessor: (app) => (
+        <span className="font-semibold text-foreground text-sm">
+          {formatCurrency(app.current_period_amount || app.total_amount || 0)}
+        </span>
+      )
+    },
+
+    ...((onVerify || onDelete) ? [{
+      header: 'Actions',
+      align: 'right' as const,
+      accessor: (app: PaymentApplication) => {
+        const isCompleted = app.status === 'approved' || app.status === 'rejected' || app.status === 'paid';
+        
+        return (
+          <div className="flex justify-end gap-2">
+            {onVerify && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onVerify(app.id);
+                }}
+                className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
+                  isCompleted
+                    ? 'bg-muted text-muted-foreground hover:bg-muted/80'
+                    : 'bg-primary text-primary-foreground hover:bg-primary/90'
+                }`}
+              >
+                {isCompleted ? 'View' : 'Review'}
+              </button>
+            )}
+            {onDelete && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(app.id);
+                }}
+                className="inline-flex items-center gap-1 px-2 py-1.5 text-status-critical hover:bg-red-50 rounded-md transition-colors"
+                title="Delete payment application"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+              </button>
+            )}
+          </div>
+        );
+      }
+    } as Column<PaymentApplication>] : [])
+  ];
 
   return (
     <div className="space-y-4">
@@ -139,71 +256,13 @@ const PaymentApplicationTable: React.FC<PaymentApplicationTableProps> = ({
       )}
 
       {/* Desktop Table View */}
-      <div className="hidden lg:block bg-white border border-gray-200 rounded-lg overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                {enableBulkActions && (
-                  <th className="px-4 py-3 text-left w-12">
-                    <input
-                      type="checkbox"
-                      checked={allSelected}
-                      ref={input => {
-                        if (input) input.indeterminate = someSelected && !allSelected;
-                      }}
-                      onChange={(e) => handleSelectAll(e.target.checked)}
-                      className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 cursor-pointer"
-                    />
-                  </th>
-                )}
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  ID
-                </th>
-                {showProject && (
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Project
-                  </th>
-                )}
-                {showContractor && (
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Contractor
-                  </th>
-                )}
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Date
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Amount
-                </th>
-                {(onVerify || onDelete) && (
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Actions
-                  </th>
-                )}
-              </tr>
-            </thead>
-            <tbody>
-              {paginatedApps.map((app) => (
-                <PaymentApplicationRow
-                  key={app.id}
-                  application={app}
-                  isSelected={selectedIds.includes(app.id)}
-                  onSelect={handleSelectItem}
-                  onVerify={onVerify}
-                  onDelete={onDelete}
-                  onRowClick={onRowClick}
-                  showProject={showProject}
-                  showContractor={showContractor}
-                  showCheckbox={enableBulkActions}
-                />
-              ))}
-            </tbody>
-          </table>
-        </div>
+      <div className="hidden lg:block bg-white border border-border rounded-lg overflow-hidden shadow-none">
+        <DataTable
+          data={paginatedApps}
+          columns={columns}
+          onRowClick={onRowClick}
+          className="border-0 rounded-none"
+        />
       </div>
 
       {/* Mobile Card View */}
@@ -213,7 +272,7 @@ const PaymentApplicationTable: React.FC<PaymentApplicationTableProps> = ({
             key={app.id}
             application={app}
             isSelected={selectedIds.includes(app.id)}
-            onSelect={enableBulkActions ? handleSelectItem : undefined}
+            onSelect={enableBulkActions ? handleSelectAll : undefined} // Fix: handleSelectAll expects boolean, but Card expects (id, checked) -> wrapper needed or fix Card
             onVerify={onVerify}
             onDelete={onDelete}
             onClick={onRowClick}

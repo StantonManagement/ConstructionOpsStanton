@@ -12,12 +12,13 @@ import type { CreateClaimRequest } from '@/types/warranties';
  * GET /api/warranties/[id]/claims
  * Get all claims for a warranty
  */
-export const GET = withAuth(async (request: NextRequest, { params }: { params: { id: string } }, user: any) => {
+export const GET = withAuth(async (request: NextRequest, context: { params: Promise<{ id: string }> }, user: any) => {
   try {
     if (!supabaseAdmin) {
       throw new APIError('Service role client not available', 500, 'SERVER_ERROR');
     }
 
+    const params = await context.params;
     const warrantyId = parseInt(params.id);
 
     const { data: claims, error } = await supabaseAdmin
@@ -45,12 +46,13 @@ export const GET = withAuth(async (request: NextRequest, { params }: { params: {
  * POST /api/warranties/[id]/claims
  * File a claim against a warranty
  */
-export const POST = withAuth(async (request: NextRequest, { params }: { params: { id: string } }, user: any) => {
+export const POST = withAuth(async (request: NextRequest, context: { params: Promise<{ id: string }> }, user: any) => {
   try {
     if (!supabaseAdmin) {
       throw new APIError('Service role client not available', 500, 'SERVER_ERROR');
     }
 
+    const params = await context.params;
     const warrantyId = parseInt(params.id);
     const body: CreateClaimRequest = await request.json();
 

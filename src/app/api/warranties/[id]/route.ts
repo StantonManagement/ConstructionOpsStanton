@@ -12,12 +12,13 @@ import type { UpdateWarrantyRequest } from '@/types/warranties';
  * GET /api/warranties/[id]
  * Get warranty detail with claims
  */
-export const GET = withAuth(async (request: NextRequest, { params }: { params: { id: string } }, user: any) => {
+export const GET = withAuth(async (request: NextRequest, context: { params: Promise<{ id: string }> }, user: any) => {
   try {
     if (!supabaseAdmin) {
       throw new APIError('Service role client not available', 500, 'SERVER_ERROR');
     }
 
+    const params = await context.params;
     const warrantyId = parseInt(params.id);
 
     // Fetch warranty
@@ -80,12 +81,13 @@ export const GET = withAuth(async (request: NextRequest, { params }: { params: {
  * PUT /api/warranties/[id]
  * Update warranty
  */
-export const PUT = withAuth(async (request: NextRequest, { params }: { params: { id: string } }, user: any) => {
+export const PUT = withAuth(async (request: NextRequest, context: { params: Promise<{ id: string }> }, user: any) => {
   try {
     if (!supabaseAdmin) {
       throw new APIError('Service role client not available', 500, 'SERVER_ERROR');
     }
 
+    const params = await context.params;
     const warrantyId = parseInt(params.id);
     const body: UpdateWarrantyRequest = await request.json();
 
@@ -156,12 +158,13 @@ export const PUT = withAuth(async (request: NextRequest, { params }: { params: {
  * DELETE /api/warranties/[id]
  * Delete warranty
  */
-export const DELETE = withAuth(async (request: NextRequest, { params }: { params: { id: string } }, user: any) => {
+export const DELETE = withAuth(async (request: NextRequest, context: { params: Promise<{ id: string }> }, user: any) => {
   try {
     if (!supabaseAdmin) {
       throw new APIError('Service role client not available', 500, 'SERVER_ERROR');
     }
 
+    const params = await context.params;
     const warrantyId = parseInt(params.id);
 
     const { error } = await supabaseAdmin

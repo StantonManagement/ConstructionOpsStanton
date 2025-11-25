@@ -1,10 +1,11 @@
-
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useData } from '../context/DataContext';
 import { useAuth } from '@/providers/AuthProvider';
 import ProjectCard from '../../components/ProjectCard';
 import { supabase } from '@/lib/supabaseClient';
 import { Project } from '../context/DataContext';
+import { MetricCard } from '@/components/ui/MetricCard';
+import { getBudgetStatus, formatCurrency } from '@/lib/theme';
 
 // Types for better type safety
 interface PaymentApplication {
@@ -34,7 +35,7 @@ interface OverviewViewProps {
 const LoadingSkeleton: React.FC = () => (
   <div className="space-y-6">
     {[1, 2, 3].map((i) => (
-      <div key={i} className="bg-gradient-to-r from-gray-100 via-gray-50 to-gray-100 rounded-2xl p-6 animate-pulse">
+      <div key={i} className="bg-card rounded-xl p-6 animate-pulse border border-border">
         <div className="flex items-center space-x-4">
           <div className="w-12 h-12 bg-muted rounded-xl"></div>
           <div className="flex-1 space-y-3">
@@ -45,82 +46,6 @@ const LoadingSkeleton: React.FC = () => (
         </div>
       </div>
     ))}
-  </div>
-);
-
-// Modern queue card component
-const QueueCard: React.FC<{
-  app: PaymentApplication;
-  status: StatusConfig;
-  onReview: (id: string) => void
-}> = ({ app, status, onReview }) => (
-  <div
-    className="group relative bg-card hover:bg-gradient-to-br hover:from-primary/5 hover:to-primary/10 rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-border hover:border-primary/50 shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:scale-[1.02]"
-    tabIndex={0}
-    aria-label={`Review application for ${app.project?.name}`}
-    onClick={() => onReview(app.id)}
-    onKeyDown={(e) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        onReview(app.id);
-      }
-    }}
-  >
-    {/* Status badge */}
-    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 sm:mb-4 gap-2 sm:gap-0">
-      <span className={`inline-flex items-center px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold ${status.color} backdrop-blur-sm`}>
-        <span className="mr-1">{status.icon}</span>
-        {status.label}
-      </span>
-      <span className="text-xs sm:text-sm text-muted-foreground bg-secondary px-2 py-1 rounded-lg">
-        {app.created_at ? new Date(app.created_at).toLocaleDateString() : '-'}
-      </span>
-    </div>
-
-    {/* Project info */}
-    <div className="space-y-2 sm:space-y-3 mb-4 sm:mb-6">
-      <div className="flex items-center gap-2 sm:gap-3 font-bold text-base sm:text-lg text-foreground">
-        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg sm:rounded-xl flex items-center justify-center text-white">
-          🏗️
-        </div>
-        <span className="group-hover:text-primary transition-colors truncate">
-          {app.project?.name || 'Unknown Project'}
-        </span>
-      </div>
-      
-      <div className="flex items-center gap-2 sm:gap-3 text-muted-foreground">
-        <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center text-white text-xs sm:text-sm">
-          👷
-        </div>
-        <span className="text-sm sm:text-base">Contractor: <span className="font-medium truncate">{app.contractor?.name || 'Unknown'}</span></span>
-      </div>
-      
-      <div className="flex items-center gap-2 sm:gap-3 text-muted-foreground">
-        <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-lg flex items-center justify-center text-white text-xs sm:text-sm">
-          💲
-        </div>
-        <span className="text-sm sm:text-base">Current Period Value: 
-          <span className="ml-2 font-bold text-base sm:text-lg text-green-700 bg-green-50 px-2 sm:px-3 py-1 rounded-lg">
-            ${(app.current_period_value || 0).toLocaleString()}
-          </span>
-        </span>
-      </div>
-    </div>
-
-    {/* Action button */}
-    <button
-      onClick={(e) => {
-        e.stopPropagation();
-        onReview(app.id);
-      }}
-      className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg sm:rounded-xl px-4 sm:px-6 py-2 sm:py-3 font-semibold transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-[1.02] focus:outline-none focus:ring-4 focus:ring-blue-300 text-sm sm:text-base"
-      aria-label={`Go to review for ${app.project?.name}`}
-    >
-      <span className="flex items-center justify-center gap-2">
-        <span>Review Application</span>
-        <span className="text-blue-200">→</span>
-      </span>
-    </button>
   </div>
 );
 
@@ -210,38 +135,35 @@ const DecisionQueueCards: React.FC<{ role: string | null, setError: (msg: string
     return Object.values(map);
   }, [queue]);
 
-  // Priority badge config
+  // Priority badge config - NOW USING SEMANTIC COLORS
   const priorityBadge = {
-    urgent: { color: 'bg-red-100 text-red-800 border-red-300', label: 'Urgent', icon: '🚨' },
-    high: { color: 'bg-orange-100 text-orange-800 border-orange-300', label: 'High', icon: '⚡' },
-    medium: { color: 'bg-yellow-100 text-yellow-800 border-yellow-300', label: 'Medium', icon: '⚠️' },
-    low: { color: 'bg-gray-100 text-gray-800 border-gray-300', label: 'Low', icon: '📌' },
+    urgent: { color: 'bg-red-50 text-status-critical border-red-200', label: 'Urgent', icon: '🚨' },
+    high: { color: 'bg-amber-50 text-status-warning border-amber-200', label: 'High', icon: '⚡' },
+    medium: { color: 'bg-amber-50 text-status-warning border-amber-200', label: 'Medium', icon: '⚠️' },
+    low: { color: 'bg-gray-50 text-status-neutral border-gray-200', label: 'Low', icon: '📌' },
   };
 
   if (error) {
     return (
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-lg p-6">
-        <h3 className="text-xl font-bold text-foreground mb-6 flex items-center gap-3">
-          <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
-            📋
-          </div>
+      <div className="bg-card rounded-xl border border-border p-6">
+        <h3 className="text-lg font-semibold text-foreground mb-6 flex items-center gap-3">
           Decisions Queue
         </h3>
-        <div className="bg-red-50 border-2 border-red-200 rounded-2xl p-6">
-          <div className="text-red-700 text-center py-6 flex flex-col items-center gap-4">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+          <div className="text-status-critical text-center py-6 flex flex-col items-center gap-4">
             <span className="text-3xl">⚠️</span>
             <div className="font-medium">{error}</div>
             <div className="flex gap-3">
               <button
                 onClick={fetchQueue}
                 disabled={loading}
-                className="px-6 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 disabled:opacity-50 font-medium transition-colors"
+                className="px-4 py-2 bg-status-critical text-white rounded-lg hover:bg-red-700 disabled:opacity-50 font-medium transition-colors"
               >
                 {loading ? 'Retrying...' : 'Retry'}
               </button>
               <button
                 onClick={() => setLocalError(null)}
-                className="px-6 py-3 bg-gray-200 text-muted-foreground rounded-xl hover:bg-muted font-medium transition-colors"
+                className="px-4 py-2 bg-gray-200 text-muted-foreground rounded-lg hover:bg-muted font-medium transition-colors"
               >
                 Dismiss
               </button>
@@ -253,23 +175,20 @@ const DecisionQueueCards: React.FC<{ role: string | null, setError: (msg: string
   }
 
   return (
-    <div className="bg-white rounded-xl sm:rounded-2xl border-2 border-gray-300 shadow-xl p-4 sm:p-6 hover:shadow-2xl hover:border-purple-400 transition-all duration-300">
-      <h3 className="text-lg sm:text-xl font-bold text-foreground mb-4 sm:mb-6 flex items-center gap-2 sm:gap-3">
-        <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg sm:rounded-xl flex items-center justify-center text-white">
-          📋
-        </div>
-        Decisions Queue
+    <div className="bg-card rounded-xl border border-border p-4 sm:p-6 h-full">
+      <h3 className="text-lg font-semibold text-foreground mb-4 sm:mb-6 flex items-center gap-2">
+        📋 Decisions Queue
       </h3>
       
       {loading ? (
         <LoadingSkeleton />
       ) : projectQueueSummary.length === 0 ? (
         <div className="text-center py-12 flex flex-col items-center gap-4">
-          <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-500 rounded-2xl flex items-center justify-center text-2xl">
+          <div className="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center text-2xl border border-emerald-100">
             ✅
           </div>
-          <span className="text-gray-600 font-medium">No items need your attention.</span>
-          <span className="text-sm text-gray-500">All caught up! Great work.</span>
+          <span className="text-foreground font-medium">No items need your attention.</span>
+          <span className="text-sm text-muted-foreground">All caught up! Great work.</span>
         </div>
       ) : (
         <div className="space-y-4">
@@ -278,52 +197,44 @@ const DecisionQueueCards: React.FC<{ role: string | null, setError: (msg: string
             return (
               <div
                 key={proj.projectName}
-                className={`group bg-gradient-to-r ${
-                  proj.highestPriority === 'urgent' ? 'from-red-50 to-red-100 hover:from-red-100 hover:to-red-200 border-red-400' :
-                  proj.highestPriority === 'high' ? 'from-orange-50 to-orange-100 hover:from-orange-100 hover:to-orange-200 border-orange-400' :
-                  proj.highestPriority === 'medium' ? 'from-yellow-50 to-yellow-100 hover:from-yellow-100 hover:to-yellow-200 border-yellow-400' :
-                  'from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 border-gray-400'
-                } rounded-2xl p-5 border-2 shadow-lg hover:shadow-xl transition-all duration-200 cursor-pointer transform hover:scale-[1.02]`}
+                className="group bg-card hover:bg-accent/50 rounded-xl p-5 border border-border transition-all duration-200 cursor-pointer"
                 onClick={navigateToPaymentApplications}
                 role="button"
                 tabIndex={0}
-                                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      navigateToPaymentApplications();
-                    }
-                  }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    navigateToPaymentApplications();
+                  }
+                }}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
-                    <div className="flex items-center gap-3 font-bold text-lg text-foreground mb-2">
+                    <div className="flex items-center gap-3 font-semibold text-base text-foreground mb-2">
                       <span>{proj.projectName}</span>
                       <span
-                        className={`px-3 py-1 rounded-xl text-xs font-semibold border ${badge.color}`}
+                        className={`px-2 py-0.5 rounded text-xs font-medium border ${badge.color}`}
                         title={badge.label + ' Priority'}
                       >
                         {badge.icon} {badge.label}
                       </span>
                     </div>
-                    <div className="text-sm text-muted-foreground mb-1 font-medium">
+                    <div className="text-sm text-muted-foreground mb-1">
                       {proj.count} payment{proj.count > 1 ? 's' : ''} need review
                     </div>
-                    <div className="text-sm text-green-700 font-semibold bg-green-50 inline-block px-2 py-1 rounded-lg">
-                      Total: ${proj.total.toLocaleString()}
-                    </div>
-                    <div className="text-xs text-blue-600 mt-2 font-medium group-hover:text-blue-700">
-                      Click to view details →
+                    <div className="text-sm text-status-neutral font-medium">
+                      Total: {formatCurrency(proj.total)}
                     </div>
                   </div>
                   <button
-                    className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl px-5 py-3 font-semibold transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105"
+                    className="text-primary hover:text-primary/80 text-sm font-medium"
                     disabled={role === null}
                     onClick={(e) => {
                       e.stopPropagation();
                       navigateToPaymentApplications();
                     }}
                   >
-                    {role === null ? "Loading..." : "View All"}
+                    {role === null ? "Loading..." : "View All →"}
                   </button>
                 </div>
               </div>
@@ -333,24 +244,21 @@ const DecisionQueueCards: React.FC<{ role: string | null, setError: (msg: string
           {/* Individual Payment Applications */}
           {queue.length > 0 && (
             <div className="mt-8">
-              <h4 className="text-sm font-bold text-muted-foreground mb-4 flex items-center gap-2">
-                <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-lg flex items-center justify-center text-white text-xs">
-                  📄
-                </div>
+              <h4 className="text-sm font-medium text-muted-foreground mb-4">
                 Individual Applications
               </h4>
               <div className="space-y-3">
                 {queue.slice(0, 3).map((app) => {
                   const statusConfig = {
-                    submitted: { color: 'bg-red-100 text-red-800', label: 'Submitted', icon: '🚨' },
-                    needs_review: { color: 'bg-yellow-100 text-yellow-800', label: 'Needs Review', icon: '⚠️' }
+                    submitted: { color: 'bg-red-50 text-status-critical border-red-200', label: 'Submitted', icon: '🚨' },
+                    needs_review: { color: 'bg-amber-50 text-status-warning border-amber-200', label: 'Needs Review', icon: '⚠️' }
                   };
                   const status = statusConfig[app.status] || statusConfig.needs_review;
 
                   return (
                     <div
                       key={app.id}
-                      className="group bg-white hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 rounded-xl p-4 border-2 border-gray-300 hover:border-blue-400 shadow-lg hover:shadow-xl transition-all duration-200 cursor-pointer transform hover:scale-[1.02]"
+                      className="group bg-card hover:bg-accent/50 rounded-lg p-4 border border-border transition-all duration-200 cursor-pointer"
                       onClick={() => navigateToPaymentApp(app.id)}
                       role="button"
                       tabIndex={0}
@@ -364,24 +272,24 @@ const DecisionQueueCards: React.FC<{ role: string | null, setError: (msg: string
                       <div className="flex items-center justify-between">
                         <div className="flex-1 space-y-2">
                           <div className="flex items-center gap-3">
-                            <span className={`px-2 py-1 rounded-lg text-xs font-semibold ${status.color}`}>
+                            <span className={`px-2 py-0.5 rounded text-xs font-medium border ${status.color}`}>
                               {status.icon} {status.label}
                             </span>
-                            <span className="text-xs text-muted-foreground bg-secondary px-2 py-1 rounded-lg">
+                            <span className="text-xs text-muted-foreground">
                               {app.created_at ? new Date(app.created_at).toLocaleDateString() : '-'}
                             </span>
                           </div>
-                          <div className="font-semibold text-foreground group-hover:text-blue-700">
+                          <div className="font-medium text-foreground">
                             {app.project?.name || 'Unknown Project'}
                           </div>
-                          <div className="text-sm text-gray-600">
+                          <div className="text-sm text-muted-foreground">
                             Contractor: {app.contractor?.name || 'Unknown'}
                           </div>
-                          <div className="text-sm font-bold text-green-700 bg-green-50 inline-block px-2 py-1 rounded-lg">
-                            ${(app.current_period_value || 0).toLocaleString()}
+                          <div className="text-sm font-medium text-foreground">
+                            {formatCurrency(app.current_period_value || 0)}
                           </div>
                         </div>
-                        <div className="text-blue-600 text-sm font-medium group-hover:text-blue-700">
+                        <div className="text-primary text-sm font-medium">
                           Review →
                         </div>
                       </div>
@@ -390,7 +298,7 @@ const DecisionQueueCards: React.FC<{ role: string | null, setError: (msg: string
                 })}
                 {queue.length > 3 && (
                   <div className="text-center py-3">
-                    <span className="text-sm text-muted-foreground bg-secondary px-3 py-1 rounded-lg">
+                    <span className="text-sm text-muted-foreground">
                       +{queue.length - 3} more applications
                     </span>
                   </div>
@@ -406,9 +314,26 @@ const DecisionQueueCards: React.FC<{ role: string | null, setError: (msg: string
 
 const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchToPayments, searchQuery = '' }) => {
   const { projects } = useData();
-  const { role } = useAuth(); // Use centralized auth instead of fetching role independently
+  const { role } = useAuth();
   const [lastActiveProject, setLastActiveProject] = useState<Project | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Navigation helper for switching tabs
+  const navigateToTab = useCallback((tab: string) => {
+    const params = new URLSearchParams(window.location.search);
+    params.set('tab', tab);
+    window.history.pushState({}, '', `${window.location.pathname}?${params.toString()}`);
+    window.dispatchEvent(new PopStateEvent('popstate'));
+  }, []);
+
+  // Navigation handler for project budget clicks
+  const handleProjectBudgetClick = useCallback((project: Project) => {
+    const params = new URLSearchParams();
+    params.set('tab', 'budget');
+    params.set('project', project.id.toString());
+    window.history.pushState({}, '', `${window.location.pathname}?${params.toString()}`);
+    window.dispatchEvent(new PopStateEvent('popstate'));
+  }, []);
 
   // Filter projects based on search query
   const filteredProjects = useMemo(() => {
@@ -437,13 +362,6 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
   // Enhanced project stats with contractor data
   const [enhancedProjects, setEnhancedProjects] = useState<any[]>([]);
   const [statsLoading, setStatsLoading] = useState(true);
-
-  // Budget details modal state
-  const [showBudgetModal, setShowBudgetModal] = useState(false);
-  const [budgetModalData, setBudgetModalData] = useState<any>({});
-  const [budgetModalType, setBudgetModalType] = useState<'budget' | 'spent' | 'progress'>('budget');
-  const [loadingBudgetModal, setLoadingBudgetModal] = useState(false);
-  const [statsModalTitle, setStatsModalTitle] = useState('');
 
   // Fetch enhanced project data with contractor stats and approved payments
   const fetchEnhancedProjectData = useCallback(async () => {
@@ -496,7 +414,7 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
     } finally {
       setStatsLoading(false);
     }
-  }, [projects.length]); // Changed from [projects] to [projects.length] to prevent infinite loops
+  }, [projects.length]);
 
   useEffect(() => {
     fetchEnhancedProjectData();
@@ -546,215 +464,16 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
     };
   }, [filteredEnhancedProjects]);
 
-  const handleBudgetCardClick = async (type: 'budget' | 'spent' | 'progress') => {
-    setBudgetModalType(type);
-    setLoadingBudgetModal(true);
-    setShowBudgetModal(true);
-
-    try {
-      let modalData: any = {};
-      let modalTitle = '';
-
-      switch (type) {
-        case 'budget':
-          modalTitle = 'Total Budget Breakdown';
-          // Fetch all active contracts with contractor details
-          const { data: contractsData } = await supabase
-            .from('project_contractors')
-            .select(`
-              contract_amount,
-              contractor:contractors(name, trade),
-              project:projects(name, client_name)
-            `)
-            .eq('contract_status', 'active')
-            .order('contract_amount', { ascending: false });
-
-          modalData = {
-            total: stats.totalBudget,
-            items: contractsData?.map((contract: any) => ({
-              name: contract.contractor?.name || 'Unknown Contractor',
-              trade: contract.contractor?.trade || 'Unknown Trade',
-              project: contract.project?.name || 'Unknown Project',
-              amount: contract.contract_amount,
-              percentage: stats.totalBudget > 0 ? ((contract.contract_amount / stats.totalBudget) * 100).toFixed(1) : '0'
-            })) || []
-          };
-          break;
-
-        case 'spent':
-          modalTitle = 'Total Spent Breakdown';
-          // Fetch all approved payment applications with details
-          const { data: approvedPaymentsData } = await supabase
-            .from('payment_applications')
-            .select(`
-              current_period_value,
-              created_at,
-              contractor:contractors(name, trade),
-              project:projects(name, client_name)
-            `)
-            .eq('status', 'approved')
-            .order('created_at', { ascending: false });
-
-          modalData = {
-            total: stats.totalSpent,
-            items: approvedPaymentsData?.map((payment: any) => ({
-              name: payment.contractor?.name || 'Unknown Contractor',
-              trade: payment.contractor?.trade || 'Unknown Trade',
-              project: payment.project?.name || 'Unknown Project',
-              amount: payment.current_period_value,
-              date: new Date(payment.created_at).toLocaleDateString(),
-              percentage: stats.totalSpent > 0 ? ((payment.current_period_value / stats.totalSpent) * 100).toFixed(1) : '0'
-            })) || []
-          };
-          break;
-
-        case 'progress':
-          modalTitle = 'Budget Utilization Details';
-          // Fetch project-level budget utilization
-          const { data: projectStatsData } = await supabase
-            .from('projects')
-            .select(`
-              name,
-              client_name,
-              budget,
-              spent
-            `)
-            .eq('status', 'active')
-            .order('spent', { ascending: false });
-
-          modalData = {
-            totalBudget: stats.totalBudget,
-            totalSpent: stats.totalSpent,
-            remainingBudget: stats.totalBudget - stats.totalSpent,
-            utilizationRate: stats.utilizationRate,
-            items: projectStatsData?.map((project: any) => {
-              const projectBudget = Number(project.budget) || 0;
-              const projectSpent = Number(project.spent) || 0;
-              const projectUtilization = projectBudget > 0 ? ((projectSpent / projectBudget) * 100) : 0;
-              return {
-                name: project.name,
-                client: project.client_name,
-                budget: projectBudget,
-                spent: projectSpent,
-                remaining: projectBudget - projectSpent,
-                utilization: projectUtilization,
-                status: projectUtilization > 90 ? 'Over Budget' : 
-                       projectUtilization > 75 ? 'Near Limit' : 
-                       projectUtilization > 50 ? 'High Usage' : 'On Track'
-              };
-            }) || []
-          };
-          break;
-      }
-
-      setBudgetModalData(modalData);
-      setStatsModalTitle(modalTitle);
-    } catch (error) {
-      console.error('Error fetching budget details:', error);
-      setError('Failed to load budget details');
-    } finally {
-      setLoadingBudgetModal(false);
-    }
-  };
-
-  const StatCard: React.FC<{
-    title: string;
-    value: string | number;
-    subtitle?: string;
-    colorClass: string;
-    icon?: string;
-    onClick?: () => void;
-  }> = ({ title, value, subtitle, colorClass, icon, onClick }) => (
-    <div
-      className={`group ${colorClass} rounded-xl sm:rounded-2xl p-3 sm:p-4 text-center transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-[1.02] ${
-        onClick ? 'cursor-pointer border border-gray-200 hover:border-blue-300' : 'border border-gray-200'
-      } relative overflow-hidden`}
-      onClick={onClick}
-      role={onClick ? 'button' : undefined}
-      tabIndex={onClick ? 0 : undefined}
-    >
-      {/* Decorative background pattern */}
-      <div className="absolute inset-0 opacity-5">
-        <div className="absolute top-0 right-0 w-16 sm:w-20 h-16 sm:h-20 bg-white rounded-full -translate-y-8 sm:-translate-y-10 translate-x-8 sm:translate-x-10"></div>
-        <div className="absolute bottom-0 left-0 w-12 sm:w-16 h-12 sm:h-16 bg-white rounded-full translate-y-6 sm:translate-y-8 -translate-x-6 sm:-translate-x-8"></div>
-      </div>
-
-      <div className="relative z-10">
-        {/* Icon and Value Row */}
-        <div className="flex flex-col items-center mb-2 sm:mb-3">
-          {icon && (
-            <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center text-lg sm:text-xl mb-1 sm:mb-2 shadow-md ${
-              colorClass.includes('blue') ? 'bg-blue-500 text-white' :
-              colorClass.includes('emerald') ? 'bg-emerald-500 text-white' :
-              colorClass.includes('amber') ? 'bg-amber-500 text-white' :
-              colorClass.includes('red') ? 'bg-red-500 text-white' :
-              'bg-gray-500 text-white'
-            }`}>
-              {icon}
-            </div>
-          )}
-          <div className={`text-lg sm:text-2xl font-bold ${
-            colorClass.includes('blue') ? 'text-blue-700' :
-            colorClass.includes('emerald') ? 'text-emerald-700' :
-            colorClass.includes('amber') ? 'text-amber-700' :
-            colorClass.includes('red') ? 'text-red-700' :
-            'text-muted-foreground'
-          }`}>
-            {value}
-          </div>
-        </div>
-
-        {/* Title */}
-        <div className={`text-xs sm:text-sm font-bold mb-1 sm:mb-2 ${
-          colorClass.includes('blue') ? 'text-blue-800' :
-          colorClass.includes('emerald') ? 'text-emerald-800' :
-          colorClass.includes('amber') ? 'text-amber-800' :
-          colorClass.includes('red') ? 'text-red-800' :
-          'text-gray-800'
-        }`}>
-          {title}
-        </div>
-
-        {/* Subtitle */}
-        {subtitle && (
-          <div className={`text-xs font-medium mb-1 sm:mb-2 ${
-            colorClass.includes('blue') ? 'text-blue-600' :
-            colorClass.includes('emerald') ? 'text-emerald-600' :
-            colorClass.includes('amber') ? 'text-amber-600' :
-            colorClass.includes('red') ? 'text-red-600' :
-            'text-gray-600'
-          }`}>
-            {subtitle}
-          </div>
-        )}
-
-        {/* Click indicator */}
-        {onClick && (
-          <div className={`text-xs font-semibold px-2 py-1 rounded-lg inline-block group-hover:shadow-md transition-all duration-200 ${
-            colorClass.includes('blue') ? 'text-blue-700 bg-blue-200/50 group-hover:bg-blue-200' :
-            colorClass.includes('emerald') ? 'text-emerald-700 bg-emerald-200/50 group-hover:bg-emerald-200' :
-            colorClass.includes('amber') ? 'text-amber-700 bg-amber-200/50 group-hover:bg-amber-200' :
-            colorClass.includes('red') ? 'text-red-700 bg-red-200/50 group-hover:bg-red-200' :
-            'text-muted-foreground bg-gray-200/50 group-hover:bg-gray-200'
-          }`}>
-            View Details →
-          </div>
-        )}
-      </div>
-    </div>
-  );
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
-      <div className="space-y-6 sm:space-y-10 p-4 sm:p-8">
-        {/* Enhanced Dashboard Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          <StatCard
+    <div className="min-h-screen bg-background p-4 sm:p-8">
+      <div className="space-y-6 sm:space-y-10">
+        {/* Enhanced Dashboard Stats - New Design System */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <MetricCard
             title="Total Projects"
             value={stats.totalProjects}
             subtitle={`${stats.activeProjects} active`}
-            colorClass="bg-gradient-to-br from-blue-50 to-blue-100"
-            icon="🏗️"
+            className="cursor-pointer hover:bg-accent/50 transition-colors"
             onClick={() => {
               const params = new URLSearchParams(window.location.search);
               params.set('tab', 'projects');
@@ -762,104 +481,89 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
               window.dispatchEvent(new PopStateEvent('popstate'));
             }}
           />
-          <StatCard
+
+          <MetricCard
             title="Total Budget"
-            value={`$${stats.totalBudget.toLocaleString()}`}
-            subtitle={`Avg: $${stats.avgProjectBudget.toLocaleString()}`}
-            colorClass="bg-gradient-to-br from-emerald-50 to-emerald-100"
-            icon="💰"
-            onClick={() => handleBudgetCardClick('budget')}
+            value={formatCurrency(stats.totalBudget)}
+            subtitle={`Avg: ${formatCurrency(stats.avgProjectBudget)}`}
+            className="cursor-pointer hover:bg-accent/50 transition-colors"
+            onClick={() => navigateToTab('budget')}
           />
-          <StatCard
+
+          <MetricCard
             title="Total Spent"
-            value={`$${stats.totalSpent.toLocaleString()}`}
+            value={formatCurrency(stats.totalSpent)}
+            status={getBudgetStatus(stats.totalSpent, stats.totalBudget)}
+            statusLabel={getBudgetStatus(stats.totalSpent, stats.totalBudget) !== 'neutral' ? 'High Usage' : undefined}
             subtitle={`${stats.utilizationRate}% utilized`}
-            colorClass={stats.utilizationRate > 90 ? "bg-gradient-to-br from-red-50 to-red-100" : 
-                       stats.utilizationRate > 75 ? "bg-gradient-to-br from-amber-50 to-amber-100" : 
-                       "bg-gradient-to-br from-emerald-50 to-emerald-100"}
-            icon="💸"
-            onClick={() => handleBudgetCardClick('spent')}
+            className="cursor-pointer hover:bg-accent/50 transition-colors"
+            onClick={() => navigateToTab('budget')}
           />
-          <StatCard
+
+          <MetricCard
             title="Remaining Budget"
-            value={`$${stats.remainingBudget.toLocaleString()}`}
-            subtitle={stats.remainingBudget < 0 ? "Over budget!" : "Available"}
-            colorClass={stats.remainingBudget >= 0 ? "bg-gradient-to-br from-emerald-50 to-emerald-100" : "bg-gradient-to-br from-red-50 to-red-100"}
-            icon={stats.remainingBudget >= 0 ? "✅" : "⚠️"}
-            onClick={() => handleBudgetCardClick('progress')}
+            value={formatCurrency(stats.remainingBudget)}
+            status={stats.remainingBudget < 0 ? 'critical' : 'neutral'}
+            statusLabel={stats.remainingBudget < 0 ? 'Over Budget' : 'Available'}
+            className="cursor-pointer hover:bg-accent/50 transition-colors"
+            onClick={() => navigateToTab('budget')}
           />
         </div>
 
         {/* Quick Jump to Last Active Project */}
         {lastActiveProject && onProjectSelect && (
-          <div className="bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 rounded-2xl border-2 border-purple-300 shadow-lg p-6 mb-6">
+          <div className="bg-card rounded-xl border border-border p-6 shadow-sm">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-indigo-500 rounded-xl flex items-center justify-center text-white text-xl shadow-lg">
+              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center text-primary text-xl">
                 ⚡
               </div>
               <div>
-                <h3 className="text-xl font-bold text-purple-900">Quick Jump</h3>
-                <p className="text-sm text-purple-600">Return to your last active project</p>
+                <h3 className="text-lg font-semibold text-foreground">Quick Jump</h3>
+                <p className="text-sm text-muted-foreground">Return to your last active project</p>
               </div>
             </div>
             <button
               onClick={() => onProjectSelect(lastActiveProject)}
-              className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl px-6 py-4 font-semibold transition-all duration-200 shadow-md hover:shadow-xl transform hover:scale-[1.02] flex items-center justify-between group"
+              className="w-full bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg px-6 py-4 font-medium transition-all shadow-sm hover:shadow flex items-center justify-between group"
             >
               <div className="flex items-center gap-4">
-                <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center text-xl">
+                <div className="w-8 h-8 bg-white/20 rounded flex items-center justify-center text-lg">
                   🏗️
                 </div>
                 <div className="text-left">
-                  <div className="font-bold text-lg">{lastActiveProject.name}</div>
-                  <div className="text-sm text-purple-100">{lastActiveProject.client_name}</div>
+                  <div className="font-semibold">{lastActiveProject.name}</div>
+                  <div className="text-xs text-primary-foreground/80">{lastActiveProject.client_name}</div>
                 </div>
               </div>
-              <span className="text-2xl text-white/80 group-hover:text-white group-hover:translate-x-1 transition-all">→</span>
+              <span className="text-xl group-hover:translate-x-1 transition-transform">→</span>
             </button>
           </div>
         )}
 
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 sm:gap-10">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
           {/* Enhanced Projects List */}
-          <div className="bg-white/80 backdrop-blur-sm rounded-2xl sm:rounded-3xl border border-gray-200 shadow-2xl p-4 sm:p-8 hover:shadow-3xl hover:border-blue-300 transition-all duration-300">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 sm:mb-8 gap-4 sm:gap-0">
-              <h3
-                className="text-xl sm:text-2xl font-bold text-foreground cursor-pointer hover:text-blue-600 transition-colors flex items-center gap-3 sm:gap-4"
-                onClick={() => {
-                  const params = new URLSearchParams(window.location.search);
-                  params.set('tab', 'projects');
-                  window.history.pushState({}, '', `${window.location.pathname}?${params.toString()}`);
-                  window.dispatchEvent(new PopStateEvent('popstate'));
-                }}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    const params = new URLSearchParams(window.location.search);
-                    params.set('tab', 'projects');
-                    window.history.pushState({}, '', `${window.location.pathname}?${params.toString()}`);
-                    window.dispatchEvent(new PopStateEvent('popstate'));
-                  }
-                }}
+          <div className="bg-card rounded-xl border border-border p-4 sm:p-6 h-full">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4 sm:gap-0">
+              <div 
+                className="flex items-center gap-3 cursor-pointer group"
+                onClick={() => navigateToTab('projects')}
               >
-                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-xl sm:rounded-2xl flex items-center justify-center text-white shadow-lg">
+                <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center text-blue-600 border border-blue-100">
                   🏗️
                 </div>
-                <div className="flex flex-col">
-                  <span>Active Projects</span>
-                  <span className="text-xs sm:text-sm text-blue-600 font-medium">
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors">
+                    Active Projects
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
                     {enhancedProjects.length} total projects
-                  </span>
+                  </p>
                 </div>
-                <span className="text-xs sm:text-sm text-blue-600 font-semibold bg-blue-50 px-2 sm:px-4 py-1 sm:py-2 rounded-lg sm:rounded-xl border border-blue-200 hover:bg-blue-100 transition-colors">
-                  View All →
-                </span>
-              </h3>
+              </div>
+              
               {projects.length > 5 && (
                 <button 
-                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-3 sm:px-4 py-2 rounded-lg sm:rounded-xl font-semibold text-xs sm:text-sm transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105" 
+                  className="text-sm font-medium text-primary hover:text-primary/80 transition-colors" 
                   onClick={() => {
                     if (role === "admin") {
                       window.location.href = "/pm-dashboard";
@@ -868,44 +572,47 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
                     }
                   }}
                 >
-                  View All
+                  View All →
                 </button>
               )}
             </div>
+
             {error && (
-              <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4 mb-4">
-                <div className="text-red-700 font-medium">{error}</div>
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4 text-status-critical text-sm font-medium">
+                {error}
               </div>
             )}
-            <div className="space-y-3 sm:space-y-4 max-h-80 sm:max-h-96 overflow-y-auto custom-scrollbar">
+
+            <div className="space-y-4 max-h-[600px] overflow-y-auto custom-scrollbar pr-2">
               {statsLoading ? (
                 <div className="flex items-center justify-center py-12">
-                  <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                  <span className="ml-3 text-gray-600 font-medium">Loading project data...</span>
+                  <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                  <span className="ml-3 text-muted-foreground font-medium">Loading project data...</span>
                 </div>
               ) : filteredEnhancedProjects.length === 0 ? (
                 <div className="text-center py-12 flex flex-col items-center gap-4">
-                  <div className="w-16 h-16 bg-gradient-to-br from-gray-400 to-gray-500 rounded-2xl flex items-center justify-center text-2xl">
+                  <div className="w-12 h-12 bg-muted rounded-xl flex items-center justify-center text-2xl text-muted-foreground">
                     📋
                   </div>
-                  <span className="text-gray-600 font-medium">
+                  <span className="text-muted-foreground font-medium">
                     {searchQuery ? 'No projects match your search' : 'No projects'}
                   </span>
                 </div>
               ) : (
-                                 filteredEnhancedProjects.map((project) => (
-                   <div key={project.id} className="border-2 border-gray-200 rounded-xl shadow-lg hover:shadow-xl hover:border-blue-300 transition-all duration-300">
-                     <ProjectCard
-                       project={{
-                         ...project,
-                         budget: project.calculatedBudget,
-                         spent: project.calculatedSpent
-                       }}
-                       onSelect={onProjectSelect}
-                       isLoading={statsLoading}
-                     />
-                   </div>
-                 ))
+                filteredEnhancedProjects.map((project) => (
+                  <div key={project.id} className="border border-border rounded-lg hover:border-primary/50 transition-colors">
+                    <ProjectCard
+                      project={{
+                        ...project,
+                        budget: project.calculatedBudget,
+                        spent: project.calculatedSpent
+                      }}
+                      onSelect={onProjectSelect}
+                      onBudgetClick={handleProjectBudgetClick}
+                      isLoading={statsLoading}
+                    />
+                  </div>
+                ))
               )}
             </div>
           </div>
@@ -914,169 +621,6 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
           <DecisionQueueCards role={role} setError={setError} />
         </div>
       </div>
-
-      {/* Budget Details Modal */}
-      {showBudgetModal && (
-        <div className="fixed inset-0  bg-opacity-50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h2 className="text-xl font-semibold text-foreground">{statsModalTitle}</h2>
-              <button
-                onClick={() => setShowBudgetModal(false)}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-
-            <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
-              {loadingBudgetModal ? (
-                <div className="flex items-center justify-center py-12">
-                  <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                  <span className="ml-3 text-gray-600">Loading data...</span>
-                </div>
-              ) : budgetModalType === 'progress' ? (
-                <div className="space-y-6">
-                  {/* Summary Cards */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                    <div className="bg-blue-50 p-4 rounded-lg">
-                      <div className="text-sm text-blue-600 font-medium">Total Budget</div>
-                      <div className="text-2xl font-bold text-blue-900">${budgetModalData.totalBudget?.toLocaleString()}</div>
-                    </div>
-                    <div className="bg-purple-50 p-4 rounded-lg">
-                      <div className="text-sm text-purple-600 font-medium">Total Spent</div>
-                      <div className="text-2xl font-bold text-purple-900">${budgetModalData.totalSpent?.toLocaleString()}</div>
-                    </div>
-                    <div className="bg-green-50 p-4 rounded-lg">
-                      <div className="text-sm text-green-600 font-medium">Remaining</div>
-                      <div className="text-2xl font-bold text-green-900">${budgetModalData.remainingBudget?.toLocaleString()}</div>
-                    </div>
-                  </div>
-                  
-                  {/* Project Breakdown */}
-                  <div>
-                    <h4 className="text-lg font-semibold text-foreground mb-4">Project Breakdown</h4>
-                    <div className="space-y-3">
-                      {budgetModalData.items?.map((project: any, index: number) => (
-                        <div key={index} className="bg-gray-50 p-4 rounded-lg">
-                          <div className="flex justify-between items-start mb-2">
-                            <div>
-                              <div className="font-medium text-foreground">{project.name}</div>
-                              <div className="text-sm text-gray-600">{project.client}</div>
-                            </div>
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              project.status === 'Over Budget' ? 'bg-red-100 text-red-800' :
-                              project.status === 'Near Limit' ? 'bg-yellow-100 text-yellow-800' :
-                              project.status === 'High Usage' ? 'bg-orange-100 text-orange-800' :
-                              'bg-green-100 text-green-800'
-                            }`}>
-                              {project.status}
-                            </span>
-                          </div>
-                          <div className="grid grid-cols-3 gap-4 text-sm">
-                            <div>
-                              <div className="text-gray-600">Budget</div>
-                              <div className="font-medium">${project.budget?.toLocaleString()}</div>
-                            </div>
-                            <div>
-                              <div className="text-gray-600">Spent</div>
-                              <div className="font-medium">${project.spent?.toLocaleString()}</div>
-                            </div>
-                            <div>
-                              <div className="text-gray-600">Remaining</div>
-                              <div className="font-medium">${project.remaining?.toLocaleString()}</div>
-                            </div>
-                          </div>
-                          <div className="mt-2">
-                            <div className="flex justify-between text-xs text-gray-600 mb-1">
-                              <span>Utilization</span>
-                              <span>{project.utilization?.toFixed(1)}%</span>
-                            </div>
-                            <div className="w-full bg-gray-200 rounded-full h-2">
-                              <div
-                                className={`h-2 rounded-full ${
-                                  project.utilization > 90 ? 'bg-red-500' :
-                                  project.utilization > 75 ? 'bg-yellow-500' :
-                                  project.utilization > 50 ? 'bg-orange-500' : 'bg-green-500'
-                                }`}
-                                style={{ width: `${Math.min(project.utilization, 100)}%` }}
-                              ></div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              ) : budgetModalData.total ? (
-                <div className="space-y-4">
-                  {/* Summary */}
-                  <div className="bg-gray-50 p-4 rounded-lg mb-6">
-                    <div className="text-sm text-gray-600">Total Amount</div>
-                    <div className="text-2xl font-bold text-foreground">${budgetModalData.total?.toLocaleString()}</div>
-                  </div>
-                  
-                  {/* Items List */}
-                  <div>
-                    <h4 className="text-lg font-semibold text-foreground mb-4">
-                      {budgetModalType === 'budget' ? 'Contract Breakdown' : 'Payment Breakdown'}
-                    </h4>
-                    <div className="space-y-3">
-                      {budgetModalData.items?.map((item: any, index: number) => (
-                        <div key={index} className="bg-white border border-gray-200 p-4 rounded-lg">
-                          <div className="flex justify-between items-start">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="font-medium text-foreground">{item.name}</span>
-                                <span className="text-xs text-muted-foreground bg-secondary px-2 py-1 rounded">{item.trade}</span>
-                              </div>
-                              <div className="text-sm text-gray-600 mb-2">
-                                <div>Project: {item.project}</div>
-                                {item.date && <div>Date: {item.date}</div>}
-                              </div>
-                              <div className="text-xs text-gray-500">
-                                {item.percentage}% of total
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <div className="text-lg font-bold text-foreground">${item.amount?.toLocaleString()}</div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <div className="text-4xl mb-4">📊</div>
-                  <p className="text-gray-500 font-medium">No data available</p>
-                  <p className="text-sm text-gray-400">There are no items in this category</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      <style jsx>{`
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 6px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: #f1f5f9;
-          border-radius: 3px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: #cbd5e1;
-          border-radius: 3px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: #94a3b8;
-        }
-      `}</style>
     </div>
   );
 };

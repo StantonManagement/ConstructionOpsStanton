@@ -12,12 +12,13 @@ import type { UpdatePunchListItemRequest } from '@/types/punch-list';
  * GET /api/punch-list/[id]
  * Get punch list item detail with comments and photos
  */
-export const GET = withAuth(async (request: NextRequest, { params }: { params: { id: string } }, user: any) => {
+export const GET = withAuth(async (request: NextRequest, context: { params: Promise<{ id: string }> }, user: any) => {
   try {
     if (!supabaseAdmin) {
       throw new APIError('Service role client not available', 500, 'SERVER_ERROR');
     }
 
+    const params = await context.params;
     const itemId = parseInt(params.id);
 
     // Fetch punch list item
@@ -78,12 +79,13 @@ export const GET = withAuth(async (request: NextRequest, { params }: { params: {
  * PUT /api/punch-list/[id]
  * Update punch list item
  */
-export const PUT = withAuth(async (request: NextRequest, { params }: { params: { id: string } }, user: any) => {
+export const PUT = withAuth(async (request: NextRequest, context: { params: Promise<{ id: string }> }, user: any) => {
   try {
     if (!supabaseAdmin) {
       throw new APIError('Service role client not available', 500, 'SERVER_ERROR');
     }
 
+    const params = await context.params;
     const itemId = parseInt(params.id);
     const body: UpdatePunchListItemRequest = await request.json();
 
@@ -141,12 +143,13 @@ export const PUT = withAuth(async (request: NextRequest, { params }: { params: {
  * DELETE /api/punch-list/[id]
  * Delete punch list item
  */
-export const DELETE = withAuth(async (request: NextRequest, { params }: { params: { id: string } }, user: any) => {
+export const DELETE = withAuth(async (request: NextRequest, context: { params: Promise<{ id: string }> }, user: any) => {
   try {
     if (!supabaseAdmin) {
       throw new APIError('Service role client not available', 500, 'SERVER_ERROR');
     }
 
+    const params = await context.params;
     const itemId = parseInt(params.id);
 
     const { error } = await supabaseAdmin

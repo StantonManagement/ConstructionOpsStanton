@@ -11,12 +11,13 @@ import {
  * POST /api/punch-list/[id]/reject
  * Reject completed work and reopen punch list item
  */
-export const POST = withAuth(async (request: NextRequest, { params }: { params: { id: string } }, user: any) => {
+export const POST = withAuth(async (request: NextRequest, context: { params: Promise<{ id: string }> }, user: any) => {
   try {
     if (!supabaseAdmin) {
       throw new APIError('Service role client not available', 500, 'SERVER_ERROR');
     }
 
+    const params = await context.params;
     const itemId = parseInt(params.id);
     const body = await request.json();
     const { comment } = body;

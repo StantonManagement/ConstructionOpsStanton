@@ -446,3 +446,5 @@ COMMENT ON POLICY "Admins can delete payment applications" ON payment_applicatio
 -- DROP INDEX IF EXISTS idx_contractors_id;
 
 
+
+

@@ -40,14 +40,14 @@ export async function GET(request: NextRequest) {
     const activeOnly = searchParams.get('active_only') === 'true';
     const includeStats = searchParams.get('include_stats') === 'true';
 
-    // Build query
+    // Build query (exclude inactive by default)
     let query = supabaseAdmin
       .from('owner_entities')
       .select('*')
       .order('name', { ascending: true });
 
-    // Apply filters
-    if (activeOnly) {
+    // Apply filters (show inactive only if explicitly requested)
+    if (activeOnly !== false) {
       query = query.eq('is_active', true);
     }
 

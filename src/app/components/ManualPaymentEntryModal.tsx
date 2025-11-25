@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useRouter } from 'next/navigation';
+import { DataTable, Column } from '@/components/ui/DataTable';
+import { formatCurrency } from '@/lib/theme';
 
 interface LineItemData {
   id: number;
@@ -279,97 +281,100 @@ const ManualPaymentEntryModal: React.FC<ManualPaymentEntryModalProps> = ({
               )}
 
               {/* Line Items Table */}
-              <div className="bg-white border border-gray-200 rounded-lg overflow-hidden mb-6">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-gray-50 border-b border-gray-200">
-                      <tr>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider w-16">
-                          Item
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                          Description
-                        </th>
-                        <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider w-32">
-                          Value
-                        </th>
-                        <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider w-24">
-                          Prev %
-                        </th>
-                        <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider w-32">
-                          Current %
-                        </th>
-                        <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider w-32">
-                          This Period
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200">
-                      {lineItems.map((item, index) => {
+              <div className="bg-white rounded-lg overflow-hidden mb-6">
+                <DataTable
+                  data={lineItems}
+                  columns={[
+                    { 
+                      header: 'Item', 
+                      accessor: 'item_no', 
+                      className: 'w-16 font-medium text-gray-900' 
+                    },
+                    { 
+                      header: 'Description', 
+                      accessor: 'description_of_work',
+                      className: 'text-gray-700'
+                    },
+                    { 
+                      header: 'Value', 
+                      align: 'right', 
+                      accessor: (item) => {
+                        const scheduledValue = (item.scheduled_value || 0) + (item.change_order_amount || 0);
+                        return <span className="font-medium text-gray-900">{formatCurrency(scheduledValue)}</span>;
+                      },
+                      className: 'w-32'
+                    },
+                    { 
+                      header: 'Prev %', 
+                      align: 'right', 
+                      accessor: (item) => (
+                        <span className="text-gray-600">{(item.from_previous_application || 0).toFixed(1)}%</span>
+                      ),
+                      className: 'w-24'
+                    },
+                    { 
+                      header: 'Current %', 
+                      accessor: (item) => {
+                        const previousPercent = item.from_previous_application || 0;
+                        const currentPercent = percentages[item.id] || 0;
+                        const hasError = !!validationErrors[item.id];
+
+                        return (
+                          <div className="flex flex-col gap-1">
+                            <input
+                              type="number"
+                              min={previousPercent}
+                              max="100"
+                              step="0.1"
+                              value={currentPercent}
+                              onChange={(e) => handlePercentageChange(item.id, e.target.value)}
+                              disabled={submitting}
+                              className={`w-full px-3 py-2 text-sm text-right border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed ${
+                                hasError ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                              }`}
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                            {hasError && (
+                              <span className="text-xs text-red-600">{validationErrors[item.id]}</span>
+                            )}
+                          </div>
+                        );
+                      },
+                      className: 'w-32'
+                    },
+                    { 
+                      header: 'This Period', 
+                      align: 'right', 
+                      accessor: (item) => {
                         const scheduledValue = (item.scheduled_value || 0) + (item.change_order_amount || 0);
                         const previousPercent = item.from_previous_application || 0;
                         const currentPercent = percentages[item.id] || 0;
                         const thisPeriodPercent = Math.max(0, currentPercent - previousPercent);
                         const thisPeriodAmount = (scheduledValue * thisPeriodPercent) / 100;
-                        const hasError = !!validationErrors[item.id];
-
-                        return (
-                          <tr key={item.id} className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} ${hasError ? 'bg-red-50' : ''}`}>
-                            <td className="px-4 py-3 text-sm text-gray-900 font-medium">
-                              {item.item_no || index + 1}
-                            </td>
-                            <td className="px-4 py-3 text-sm text-gray-700">
-                              {item.description_of_work}
-                            </td>
-                            <td className="px-4 py-3 text-sm text-gray-900 text-right font-medium">
-                              {formatCurrency(scheduledValue)}
-                            </td>
-                            <td className="px-4 py-3 text-sm text-gray-600 text-right">
-                              {previousPercent.toFixed(1)}%
-                            </td>
-                            <td className="px-4 py-3">
-                              <div className="flex flex-col gap-1">
-                                <input
-                                  type="number"
-                                  min={previousPercent}
-                                  max="100"
-                                  step="0.1"
-                                  value={currentPercent}
-                                  onChange={(e) => handlePercentageChange(item.id, e.target.value)}
-                                  disabled={submitting}
-                                  className={`w-full px-3 py-2 text-sm text-right border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed ${
-                                    hasError ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                                  }`}
-                                />
-                                {hasError && (
-                                  <span className="text-xs text-red-600">{validationErrors[item.id]}</span>
-                                )}
-                              </div>
-                            </td>
-                            <td className="px-4 py-3 text-sm text-gray-900 text-right font-medium">
-                              {formatCurrency(thisPeriodAmount)}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
+                        return <span className="font-medium text-gray-900">{formatCurrency(thisPeriodAmount)}</span>;
+                      },
+                      className: 'w-32'
+                    }
+                  ]}
+                  footer={
                     <tfoot className="bg-blue-50 border-t-2 border-blue-200">
                       <tr>
-                        <td colSpan={2} className="px-4 py-3 text-sm font-bold text-gray-900">
+                        <td colSpan={2} className="px-6 py-3 text-sm font-bold text-gray-900">
                           TOTALS
                         </td>
-                        <td className="px-4 py-3 text-sm font-bold text-gray-900 text-right">
+                        <td className="px-6 py-3 text-sm font-bold text-gray-900 text-right">
                           {formatCurrency(totals.totalScheduledValue)}
                         </td>
-                        <td className="px-4 py-3"></td>
-                        <td className="px-4 py-3"></td>
-                        <td className="px-4 py-3 text-sm font-bold text-blue-600 text-right">
+                        <td className="px-6 py-3"></td>
+                        <td className="px-6 py-3"></td>
+                        <td className="px-6 py-3 text-sm font-bold text-blue-600 text-right">
                           {formatCurrency(totals.totalThisPeriod)}
                         </td>
                       </tr>
                     </tfoot>
-                  </table>
-                </div>
+                  }
+                  className="border-gray-200"
+                />
               </div>
 
               {/* PM Notes */}

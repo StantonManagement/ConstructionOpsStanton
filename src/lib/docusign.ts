@@ -1,16 +1,15 @@
 // PDFfiller is now used for e-signature integration. This file is deprecated.
-
 // Lien waiver e-signatures with DocuSign
-// TODO: Implement DocuSign integration
+// Future Phase: Implement DocuSign integration
 
 export function createEnvelope(templateId: string, signerEmail: string) {
-  // Create envelope from template
+  throw new Error("DocuSign integration is scheduled for a future phase.");
 }
 
 export function sendForSignature(envelopeId: string) {
-  // Send for signature
+  throw new Error("DocuSign integration is scheduled for a future phase.");
 }
 
 export function handleWebhook(req: any) {
-  // Handle webhook status updates
+  throw new Error("DocuSign integration is scheduled for a future phase.");
 }

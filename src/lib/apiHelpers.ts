@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, supabaseAdmin } from './supabaseClient';
+import { User } from '@/types/schema';
 
 /**
  * Shared API utilities for consistent request handling, validation, and response formatting
@@ -21,7 +22,7 @@ export class APIError extends Error {
  * Extract and validate auth token from request
  * Returns the user object if valid, throws APIError if invalid
  */
-export async function validateAuth(request: NextRequest) {
+export async function validateAuth(request: NextRequest): Promise<User> {
   try {
     const authHeader = request.headers.get('authorization');
     
@@ -37,7 +38,7 @@ export async function validateAuth(request: NextRequest) {
       throw new APIError('Invalid or expired token', 401, 'UNAUTHORIZED');
     }
 
-    return user;
+    return user as User;
   } catch (err) {
     if (err instanceof APIError) throw err;
     throw new APIError('Authentication failed', 401, 'AUTH_FAILED');
@@ -154,7 +155,7 @@ export function withErrorHandling(
  * Supports dynamic routes by forwarding the context parameter
  */
 export function withAuth<T = any>(
-  handler: (request: NextRequest, context: T, user: any) => Promise<NextResponse>
+  handler: (request: NextRequest, context: T, user: User) => Promise<NextResponse>
 ) {
   return async (request: NextRequest, context: T) => {
     try {

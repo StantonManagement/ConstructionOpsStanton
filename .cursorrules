@@ -1,0 +1,179 @@
+# Cursor AI Rules for This Project
+
+## CRITICAL: API Error Handling (MANDATORY)
+
+### Rule 1: NO ASSUMPTIONS - DEMAND EVIDENCE
+- **NEVER** say "it should work now" or "refresh and try again"
+- **NEVER** make blind fixes without seeing the actual error
+- **ALWAYS** wait for user confirmation before declaring success
+
+### Rule 2: 500 ERRORS = SERVER LOGS REQUIRED
+When a 500 Internal Server Error occurs:
+1. **STOP** - Do not make any code changes yet
+2. **REQUEST** the server terminal output from the user
+3. **READ** the actual error message, stack trace, and error details
+4. **DIAGNOSE** the root cause (NOT symptoms)
+5. **FIX** based on the actual error
+6. **VERIFY** by asking user to test and report results
+
+### Rule 3: DATABASE CHANGES = SCHEMA VERIFICATION REQUIRED
+Before assuming database field properties:
+1. **CHECK** migration files for constraints (NOT NULL, UNIQUE, CHECK, etc.)
+2. **VERIFY** with user that migrations actually ran successfully
+3. **CONFIRM** table/column exists in database before querying it
+4. If schema needs changes: Create migration FIRST, code changes SECOND
+5. **QUERY ACTUAL SCHEMA** - Don't trust migration files, query information_schema:
+   ```sql
+   SELECT column_name, data_type, is_nullable 
+   FROM information_schema.columns 
+   WHERE table_name = 'your_table' 
+   ORDER BY ordinal_position;
+   ```
+6. **CHECK FOR CHECK CONSTRAINTS** - These can reject values silently:
+   ```sql
+   SELECT conname, pg_get_constraintdef(oid) 
+   FROM pg_constraint 
+   WHERE conrelid = 'your_table'::regclass;
+   ```
+
+### Rule 4: VERIFY BEFORE YOU CODE
+Before making any fix:
+- Check if table/column exists
+- Check if foreign keys are named as expected
+- Check if constraints match code assumptions
+- Check server logs for the actual error
+
+### Rule 5: TEST IN LAYERS
+When debugging:
+1. Database Layer: Can we insert/query directly?
+2. API Layer: Does the endpoint return expected data? Check server logs
+3. Frontend Layer: Does the UI handle the API response correctly?
+
+## Next.js 15 Specific Rules
+
+### Rule 6: PARAMS ARE ASYNC
+In Next.js 15, route params are Promises:
+- **ALWAYS** use `const { param } = await params`
+- **NEVER** use `const { param } = params` directly
+- Update TypeScript types: `{ params: Promise<{ id: string }> }`
+
+### Rule 7: SUPABASE FOREIGN KEY AMBIGUITY
+When a table has multiple FKs to the same table:
+- **ALWAYS** use explicit FK names: `contractors!table_column_fkey`
+- **NEVER** use just the table name: `contractors`
+- Check error message for the correct FK constraint name
+
+## Windows/PowerShell Specific
+
+### Rule 8: WINDOWS COMMANDS
+- User is on Windows with PowerShell
+- Use PowerShell syntax, not bash/Unix commands
+- Use semicolons (`;`) not double ampersands (`&&`)
+
+## Development Workflow
+
+### Rule 9: ERROR INVESTIGATION PROCESS
+1. User reports error with console output
+2. If 500 error: Request server terminal logs (MANDATORY)
+3. Read full error including details, hints, code
+4. Identify root cause (database? API? frontend?)
+5. Make targeted fix for root cause
+6. Ask user to test
+7. Only if user confirms it works, move to next task
+
+### Rule 10: NO CIRCULAR FIXES
+- If you make a fix and it doesn't work, DON'T repeat the same fix
+- If you're unsure, ASK the user for more information
+- Better to ask questions than make wrong assumptions
+
+## Success Criteria
+
+### Rule 11: DEFINITION OF "DONE"
+A task is only done when:
+- ✅ User confirms it works
+- ✅ No errors in browser console
+- ✅ No errors in server logs
+- ✅ Feature works as expected in UI
+
+**NOT done when:**
+- ❌ "It should work now"
+- ❌ "Try refreshing"
+- ❌ "This fix will solve it"
+
+## Communication Rules
+
+### Rule 12: BE HONEST ABOUT UNCERTAINTY
+- If you don't know, say "I need to see the server logs to diagnose this"
+- If you're guessing, say "This might be the issue, let me verify..."
+- If you need info, say "Can you check X in the database/terminal?"
+
+### Rule 13: RESPECT USER'S TIME
+- Don't make 5 sequential "fixes" that don't work
+- After 2 failed attempts, STOP and ask for more diagnostic info
+- Acknowledge mistakes quickly: "I was wrong, let me check the actual error"
+
+---
+
+## Database Schema Mismatch Prevention (CRITICAL)
+
+### Rule 14: VERIFY ACTUAL DATABASE STATE
+When code and database don't match (very common):
+
+**Symptoms:**
+- `column "X" does not exist`
+- `null value in column "X" violates not-null constraint`
+- `violates check constraint "X_check"`
+- `invalid input syntax for type integer: "uuid-string"`
+
+**Required Checks:**
+1. **Query actual columns:** Run `SELECT column_name, data_type, is_nullable FROM information_schema.columns WHERE table_name = 'X'`
+2. **Check constraints:** Run `SELECT conname, pg_get_constraintdef(oid) FROM pg_constraint WHERE conrelid = 'X'::regclass`
+3. **Verify FK names:** Error messages show actual FK names - use those, not guessed names
+4. **Column types:** UUID vs INTEGER, VARCHAR vs TEXT, etc. - these MUST match exactly
+
+### Rule 15: MIGRATION FILE ≠ ACTUAL DATABASE
+**Problem:** User may have run different migrations than you expect
+
+**Never assume:**
+- ❌ "Our migration file says X, so database has X"
+- ❌ "Column should be nullable because our migration doesn't have NOT NULL"
+- ❌ "Status values are A, B, C because that's what we designed"
+
+**Always verify:**
+- ✅ Query information_schema to see what's actually there
+- ✅ Ask user "Which migration files did you run?"
+- ✅ Check constraint definitions in the actual database
+- ✅ Test with actual data to find CHECK constraint violations
+
+### Rule 16: ITERATIVE SCHEMA FIXES
+When fixing schema mismatches:
+1. Fix ONE issue at a time (not all at once)
+2. After each fix, ask user to test again
+3. Read the NEW error message - it will reveal the NEXT issue
+4. Repeat until code and schema match
+
+**Example from this project:**
+- Error 1: `params is a Promise` → Fixed with `await params`
+- Error 2: Multiple FK relationships → Fixed with explicit FK names
+- Error 3: `contractor_id` NOT NULL → Fixed with `ALTER COLUMN`  
+- Error 4: `assigned_by` INTEGER but got UUID → Fixed with `ALTER COLUMN TYPE UUID`
+- Error 5: `item_number` missing → Fixed by calling database function
+- Error 6: `status = 'open'` violates check → Fixed by using 'assigned'
+
+**Key Lesson:** Each error revealed a NEW schema mismatch. Can't fix all at once.
+
+---
+
+## Summary: The Core Principle
+
+**"Show me the logs, not your assumptions"**
+**"Query the schema, don't trust migration files"**
+
+When in doubt:
+1. Request evidence (logs, schema, actual error)
+2. Query actual database state (information_schema)
+3. Diagnose root cause
+4. Make one targeted fix
+5. Verify it worked
+6. Only then move forward
+

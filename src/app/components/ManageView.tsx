@@ -1,6 +1,6 @@
-import React, { useState, ChangeEvent, FormEvent, ReactNode, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, ChangeEvent, FormEvent, ReactNode, useCallback, useMemo, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { Building, UserPlus, FilePlus, AlertCircle, CheckCircle, X, Search, Filter, Plus, Edit3, Eye, Trash2, Archive, Star, Calendar, DollarSign } from 'lucide-react';
+import { Building, UserPlus, FilePlus, AlertCircle, CheckCircle, X, Search, Filter, Plus, Edit3, Eye, Trash2, Archive, Star, Calendar, DollarSign, Upload } from 'lucide-react';
 import { useProjects } from '@/hooks/queries/useProjects';
 import { useContractors } from '@/hooks/queries/useContractors';
 import { useContracts } from '@/hooks/queries/useContracts';
@@ -9,16 +9,8 @@ import { useCreateContractor, useUpdateContractor, useDeleteContractor } from '@
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useLineItemsState, LineItem } from '@/hooks/useLineItemsState';
 import { EditableLineItemsTable } from '@/app/components/EditableLineItemsTable';
-
-// Enhanced notification system
-type NotificationType = 'success' | 'error' | 'warning' | 'info';
-
-interface NotificationData {
-  id: string;
-  type: NotificationType;
-  message: string;
-  duration?: number;
-}
+import { useModal } from '@/app/context/ModalContext';
+import { Project, Subcontractor, Contract } from '@/types/schema';
 
 // Form validation utilities
 const validators = {
@@ -45,41 +37,6 @@ interface FieldConfig {
   required?: boolean;
   defaultValue?: string;
 }
-
-// Enhanced notification component with better positioning
-const NotificationManager: React.FC<{
-  notifications: NotificationData[];
-  onRemove: (id: string) => void;
-}> = ({ notifications, onRemove }) => {
-  return (
-    <div className="fixed top-4 right-4 z-50 space-y-2 max-w-sm">
-      {notifications.map((notification) => (
-        <div
-          key={notification.id}
-          className={`
-            px-4 py-3 rounded-lg shadow-lg animate-slide-in flex items-center gap-3 min-w-80 backdrop-blur-sm
-            ${notification.type === 'success' ? 'bg-[var(--status-success-bg)] text-[var(--status-success-text)]' : ''}
-            ${notification.type === 'error' ? 'bg-[var(--status-critical-bg)] text-[var(--status-critical-text)]' : ''}
-            ${notification.type === 'warning' ? 'bg-[var(--status-warning-bg)] text-[var(--status-warning-text)]' : ''}
-            ${notification.type === 'info' ? 'bg-primary text-primary-foreground' : ''}
-          `}
-        >
-          {notification.type === 'success' && <CheckCircle className="w-5 h-5 flex-shrink-0" />}
-          {notification.type === 'error' && <AlertCircle className="w-5 h-5 flex-shrink-0" />}
-          {notification.type === 'warning' && <AlertCircle className="w-5 h-5 flex-shrink-0" />}
-          {notification.type === 'info' && <AlertCircle className="w-5 h-5 flex-shrink-0" />}
-          <span className="flex-1 text-sm">{notification.message}</span>
-          <button
-            onClick={() => onRemove(notification.id)}
-            className="hover:opacity-70 transition-opacity flex-shrink-0"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      ))}
-    </div>
-  );
-};
 
 // Improved Quick Actions Component
 const QuickActions: React.FC<{
@@ -153,12 +110,20 @@ const QuickActions: React.FC<{
   );
 };
 
+interface Filters {
+  status: string;
+  trade: string;
+  performance: string;
+  contractValue: string;
+  expiry: string;
+}
+
 // Improved Search and Filter Bar
 const SearchFilterBar: React.FC<{
   searchTerm: string;
   onSearchChange: (value: string) => void;
   activeTab: string;
-  filters: any;
+  filters: Filters;
   onFilterChange: (key: string, value: string) => void;
   onClearFilters: () => void;
 }> = ({ searchTerm, onSearchChange, activeTab, filters, onFilterChange, onClearFilters }) => {
@@ -362,13 +327,13 @@ const TabNavigation: React.FC<{
 
 // Enhanced Card Component with better styling
 const ItemCard: React.FC<{
-  item: any;
+  item: Project | Subcontractor | Contract;
   type: 'project' | 'vendor' | 'contract';
   selected: boolean;
   onSelect: (id: string) => void;
-  onView: (item: any) => void;
-  onEdit: (item: any) => void;
-  onDelete: (item: any) => void;
+  onView: (item: Project | Subcontractor | Contract) => void;
+  onEdit: (item: Project | Subcontractor | Contract) => void;
+  onDelete: (item: Project | Subcontractor | Contract) => void;
 }> = ({ item, type, selected, onSelect, onView, onEdit, onDelete }) => {
   const getCardIcon = () => {
     switch (type) {
@@ -784,14 +749,14 @@ const AddForm: React.FC<AddFormProps> = ({
 // Contract form component (keeping existing functionality)
 const AddContractForm: React.FC<{ 
   onClose: () => void; 
-  onSuccess?: () => void;
-  onError?: (message: string) => void;
+  onRefresh: () => Promise<void>;
   setDirty: (dirty: boolean) => void;
-  initialData?: any;
+  initialData?: Contract;
   isEdit?: boolean;
-  projects: any[];
-  subcontractors: any[];
-}> = ({ onClose, onSuccess, onError, setDirty, initialData, isEdit = false, projects, subcontractors }) => {
+  projects: Project[];
+  subcontractors: Subcontractor[];
+}> = ({ onClose, onRefresh, setDirty, initialData, isEdit = false, projects, subcontractors }) => {
+  const { showToast } = useModal();
   const [formData, setFormData] = useState({
     projectId: initialData?.project_id?.toString() || "",
     subcontractorId: initialData?.subcontractor_id?.toString() || "",
@@ -807,6 +772,7 @@ const AddContractForm: React.FC<{
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isContractLocked, setIsContractLocked] = useState(false);
   const [validationError, setValidationError] = useState('');
+  const initialItemsLoaded = useRef(false);
 
   // Initialize empty rows for new contracts, load existing for edits
   useEffect(() => {
@@ -876,6 +842,40 @@ const AddContractForm: React.FC<{
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEdit, initialData?.id]);
+
+  // Keyboard undo handler (Ctrl+Z / Cmd+Z)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't interfere with text input undo
+      const target = e.target as HTMLElement;
+      const isInput = target.tagName === 'INPUT' || 
+                      target.tagName === 'TEXTAREA' || 
+                      target.tagName === 'SELECT' ||
+                      target.isContentEditable;
+      
+      // Check for Ctrl+Z (Windows) or Cmd+Z (Mac)
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey && !isInput) {
+        if (lineItemsHook.canUndo) {
+          e.preventDefault();
+          lineItemsHook.undo();
+          showToast({ message: 'Undone', type: 'info', duration: 2000 });
+        }
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [lineItemsHook.canUndo, lineItemsHook.undo, showToast]);
+
+  // Track line item changes and mark form as dirty
+  useEffect(() => {
+    if (initialItemsLoaded.current) {
+      // Any change after initial load marks form as dirty
+      setDirty(true);
+    } else if (lineItemsHook.items.length > 0) {
+      initialItemsLoaded.current = true;
+    }
+  }, [lineItemsHook.items, setDirty]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -1057,12 +1057,19 @@ const AddContractForm: React.FC<{
         lineItemsHook.setAllItems([]);
       }
 
-      if (onSuccess) onSuccess();
+      showToast({ message: isEdit ? 'Contract updated successfully!' : 'Contract added successfully!', type: 'success' });
+      
+      // Refresh in background - don't block modal close
+      onRefresh().catch(error => {
+        console.error('Failed to refresh contracts:', error);
+        // Data will refresh on next navigation, not critical
+      });
+      
       onClose();
 
     } catch (error) {
       const message = error instanceof Error ? error.message : 'An unexpected error occurred';
-      if (onError) onError(message);
+      showToast({ message, type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -1253,6 +1260,19 @@ const AddContractForm: React.FC<{
           </div>
         )}
 
+        {/* CSV Import Placeholder */}
+        <div className="relative inline-block mb-4">
+          <button
+            type="button"
+            disabled
+            className="flex items-center gap-2 px-4 py-2 text-sm bg-gray-100 text-gray-400 border border-gray-300 rounded-lg cursor-not-allowed"
+            title="CSV import functionality coming in Phase 2"
+          >
+            <Upload className="w-4 h-4" />
+            Import from CSV (Coming Soon)
+          </button>
+        </div>
+
         {/* Line Items Section */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Line Items</label>
@@ -1266,7 +1286,13 @@ const AddContractForm: React.FC<{
             onDelete={lineItemsHook.deleteItems}
             onReorder={lineItemsHook.reorderItem}
             isEditable={!isContractLocked}
-            maxItems={100}
+            maxItems={15}
+            onMaxItemsReached={() => 
+              showToast({ 
+                message: 'Maximum 15 line items reached. Contact admin for more.', 
+                type: 'warning' 
+              })
+            }
           />
           
           {/* Validation Messages */}
@@ -1336,7 +1362,7 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
   
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [notifications, setNotifications] = useState<NotificationData[]>([]);
+  const { showToast } = useModal();
   const [openForm, setOpenForm] = useState<'contract' | null>(null);
   const [pendingForm, setPendingForm] = useState<'contract' | null>(null);
   const [formDirty, setFormDirty] = useState(false);
@@ -1354,7 +1380,7 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [viewModal, setViewModal] = useState<'contract' | null>(null);
   const [editModal, setEditModal] = useState<'contract' | null>(null);
-  const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [selectedItem, setSelectedItem] = useState<Contract | null>(null);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
@@ -1381,45 +1407,26 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
     router.replace(`/?${params.toString()}`, { scroll: false });
   };
 
-  const addNotification = useCallback((
-    type: NotificationType, 
-    message: string, 
-    duration: number = 5000
-  ) => {
-    const id = Date.now().toString();
-    const notification: NotificationData = { id, type, message, duration };
-    setNotifications(prev => [...prev, notification]);
-    if (duration > 0) {
-      setTimeout(() => {
-        setNotifications(prev => prev.filter(n => n.id !== id));
-      }, duration);
-    }
-  }, []);
-
-  const removeNotification = useCallback((id: string) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
-  }, []);
-
   // React Query handles data refreshing automatically
   const refreshContracts = useCallback(async () => {
     try {
       await refetchContracts();
-      addNotification('success', 'Contracts refreshed');
+      showToast({ message: 'Contracts refreshed', type: 'success' });
     } catch (error) {
       console.error('Error refreshing contracts:', error);
-      addNotification('error', 'Failed to refresh contracts data');
+      showToast({ message: 'Failed to refresh contracts data', type: 'error' });
     }
-  }, [refetchContracts, addNotification]);
+  }, [refetchContracts, showToast]);
 
   const refreshSubcontractors = useCallback(async () => {
     try {
       await refetchContractors();
-      addNotification('success', 'Contractors refreshed');
+      showToast({ message: 'Contractors refreshed', type: 'success' });
     } catch (error) {
       console.error('Error refreshing subcontractors:', error);
-      addNotification('error', 'Failed to refresh subcontractors data');
+      showToast({ message: 'Failed to refresh subcontractors data', type: 'error' });
     }
-  }, [refetchContractors, addNotification]);
+  }, [refetchContractors, showToast]);
 
 
 
@@ -1523,7 +1530,7 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
 
   const handleExport = () => {
     try {
-      const data = currentData;
+      const data = currentData as Contract[];
       
       if (data.length === 0) {
         addNotification('info', 'No data to export');
@@ -1586,10 +1593,10 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
       
-      addNotification('success', `Exported ${data.length} contract(s) successfully!`);
+      showToast({ message: `Exported ${data.length} contract(s) successfully!`, type: 'success' });
     } catch (error) {
       console.error('Error exporting data:', error);
-      addNotification('error', 'Failed to export data. Please try again.');
+      showToast({ message: 'Failed to export data. Please try again.', type: 'error' });
     }
   };
 
@@ -1609,24 +1616,24 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
       // React Query will automatically refetch contracts after mutation
       // No need for manual dispatch - the query will update automatically
 
-      addNotification('success', `Successfully deleted ${selectedItems.size} item(s)`);
+      showToast({ message: `Successfully deleted ${selectedItems.size} item(s)`, type: 'success' });
       setSelectedItems(new Set());
       setShowDeleteConfirmation(false);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to delete items';
-      addNotification('error', message);
+      showToast({ message, type: 'error' });
     } finally {
       setDeleteLoading(false);
     }
   };
 
   const handleViewItem = (item: any) => {
-    setSelectedItem(item);
+    setSelectedItem(item as Contract);
     setViewModal('contract');
   };
 
   const handleEditItem = (item: any) => {
-    setSelectedItem(item);
+    setSelectedItem(item as Contract);
     setEditModal('contract');
   };
 
@@ -1653,11 +1660,6 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <NotificationManager 
-          notifications={notifications} 
-          onRemove={removeNotification} 
-        />
-
         {/* Header */}
         <div className="mb-6 sm:mb-8">
           <div className="text-center sm:text-left">
@@ -1735,12 +1737,12 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
               key={item.id}
               item={item}
               type="contract"
-              selected={selectedItems.has(item.id)}
-              onSelect={handleItemSelect}
-              onView={handleViewItem}
-              onEdit={handleEditItem}
+              selected={selectedItems.has(item.id.toString())}
+              onSelect={(id) => handleItemSelect(id)}
+              onView={(i) => handleViewItem(i)}
+              onEdit={(i) => handleEditItem(i)}
               onDelete={() => {
-                setSelectedItems(new Set([item.id]));
+                setSelectedItems(new Set([item.id.toString()]));
                 setShowDeleteConfirmation(true);
               }}
             />
@@ -1776,12 +1778,7 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
           <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full">
             <AddContractForm
               onClose={() => setOpenForm(null)}
-              onSuccess={async () => {
-                addNotification('success', 'Contract added successfully!');
-                // Refresh contracts data
-                await refetchContracts();
-              }}
-              onError={(message) => addNotification('error', message)}
+              onRefresh={refetchContracts}
               setDirty={setFormDirty}
               projects={projects}
               subcontractors={subcontractors}
@@ -1832,12 +1829,7 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
           <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full">
             <AddContractForm
               onClose={handleCloseEditModal}
-              onSuccess={async () => {
-                addNotification('success', 'Contract updated successfully!');
-                // Refresh contracts data
-                await refetchContracts();
-              }}
-              onError={(message) => addNotification('error', message)}
+              onRefresh={refetchContracts}
               setDirty={setFormDirty}
               initialData={selectedItem}
               isEdit={true}

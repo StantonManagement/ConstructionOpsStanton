@@ -1,12 +1,20 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Clock, User, LogOut, Menu, X, Bell, Settings, Search, ChevronDown, DollarSign, FileText, AlertCircle, Building } from 'lucide-react';
+import { Clock, User, LogOut, Menu, X, Bell, Settings, Search, ChevronDown, DollarSign, FileText, AlertCircle, Building, Check } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 interface UserData {
   name: string;
   email: string;
   avatar_url: string;
   role: string;
+}
+
+interface Project {
+  id: number;
+  name: string;
+  status: string;
+  current_phase?: string;
 }
 
 interface Notification {
@@ -34,17 +42,90 @@ interface HeaderProps {
   userData: UserData | null;
   onSearch?: (query: string) => void;
   searchQuery?: string;
+  selectedProjectId?: number | null;
+  onProjectSelect?: (projectId: number | null) => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ onShowProfile, onLogout, userData, onSearch, searchQuery = '' }) => {
+const Header: React.FC<HeaderProps> = ({ onShowProfile, onLogout, userData, onSearch, searchQuery = '', selectedProjectId, onProjectSelect }) => {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [time, setTime] = useState<string | null>(null);
   const [date, setDate] = useState<string | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [isProjectSelectorOpen, setIsProjectSelectorOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoadingNotifications, setIsLoadingNotifications] = useState(false);
   const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [isLoadingProjects, setIsLoadingProjects] = useState(false);
+
+  // Fetch active projects for the selector
+  const fetchProjects = useCallback(async () => {
+    setIsLoadingProjects(true);
+    try {
+      const { data: projectsData, error } = await supabase
+        .from('projects')
+        .select('id, name, status, current_phase')
+        .in('status', ['active', 'in_progress', 'planning'])
+        .order('name', { ascending: true });
+
+      if (error) {
+        console.error('Error fetching projects:', error);
+        return;
+      }
+
+      setProjects(projectsData || []);
+    } catch (error) {
+      console.error('Error fetching projects:', error);
+    } finally {
+      setIsLoadingProjects(false);
+    }
+  }, []);
+
+  // Load projects on mount
+  useEffect(() => {
+    fetchProjects();
+  }, [fetchProjects]);
+
+  // Get selected project from URL or props
+  const currentProjectId = selectedProjectId ?? (searchParams.get('project') ? parseInt(searchParams.get('project')!) : null);
+  const selectedProject = projects.find(p => p.id === currentProjectId);
+
+  const handleProjectSelect = (projectId: number | null) => {
+    setIsProjectSelectorOpen(false);
+    
+    // Update URL params
+    const params = new URLSearchParams(searchParams.toString());
+    if (projectId) {
+      params.set('project', projectId.toString());
+    } else {
+      params.delete('project');
+    }
+    router.replace(`?${params.toString()}`, { scroll: false });
+    
+    // Call parent callback if provided
+    if (onProjectSelect) {
+      onProjectSelect(projectId);
+    }
+  };
+
+  const getProjectStatusColor = (status: string) => {
+    switch (status?.toLowerCase()) {
+      case 'active':
+      case 'in_progress':
+        return 'bg-green-500';
+      case 'planning':
+        return 'bg-blue-500';
+      case 'on_hold':
+        return 'bg-yellow-500';
+      case 'completed':
+        return 'bg-gray-400';
+      default:
+        return 'bg-gray-400';
+    }
+  };
 
   useEffect(() => {
     const updateDateTime = () => {
@@ -284,7 +365,89 @@ const Header: React.FC<HeaderProps> = ({ onShowProfile, onLogout, userData, onSe
         </div>
 
         {/* Desktop Actions */}
-        <div className="hidden md:flex items-center gap-6">
+        <div className="hidden md:flex items-center gap-4">
+          {/* Project Selector */}
+          <div className="relative">
+            <button
+              onClick={() => setIsProjectSelectorOpen(!isProjectSelectorOpen)}
+              className={`flex items-center gap-2 px-3 py-2 text-sm rounded-lg border transition-colors min-w-[180px] max-w-[220px] ${
+                selectedProject 
+                  ? 'bg-primary/5 border-primary/30 text-primary hover:bg-primary/10' 
+                  : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'
+              }`}
+              aria-label="Select project"
+              aria-expanded={isProjectSelectorOpen}
+              aria-haspopup="listbox"
+            >
+              {selectedProject ? (
+                <>
+                  <span className={`w-2 h-2 rounded-full flex-shrink-0 ${getProjectStatusColor(selectedProject.status)}`} />
+                  <span className="truncate font-medium">{selectedProject.name}</span>
+                </>
+              ) : (
+                <>
+                  <Building className="w-4 h-4 flex-shrink-0 text-gray-400" />
+                  <span className="truncate">All Projects</span>
+                </>
+              )}
+              <ChevronDown className={`w-4 h-4 flex-shrink-0 ml-auto transition-transform ${isProjectSelectorOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {/* Project Selector Dropdown */}
+            {isProjectSelectorOpen && (
+              <div className="absolute top-full left-0 mt-1 w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50 max-h-80 overflow-y-auto" role="listbox">
+                {/* All Projects Option */}
+                <button
+                  onClick={() => handleProjectSelect(null)}
+                  className={`w-full px-3 py-2 text-left text-sm flex items-center gap-2 hover:bg-gray-50 transition-colors ${
+                    !currentProjectId ? 'bg-primary/5 text-primary' : 'text-gray-700'
+                  }`}
+                  role="option"
+                  aria-selected={!currentProjectId}
+                >
+                  <Building className="w-4 h-4 text-gray-400" />
+                  <span className="font-medium">All Projects</span>
+                  {!currentProjectId && <Check className="w-4 h-4 ml-auto text-primary" />}
+                </button>
+
+                {/* Divider */}
+                {projects.length > 0 && <div className="border-t border-gray-100 my-1" />}
+
+                {/* Loading State */}
+                {isLoadingProjects && (
+                  <div className="px-3 py-4 text-center text-gray-500 text-sm">
+                    <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                    Loading projects...
+                  </div>
+                )}
+
+                {/* Project List */}
+                {!isLoadingProjects && projects.map((project) => (
+                  <button
+                    key={project.id}
+                    onClick={() => handleProjectSelect(project.id)}
+                    className={`w-full px-3 py-2 text-left text-sm flex items-center gap-2 hover:bg-gray-50 transition-colors ${
+                      currentProjectId === project.id ? 'bg-primary/5 text-primary' : 'text-gray-700'
+                    }`}
+                    role="option"
+                    aria-selected={currentProjectId === project.id}
+                  >
+                    <span className={`w-2 h-2 rounded-full flex-shrink-0 ${getProjectStatusColor(project.status)}`} />
+                    <span className="truncate">{project.name}</span>
+                    {currentProjectId === project.id && <Check className="w-4 h-4 ml-auto text-primary flex-shrink-0" />}
+                  </button>
+                ))}
+
+                {/* Empty State */}
+                {!isLoadingProjects && projects.length === 0 && (
+                  <div className="px-3 py-4 text-center text-gray-500 text-sm">
+                    No active projects found
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
           {/* Search Bar */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" aria-hidden="true" />
@@ -637,13 +800,14 @@ const Header: React.FC<HeaderProps> = ({ onShowProfile, onLogout, userData, onSe
       )}
 
       {/* Click outside to close dropdowns */}
-      {(isUserMenuOpen || isMenuOpen || isNotificationsOpen) && (
+      {(isUserMenuOpen || isMenuOpen || isNotificationsOpen || isProjectSelectorOpen) && (
         <div 
           className="fixed inset-0 z-40" 
           onClick={() => {
             setIsUserMenuOpen(false);
             setIsMenuOpen(false);
             setIsNotificationsOpen(false);
+            setIsProjectSelectorOpen(false);
           }}
           aria-hidden="true"
         />

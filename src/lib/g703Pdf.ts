@@ -21,7 +21,16 @@ export interface ChangeOrder {
 
 export interface GenerateG703PdfParams {
   project: { name?: string; address?: string };
-  contractor: { name?: string };
+  contractor: { name?: string; trade?: string };
+  ownerName?: string;
+  clientName?: string;
+  contractorContact?: string;
+  contractorAddress?: {
+    street?: string;
+    city?: string;
+    state?: string;
+    zip?: string;
+  };
   applicationNumber: string | number;
   invoiceDate: string;
   period: string;
@@ -35,6 +44,10 @@ export interface GenerateG703PdfParams {
 export async function generateG703Pdf({
   project,
   contractor,
+  ownerName,
+  clientName,
+  contractorContact,
+  contractorAddress,
   applicationNumber,
   invoiceDate,
   period,
@@ -102,7 +115,7 @@ export async function generateG703Pdf({
   const smallSize = 10;
 
   // Company name
-  coverPage.drawText(contractor.name || 'Chain-JP LLC', { x: margin, y, size: 14, font: fontBold, color: colors.black });
+  coverPage.drawText(contractor.name || '', { x: margin, y, size: 14, font: fontBold, color: colors.black });
 
   // Application title
   const appTitle = 'Contractor/Vendor Application for Payment';
@@ -118,7 +131,7 @@ export async function generateG703Pdf({
 
   // To: and DATE:
   coverPage.drawText('To:', { x: margin, y, size: smallSize, font, color: colors.black });
-  coverPage.drawText('Stanton Management LLC', { x: margin + 40, y, size: smallSize, font, color: colors.black });
+  coverPage.drawText(clientName || 'Stanton Management LLC', { x: margin + 40, y, size: smallSize, font, color: colors.black });
   coverPage.drawText('DATE:', { x: margin + 300, y, size: smallSize, font, color: colors.black });
   coverPage.drawText(invoiceDate || '', { x: margin + 340, y, size: smallSize, font, color: colors.black });
 
@@ -140,38 +153,46 @@ export async function generateG703Pdf({
 
   // Owner:
   coverPage.drawText('Owner:', { x: margin, y, size: smallSize, font, color: colors.black });
-  coverPage.drawText('SREP Hartford I LLC', { x: margin + 50, y, size: smallSize, font, color: colors.black });
+  coverPage.drawText(ownerName || 'SREP Hartford I LLC', { x: margin + 50, y, size: smallSize, font, color: colors.black });
 
   y -= 1.5 * lineHeight;
 
   // FROM: and Application #:
   coverPage.drawText('FROM:', { x: margin, y, size: smallSize, font, color: colors.black });
-  coverPage.drawText(contractor.name || 'Chain-JP LLC', { x: margin + 40, y, size: smallSize, font, color: colors.black });
+  coverPage.drawText(contractor.name || '', { x: margin + 40, y, size: smallSize, font, color: colors.black });
   coverPage.drawText('Application #:', { x: margin + 300, y, size: smallSize, font, color: colors.black });
   coverPage.drawText(`${applicationNumber || ''}`, { x: margin + 390, y, size: smallSize, font, color: colors.black });
 
   y -= lineHeight;
 
-  // 32 Blue Cliff Terrace
-  coverPage.drawText('32 Blue Cliff Terrace', { x: margin + 40, y, size: smallSize, font, color: colors.black });
+  // Contractor Address Line 1
+  if (contractorAddress?.street) {
+    coverPage.drawText(contractorAddress.street, { x: margin + 40, y, size: smallSize, font, color: colors.black });
+  }
 
   y -= lineHeight;
 
-  // New Haven, CT 06513
-  coverPage.drawText('New Haven, CT 06513', { x: margin + 40, y, size: smallSize, font, color: colors.black });
+  // Contractor Address Line 2
+  if (contractorAddress?.city || contractorAddress?.state || contractorAddress?.zip) {
+    const city = contractorAddress.city || '';
+    const state = contractorAddress.state || '';
+    const zip = contractorAddress.zip || '';
+    const addressLine2 = `${city}${city && state ? ', ' : ''}${state}${zip ? ' ' + zip : ''}`;
+    coverPage.drawText(addressLine2, { x: margin + 40, y, size: smallSize, font, color: colors.black });
+  }
 
   y -= lineHeight;
 
   // Officer:
   coverPage.drawText('Officer:', { x: margin, y, size: smallSize, font, color: colors.black });
-  coverPage.drawText('Olguer Cadena', { x: margin + 50, y, size: smallSize, font, color: colors.black });
+  coverPage.drawText(contractorContact || '', { x: margin + 50, y, size: smallSize, font, color: colors.black });
 
   y -= lineHeight;
 
   // Title: and Trade:
   coverPage.drawText('Title:', { x: margin, y, size: smallSize, font, color: colors.black });
   coverPage.drawText('Trade:', { x: margin + 300, y, size: smallSize, font, color: colors.black });
-  coverPage.drawText('Exterior Stairs/Decking/ Window Capping', { x: margin + 340, y, size: smallSize, font, color: colors.black });
+  coverPage.drawText(contractor.trade || '', { x: margin + 340, y, size: smallSize, font, color: colors.black });
 
   y -= 1.5 * lineHeight;
 
@@ -308,7 +329,7 @@ export async function generateG703Pdf({
   });
 
   // Contractor info on the right (matching 3rd page format)
-  const contractorName = contractor.name || 'Chain-JP LLC';
+  const contractorName = contractor.name || '';
   const contractorTextWidth = fontBold.widthOfTextAtSize(contractorName, 10);
   page.drawText(contractorName, { 
     x: width - contractorTextWidth - 40, 
@@ -319,7 +340,7 @@ export async function generateG703Pdf({
   });
   
   // Trade info on the right (matching 3rd page format)
-  const tradeText = 'Exterior Stairs/Decking/ Window Capping';
+  const tradeText = contractor.trade || '';
   const tradeTextWidth = font.widthOfTextAtSize(tradeText, 8);
   page.drawText(tradeText, { 
     x: width - tradeTextWidth - 40, 
@@ -799,7 +820,7 @@ export async function generateG703Pdf({
       });
       
       // Contractor info on the right
-      const contractorName = contractor.name || 'Chain-JP LLC';
+      const contractorName = contractor.name || '';
       const contractorTextWidth = fontBold.widthOfTextAtSize(contractorName, 10);
       page.drawText(contractorName, { 
         x: width - contractorTextWidth - 40, 
@@ -821,7 +842,7 @@ export async function generateG703Pdf({
       });
       
       // Trade info on the right
-      const tradeText = 'Exterior Stairs/Decking/ Window Capping';
+      const tradeText = contractor.trade || '';
       const tradeTextWidth = font.widthOfTextAtSize(tradeText, 8);
       page.drawText(tradeText, { 
         x: width - tradeTextWidth - 40, 
@@ -1187,7 +1208,7 @@ export async function generateG703Pdf({
   const pdfBytes = await pdfDoc.save();
   
   // Generate filename: PayApp - <VENDOR> - <Project> - App <#>_<mmddyyyy>
-  const vendor = contractor.name || 'Chain-JP LLC';
+  const vendor = contractor.name || 'Vendor';
   const projectName = project.name || 'Project';
   const appNum = applicationNumber || '1';
   

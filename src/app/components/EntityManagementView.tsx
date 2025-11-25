@@ -33,6 +33,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { DataTable, Column } from '@/components/ui/DataTable';
+import { SignalBadge } from '@/components/ui/SignalBadge';
+import { formatCurrency, SystemStatus } from '@/lib/theme';
 
 // Types
 interface OwnerEntity {
@@ -83,29 +86,42 @@ const ENTITY_TYPES = [
 
 // Alert Component
 const Alert: React.FC<{ alert: AlertState; onClose: () => void }> = ({ alert, onClose }) => {
-  const bgColor = {
-    success: 'bg-green-50 border-green-200',
-    error: 'bg-red-50 border-red-200',
-    warning: 'bg-yellow-50 border-yellow-200',
-    info: 'bg-blue-50 border-blue-200'
-  }[alert.type];
-
-  const textColor = {
-    success: 'text-green-800',
-    error: 'text-red-800',
-    warning: 'text-yellow-800',
-    info: 'text-blue-800'
+  const alertStyles = {
+    success: {
+      bg: 'bg-[var(--status-success-bg)]',
+      text: 'text-[var(--status-success-text)]',
+      border: 'border-[var(--status-success-border)]',
+      icon: 'text-[var(--status-success-icon)]'
+    },
+    error: {
+      bg: 'bg-[var(--status-critical-bg)]',
+      text: 'text-[var(--status-critical-text)]',
+      border: 'border-[var(--status-critical-border)]',
+      icon: 'text-[var(--status-critical-icon)]'
+    },
+    warning: {
+      bg: 'bg-[var(--status-warning-bg)]',
+      text: 'text-[var(--status-warning-text)]',
+      border: 'border-[var(--status-warning-border)]',
+      icon: 'text-[var(--status-warning-icon)]'
+    },
+    info: {
+      bg: 'bg-[var(--status-neutral-bg)]',
+      text: 'text-[var(--status-neutral-text)]',
+      border: 'border-[var(--status-neutral-border)]',
+      icon: 'text-[var(--status-neutral-icon)]'
+    }
   }[alert.type];
 
   const Icon = alert.type === 'success' ? CheckCircle : AlertCircle;
 
   return (
-    <div className={`${bgColor} border ${textColor} px-4 py-3 rounded-lg mb-4 flex items-start justify-between`}>
+    <div className={`${alertStyles.bg} border ${alertStyles.border} ${alertStyles.text} px-4 py-3 rounded-lg mb-4 flex items-start justify-between`}>
       <div className="flex items-start gap-2">
-        <Icon className="w-5 h-5 mt-0.5" />
+        <Icon className={`w-5 h-5 mt-0.5 ${alertStyles.icon}`} />
         <p className="text-sm">{alert.message}</p>
       </div>
-      <button onClick={onClose} className={`${textColor} hover:opacity-70`}>
+      <button onClick={onClose} className={`${alertStyles.text} hover:opacity-70`}>
         <X className="w-4 h-4" />
       </button>
     </div>
@@ -755,117 +771,89 @@ const EntityManagementView: React.FC = () => {
       </div>
 
       {/* Entity Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Entity Name
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Type
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Contact
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Properties
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Budget Summary
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredEntities.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
-                    <Building2 className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-                    <p>No entities found</p>
-                  </td>
-                </tr>
-              ) : (
-                filteredEntities.map((entity) => (
-                  <tr key={entity.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <Building2 className="w-5 h-5 text-gray-400 mr-2" />
-                        <div className="text-sm font-medium text-gray-900">{entity.name}</div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {entity.entity_type}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {entity.contact_name || '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <div className="flex items-center">
-                        <Home className="w-4 h-4 mr-1" />
-                        {entity.stats?.property_count || 0}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {entity.stats ? (
-                        <div>
-                          <div className="flex items-center text-green-600">
-                            <DollarSign className="w-4 h-4 mr-1" />
-                            {entity.stats.total_budget.toLocaleString()}
-                          </div>
-                          <div className="text-xs text-gray-400">
-                            Spent: ${entity.stats.total_spent.toLocaleString()}
-                          </div>
-                        </div>
-                      ) : (
-                        '-'
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        entity.is_active 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-gray-100 text-gray-800'
-                      }`}>
-                        {entity.is_active ? 'Active' : 'Inactive'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setEditingEntity(entity);
-                            setIsEditModalOpen(true);
-                          }}
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setDeletingEntity(entity);
-                            setIsDeleteModalOpen(true);
-                          }}
-                        >
-                          <Trash2 className="w-4 h-4 text-red-500" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+      <div className="bg-white rounded-lg shadow overflow-hidden border border-border">
+        <DataTable
+          data={filteredEntities}
+          columns={[
+            {
+              header: 'Entity Name',
+              accessor: (entity) => (
+                <div className="flex items-center">
+                  <Building2 className="w-5 h-5 text-muted-foreground mr-2" />
+                  <div className="text-sm font-medium text-foreground">{entity.name}</div>
+                </div>
+              )
+            },
+            {
+              header: 'Type',
+              accessor: 'entity_type'
+            },
+            {
+              header: 'Contact',
+              accessor: (entity) => entity.contact_name || '-'
+            },
+            {
+              header: 'Properties',
+              accessor: (entity) => (
+                <div className="flex items-center">
+                  <Home className="w-4 h-4 mr-1 text-muted-foreground" />
+                  {entity.stats?.property_count || 0}
+                </div>
+              )
+            },
+            {
+              header: 'Budget Summary',
+              accessor: (entity) => entity.stats ? (
+                <div>
+                  <div className="flex items-center text-status-success">
+                    <DollarSign className="w-4 h-4 mr-1" />
+                    {formatCurrency(entity.stats.total_budget)}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    Spent: {formatCurrency(entity.stats.total_spent)}
+                  </div>
+                </div>
+              ) : '-'
+            },
+            {
+              header: 'Status',
+              accessor: (entity) => (
+                <SignalBadge status={entity.is_active ? 'success' : 'neutral'}>
+                  {entity.is_active ? 'Active' : 'Inactive'}
+                </SignalBadge>
+              )
+            },
+            {
+              header: 'Actions',
+              align: 'right',
+              accessor: (entity) => (
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setEditingEntity(entity);
+                      setIsEditModalOpen(true);
+                    }}
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setDeletingEntity(entity);
+                      setIsDeleteModalOpen(true);
+                    }}
+                  >
+                    <Trash2 className="w-4 h-4 text-status-critical" />
+                  </Button>
+                </div>
+              )
+            }
+          ]}
+          emptyMessage="No entities found"
+        />
       </div>
 
       {/* Entity count */}

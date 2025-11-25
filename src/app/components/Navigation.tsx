@@ -2,7 +2,7 @@
 
 import React, { ReactNode, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { DollarSign, Users, Settings, Building, BarChart2, ShieldCheck, ChevronDown, Folder, Home, Menu, X, FileText, UserCog, GitBranch, Clipboard } from 'lucide-react';
+import { DollarSign, Users, Settings, Building, BarChart2, ShieldCheck, ChevronDown, Folder, Home, Menu, X, FileText, UserCog, GitBranch, Clipboard, HardHat } from 'lucide-react';
 import { Project } from '../context/DataContext';
 import { supabase } from '@/lib/supabaseClient';
 
@@ -22,9 +22,10 @@ type NavButtonProps = {
   onClick?: () => void;
   roles?: string[];
   href?: string;
+  badge?: number;
 };
 
-const NavButton: React.FC<NavButtonProps> = ({ id, activeTab, setActiveTab, icon, children, href }) => {
+const NavButton: React.FC<NavButtonProps> = ({ id, activeTab, setActiveTab, icon, children, href, badge }) => {
   const isActive = activeTab === id;
   const router = useRouter();
   
@@ -53,7 +54,12 @@ const NavButton: React.FC<NavButtonProps> = ({ id, activeTab, setActiveTab, icon
       <span className="flex-shrink-0">
         {icon}
       </span>
-      <span className="ml-3 truncate">{children}</span>
+      <span className="ml-3 truncate flex-1">{children}</span>
+      {badge !== undefined && badge > 0 && (
+        <span className="ml-auto bg-orange-500 text-white text-xs font-medium rounded-full h-5 min-w-[20px] px-1.5 flex items-center justify-center">
+          {badge > 99 ? '99+' : badge}
+        </span>
+      )}
     </button>
   );
 };
@@ -133,14 +139,23 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab, setSel
   // Fetch notification counts for badges with better error handling
   const fetchNotificationCounts = async () => {
     try {
-      // Only fetch payment applications count for now
+      // Fetch payment applications count
       const { data: paymentData } = await supabase
         .from('payment_applications')
         .select('id')
         .eq('status', 'pending');
 
+      // Fetch daily log requests count (sent today or pending response)
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const { data: dailyLogsData } = await supabase
+        .from('daily_log_requests')
+        .select('id')
+        .or(`request_status.eq.sent,created_at.gte.${today.toISOString()}`);
+
       const newCounts: Record<string, number> = {
-        payment: Array.isArray(paymentData) ? paymentData.length : 0
+        payment: Array.isArray(paymentData) ? paymentData.length : 0,
+        'daily-logs': Array.isArray(dailyLogsData) ? dailyLogsData.length : 0
       };
 
       setNotificationCounts(newCounts);
@@ -151,6 +166,9 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab, setSel
 
   useEffect(() => {
     fetchNotificationCounts();
+    // Refresh counts every 60 seconds
+    const interval = setInterval(fetchNotificationCounts, 60000);
+    return () => clearInterval(interval);
   }, []);
 
   const navigationItems = [
@@ -176,10 +194,26 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab, setSel
       canAccess: true // All users can access
     },
     {
+      id: 'daily-logs',
+      icon: <FileText className="w-5 h-5"/>,
+      label: 'Daily Logs',
+      href: '/?tab=daily-logs',
+      canAccess: userRole && ['admin', 'pm', 'staff'].includes(userRole.toLowerCase()), // Admin, PM, and Staff
+      badge: notificationCounts['daily-logs'] || 0
+    },
+    {
       id: 'payments',
       icon: <DollarSign className="w-5 h-5"/>,
       label: 'Payments',
       href: '/?tab=payments',
+      canAccess: true, // All users can access
+      badge: notificationCounts['payment'] || 0
+    },
+    {
+      id: 'contractors',
+      icon: <HardHat className="w-5 h-5"/>,
+      label: 'Contractors',
+      href: '/?tab=contractors',
       canAccess: true // All users can access
     },
     {
@@ -202,13 +236,6 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab, setSel
       label: 'Settings',
       href: '/?tab=settings',
       canAccess: true // All users can access
-    },
-    {
-      id: 'daily-logs',
-      icon: <FileText className="w-5 h-5"/>,
-      label: 'Daily Logs',
-      href: '/?tab=daily-logs',
-      canAccess: userRole && ['admin', 'staff'].includes(userRole.toLowerCase()) // Admin and Staff only
     }
   ];
 
@@ -269,6 +296,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab, setSel
                   }}
                   icon={item.icon}
                   href={item.href}
+                  badge={'badge' in item ? item.badge : undefined}
                 >
                   {item.label}
                 </NavButton>

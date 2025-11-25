@@ -1,5 +1,5 @@
 // SMS service with Twilio
-// TODO: Implement Twilio integration
+// Integration is handled via /api/sms/* endpoints
 
 export async function sendSMS(to: string, message: string) {
   // Call the backend API route to send SMS via Twilio
@@ -16,5 +16,7 @@ export async function sendSMS(to: string, message: string) {
 }
 
 export function processWebhook(req: any) {
-  // Handle incoming SMS webhook
+  // Webhook processing is handled in /api/sms/webhook/route.ts
+  // This stub is kept for reference or future shared logic
+  throw new Error("Use /api/sms/webhook endpoint for webhook processing");
 }

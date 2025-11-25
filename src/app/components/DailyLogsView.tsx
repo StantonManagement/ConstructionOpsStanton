@@ -1,9 +1,11 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { FileText, Plus, Edit, Trash2, Eye, AlertCircle, CheckCircle, Clock, RefreshCw, Phone, Mail, MessageSquare } from 'lucide-react';
 import { useModal } from '../context/ModalContext';
+import { EmptyState } from './ui/EmptyState';
 
 // Utility functions
 const formatDate = (dateString: string) => {
@@ -66,6 +68,7 @@ interface DailyLogsViewProps {
 }
 
 const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
+  const searchParams = useSearchParams();
   const { showToast, showConfirm } = useModal();
   const [requests, setRequests] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
@@ -77,6 +80,9 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
   const [pmNotes, setPmNotes] = useState<any[]>([]);
   const [loadingNotes, setLoadingNotes] = useState(false);
+  const [projectFilter, setProjectFilter] = useState<string>(
+    searchParams.get('project') || 'all'
+  );
   
   // Add request form state
   const [selectedProject, setSelectedProject] = useState<any>(null);
@@ -130,17 +136,36 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
     fetchProjects();
   }, [fetchRequests, fetchProjects]);
 
-  // Filter requests based on search query
-  const filteredRequests = requests.filter(request => {
-    if (!searchQuery.trim()) return true;
-    const query = searchQuery.toLowerCase();
-    return (
-      request.project?.name?.toLowerCase().includes(query) ||
-      request.project?.client_name?.toLowerCase().includes(query) ||
-      request.pm_phone_number?.toLowerCase().includes(query) ||
-      request.received_notes?.toLowerCase().includes(query)
-    );
-  });
+  // Sync project filter from URL (Header project selector)
+  useEffect(() => {
+    const urlProjectFilter = searchParams?.get('project') || 'all';
+    if (urlProjectFilter !== projectFilter) {
+      setProjectFilter(urlProjectFilter);
+    }
+  }, [searchParams]);
+
+  // Filter requests based on search query and project filter
+  const filteredRequests = useMemo(() => {
+    let filtered = requests;
+
+    // Project filter (from Header selector)
+    if (projectFilter !== 'all') {
+      filtered = filtered.filter(request => request.project?.id === parseInt(projectFilter));
+    }
+
+    // Search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(request =>
+        request.project?.name?.toLowerCase().includes(query) ||
+        request.project?.client_name?.toLowerCase().includes(query) ||
+        request.pm_phone_number?.toLowerCase().includes(query) ||
+        request.received_notes?.toLowerCase().includes(query)
+      );
+    }
+
+    return filtered;
+  }, [requests, projectFilter, searchQuery]);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -248,6 +273,38 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
       <div className="flex items-center justify-center py-12">
         <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
         <span className="ml-3 text-muted-foreground">Loading daily log requests...</span>
+      </div>
+    );
+  }
+
+  // Empty state when no daily log requests exist
+  if (requests.length === 0) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Daily Log Requests</h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Automated daily updates from your PM
+            </p>
+          </div>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
+          >
+            <Plus className="w-4 h-4" />
+            Add Request
+          </button>
+        </div>
+        <div className="bg-card border border-border rounded-lg">
+          <EmptyState
+            icon={FileText}
+            title="No daily log requests"
+            description="Set up automated SMS requests to get daily updates from your PM. You'll receive project status updates at scheduled times."
+            actionLabel="Add Request"
+            onAction={() => setShowAddModal(true)}
+          />
+        </div>
       </div>
     );
   }

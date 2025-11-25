@@ -7,24 +7,9 @@ import { useAuth } from "@/providers/AuthProvider";
 import Header from "./Header";
 import UserProfile from "./UserProfile";
 import { useModal } from "../context/ModalContext";
-
-// Utility functions
-const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-};
-
-const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
-};
+import { DataTable } from '@/components/ui/DataTable';
+import { SignalBadge } from '@/components/ui/SignalBadge';
+import { getBudgetStatus, SystemStatus, formatCurrency, formatDate, getPaymentStatus } from '@/lib/theme';
 
 // Tab Navigation Component
 function TabNavigation({ activeTab, onTabChange }: { activeTab: string; onTabChange: (tab: string) => void }) {
@@ -680,51 +665,22 @@ function ProjectOverview({ project, onCreatePaymentApps, onStatsPaymentAppClick 
                     <div>
                       <h4 className="text-lg font-semibold text-foreground mb-4">Contractors ({projectModalData.contractors?.length || 0})</h4>
                       {projectModalData.contractors?.length > 0 ? (
-                        <div className="overflow-x-auto">
-                          <table className="min-w-full divide-y divide-gray-200">
-                            <thead className="bg-muted">
-                              <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Name</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Trade</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Contact</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Contract Amount</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Paid to Date</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Status</th>
-                              </tr>
-                            </thead>
-                            <tbody className="bg-card divide-y divide-gray-200">
-                              {projectModalData.contractors.map((contractor: any) => (
-                                <tr key={contractor.id} className="hover:bg-muted">
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-foreground">
-                                    {contractor.contractors?.name}
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                                    {contractor.contractors?.trade}
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                                    <div>{contractor.contractors?.phone}</div>
-                                    <div>{contractor.contractors?.email}</div>
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                                    {formatCurrency(contractor.contract_amount || 0)}
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                                    {formatCurrency(contractor.paid_to_date || 0)}
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap">
-                                    <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                                      contractor.contract_status === 'active' 
-                                        ? 'bg-[var(--status-success-bg)] text-[var(--status-success-text)]' 
-                                        : 'bg-secondary text-secondary-foreground'
-                                    }`}>
-                                      {contractor.contract_status}
-                                    </span>
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
+                        <DataTable
+                          data={projectModalData.contractors}
+                          columns={[
+                            { header: 'Name', accessor: (row: any) => <span className="font-medium text-foreground">{row.contractors?.name}</span> },
+                            { header: 'Trade', accessor: (row: any) => <span className="text-muted-foreground">{row.contractors?.trade}</span> },
+                            { header: 'Contact', accessor: (row: any) => <div className="text-xs text-muted-foreground"><div>{row.contractors?.phone}</div><div>{row.contractors?.email}</div></div> },
+                            { header: 'Contract Amount', accessor: (row: any) => formatCurrency(row.contract_amount || 0), align: 'right' },
+                            { header: 'Paid to Date', accessor: (row: any) => formatCurrency(row.paid_to_date || 0), align: 'right' },
+                            { header: 'Status', accessor: (row: any) => (
+                                <SignalBadge status={row.contract_status === 'active' ? 'success' : 'neutral'}>
+                                  {row.contract_status}
+                                </SignalBadge>
+                            )}
+                          ]}
+                          emptyMessage="No contractors assigned"
+                        />
                       ) : (
                         <p className="text-muted-foreground text-center py-4">No contractors assigned to this project</p>
                       )}
@@ -734,42 +690,33 @@ function ProjectOverview({ project, onCreatePaymentApps, onStatsPaymentAppClick 
                     <div>
                       <h4 className="text-lg font-semibold text-foreground mb-4">Payment Applications ({projectModalData.paymentApps?.length || 0})</h4>
                       {projectModalData.paymentApps?.length > 0 ? (
-                        <div className="space-y-3">
-                          {projectModalData.paymentApps.map((app: any) => (
-                            <div key={app.id} className="bg-muted rounded-lg p-4 hover:bg-secondary transition-colors cursor-pointer"
-                                 onClick={() => onStatsPaymentAppClick(app.id)}>
-                              <div className="flex items-center justify-between">
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2 mb-2">
-                                    <span className="text-sm font-medium text-foreground">
-                                      {app.contractors?.name || 'Unknown Contractor'}
-                                    </span>
-                                    <span className="text-xs text-muted-foreground">
-                                      {app.contractors?.trade || ''}
-                                    </span>
-                                  </div>
-                                  <div className="text-sm text-muted-foreground">
-                                    Amount: {formatCurrency(app.current_period_value || 0)} • Created: {formatDate(app.created_at)}
-                                  </div>
+                        <DataTable
+                          data={projectModalData.paymentApps}
+                          columns={[
+                            { 
+                              header: 'Contractor', 
+                              accessor: (row: any) => (
+                                <div>
+                                  <div className="font-medium text-foreground">{row.contractors?.name || 'Unknown'}</div>
+                                  <div className="text-xs text-muted-foreground">{row.contractors?.trade}</div>
                                 </div>
-                                <div className="text-right">
-                                  <div className={`text-sm font-medium ${
-                                    app.status === 'approved' ? 'text-[var(--status-success-text)]' :
-                                    app.status === 'submitted' ? 'text-[var(--status-critical-text)]' :
-                                    app.status === 'needs_review' ? 'text-[var(--status-warning-text)]' :
-                                    app.status === 'check_ready' ? 'text-purple-600' :
-                                    'text-muted-foreground'
-                                  }`}>
-                                    {app.status.replace('_', ' ').toUpperCase()}
-                                  </div>
-                                  <div className="text-xs text-muted-foreground">
-                                    ID: {app.id}
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
+                              )
+                            },
+                            { header: 'Amount', accessor: (row: any) => formatCurrency(row.current_period_value), align: 'right' },
+                            { header: 'Created', accessor: (row: any) => formatDate(row.created_at) },
+                            { 
+                              header: 'Status', 
+                              accessor: (row: any) => (
+                                <SignalBadge status={getPaymentStatus(row.status)}>
+                                  {row.status.replace(/_/g, ' ')}
+                                </SignalBadge>
+                              ) 
+                            },
+                            { header: 'ID', accessor: 'id', align: 'right', className: 'text-xs text-muted-foreground' }
+                          ]}
+                          emptyMessage="No payment applications for this project"
+                          onRowClick={(row) => onStatsPaymentAppClick(row.id)}
+                        />
                       ) : (
                         <p className="text-muted-foreground text-center py-4">No payment applications for this project</p>
                       )}
@@ -779,39 +726,36 @@ function ProjectOverview({ project, onCreatePaymentApps, onStatsPaymentAppClick 
                     <div>
                       <h4 className="text-lg font-semibold text-foreground mb-4">Daily Log Requests ({projectModalData.dailyLogs?.length || 0})</h4>
                       {projectModalData.dailyLogs?.length > 0 ? (
-                        <div className="space-y-3">
-                          {projectModalData.dailyLogs.map((log: any) => (
-                            <div key={log.id} className="bg-muted rounded-lg p-4">
-                              <div className="flex items-center justify-between mb-2">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-sm font-medium text-foreground">
-                                    {formatDate(log.request_date)}
-                                  </span>
-                                  <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                                    log.request_status === 'received' ? 'bg-[var(--status-success-bg)] text-[var(--status-success-text)]' :
-                                    log.request_status === 'sent' ? 'bg-blue-100 text-primary' :
-                                    log.request_status === 'pending' ? 'bg-[var(--status-warning-bg)] text-[var(--status-warning-text)]' :
-                                    'bg-[var(--status-critical-bg)] text-[var(--status-critical-text)]'
-                                  }`}>
-                                    {log.request_status.toUpperCase()}
-                                  </span>
-                                </div>
-                                <div className="text-xs text-muted-foreground">
-                                  Retries: {log.retry_count}/{log.max_retries}
-                                </div>
-                              </div>
-                              <div className="text-sm text-muted-foreground">
-                                <div>PM Phone: {log.pm_phone_number}</div>
-                                <div>Request Time: {log.request_time}</div>
-                                {log.received_notes && (
-                                  <div className="mt-2 p-2 bg-card rounded border">
-                                    <strong>Notes:</strong> {log.received_notes}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
+                        <DataTable
+                          data={projectModalData.dailyLogs}
+                          columns={[
+                            { header: 'Date', accessor: (row: any) => formatDate(row.request_date) },
+                            { 
+                              header: 'Status', 
+                              accessor: (row: any) => {
+                                const statusMap: Record<string, SystemStatus> = {
+                                  received: 'success',
+                                  sent: 'neutral', // 'blue' isn't a system status, map to neutral
+                                  pending: 'warning',
+                                  failed: 'critical'
+                                };
+                                return (
+                                  <SignalBadge status={statusMap[row.request_status] || 'neutral'}>
+                                    {row.request_status.toUpperCase()}
+                                  </SignalBadge>
+                                );
+                              }
+                            },
+                            { header: 'Retries', accessor: (row: any) => `${row.retry_count}/${row.max_retries}` },
+                            { header: 'PM Phone', accessor: 'pm_phone_number' },
+                            { header: 'Time', accessor: 'request_time' },
+                            { 
+                              header: 'Notes', 
+                              accessor: (row: any) => row.received_notes ? <div className="truncate max-w-xs" title={row.received_notes}>{row.received_notes}</div> : '-' 
+                            }
+                          ]}
+                          emptyMessage="No daily log requests for this project"
+                        />
                       ) : (
                         <p className="text-muted-foreground text-center py-4">No daily log requests for this project</p>
                       )}
@@ -821,30 +765,23 @@ function ProjectOverview({ project, onCreatePaymentApps, onStatsPaymentAppClick 
                     <div>
                       <h4 className="text-lg font-semibold text-foreground mb-4">PM Notes ({projectModalData.pmNotes?.length || 0})</h4>
                       {projectModalData.pmNotes?.length > 0 ? (
-                        <div className="space-y-3">
-                          {projectModalData.pmNotes.map((note: any) => (
-                            <div key={note.id} className="bg-muted rounded-lg p-4">
-                              <div className="flex items-center justify-between mb-2">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-sm font-medium text-foreground">
-                                    {formatDate(note.created_at)}
-                                  </span>
-                                  <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                                    note.is_active ? 'bg-[var(--status-success-bg)] text-[var(--status-success-text)]' : 'bg-secondary text-secondary-foreground'
-                                  }`}>
-                                    {note.is_active ? 'ACTIVE' : 'INACTIVE'}
-                                  </span>
-                                </div>
-                                <div className="text-xs text-muted-foreground">
-                                  {note.scheduled_time}
-                                </div>
-                              </div>
-                              <div className="text-sm text-muted-foreground">
-                                {note.note}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
+                        <DataTable
+                          data={projectModalData.pmNotes}
+                          columns={[
+                            { header: 'Date', accessor: (row: any) => formatDate(row.created_at) },
+                            { 
+                              header: 'Status', 
+                              accessor: (row: any) => (
+                                <SignalBadge status={row.is_active ? 'success' : 'neutral'}>
+                                  {row.is_active ? 'ACTIVE' : 'INACTIVE'}
+                                </SignalBadge>
+                              ) 
+                            },
+                            { header: 'Time', accessor: 'scheduled_time' },
+                            { header: 'Note', accessor: (row: any) => <div className="whitespace-pre-wrap">{row.note}</div> }
+                          ]}
+                          emptyMessage="No PM notes for this project"
+                        />
                       ) : (
                         <p className="text-muted-foreground text-center py-4">No PM notes for this project</p>
                       )}
@@ -854,50 +791,22 @@ function ProjectOverview({ project, onCreatePaymentApps, onStatsPaymentAppClick 
                     <div>
                       <h4 className="text-lg font-semibold text-foreground mb-4">Line Items ({projectModalData.lineItems?.length || 0})</h4>
                       {projectModalData.lineItems?.length > 0 ? (
-                        <div className="overflow-x-auto">
-                          <table className="min-w-full divide-y divide-gray-200">
-                            <thead className="bg-muted">
-                              <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Item No</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Description</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Contractor</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Scheduled Value</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">% Complete</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Status</th>
-                              </tr>
-                            </thead>
-                            <tbody className="bg-card divide-y divide-gray-200">
-                              {projectModalData.lineItems.map((item: any) => (
-                                <tr key={item.id} className="hover:bg-muted">
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-foreground">
-                                    {item.item_no}
-                                  </td>
-                                  <td className="px-6 py-4 text-sm text-muted-foreground max-w-xs truncate">
-                                    {item.description_of_work}
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                                    {item.contractors?.name}
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                                    {formatCurrency(item.scheduled_value || 0)}
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                                    {item.percent_completed ? `${Math.round(item.percent_completed * 100)}%` : 'N/A'}
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap">
-                                    <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                                      item.status === 'active' 
-                                        ? 'bg-[var(--status-success-bg)] text-[var(--status-success-text)]' 
-                                        : 'bg-secondary text-secondary-foreground'
-                                    }`}>
-                                      {item.status}
-                                    </span>
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
+                        <DataTable
+                          data={projectModalData.lineItems}
+                          columns={[
+                            { header: 'Item No', accessor: 'item_no' },
+                            { header: 'Description', accessor: (row: any) => <div className="max-w-xs truncate" title={row.description_of_work}>{row.description_of_work}</div> },
+                            { header: 'Contractor', accessor: (row: any) => row.contractors?.name },
+                            { header: 'Scheduled Value', accessor: (row: any) => formatCurrency(row.scheduled_value || 0) },
+                            { header: '% Complete', accessor: (row: any) => row.percent_completed ? `${Math.round(row.percent_completed * 100)}%` : 'N/A' },
+                            { header: 'Status', accessor: (row: any) => (
+                                <SignalBadge status={row.status === 'active' ? 'success' : 'neutral'}>
+                                  {row.status}
+                                </SignalBadge>
+                            )}
+                          ]}
+                          emptyMessage="No line items found"
+                        />
                       ) : (
                         <p className="text-muted-foreground text-center py-4">No line items for this project</p>
                       )}
@@ -907,37 +816,31 @@ function ProjectOverview({ project, onCreatePaymentApps, onStatsPaymentAppClick 
                     <div>
                       <h4 className="text-lg font-semibold text-foreground mb-4">Contracts ({projectModalData.contracts?.length || 0})</h4>
                       {projectModalData.contracts?.length > 0 ? (
-                        <div className="space-y-3">
-                          {projectModalData.contracts.map((contract: any) => (
-                            <div 
-                              key={contract.id} 
-                              className="bg-muted rounded-lg p-4 hover:bg-muted/80 transition-colors cursor-pointer"
-                              onClick={() => {
-                                setSelectedContract(contract);
-                                setShowContractModal(true);
-                              }}
-                            >
-                              <div className="flex items-center justify-between mb-2">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-sm font-medium text-foreground">
-                                    {contract.contractors?.name || 'Unknown Contractor'}
-                                  </span>
-                                  <span className="text-xs text-muted-foreground">
-                                    {contract.contractors?.trade || ''}
-                                  </span>
+                        <DataTable
+                          data={projectModalData.contracts}
+                          columns={[
+                            { 
+                              header: 'Contractor', 
+                              accessor: (row: any) => (
+                                <div>
+                                  <div className="font-medium text-foreground">{row.contractors?.name || 'Unknown'}</div>
+                                  <div className="text-xs text-muted-foreground">{row.contractors?.trade}</div>
                                 </div>
-                                <div className="text-sm font-medium text-foreground">
-                                  {formatCurrency(contract.contract_amount || 0)}
-                                </div>
-                              </div>
-                              <div className="text-sm text-muted-foreground">
-                                <div>Start: {contract.start_date ? formatDate(contract.start_date) : 'N/A'}</div>
-                                <div>End: {contract.end_date ? formatDate(contract.end_date) : 'N/A'}</div>
-                                <div>Created: {formatDate(contract.created_at)}</div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
+                              )
+                            },
+                            { header: 'Amount', accessor: (row: any) => formatCurrency(row.contract_amount), align: 'right' },
+                            { header: 'Start Date', accessor: (row: any) => row.start_date ? formatDate(row.start_date) : 'N/A' },
+                            { header: 'End Date', accessor: (row: any) => row.end_date ? formatDate(row.end_date) : 'N/A' },
+                            { header: 'Created', accessor: (row: any) => formatDate(row.created_at) }
+                          ]}
+                          emptyMessage="No contracts for this project"
+                          onRowClick={(row) => {
+                            // Close parent modal first to avoid stacking
+                            setShowProjectModal(false);
+                            setSelectedContract(row);
+                            setShowContractModal(true);
+                          }}
+                        />
                       ) : (
                         <p className="text-muted-foreground text-center py-4">No contracts for this project</p>
                       )}
@@ -1060,87 +963,46 @@ function ProjectOverview({ project, onCreatePaymentApps, onStatsPaymentAppClick 
                 <div className="space-y-4">
                   {modalType === 'contractors' ? (
                     // Contractors table
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-muted">
-                          <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Name</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Trade</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Contact</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Contract Amount</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Paid to Date</th>
-                          </tr>
-                        </thead>
-                        <tbody className="bg-card divide-y divide-gray-200">
-                          {modalData.map((contractor: any) => (
-                            <tr key={contractor.id} className="hover:bg-muted">
-                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-foreground">
-                                {contractor.name}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                                {contractor.trade}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                                <div>{contractor.email}</div>
-                                <div>{contractor.phone}</div>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                                {formatCurrency(contractor.contract_amount || 0)}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                                {formatCurrency(contractor.paid_to_date || 0)}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                    <DataTable
+                      data={modalData}
+                      columns={[
+                        { header: 'Name', accessor: (row: any) => <span className="font-medium text-foreground">{row.name}</span> },
+                        { header: 'Trade', accessor: (row: any) => <span className="text-muted-foreground">{row.trade}</span> },
+                        { header: 'Contact', accessor: (row: any) => <div className="text-xs text-muted-foreground"><div>{row.email}</div><div>{row.phone}</div></div> },
+                        { header: 'Contract Amount', accessor: (row: any) => formatCurrency(row.contract_amount || 0), align: 'right' },
+                        { header: 'Paid to Date', accessor: (row: any) => formatCurrency(row.paid_to_date || 0), align: 'right' },
+                      ]}
+                      emptyMessage="No contractors found"
+                    />
                   ) : (
                     // Payment applications table
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-muted">
-                          <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">ID</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Contractor</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Trade</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Amount</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Created</th>
-                          </tr>
-                        </thead>
-                        <tbody className="bg-card divide-y divide-gray-200">
-                          {modalData.map((app: any) => (
-                            <tr 
-                              key={app.id} 
-                              className="hover:bg-muted cursor-pointer"
-                              onClick={() => handlePaymentAppClick(app.id)}
-                            >
-                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-foreground">
-                                #{app.id}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
-                                {app.contractor_name}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                                {app.trade}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadge(app.status)}`}>
-                                  {app.status.replace('_', ' ')}
-                                </span>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                                {formatCurrency(app.grand_total || 0)}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                                {formatDate(app.created_at)}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                    <DataTable
+                      data={modalData}
+                      columns={[
+                        { header: 'ID', accessor: (row: any) => <span className="font-medium text-foreground">#{row.id}</span> },
+                        { header: 'Contractor', accessor: 'contractor_name' },
+                        { header: 'Trade', accessor: (row: any) => <span className="text-muted-foreground">{row.trade}</span> },
+                        { header: 'Status', accessor: (row: any) => {
+                            const statusMap: Record<string, SystemStatus> = {
+                                'approved': 'success',
+                                'submitted': 'critical',
+                                'needs_review': 'warning',
+                                'rejected': 'critical',
+                                'check_ready': 'success',
+                                'sms_sent': 'neutral'
+                            };
+                            return (
+                                <SignalBadge status={statusMap[row.status] || 'neutral'}>
+                                  {row.status.replace('_', ' ').toUpperCase()}
+                                </SignalBadge>
+                            );
+                        }},
+                        { header: 'Amount', accessor: (row: any) => formatCurrency(row.grand_total || 0), align: 'right' },
+                        { header: 'Created', accessor: (row: any) => new Date(row.created_at).toLocaleDateString() }
+                      ]}
+                      onRowClick={(row) => handlePaymentAppClick(row.id)}
+                      emptyMessage="No payment applications found"
+                    />
                   )}
                 </div>
               ) : (
@@ -1471,66 +1333,68 @@ function DailyLogRequests({ projects }: { projects: any[] }) {
           </div>
         ) : (
           <>
-            {requests.map((request) => (
-              <div 
-                key={request.id} 
-                className="bg-card border border-border rounded-lg p-4 cursor-pointer hover:shadow-md transition-all duration-200"
-                onClick={() => handleViewRequest(request)}
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-sm font-medium text-foreground">
-                        {request.project?.name} - {request.project?.client_name}
-                      </span>
-                      {getStatusBadge(request.request_status)}
-                    </div>
-
-                    <div className="text-sm text-muted-foreground mb-2">
-                      <div>PM Phone: {request.pm_phone_number}</div>
-                      <div>Request Date: {request.request_date}</div>
-                      <div>Request Time: {request.request_time || '18:00'} EST</div>
-                      {request.retry_count > 0 && (
-                        <div>Retry Count: {request.retry_count}</div>
-                      )}
-                      {request.received_notes && (
-                        <div className="mt-2 p-2 bg-muted rounded border">
-                          <strong>Received Notes:</strong> {request.received_notes}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="text-xs text-muted-foreground">
-                      Created: {request.created_at ? formatDate(request.created_at) : 'Unknown'}
-                      {request.last_request_sent_at && (
-                        <span> • Last Sent: {formatDate(request.last_request_sent_at)}</span>
-                      )}
-                      {request.received_at && (
-                        <span> • Received: {formatDate(request.received_at)}</span>
-                      )}
-                    </div>
-
-                    <div className="mt-2 text-xs text-primary font-medium">
-                      💬 Click to view Daily Logs and replies
-                    </div>
-                  </div>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteRequest(request.id);
-                    }}
-                    className="text-[var(--status-critical-text)] hover:text-[var(--status-critical-text)] p-1"
-                    title="Delete request"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-            ))}
-
-            {requests.length === 0 && (
+            {requests.length > 0 ? (
+              <DataTable
+                data={requests}
+                columns={[
+                  { 
+                    header: 'Project', 
+                    accessor: (row: any) => (
+                      <div>
+                        <div className="font-medium text-foreground">{row.project?.name}</div>
+                        <div className="text-xs text-muted-foreground">{row.project?.client_name}</div>
+                      </div>
+                    )
+                  },
+                  { 
+                    header: 'Status', 
+                    accessor: (row: any) => getStatusBadge(row.request_status)
+                  },
+                  { 
+                    header: 'Details', 
+                    accessor: (row: any) => (
+                      <div className="text-sm text-muted-foreground">
+                        <div>Phone: {row.pm_phone_number}</div>
+                        <div>Date: {row.request_date}</div>
+                        <div>Time: {row.request_time || '18:00'} EST</div>
+                      </div>
+                    )
+                  },
+                  { 
+                    header: 'Received Notes', 
+                    accessor: (row: any) => row.received_notes ? <div className="truncate max-w-xs" title={row.received_notes}>{row.received_notes}</div> : '-'
+                  },
+                  {
+                    header: 'Created',
+                    accessor: (row: any) => (
+                      <div className="text-xs text-muted-foreground">
+                        <div>{row.created_at ? formatDate(row.created_at) : 'Unknown'}</div>
+                      </div>
+                    )
+                  },
+                  {
+                    header: 'Actions',
+                    accessor: (row: any) => (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteRequest(row.id);
+                        }}
+                        className="text-[var(--status-critical-text)] hover:text-[var(--status-critical-text)] p-1"
+                        title="Delete request"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    ),
+                    align: 'right'
+                  }
+                ]}
+                emptyMessage="No daily log requests yet"
+                onRowClick={(row) => handleViewRequest(row)}
+              />
+            ) : (
               <div className="text-center py-12 bg-card border-2 border-dashed border-border rounded-lg">
                 <div className="text-4xl mb-4">📝</div>
                 <p className="text-muted-foreground font-medium">No daily log requests yet</p>
@@ -1574,48 +1438,24 @@ function DailyLogRequests({ projects }: { projects: any[] }) {
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                   <span className="ml-2 text-muted-foreground">Loading PM notes...</span>
                 </div>
-              ) : pmNotes.length > 0 ? (
-                <div className="space-y-4">
-                  <h4 className="text-md font-semibold text-foreground mb-4">
-                    PM Notes from Payment Applications ({pmNotes.length})
-                  </h4>
-                  {pmNotes.map((note, index) => (
-                    <div key={note.id} className="bg-muted rounded-lg p-4 border border-border">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium text-foreground">
-                          Payment App #{note.id}
-                        </span>
-                        <span className={`text-xs px-2 py-1 rounded-full ${
-                          note.status === 'approved' ? 'bg-[var(--status-success-bg)] text-[var(--status-success-text)]' :
-                          note.status === 'rejected' ? 'bg-[var(--status-critical-bg)] text-[var(--status-critical-text)]' :
-                          note.status === 'submitted' ? 'bg-blue-100 text-primary' :
-                          'bg-secondary text-secondary-foreground'
-                        }`}>
-                          {note.status}
-                        </span>
-                      </div>
-
-                      <div className="text-sm text-muted-foreground mb-2">
-                        <div>Created: {formatDate(note.created_at)}</div>
-                      </div>
-
-                      <div className="bg-card rounded p-3 border border-border">
-                        <div className="text-sm text-foreground font-medium mb-1">PM Notes:</div>
-                        <div className="text-sm text-muted-foreground whitespace-pre-wrap">
-                          {note.pm_notes}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
               ) : (
-                <div className="text-center py-8">
-                  <div className="text-4xl mb-4">📝</div>
-                  <p className="text-muted-foreground font-medium">No Daily Logs found</p>
-                  <p className="text-sm text-muted-foreground">
-                    No Daily Logs have been submitted for this project yet.
-                  </p>
-                </div>
+                <DataTable
+                  data={pmNotes}
+                  columns={[
+                    { header: 'Payment App', accessor: (row: any) => `#${row.id}` },
+                    { 
+                      header: 'Status', 
+                      accessor: (row: any) => (
+                        <SignalBadge status={getPaymentStatus(row.status)}>
+                          {row.status}
+                        </SignalBadge>
+                      )
+                    },
+                    { header: 'Created', accessor: (row: any) => formatDate(row.created_at) },
+                    { header: 'PM Notes', accessor: (row: any) => <div className="whitespace-pre-wrap">{row.pm_notes}</div> }
+                  ]}
+                  emptyMessage="No Daily Logs found"
+                />
               )}
             </div>
 
@@ -2152,48 +1992,102 @@ function PaymentTable({ applications, onVerify, getDocumentForApp, sendForSignat
   const allSelected = applications.length > 0 && selectedItems.length === applications.length;
   const partiallySelected = selectedItems.length > 0 && selectedItems.length < applications.length;
 
+  const columns = [
+    {
+      header: (
+        <input
+          type="checkbox"
+          checked={allSelected}
+          ref={(el) => { if (el) el.indeterminate = partiallySelected; }}
+          onChange={(e) => onSelectAll(e.target.checked)}
+          className="w-4 h-4 text-primary rounded focus:ring-primary"
+        />
+      ),
+      accessor: (row: any) => (
+        <div className="flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
+          <input
+            type="checkbox"
+            checked={selectedItems.includes(row.id)}
+            onChange={(e) => onSelectItem(row.id, e.target.checked)}
+            className="w-4 h-4 text-primary rounded focus:ring-primary cursor-pointer"
+          />
+        </div>
+      ),
+      className: "w-10 px-2"
+    },
+    {
+      header: 'Status',
+      accessor: (row: any) => {
+         const statusMap: Record<string, SystemStatus> = {
+          'approved': 'success',
+          'submitted': 'critical',
+          'needs_review': 'warning',
+          'rejected': 'critical',
+          'check_ready': 'success',
+          'sms_sent': 'neutral'
+        };
+        return (
+          <SignalBadge status={statusMap[row.status] || 'neutral'}>
+            {row.status.replace('_', ' ').toUpperCase()}
+          </SignalBadge>
+        );
+      }
+    },
+    {
+      header: 'Project',
+      accessor: (row: any) => (
+        <div className="min-w-0">
+          <p className="font-medium text-foreground text-sm truncate">{row.project?.name}</p>
+          <p className="text-xs text-muted-foreground">#{row.id}</p>
+        </div>
+      )
+    },
+    {
+      header: 'Contractor',
+      accessor: (row: any) => (
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-foreground truncate">{row.contractor?.name}</p>
+          {row.contractor?.trade && (
+            <p className="text-xs text-muted-foreground">{row.contractor.trade}</p>
+          )}
+        </div>
+      )
+    },
+    {
+      header: 'Amount',
+      accessor: (row: any) => <span className="font-bold text-foreground">{formatCurrency(row.current_payment || 0)}</span>,
+      align: 'right' as const
+    },
+    {
+      header: 'Date',
+      accessor: (row: any) => <span className="text-muted-foreground">{row.created_at ? formatDate(row.created_at) : "-"}</span>,
+    },
+    {
+      header: 'Actions',
+      accessor: (row: any) => (
+        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+          <button
+            onClick={() => onVerify(row.id)}
+            className="px-3 py-1 rounded-md text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+          >
+            Verify
+          </button>
+        </div>
+      ),
+      align: 'right' as const
+    }
+  ];
+
   return (
     <div className="bg-card rounded-lg border border-border overflow-hidden">
       {/* Desktop Table View */}
       <div className="hidden sm:block">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-muted">
-              <tr>
-                <th className="px-4 py-3 text-left">
-                  <input
-                    type="checkbox"
-                    checked={allSelected}
-                    ref={(el) => {
-                      if (el) el.indeterminate = partiallySelected;
-                    }}
-                    onChange={(e) => onSelectAll(e.target.checked)}
-                    className="w-4 h-4 text-primary rounded focus:ring-primary"
-                  />
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Project</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Contractor</th>
-                <th className="px-4 py-3 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider">Amount</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Date</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="bg-card divide-y divide-gray-200">
-              {(applications || []).filter(Boolean).map((app: any) => (
-                <PaymentRow
-                  key={app.id}
-                  application={app}
-                  isSelected={selectedItems.includes(app.id)}
-                  onSelect={onSelectItem}
-                  onVerify={onVerify}
-                  getDocumentForApp={getDocumentForApp}
-                  sendForSignature={sendForSignature}
-                />
-              ))}
-            </tbody>
-          </table>
-        </div>
+         <DataTable
+            data={(applications || []).filter(Boolean)}
+            columns={columns}
+            className="border-none rounded-none shadow-none"
+            emptyMessage="No payment applications found"
+        />
       </div>
 
       {/* Mobile Card View */}

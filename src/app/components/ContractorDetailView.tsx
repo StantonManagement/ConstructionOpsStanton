@@ -1,12 +1,16 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { ArrowLeft, DollarSign, TrendingUp, AlertCircle, Send, Plus, FileSpreadsheet, GripVertical, Edit } from 'lucide-react';
+import { ArrowLeft, DollarSign, TrendingUp, AlertCircle, Send, Plus, FileSpreadsheet, GripVertical, Edit, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import ManualPaymentEntryModal from './ManualPaymentEntryModal';
 import PaymentApplicationList from './shared/PaymentApplicationList';
 import type { PaymentApplication } from './shared/PaymentApplicationRow';
+import { MetricCard } from '@/components/ui/MetricCard';
+import { SignalBadge } from '@/components/ui/SignalBadge';
+import { formatCurrency } from '@/lib/theme';
+import RemoveFromProjectModal from './RemoveFromProjectModal';
 import {
   DndContext,
   closestCenter,
@@ -106,44 +110,42 @@ function SortableLineItemRow({
     <tr 
       ref={setNodeRef} 
       style={style}
-      className={`border-b border-gray-200 hover:bg-gray-50 ${
-        hasChangeOrder ? 'bg-orange-50' : ''
-      } ${isNewItem ? 'bg-yellow-50' : ''}`}
+      className={`border-b border-border hover:bg-muted/50 ${
+        hasChangeOrder ? 'bg-[var(--status-warning-bg)]' : ''
+      } ${isNewItem ? 'bg-[var(--status-warning-bg)]' : ''}`}
     >
       <td className="px-4 py-3">
         <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing">
-          <GripVertical className="w-4 h-4 text-gray-400" />
+          <GripVertical className="w-4 h-4 text-muted-foreground" />
         </div>
       </td>
-      <td className="px-4 py-3 text-sm text-gray-900">{index + 1}</td>
-      <td className="px-4 py-3 text-sm text-gray-900">
+      <td className="px-4 py-3 text-sm text-foreground">{index + 1}</td>
+      <td className="px-4 py-3 text-sm text-foreground">
         <div className="flex items-center gap-2">
           {item.description_of_work}
           {isNewItem && (
-            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-200 text-yellow-800">
-              NEW
-            </span>
+            <SignalBadge status="warning" size="sm">NEW</SignalBadge>
           )}
         </div>
       </td>
-      <td className="px-4 py-3 text-sm text-right text-gray-900">
+      <td className="px-4 py-3 text-sm text-right text-foreground">
         {formatCurrency(originalAmount)}
       </td>
       <td className={`px-4 py-3 text-sm text-right font-semibold ${
-        coAmount > 0 ? 'text-orange-600' : coAmount < 0 ? 'text-red-600' : 'text-gray-900'
+        coAmount > 0 ? 'text-status-warning' : coAmount < 0 ? 'text-status-critical' : 'text-foreground'
       }`}>
         {coAmount > 0 && '+'}{formatCurrency(coAmount)}
       </td>
-      <td className="px-4 py-3 text-sm text-right font-semibold text-blue-600">
+      <td className="px-4 py-3 text-sm text-right font-semibold text-foreground">
         {formatCurrency(currentAmount)}
       </td>
-      <td className="px-4 py-3 text-sm text-right text-gray-600">
+      <td className="px-4 py-3 text-sm text-right text-muted-foreground">
         {prevPercent.toFixed(2)}%
       </td>
-      <td className="px-4 py-3 text-sm text-right text-gray-600">
+      <td className="px-4 py-3 text-sm text-right text-muted-foreground">
         {currPercent.toFixed(2)}%
       </td>
-      <td className="px-4 py-3 text-sm text-right font-semibold text-green-600">
+      <td className="px-4 py-3 text-sm text-right font-semibold text-status-success">
         {formatCurrency(paidAmount)}
       </td>
     </tr>
@@ -171,6 +173,8 @@ const ContractorDetailView: React.FC<ContractorDetailViewProps> = ({ contract, c
     description: '',
     amount: 0,
   });
+  const [showRemoveModal, setShowRemoveModal] = useState(false);
+  const [isRemoving, setIsRemoving] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -178,15 +182,6 @@ const ContractorDetailView: React.FC<ContractorDetailViewProps> = ({ contract, c
       coordinateGetter: sortableKeyboardCoordinates,
     })
   );
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
-  };
 
   const fetchLineItems = useCallback(async () => {
     setLoading(true);
@@ -314,6 +309,48 @@ const ContractorDetailView: React.FC<ContractorDetailViewProps> = ({ contract, c
     } catch (error) {
       console.error('Error deleting payment application:', error);
       alert(error instanceof Error ? error.message : 'Failed to delete payment application');
+    }
+  };
+
+  const handleRemoveFromProject = async () => {
+    setIsRemoving(true);
+    try {
+      // Check for active payment applications
+      const { data: paymentApps, error: checkError } = await supabase
+        .from('payment_applications')
+        .select('id, status')
+        .eq('project_id', contract.project_id)
+        .eq('contractor_id', contractor.id);
+
+      if (checkError) throw checkError;
+
+      // Check if there are any approved or pending payment applications
+      const hasActivePayments = paymentApps && paymentApps.some(
+        app => app.status === 'approved' || app.status === 'submitted' || app.status === 'pending'
+      );
+
+      if (hasActivePayments) {
+        alert('Cannot remove contractor with active or approved payment applications. Please archive or reject them first.');
+        setIsRemoving(false);
+        return;
+      }
+
+      // Delete the contract from project_contractors
+      const { error } = await supabase
+        .from('project_contractors')
+        .delete()
+        .eq('id', contract.id);
+
+      if (error) throw error;
+
+      // Navigate back to project view after successful removal
+      setShowRemoveModal(false);
+      onBack();
+    } catch (error) {
+      console.error('Error removing contractor from project:', error);
+      alert(error instanceof Error ? error.message : 'Failed to remove contractor from project');
+    } finally {
+      setIsRemoving(false);
     }
   };
 
@@ -614,17 +651,29 @@ const ContractorDetailView: React.FC<ContractorDetailViewProps> = ({ contract, c
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         <div className="flex items-start justify-between mb-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">{contractor.name}</h1>
-            <p className="text-gray-600">{contractor.trade}</p>
+            <h1 className="text-2xl font-bold text-foreground mb-2">{contractor.name}</h1>
+            <p className="text-muted-foreground">{contractor.trade}</p>
           </div>
-          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-            {contract.contract_status || 'Active'}
-          </span>
+          <div className="flex items-center gap-3">
+            <SignalBadge status={
+              contract.contract_status === 'Active' ? 'success' : 
+              contract.contract_status === 'Completed' ? 'neutral' : 'warning'
+            }>
+              {contract.contract_status || 'Active'}
+            </SignalBadge>
+            <button
+              onClick={() => setShowRemoveModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors text-sm font-medium"
+            >
+              <Trash2 className="w-4 h-4" />
+              <span>Remove from Project</span>
+            </button>
+          </div>
         </div>
 
         {/* Contact Info */}
         {(contractor.phone || contractor.email) && (
-          <div className="flex gap-6 text-sm text-gray-600">
+          <div className="flex gap-6 text-sm text-muted-foreground">
             {contractor.phone && <div>Phone: {contractor.phone}</div>}
             {contractor.email && <div>Email: {contractor.email}</div>}
           </div>
@@ -633,49 +682,38 @@ const ContractorDetailView: React.FC<ContractorDetailViewProps> = ({ contract, c
 
       {/* Budget Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <DollarSign className="w-5 h-5 text-gray-500" />
-            <h3 className="text-sm font-medium text-gray-500">Original Contract</h3>
-          </div>
-          <p className="text-2xl font-bold text-gray-900">{formatCurrency(originalContractTotal)}</p>
-        </div>
+        <MetricCard
+          title="Original Contract"
+          value={formatCurrency(originalContractTotal)}
+          padding="sm"
+        />
 
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <TrendingUp className="w-5 h-5 text-orange-500" />
-            <h3 className="text-sm font-medium text-gray-500">Change Orders</h3>
-          </div>
-          <p className={`text-2xl font-bold ${
-            changeOrdersTotal > 0 ? 'text-orange-600' : changeOrdersTotal < 0 ? 'text-red-600' : 'text-gray-900'
-          }`}>
-            {changeOrdersTotal > 0 && '+'}{formatCurrency(changeOrdersTotal)}
-          </p>
-        </div>
+        <MetricCard
+          title="Change Orders"
+          value={`${changeOrdersTotal > 0 ? '+' : ''}${formatCurrency(changeOrdersTotal)}`}
+          status={changeOrdersTotal !== 0 ? 'warning' : 'neutral'}
+          padding="sm"
+        />
 
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <DollarSign className="w-5 h-5 text-blue-500" />
-            <h3 className="text-sm font-medium text-gray-500">Current Total</h3>
-          </div>
-          <p className="text-2xl font-bold text-blue-600">{formatCurrency(currentContractTotal)}</p>
-        </div>
+        <MetricCard
+          title="Current Total"
+          value={formatCurrency(currentContractTotal)}
+          padding="sm"
+        />
 
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <DollarSign className="w-5 h-5 text-green-500" />
-            <h3 className="text-sm font-medium text-gray-500">Paid to Date</h3>
-          </div>
-          <p className="text-2xl font-bold text-green-600">{formatCurrency(paidToDate)}</p>
-        </div>
+        <MetricCard
+          title="Paid to Date"
+          value={formatCurrency(paidToDate)}
+          status="success"
+          padding="sm"
+        />
 
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <AlertCircle className="w-5 h-5 text-orange-500" />
-            <h3 className="text-sm font-medium text-gray-500">Remaining</h3>
-          </div>
-          <p className="text-2xl font-bold text-orange-600">{formatCurrency(remaining)}</p>
-        </div>
+        <MetricCard
+          title="Remaining"
+          value={formatCurrency(remaining)}
+          status="warning"
+          padding="sm"
+        />
       </div>
 
       {/* Payment Applications Section */}
@@ -690,11 +728,11 @@ const ContractorDetailView: React.FC<ContractorDetailViewProps> = ({ contract, c
       />
 
       {/* Line Items Table */}
-      <div className="bg-white rounded-lg border border-gray-200">
-        <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+      <div className="bg-card rounded-lg border border-border">
+        <div className="px-6 py-4 border-b border-border flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-gray-900">Line Items</h2>
-            <p className="text-sm text-gray-600 mt-1">
+            <h2 className="text-lg font-semibold text-foreground">Line Items</h2>
+            <p className="text-sm text-muted-foreground mt-1">
               {lineItems.length} item{lineItems.length !== 1 ? 's' : ''} • Drag to reorder
             </p>
           </div>
@@ -702,14 +740,14 @@ const ContractorDetailView: React.FC<ContractorDetailViewProps> = ({ contract, c
             <button 
               onClick={handleExportToExcel}
               disabled={exportingToExcel || lineItems.length === 0}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-input text-foreground rounded-lg hover:bg-muted/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <FileSpreadsheet className="w-4 h-4" />
               <span>{exportingToExcel ? 'Exporting...' : 'Export to Excel'}</span>
             </button>
             <button 
               onClick={() => setShowAddLineItemModal(true)}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
             >
               <Plus className="w-4 h-4" />
               <span>Add Line Item</span>
@@ -719,11 +757,11 @@ const ContractorDetailView: React.FC<ContractorDetailViewProps> = ({ contract, c
 
         {loading ? (
           <div className="flex items-center justify-center py-12">
-            <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+            <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
           </div>
         ) : lineItems.length === 0 ? (
           <div className="text-center py-12">
-            <p className="text-gray-500">No line items yet</p>
+            <p className="text-muted-foreground">No line items yet</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -736,39 +774,39 @@ const ContractorDetailView: React.FC<ContractorDetailViewProps> = ({ contract, c
                 items={lineItems.map((item) => item.id)}
                 strategy={verticalListSortingStrategy}
               >
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
+                <table className="min-w-full divide-y divide-border">
+                  <thead className="bg-muted/50">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                         ≡
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                         #
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                         Description
                       </th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
                         Original
                       </th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
                         COs
                       </th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
                         Current
                       </th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
                         Prev %
                       </th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
                         Curr %
                       </th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
                         Paid
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody className="bg-card divide-y divide-border">
                     {lineItems.map((item, index) => (
                       <SortableLineItemRow
                         key={item.id}
@@ -778,24 +816,24 @@ const ContractorDetailView: React.FC<ContractorDetailViewProps> = ({ contract, c
                       />
                     ))}
                     {/* Totals Row */}
-                    <tr className="bg-gray-100 font-semibold">
+                    <tr className="bg-muted/50 font-semibold">
                       <td className="px-4 py-3" colSpan={3}>
-                        <span className="text-sm text-gray-900">TOTALS</span>
+                        <span className="text-sm text-foreground">TOTALS</span>
                       </td>
-                      <td className="px-4 py-3 text-sm text-right text-gray-900">
+                      <td className="px-4 py-3 text-sm text-right text-foreground">
                         {formatCurrency(lineItemTotals.original)}
                       </td>
                       <td className={`px-4 py-3 text-sm text-right ${
-                        lineItemTotals.changeOrders > 0 ? 'text-orange-600' : 
-                        lineItemTotals.changeOrders < 0 ? 'text-red-600' : 'text-gray-900'
+                        lineItemTotals.changeOrders > 0 ? 'text-status-warning' : 
+                        lineItemTotals.changeOrders < 0 ? 'text-status-critical' : 'text-foreground'
                       }`}>
                         {lineItemTotals.changeOrders > 0 && '+'}{formatCurrency(lineItemTotals.changeOrders)}
                       </td>
-                      <td className="px-4 py-3 text-sm text-right text-blue-600">
+                      <td className="px-4 py-3 text-sm text-right text-foreground">
                         {formatCurrency(lineItemTotals.current)}
                       </td>
                       <td className="px-4 py-3" colSpan={2}></td>
-                      <td className="px-4 py-3 text-sm text-right text-green-600">
+                      <td className="px-4 py-3 text-sm text-right text-status-success">
                         {formatCurrency(lineItemTotals.paid)}
                       </td>
                     </tr>
@@ -812,21 +850,21 @@ const ContractorDetailView: React.FC<ContractorDetailViewProps> = ({ contract, c
         <button 
           onClick={handleRequestPayment}
           disabled={requestingPayment}
-          className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Send className="w-5 h-5" />
           <span>{requestingPayment ? 'Sending...' : 'Request Payment'}</span>
         </button>
         <button 
           onClick={() => setShowManualEntryModal(true)}
-          className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+          className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
         >
           <Edit className="w-5 h-5" />
           <span>Create Payment App</span>
         </button>
         <button 
           onClick={() => setShowChangeOrderModal(true)}
-          className="inline-flex items-center gap-2 px-6 py-3 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+          className="inline-flex items-center gap-2 px-6 py-3 bg-card border border-border text-foreground rounded-lg hover:bg-muted/50 transition-colors"
         >
           <Plus className="w-5 h-5" />
           <span>Add Change Order</span>
@@ -835,38 +873,38 @@ const ContractorDetailView: React.FC<ContractorDetailViewProps> = ({ contract, c
 
       {/* Add Line Item Modal */}
       {showAddLineItemModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Add Line Item</h3>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-card border border-border rounded-lg p-6 max-w-md w-full shadow-xl">
+            <h3 className="text-lg font-semibold text-foreground mb-4">Add Line Item</h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Item Number (Optional)</label>
+                <label className="block text-sm font-medium text-foreground mb-1">Item Number (Optional)</label>
                 <input
                   type="text"
                   value={newLineItem.item_no}
                   onChange={(e) => setNewLineItem({ ...newLineItem, item_no: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-input bg-background rounded-lg focus:ring-2 focus:ring-ring focus:border-input"
                   placeholder="e.g., 001"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Description *</label>
+                <label className="block text-sm font-medium text-foreground mb-1">Description *</label>
                 <textarea
                   value={newLineItem.description_of_work}
                   onChange={(e) => setNewLineItem({ ...newLineItem, description_of_work: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                  className="w-full px-3 py-2 border border-input bg-background rounded-lg focus:ring-2 focus:ring-ring focus:border-input resize-none"
                   rows={3}
                   placeholder="Describe the work"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Scheduled Value *</label>
+                <label className="block text-sm font-medium text-foreground mb-1">Scheduled Value *</label>
                 <input
                   type="number"
                   value={newLineItem.scheduled_value}
                   onChange={(e) => setNewLineItem({ ...newLineItem, scheduled_value: parseFloat(e.target.value) || 0 })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-input bg-background rounded-lg focus:ring-2 focus:ring-ring focus:border-input"
                   placeholder="0.00"
                   step="0.01"
                   min="0"
@@ -880,14 +918,14 @@ const ContractorDetailView: React.FC<ContractorDetailViewProps> = ({ contract, c
                   setShowAddLineItemModal(false);
                   setNewLineItem({ description_of_work: '', scheduled_value: 0, item_no: '' });
                 }}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                className="flex-1 px-4 py-2 border border-border text-muted-foreground rounded-lg hover:bg-muted transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleAddLineItem}
                 disabled={!newLineItem.description_of_work.trim()}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Add Line Item
               </button>
@@ -898,38 +936,38 @@ const ContractorDetailView: React.FC<ContractorDetailViewProps> = ({ contract, c
 
       {/* Add Change Order Modal */}
       {showChangeOrderModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Add Change Order</h3>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-card border border-border rounded-lg p-6 max-w-md w-full shadow-xl">
+            <h3 className="text-lg font-semibold text-foreground mb-4">Add Change Order</h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Description *</label>
+                <label className="block text-sm font-medium text-foreground mb-1">Description *</label>
                 <textarea
                   value={newChangeOrder.description}
                   onChange={(e) => setNewChangeOrder({ ...newChangeOrder, description: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                  className="w-full px-3 py-2 border border-input bg-background rounded-lg focus:ring-2 focus:ring-ring focus:border-input resize-none"
                   rows={3}
                   placeholder="Describe the change order"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Amount *</label>
+                <label className="block text-sm font-medium text-foreground mb-1">Amount *</label>
                 <input
                   type="number"
                   value={newChangeOrder.amount}
                   onChange={(e) => setNewChangeOrder({ ...newChangeOrder, amount: parseFloat(e.target.value) || 0 })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-input bg-background rounded-lg focus:ring-2 focus:ring-ring focus:border-input"
                   placeholder="0.00"
                   step="0.01"
                   required
                 />
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-muted-foreground mt-1">
                   Use negative values for deductions. Current contract: {formatCurrency(contract.contract_amount || 0)}
                 </p>
               </div>
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                <p className="text-sm text-blue-800">
+              <div className="bg-[var(--status-neutral-bg)] border border-[var(--status-neutral-border)] rounded-lg p-3">
+                <p className="text-sm text-[var(--status-neutral-text)]">
                   New Contract Total: {formatCurrency((contract.contract_amount || 0) + newChangeOrder.amount)}
                 </p>
               </div>
@@ -940,14 +978,14 @@ const ContractorDetailView: React.FC<ContractorDetailViewProps> = ({ contract, c
                   setShowChangeOrderModal(false);
                   setNewChangeOrder({ description: '', amount: 0 });
                 }}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                className="flex-1 px-4 py-2 border border-border text-muted-foreground rounded-lg hover:bg-muted transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleAddChangeOrder}
                 disabled={!newChangeOrder.description.trim() || newChangeOrder.amount === 0}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Add Change Order
               </button>
@@ -967,6 +1005,18 @@ const ContractorDetailView: React.FC<ContractorDetailViewProps> = ({ contract, c
           onSuccess={(paymentAppId) => {
             fetchPaymentApplications(); // Refresh the list to show new payment app
           }}
+        />
+      )}
+
+      {/* Remove from Project Modal */}
+      {showRemoveModal && (
+        <RemoveFromProjectModal
+          contractorName={contractor.name}
+          projectName={projectName}
+          contractAmount={contract.contract_amount}
+          onConfirm={handleRemoveFromProject}
+          onCancel={() => setShowRemoveModal(false)}
+          isLoading={isRemoving}
         />
       )}
     </div>

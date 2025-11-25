@@ -43,8 +43,8 @@ export const POST = withAuth(async (request: NextRequest, user: any) => {
         created_at,
         project_id,
         contractor_id,
-        project:projects(id, name, client_name),
-        contractor:contractors(id, name, trade),
+        project:projects(id, name, client_name, owner_entities(name)),
+        contractor:contractors(id, name, trade, address, city, state, zip, contact_name),
         line_item_progress:payment_line_item_progress(
           id,
           line_item:project_line_items(id, description_of_work)
@@ -94,7 +94,7 @@ export const POST = withAuth(async (request: NextRequest, user: any) => {
     // Fetch active projects for filter dropdown (in parallel)
     const { data: projectsData, error: projectsError } = await supabaseAdmin
       .from('projects')
-      .select('id, name, client_name')
+      .select('id, name, client_name, owner_entities(name)')
       .eq('status', 'active');
 
     if (projectsError) {

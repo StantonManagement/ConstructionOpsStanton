@@ -5,10 +5,11 @@ import { Project } from '../app/context/DataContext';
 type Props = {
   project: Project;
   onSelect?: (project: Project) => void;
+  onBudgetClick?: (project: Project) => void;
   isLoading?: boolean;
 };
 
-const ProjectCard: React.FC<Props> = ({ project, onSelect, isLoading = false }) => {
+const ProjectCard: React.FC<Props> = ({ project, onSelect, onBudgetClick, isLoading = false }) => {
   // Ensure consistent number handling
   const budget = project.budget ? Number(project.budget) : 0;
   const spent = project.spent ? Number(project.spent) : 0;
@@ -26,6 +27,21 @@ const ProjectCard: React.FC<Props> = ({ project, onSelect, isLoading = false }) 
     if ((e.key === 'Enter' || e.key === ' ') && onSelect) {
       e.preventDefault();
       onSelect(project);
+    }
+  };
+
+  const handleBudgetClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onBudgetClick) {
+      onBudgetClick(project);
+    }
+  };
+
+  const handleBudgetKeyDown = (e: React.KeyboardEvent) => {
+    if ((e.key === 'Enter' || e.key === ' ') && onBudgetClick) {
+      e.preventDefault();
+      e.stopPropagation();
+      onBudgetClick(project);
     }
   };
 

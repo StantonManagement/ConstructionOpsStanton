@@ -20,6 +20,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { DataTable } from '@/components/ui/DataTable';
+import { SignalBadge } from '@/components/ui/SignalBadge';
+import { SystemStatus } from '@/lib/theme';
 
 interface User {
   id: number;
@@ -638,6 +641,84 @@ const UserManagementView: React.FC = () => {
     setTimeout(() => setAlert(null), 5000); // Auto-hide after 5 seconds
   }, []);
 
+  const userColumns = useMemo(() => {
+    const cols = [
+      {
+        header: 'Name',
+        accessor: (row: EditingUser) => <div className="font-medium text-foreground">{row.name}</div>
+      },
+      {
+        header: 'Email',
+        accessor: (row: EditingUser) => <div className="text-muted-foreground">{row.email}</div>
+      },
+      {
+        header: 'Role',
+        accessor: (row: EditingUser) => (
+          <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-primary/10 text-primary">
+            {ROLE_OPTIONS.find(r => r.value === row.role)?.label || row.role}
+          </span>
+        )
+      },
+      {
+        header: 'Status',
+        accessor: (row: EditingUser) => (
+          <SignalBadge status={row.is_active ? 'success' : 'critical'}>
+            {row.is_active ? 'Active' : 'Inactive'}
+          </SignalBadge>
+        )
+      },
+      {
+        header: 'Created',
+        accessor: (row: EditingUser) => new Date(row.created_at).toLocaleDateString()
+      }
+    ];
+
+    if (canUpdateUsers || canDeleteUsers || userRole?.toLowerCase() === 'admin') {
+      cols.push({
+        header: 'Actions',
+        accessor: (row: EditingUser) => (
+          <div className="flex items-center justify-end space-x-2">
+            {canUpdateUsers && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => toggleEdit(row)}
+                className="text-primary hover:text-primary h-8 w-8 p-0"
+                title="Edit user"
+              >
+                <Edit2 className="w-4 h-4" />
+              </Button>
+            )}
+            {userRole?.toLowerCase() === 'admin' && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => openPasswordResetModal(row)}
+                className="text-[var(--status-warning-text)] hover:text-[var(--status-warning-text)] h-8 w-8 p-0"
+                title="Reset password"
+              >
+                <Key className="w-4 h-4" />
+              </Button>
+            )}
+            {canDeleteUsers && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => openDeleteModal(row)}
+                className="text-[var(--status-critical-text)] hover:text-[var(--status-critical-text)] h-8 w-8 p-0"
+                title="Delete user"
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            )}
+          </div>
+        ),
+        align: 'right' as const
+      });
+    }
+    return cols;
+  }, [canUpdateUsers, canDeleteUsers, userRole]);
+
   const handleAddUser = async (userData: NewUser) => {
     setIsSubmitting(true);
     try {
@@ -907,102 +988,10 @@ const UserManagementView: React.FC = () => {
             </div>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-muted">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    Name
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    Email
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    Role
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    Created
-                  </th>
-                  {(canUpdateUsers || canDeleteUsers || userRole?.toLowerCase() === 'admin') && (
-                    <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                      Actions
-                    </th>
-                  )}
-                </tr>
-              </thead>
-              <tbody className="bg-card divide-y divide-border">
-                {filteredUsers.map(user => (
-                  <tr key={user.id} className="hover:bg-muted">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-foreground">{user.name}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-muted-foreground">{user.email}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-primary/10 text-primary">
-                        {ROLE_OPTIONS.find(r => r.value === user.role)?.label || user.role}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        user.is_active 
-                          ? 'bg-[var(--status-success-bg)] text-[var(--status-success-text)]' 
-                          : 'bg-[var(--status-critical-bg)] text-[var(--status-critical-text)]'
-                      }`}>
-                        {user.is_active ? 'Active' : 'Inactive'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                      {new Date(user.created_at).toLocaleDateString()}
-                    </td>
-                    {(canUpdateUsers || canDeleteUsers || userRole?.toLowerCase() === 'admin') && (
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <div className="flex items-center justify-end space-x-2">
-                          {canUpdateUsers && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => toggleEdit(user)}
-                              className="text-primary hover:text-primary h-8 w-8 p-0"
-                              title="Edit user"
-                            >
-                              <Edit2 className="w-4 h-4" />
-                            </Button>
-                          )}
-                                                     {userRole?.toLowerCase() === 'admin' && (
-                             <Button
-                               variant="ghost"
-                               size="sm"
-                               onClick={() => openPasswordResetModal(user)}
-                               className="text-[var(--status-warning-text)] hover:text-[var(--status-warning-text)] h-8 w-8 p-0"
-                               title="Reset password"
-                             >
-                               <Key className="w-4 h-4" />
-                             </Button>
-                           )}
-                          {canDeleteUsers && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => openDeleteModal(user)}
-                              className="text-[var(--status-critical-text)] hover:text-[var(--status-critical-text)] h-8 w-8 p-0"
-                              title="Delete user"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </td>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            data={filteredUsers}
+            columns={userColumns}
+          />
         )}
       </div>
 

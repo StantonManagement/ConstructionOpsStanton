@@ -3,6 +3,11 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import type { PunchListItem, PunchListSummary, PunchListFilters } from '@/types/punch-list';
+import { DataTable } from '@/components/ui/DataTable';
+import { SignalBadge } from '@/components/ui/SignalBadge';
+import { formatCurrency } from '@/lib/theme';
+import PunchListFormModal from './punch-list/PunchListFormModal';
+import PunchListDetailModal from './punch-list/PunchListDetailModal';
 
 interface PunchListViewProps {
   projectId?: number;
@@ -223,78 +228,68 @@ export default function PunchListView({ projectId }: PunchListViewProps) {
 
       {/* Items List */}
       {viewMode === 'list' ? (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item #</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Severity</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assigned To</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {items.map((item) => {
+        <div className="bg-white rounded-lg shadow-none border border-border overflow-hidden">
+          <DataTable
+            data={items}
+            columns={[
+              { header: 'Item #', accessor: 'item_number', className: 'font-medium' },
+              { header: 'Description', accessor: (item) => <div className="max-w-xs truncate" title={item.description}>{item.description}</div> },
+              { header: 'Location', accessor: (item) => item.location || item.unit_number || '—' },
+              { 
+                header: 'Severity', 
+                accessor: (item) => (
+                  <SignalBadge status={
+                    item.severity === 'critical' ? 'critical' : 
+                    item.severity === 'high' ? 'warning' : 
+                    'neutral'
+                  }>
+                    {item.severity}
+                  </SignalBadge>
+                ) 
+              },
+              { 
+                header: 'Status', 
+                accessor: (item) => (
+                  <SignalBadge status={
+                    item.status === 'rejected' ? 'critical' :
+                    item.status === 'verified' ? 'success' :
+                    'neutral'
+                  }>
+                    {item.status.replace('_', ' ')}
+                  </SignalBadge>
+                ) 
+              },
+              { header: 'Assigned To', accessor: (item) => item.assigned_contractor_name || '—' },
+              { 
+                header: 'Due Date', 
+                accessor: (item) => {
                   const isOverdue = item.due_date && item.due_date < new Date().toISOString().split('T')[0] && !['verified', 'completed'].includes(item.status);
-                  
-                  return (
-                    <tr key={item.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => setSelectedItem(item)}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {item.item_number}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-900">
-                        <div className="max-w-xs truncate">{item.description}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {item.location || item.unit_number || '—'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full border ${getSeverityColor(item.severity)}`}>
-                          {item.severity}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(item.status)}`}>
-                          {item.status.replace('_', ' ')}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {item.assigned_contractor_name || '—'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        {item.due_date ? (
-                          <span className={isOverdue ? 'text-red-600 font-medium' : 'text-gray-500'}>
-                            {new Date(item.due_date).toLocaleDateString()}
-                          </span>
-                        ) : '—'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedItem(item);
-                          }}
-                          className="text-blue-600 hover:text-blue-900"
-                        >
-                          View
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-          {items.length === 0 && (
-            <div className="text-center py-12 text-gray-500">
-              No punch list items found. Create your first item to get started.
-            </div>
-          )}
+                  return item.due_date ? (
+                    <span className={isOverdue ? 'text-status-critical font-medium' : 'text-muted-foreground'}>
+                      {new Date(item.due_date).toLocaleDateString()}
+                    </span>
+                  ) : '—';
+                }
+              },
+              {
+                header: 'Actions',
+                align: 'right',
+                accessor: (item) => (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedItem(item);
+                    }}
+                    className="text-primary hover:text-primary/80 font-medium text-sm"
+                  >
+                    View
+                  </button>
+                )
+              }
+            ]}
+            onRowClick={(item) => setSelectedItem(item)}
+            emptyMessage="No punch list items found. Create your first item to get started."
+          />
         </div>
       ) : (
         // Kanban Board View
@@ -337,31 +332,22 @@ export default function PunchListView({ projectId }: PunchListViewProps) {
         </div>
       )}
 
-      {/* Form Modal - Placeholder */}
+      {/* Form Modal */}
       {showForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-2xl w-full p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-bold">Add Punch List Item</h3>
-              <button onClick={() => setShowForm(false)} className="text-gray-500 hover:text-gray-700">×</button>
-            </div>
-            <p className="text-gray-600">Form component will be added here...</p>
-          </div>
-        </div>
+        <PunchListFormModal
+          projectId={projectId}
+          onClose={() => setShowForm(false)}
+          onSuccess={() => fetchItems()}
+        />
       )}
 
-      {/* Detail Modal - Placeholder */}
+      {/* Detail Modal */}
       {selectedItem && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-4xl w-full p-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-bold">{selectedItem.item_number}</h3>
-              <button onClick={() => setSelectedItem(null)} className="text-gray-500 hover:text-gray-700 text-2xl">×</button>
-            </div>
-            <p className="text-gray-900">{selectedItem.description}</p>
-            <p className="text-sm text-gray-500 mt-4">Detail component will be added here...</p>
-          </div>
-        </div>
+        <PunchListDetailModal
+          item={selectedItem}
+          onClose={() => setSelectedItem(null)}
+          onUpdate={() => fetchItems()}
+        />
       )}
     </div>
   );

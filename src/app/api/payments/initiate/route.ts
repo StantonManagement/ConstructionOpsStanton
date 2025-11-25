@@ -34,26 +34,26 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
 
-    // Fetch contractors through the contracts table
-    const { data: contractsData, error: contractsError } = await supabase
-      .from('contracts')
+    // Fetch contractors through the project_contractors table (the source of truth for project-contractor relationships)
+    const { data: projectContractorsData, error: projectContractorsError } = await supabase
+      .from('project_contractors')
       .select(`
-        subcontractor_id,
-        contract_nickname,
+        id,
+        contractor_id,
         contract_amount,
-        contractors!contracts_subcontractor_id_fkey (
+        contractors (
           id, name, phone
         )
       `)
       .eq('project_id', projectIdNum)
-      .in('subcontractor_id', contractorIds);
-    if (contractsError) {
-      console.error('Error fetching contractors from contracts:', contractsError);
-      return NextResponse.json({ error: 'Error fetching contractors from contracts' }, { status: 500 });
+      .in('contractor_id', contractorIds);
+    if (projectContractorsError) {
+      console.error('Error fetching contractors from project_contractors:', projectContractorsError);
+      return NextResponse.json({ error: 'Error fetching contractors from project_contractors' }, { status: 500 });
     }
 
     // Validate that we have valid contracts with amounts > 0
-    const validContracts = contractsData?.filter(contract => 
+    const validContracts = projectContractorsData?.filter(contract => 
       contract.contract_amount && Number(contract.contract_amount) > 0
     ) || [];
 
@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Transform the data to get contractors with contract info
-    console.log('Valid contracts data:', JSON.stringify(validContracts, null, 2));
+    console.log('Valid project_contractors data:', JSON.stringify(validContracts, null, 2));
     
     const contractors = validContracts.map(contract => {
       // Handle both array and object structures from Supabase
@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
         ? contract.contractors[0] 
         : contract.contractors;
       
-      console.log('Processing contract:', { 
+      console.log('Processing project_contractor:', { 
         contractorData, 
         contractorsField: contract.contractors,
         isArray: Array.isArray(contract.contractors)
@@ -82,7 +82,6 @@ export async function POST(req: NextRequest) {
         id: contractorData?.id,
         name: contractorData?.name,
         phone: contractorData?.phone,
-        contract_nickname: contract.contract_nickname,
         contract_amount: contract.contract_amount
       };
     }).filter(contractor => contractor.id !== undefined && contractor.id !== null); // Filter out contractors without valid IDs
@@ -115,88 +114,8 @@ export async function POST(req: NextRequest) {
         continue;
       }
 
-      // Debug logging
-      console.log(`Checking project_contractors for project_id: ${projectIdNum}, contractor_id: ${contractorIdNum}`);
-
-      // Check if a project_contractors record exists, if not create one with proper contract amount
-      const { data: existingProjectContractorList, error: checkError } = await supabase
-        .from('project_contractors')
-        .select('id, contract_amount')
-        .eq('project_id', projectIdNum)
-        .eq('contractor_id', contractorIdNum);
-
-      const existingProjectContractor = existingProjectContractorList && existingProjectContractorList.length > 0 
-        ? existingProjectContractorList[0] 
-        : null;
-
-      console.log('Existing project_contractor check:', {
-        existingProjectContractor,
-        checkError,
-        listLength: existingProjectContractorList?.length,
-        errorCode: checkError?.code
-      });
-
-      if (checkError) {
-        console.error('Error checking project_contractors:', {
-          error: checkError,
-          projectId: projectIdNum,
-          contractorId: contractorIdNum,
-          code: checkError.code,
-          message: checkError.message
-        });
-        results.push({ 
-          contractorId: contractorIdNum, 
-          error: 'Failed to verify project contractor relationship'
-        });
-        continue;
-      }
-
-      // If no project_contractors record exists, create one with the contract amount from contracts table
-      if (!existingProjectContractor) {
-        console.log('No existing project_contractor found, creating new one...');
-        // Convert contract amount to number to satisfy database constraint
-        const contractAmountNum = parseFloat(contractor.contract_amount);
-        if (isNaN(contractAmountNum) || contractAmountNum <= 0) {
-          results.push({ 
-            contractorId: contractorIdNum, 
-            error: `Invalid contract amount: ${contractor.contract_amount}`
-          });
-          continue;
-        }
-
-        console.log(`Creating project_contractors record with amount: ${contractAmountNum}`, {
-          projectId: projectIdNum,
-          contractorId: contractorIdNum,
-          contractAmount: contractAmountNum,
-          contractAmountOriginal: contractor.contract_amount
-        });
-
-        const { error: projectContractorError } = await supabase
-          .from('project_contractors')
-          .insert({
-            project_id: projectIdNum,
-            contractor_id: contractorIdNum,
-            contract_amount: contractAmountNum,
-            paid_to_date: 0,
-            contract_status: 'active'
-          });
-
-        if (projectContractorError) {
-          console.error('Error creating project_contractors record:', {
-            error: projectContractorError,
-            projectId: projectIdNum,
-            contractorId: contractorIdNum,
-            contractAmount: contractAmountNum,
-            code: projectContractorError.code,
-            message: projectContractorError.message
-          });
-          results.push({ 
-            contractorId: contractorIdNum, 
-            error: projectContractorError.message || 'Failed to create project contractor relationship'
-          });
-          continue;
-        }
-      }
+      // Debug logging - project_contractors record already exists since we queried from it
+      console.log(`Processing payment for project_id: ${projectIdNum}, contractor_id: ${contractorIdNum}`);
 
       // Create payment application with all required fields
       const contractAmountNum = parseFloat(contractor.contract_amount);
@@ -289,15 +208,8 @@ export async function POST(req: NextRequest) {
 
       // Send SMS via Twilio
       if (contractor.phone && TWILIO_PHONE_NUMBER) {
-        // Use contract nickname from contractor object
-        const contractNickname = contractor.contract_nickname;
-        
-        // Format: "project name - contract nickname - contractor name"
-        let messageTitle = `${project.name}`;
-        if (contractNickname) {
-          messageTitle += ` - ${contractNickname}`;
-        }
-        messageTitle += ` - ${contractor.name}`;
+        // Format: "project name - contractor name"
+        const messageTitle = `${project.name} - ${contractor.name}`;
         
         const message = `Payment app for ${messageTitle}. Ready for some quick questions? Reply YES to start.`;
         try {

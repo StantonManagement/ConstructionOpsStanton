@@ -25,17 +25,19 @@ export const POST = withAuth(async (request: NextRequest, user: any) => {
 
     // Fetch all data in parallel using relationship queries
     const [projectsResponse, contractorsResponse, contractsResponse] = await Promise.all([
-      // Projects
+      // Projects (exclude deleted)
       supabaseAdmin
         .from('projects')
-        .select('*'),
+        .select('*')
+        .neq('status', 'deleted'),
       
-      // Contractors
+      // Contractors (exclude inactive)
       supabaseAdmin
         .from('contractors')
-        .select('*'),
+        .select('*')
+        .eq('status', 'active'),
       
-      // Contracts (project_contractors) with relationships
+      // Contracts (project_contractors) with relationships - only active
       supabaseAdmin
         .from('project_contractors')
         .select(`
@@ -43,6 +45,7 @@ export const POST = withAuth(async (request: NextRequest, user: any) => {
           projects:project_id (id, name, client_name),
           contractors:contractor_id (id, name, trade)
         `)
+        .eq('contract_status', 'active')
     ]);
 
     const fetchTime = Date.now() - startTime;

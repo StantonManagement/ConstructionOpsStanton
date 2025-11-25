@@ -39,7 +39,7 @@ const ProjectFormWithEntity: React.FC<ProjectFormProps> = ({
     client_name: initialData.client_name || '',
     budget: initialData.budget || '',
     start_date: initialData.start_date || '',
-    end_date: initialData.end_date || '',
+    target_completion_date: initialData.target_completion_date || '',
     status: initialData.status || 'active',
     current_phase: initialData.current_phase || 'Planning',
     owner_entity_id: initialData.owner_entity_id || '',
@@ -144,7 +144,7 @@ const ProjectFormWithEntity: React.FC<ProjectFormProps> = ({
       budget: formData.budget ? Number(formData.budget) : null,
       owner_entity_id: formData.owner_entity_id ? Number(formData.owner_entity_id) : null,
       total_units: formData.total_units ? Number(formData.total_units) : 1,
-      end_date: formData.end_date || null,
+      target_completion_date: formData.target_completion_date || null,
       portfolio_name: formData.portfolio_name || null
     };
 
@@ -377,15 +377,15 @@ const ProjectFormWithEntity: React.FC<ProjectFormProps> = ({
               />
             </div>
 
-            {/* End Date */}
+            {/* Target Completion Date */}
             <div>
               <label className="block text-sm font-medium text-foreground mb-1.5">
-                Target End Date
+                Target Completion Date
               </label>
               <input
                 type="date"
-                name="end_date"
-                value={formData.end_date}
+                name="target_completion_date"
+                value={formData.target_completion_date}
                 onChange={handleChange}
                 className="w-full px-4 py-3 text-base border border-border rounded-lg focus:ring-2 focus:ring-primary transition-all duration-200 bg-secondary text-foreground"
                 disabled={isLoading}
