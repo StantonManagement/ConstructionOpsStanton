@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { ArrowLeft, DollarSign, TrendingUp, AlertCircle, Send, Plus, FileSpreadsheet, GripVertical, Edit, Trash2 } from 'lucide-react';
+import { ArrowLeft, DollarSign, TrendingUp, AlertCircle, Send, Plus, FileSpreadsheet, GripVertical, Edit, Trash2, Tag, Check, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import ManualPaymentEntryModal from './ManualPaymentEntryModal';
@@ -47,6 +47,13 @@ interface Contract {
   start_date?: string;
   end_date?: string;
   contract_status?: string;
+  budget_item_id?: number | null;
+}
+
+interface BudgetLineItem {
+  id: number;
+  category_name: string;
+  original_amount: number;
 }
 
 interface LineItem {
@@ -175,6 +182,12 @@ const ContractorDetailView: React.FC<ContractorDetailViewProps> = ({ contract, c
   });
   const [showRemoveModal, setShowRemoveModal] = useState(false);
   const [isRemoving, setIsRemoving] = useState(false);
+  
+  // Budget category state
+  const [budgetItems, setBudgetItems] = useState<BudgetLineItem[]>([]);
+  const [selectedBudgetItemId, setSelectedBudgetItemId] = useState<number | null>(contract.budget_item_id || null);
+  const [loadingBudgetItems, setLoadingBudgetItems] = useState(false);
+  const [savingBudgetItem, setSavingBudgetItem] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -273,6 +286,53 @@ const ContractorDetailView: React.FC<ContractorDetailViewProps> = ({ contract, c
   useEffect(() => {
     fetchPaymentApplications();
   }, [fetchPaymentApplications]);
+
+  // Fetch budget categories for this project
+  const fetchBudgetItems = useCallback(async () => {
+    setLoadingBudgetItems(true);
+    try {
+      const { data, error } = await supabase
+        .from('property_budgets')
+        .select('id, category_name, original_amount')
+        .eq('project_id', contract.project_id)
+        .eq('is_active', true)
+        .order('category_name');
+
+      if (error) throw error;
+      setBudgetItems(data || []);
+    } catch (error) {
+      console.error('Error fetching budget categories:', error);
+      setBudgetItems([]);
+    } finally {
+      setLoadingBudgetItems(false);
+    }
+  }, [contract.project_id]);
+
+  useEffect(() => {
+    fetchBudgetItems();
+  }, [fetchBudgetItems]);
+
+  // Handle budget category change
+  const handleBudgetCategoryChange = async (budgetItemId: number | null) => {
+    setSavingBudgetItem(true);
+    try {
+      const { error } = await supabase
+        .from('project_contractors')
+        .update({ budget_item_id: budgetItemId })
+        .eq('id', contract.id);
+
+      if (error) throw error;
+
+      setSelectedBudgetItemId(budgetItemId);
+      // Update the contract object locally to reflect the change
+      (contract as any).budget_item_id = budgetItemId;
+    } catch (error) {
+      console.error('Error updating budget category:', error);
+      alert('Failed to update budget category. Please try again.');
+    } finally {
+      setSavingBudgetItem(false);
+    }
+  };
 
   // Delete payment application
   const handleDeletePaymentApp = async (paymentAppId: number) => {
@@ -673,11 +733,59 @@ const ContractorDetailView: React.FC<ContractorDetailViewProps> = ({ contract, c
 
         {/* Contact Info */}
         {(contractor.phone || contractor.email) && (
-          <div className="flex gap-6 text-sm text-muted-foreground">
+          <div className="flex gap-6 text-sm text-muted-foreground mb-4">
             {contractor.phone && <div>Phone: {contractor.phone}</div>}
             {contractor.email && <div>Email: {contractor.email}</div>}
           </div>
         )}
+
+        {/* Budget Category Assignment */}
+        <div className="border-t border-gray-200 pt-4 mt-4">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Tag className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm font-medium text-foreground">Budget Category:</span>
+            </div>
+            <div className="flex items-center gap-2">
+              {loadingBudgetItems ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Loading...
+                </div>
+              ) : (
+                <>
+                  <select
+                    value={selectedBudgetItemId || ''}
+                    onChange={(e) => handleBudgetCategoryChange(e.target.value ? parseInt(e.target.value) : null)}
+                    disabled={savingBudgetItem}
+                    className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white disabled:opacity-50 disabled:cursor-not-allowed min-w-[200px]"
+                  >
+                    <option value="">-- Unassigned --</option>
+                    {budgetItems.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.category_name} (${item.original_amount.toLocaleString()})
+                      </option>
+                    ))}
+                  </select>
+                  {savingBudgetItem && (
+                    <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                  )}
+                  {!savingBudgetItem && selectedBudgetItemId && (
+                    <Check className="w-4 h-4 text-green-600" />
+                  )}
+                </>
+              )}
+            </div>
+            {budgetItems.length === 0 && !loadingBudgetItems && (
+              <span className="text-xs text-muted-foreground">
+                No budget categories defined for this project
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground mt-2">
+            Link this contract to a budget category for automatic cost tracking.
+          </p>
+        </div>
       </div>
 
       {/* Budget Summary Cards */}

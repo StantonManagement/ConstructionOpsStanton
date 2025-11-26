@@ -84,12 +84,18 @@ export function getPaymentApplicationStatus(status: string): SystemStatus {
   }
 }
 
-export function formatCurrency(amount: number): string {
+export function formatCurrency(amount: number | null | undefined, showCents: boolean = false): string {
+  // Handle null/undefined
+  if (amount == null) return '-';
+  
+  // Show "$-" for zero values (accounting format)
+  if (amount === 0) return '$-';
+  
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
+    minimumFractionDigits: showCents ? 2 : 0,
+    maximumFractionDigits: showCents ? 2 : 0,
   }).format(amount)
 }
 

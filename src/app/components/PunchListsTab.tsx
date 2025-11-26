@@ -15,6 +15,7 @@ import {
 import { DataTable } from '@/components/ui/DataTable';
 import { SignalBadge } from '@/components/ui/SignalBadge';
 import { formatCurrency } from '@/lib/theme';
+import { supabase } from '@/lib/supabaseClient';
 
 interface PunchListItem {
   id: number;

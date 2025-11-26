@@ -147,3 +147,4 @@ IS 'CASCADE DELETE: Progress records are deleted when parent payment application
 COMMENT ON CONSTRAINT project_contractors_budget_item_id_fkey ON project_contractors 
 IS 'SET NULL: Contract budget link is cleared when budget item is deleted';
 
+

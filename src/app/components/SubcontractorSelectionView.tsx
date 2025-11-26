@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Project } from '../context/DataContext';
 import { supabase } from '@/lib/supabaseClient';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { formatCurrency } from '@/lib/theme';
 
 type Props = {
   selectedProject: Project;
@@ -77,7 +78,6 @@ const ContractorCard: React.FC<{
   isSelected: boolean;
   onToggle: (id: number) => void;
 }> = ({ contract, isSelected, onToggle }) => {
-  const formatCurrency = (amount: number) => `$${amount.toLocaleString()}`;
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString('en-US', { 
       month: 'short', 

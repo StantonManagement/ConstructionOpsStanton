@@ -75,8 +75,15 @@ const ProjectCard: React.FC<Props> = ({ project, onSelect, onBudgetClick, isLoad
         </p>
       </div>
 
-      {/* Budget Information */}
-      <div className="mb-3">
+      {/* Budget Information - Clickable when onBudgetClick is provided */}
+      <div 
+        className={`mb-3 ${onBudgetClick ? 'cursor-pointer hover:bg-blue-50 rounded-lg p-2 -mx-2 transition-colors' : ''}`}
+        onClick={onBudgetClick ? handleBudgetClick : undefined}
+        onKeyDown={onBudgetClick ? handleBudgetKeyDown : undefined}
+        role={onBudgetClick ? 'button' : undefined}
+        tabIndex={onBudgetClick ? 0 : undefined}
+        aria-label={onBudgetClick ? `View budget details for ${project.name}` : undefined}
+      >
         <div className="flex justify-between items-center text-sm mb-2">
           <span className="text-gray-600 font-medium">Budget Progress</span>
           <span className="text-gray-900 font-semibold">${budget.toLocaleString()}</span>
@@ -142,6 +149,13 @@ const ProjectCard: React.FC<Props> = ({ project, onSelect, onBudgetClick, isLoad
             {statusInfo.text}
           </span>
         </div>
+        
+        {/* Budget click hint */}
+        {onBudgetClick && (
+          <div className="text-xs text-blue-600 mt-1 opacity-70">
+            Click for budget details
+          </div>
+        )}
       </div>
 
       {/* Project Status Indicators */}

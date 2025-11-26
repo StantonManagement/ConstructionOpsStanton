@@ -406,17 +406,34 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
     fetchProjects();
   }, [fetchProjects]);
 
-  // Check for project ID in URL and auto-open project detail view
+  // Keep selected project & detail view in sync with URL ?project= param
   useEffect(() => {
     const projectIdFromUrl = searchParams.get('project');
-    if (projectIdFromUrl && projects.length > 0 && !showDetailView) {
-      const project = projects.find(p => p.id.toString() === projectIdFromUrl);
-      if (project) {
-        setSelectedProject(project);
-        setShowDetailView(true);
+
+    // If there's no project in the URL, ensure we're in list mode
+    if (!projectIdFromUrl) {
+      if (showDetailView || selectedProject) {
+        setShowDetailView(false);
+        setSelectedProject(null);
       }
+      return;
     }
-  }, [searchParams, projects, showDetailView]);
+
+    // Only try to resolve once projects have loaded
+    if (projects.length === 0) return;
+
+    const projectFromUrl = projects.find(p => p.id.toString() === projectIdFromUrl);
+
+    // If we can't find the project (stale ID), leave current state alone
+    if (!projectFromUrl) return;
+
+    // If the URL already matches the current selection, do nothing
+    if (selectedProject && selectedProject.id === projectFromUrl.id) return;
+
+    // Otherwise, switch the detail view to the project from the URL
+    setSelectedProject(projectFromUrl);
+    setShowDetailView(true);
+  }, [searchParams, projects, selectedProject, showDetailView]);
 
   // Filter projects based on search query
   const filteredProjects = projects.filter(project => {

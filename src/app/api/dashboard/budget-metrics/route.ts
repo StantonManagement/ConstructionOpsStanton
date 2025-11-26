@@ -74,12 +74,23 @@ export async function GET(request: NextRequest) {
       contractsQuery = contractsQuery.eq('project_id', projectIdParam);
     }
 
+    // E. Approved Payments (SINGLE SOURCE OF TRUTH for spent calculations)
+    let approvedPaymentsQuery = client
+      .from('payment_applications')
+      .select('project_id, current_period_value')
+      .eq('status', 'approved');
+
+    if (projectIdParam && projectIdParam !== 'all') {
+      approvedPaymentsQuery = approvedPaymentsQuery.eq('project_id', projectIdParam);
+    }
+
     // Execute queries
-    const [projectsRes, budgetsRes, coRes, contractsRes] = await Promise.all([
+    const [projectsRes, budgetsRes, coRes, contractsRes, approvedPaymentsRes] = await Promise.all([
       projectsQuery,
       budgetsQuery,
       coQuery,
-      contractsQuery
+      contractsQuery,
+      approvedPaymentsQuery
     ]);
 
     if (projectsRes.error) throw new Error(`Projects error: ${projectsRes.error.message}`);
@@ -88,6 +99,7 @@ export async function GET(request: NextRequest) {
     const changeOrders = coRes.data || [];
     const projects = projectsRes.data || [];
     const contracts = contractsRes.data || []; // Fetch linked contracts
+    const approvedPayments = approvedPaymentsRes.data || []; // Approved payments for spent
 
     // 4. Aggregation Logic
 
@@ -98,6 +110,14 @@ export async function GET(request: NextRequest) {
         const current = committedCostsMap.get(c.budget_item_id) || 0;
         committedCostsMap.set(c.budget_item_id, current + (Number(c.contract_amount) || 0));
       }
+    });
+
+    // Calculate Actual Spent per Project from Approved Payments (SINGLE SOURCE OF TRUTH)
+    const approvedSpentByProject = new Map<number, number>(); // project_id -> total_spent
+    approvedPayments.forEach((payment: any) => {
+      const projectId = payment.project_id;
+      const current = approvedSpentByProject.get(projectId) || 0;
+      approvedSpentByProject.set(projectId, current + (Number(payment.current_period_value) || 0));
     });
 
     // Initialize Global Totals
@@ -199,10 +219,15 @@ export async function GET(request: NextRequest) {
     const enhancedProjects = projects.map(project => {
       const budgetData = projectBudgetsMap.get(project.id) || { original: 0, revised: 0, actual: 0, committed: 0 };
       
-      // Calculate derived values
-      const remaining = budgetData.revised - budgetData.actual - budgetData.committed;
+      // Use approved payments as SINGLE SOURCE OF TRUTH for spent
+      // Fall back to property_budgets.actual_spend if no approved payments exist
+      const actualSpentFromPayments = approvedSpentByProject.get(project.id) || 0;
+      const actualSpent = actualSpentFromPayments > 0 ? actualSpentFromPayments : budgetData.actual;
+      
+      // Calculate derived values using actual spent from approved payments
+      const remaining = budgetData.revised - actualSpent - budgetData.committed;
       const percentSpent = budgetData.revised > 0 
-        ? (budgetData.actual / budgetData.revised * 100) 
+        ? (actualSpent / budgetData.revised * 100) 
         : 0;
 
       // Determine Status
@@ -214,7 +239,7 @@ export async function GET(request: NextRequest) {
       // Add to Global Totals
       heroMetrics.totalBudget += budgetData.original;
       heroMetrics.totalRevised += budgetData.revised;
-      heroMetrics.totalSpent += budgetData.actual;
+      heroMetrics.totalSpent += actualSpent; // Use actual from approved payments
       heroMetrics.totalCommitted += budgetData.committed;
       heroMetrics.totalRemaining += remaining;
 
@@ -232,7 +257,7 @@ export async function GET(request: NextRequest) {
         status: project.status,
         budgetOriginal: budgetData.original,
         budgetRevised: budgetData.revised,
-        actualSpend: budgetData.actual,
+        actualSpend: actualSpent, // Use spent from approved payments
         remaining: remaining,
         percentSpent: percentSpent,
         budgetStatus: budgetStatus

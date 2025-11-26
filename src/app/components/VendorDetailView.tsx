@@ -590,7 +590,7 @@ const VendorDetailView: React.FC<VendorDetailViewProps> = ({ contractor: initial
               <Edit2 className="w-4 h-4" />
               Edit
             </button>
-            <SignalBadge status={contractor.status === 'active' ? 'success' : 'critical'} size="lg">
+            <SignalBadge status={contractor.status === 'active' ? 'success' : 'critical'} size="md">
               {contractor.status}
             </SignalBadge>
           </div>

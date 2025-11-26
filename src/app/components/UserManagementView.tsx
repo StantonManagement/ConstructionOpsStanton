@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { DataTable } from '@/components/ui/DataTable';
+import { DataTable, Column } from '@/components/ui/DataTable';
 import { SignalBadge } from '@/components/ui/SignalBadge';
 import { SystemStatus } from '@/lib/theme';
 
@@ -642,7 +642,7 @@ const UserManagementView: React.FC = () => {
   }, []);
 
   const userColumns = useMemo(() => {
-    const cols = [
+    const cols: Column<EditingUser>[] = [
       {
         header: 'Name',
         accessor: (row: EditingUser) => <div className="font-medium text-foreground">{row.name}</div>

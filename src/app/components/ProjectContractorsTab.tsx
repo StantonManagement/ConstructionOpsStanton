@@ -6,6 +6,7 @@ import { Plus, Phone, Mail, DollarSign, FileText, Send, Eye, Edit, Loader2, User
 import { Project } from '../context/DataContext';
 import { DataTable } from '@/components/ui/DataTable';
 import { SignalBadge } from '@/components/ui/SignalBadge';
+import { formatCurrency } from '@/lib/theme';
 import {
   DndContext,
   closestCenter,
@@ -375,7 +376,7 @@ const ProjectContractorsTab: React.FC<ProjectContractorsTabProps> = ({
   const [contractToDelete, setContractToDelete] = useState<ContractWithContractor | null>(null);
   
   // View mode and sorting state
-  const [viewMode, setViewMode] = useState<'card' | 'table'>('card');
+  const [viewMode, setViewMode] = useState<'card' | 'table'>('table');
   const [sortColumn, setSortColumn] = useState<string>('display_order');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
@@ -1115,7 +1116,7 @@ const ProjectContractorsTab: React.FC<ProjectContractorsTabProps> = ({
                     <option value="">-- Unassigned --</option>
                     {budgetItems.map((item) => (
                       <option key={item.id} value={item.id}>
-                        {item.category_name} (${item.original_amount.toLocaleString()})
+                        {item.category_name} ({formatCurrency(item.original_amount)})
                       </option>
                     ))}
                   </select>
@@ -1181,7 +1182,7 @@ const ProjectContractorsTab: React.FC<ProjectContractorsTabProps> = ({
                     Remove {contractToDelete.contractors.name} from this project?
                   </p>
                   <ul className="text-orange-700 text-sm space-y-1">
-                    <li>• Contract amount: ${contractToDelete.contract_amount.toLocaleString()}</li>
+                    <li>• Contract amount: {formatCurrency(contractToDelete.contract_amount)}</li>
                     <li>• This will remove the contract and all associated line items from this project</li>
                     <li>• <span className="font-semibold text-green-700">The contractor will remain in your system for other projects</span></li>
                     <li>• This action cannot be reversed</li>

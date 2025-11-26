@@ -1,18 +1,52 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { useData } from '../context/DataContext';
 import { TrendingUp, TrendingDown, DollarSign, Calendar, Users, Building } from 'lucide-react';
+import { formatCurrency } from '@/lib/theme';
+import { supabase } from '@/lib/supabaseClient';
 
 const MetricsView: React.FC = () => {
   const { projects, subcontractors, contracts = [] } = useData();
+  const [approvedPaymentsByProject, setApprovedPaymentsByProject] = useState<Record<number, number>>({});
+  const [spentLoading, setSpentLoading] = useState(true);
 
-  // Calculate key metrics
+  // Fetch approved payments for spent calculation (SINGLE SOURCE OF TRUTH)
+  const fetchApprovedPayments = useCallback(async () => {
+    setSpentLoading(true);
+    try {
+      const { data: approvedPayments } = await supabase
+        .from('payment_applications')
+        .select('project_id, current_period_value')
+        .eq('status', 'approved');
+
+      const spentByProject = (approvedPayments || []).reduce((acc: Record<number, number>, payment) => {
+        if (!acc[payment.project_id]) {
+          acc[payment.project_id] = 0;
+        }
+        acc[payment.project_id] += Number(payment.current_period_value) || 0;
+        return acc;
+      }, {});
+
+      setApprovedPaymentsByProject(spentByProject);
+    } catch (error) {
+      console.error('Error fetching approved payments:', error);
+    } finally {
+      setSpentLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchApprovedPayments();
+  }, [fetchApprovedPayments]);
+
+  // Calculate key metrics using approved payments for spent
   const metrics = useMemo(() => {
     const totalProjects = projects.length;
     const activeProjects = projects.filter(p => (p as any).status === 'active' || !(p as any).status).length;
     const completedProjects = projects.filter(p => (p as any).status === 'completed').length;
 
     const totalBudget = projects.reduce((sum, p) => sum + (Number(p.budget) || 0), 0);
-    const totalSpent = projects.reduce((sum, p) => sum + (Number(p.spent) || 0), 0);
+    // Use approved payments for spent calculation (SINGLE SOURCE OF TRUTH)
+    const totalSpent = Object.values(approvedPaymentsByProject).reduce((sum, spent) => sum + spent, 0);
     const remainingBudget = totalBudget - totalSpent;
     const budgetUtilization = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0;
 
@@ -41,7 +75,7 @@ const MetricsView: React.FC = () => {
       avgProjectBudget,
       completionRate
     };
-  }, [projects, subcontractors, contracts]);
+  }, [projects, subcontractors, contracts, approvedPaymentsByProject]);
 
   const MetricCard: React.FC<{
     title: string;
@@ -94,7 +128,7 @@ const MetricsView: React.FC = () => {
         />
         <MetricCard
           title="Total Budget"
-          value={`$${metrics.totalBudget.toLocaleString()}`}
+          value={formatCurrency(metrics.totalBudget)}
           icon={<DollarSign className="w-6 h-6 text-white" />}
           color="bg-purple-500"
           trend={{ value: 8, isPositive: true }}
@@ -113,7 +147,7 @@ const MetricsView: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="text-center">
             <div className="text-3xl font-bold text-primary mb-2">
-              ${metrics.totalSpent.toLocaleString()}
+              {formatCurrency(metrics.totalSpent)}
             </div>
             <div className="text-muted-foreground">Total Spent</div>
             <div className="text-sm text-gray-500 mt-1">
@@ -122,7 +156,7 @@ const MetricsView: React.FC = () => {
           </div>
           <div className="text-center">
             <div className="text-3xl font-bold text-green-600 mb-2">
-              ${metrics.remainingBudget.toLocaleString()}
+              {formatCurrency(metrics.remainingBudget)}
             </div>
             <div className="text-muted-foreground">Remaining Budget</div>
             <div className="text-sm text-gray-500 mt-1">
@@ -131,7 +165,7 @@ const MetricsView: React.FC = () => {
           </div>
           <div className="text-center">
             <div className="text-3xl font-bold text-purple-600 mb-2">
-              ${metrics.contractValue.toLocaleString()}
+              {formatCurrency(metrics.contractValue)}
             </div>
             <div className="text-muted-foreground">Contract Value</div>
             <div className="text-sm text-gray-500 mt-1">
@@ -169,7 +203,7 @@ const MetricsView: React.FC = () => {
             </div>
             <div className="flex justify-between items-center">
               <span className="text-muted-foreground">Average Project Budget</span>
-              <span className="font-semibold text-foreground">${metrics.avgProjectBudget.toLocaleString()}</span>
+              <span className="font-semibold text-foreground">{formatCurrency(metrics.avgProjectBudget)}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-muted-foreground">Vendor Utilization</span>

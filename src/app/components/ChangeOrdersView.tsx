@@ -24,10 +24,10 @@ import {
   GitBranch
 } from 'lucide-react';
 // import ChangeOrderForm from './ChangeOrderForm'; // TODO: Integrate properly
-import { DataTable } from '@/components/ui/DataTable';
+import { DataTable, Column } from '@/components/ui/DataTable';
 import { EmptyState } from './ui/EmptyState';
 import { SignalBadge } from '@/components/ui/SignalBadge';
-import { SystemStatus } from '@/lib/theme';
+import { SystemStatus, formatCurrency } from '@/lib/theme';
 
 // Types
 interface ChangeOrder {
@@ -136,7 +136,7 @@ const ChangeOrdersView: React.FC = () => {
 
   // Approve change order
   const handleApprove = useCallback(async (order: ChangeOrder) => {
-    if (!confirm(`Approve change order ${order.co_number} for $${order.cost_impact.toLocaleString()}?`)) {
+    if (!confirm(`Approve change order ${order.co_number} for ${formatCurrency(order.cost_impact)}?`)) {
       return;
     }
 
@@ -242,7 +242,7 @@ const ChangeOrdersView: React.FC = () => {
     setShowPhotoModal(true);
   }, [fetchPhotos]);
 
-  const changeOrderColumns = React.useMemo(() => [
+  const changeOrderColumns: Column<ChangeOrder>[] = React.useMemo(() => [
     {
       header: 'CO #',
       accessor: (row: ChangeOrder) => (
@@ -254,8 +254,8 @@ const ChangeOrdersView: React.FC = () => {
         </div>
       )
     },
-    { header: 'Project', accessor: 'project_name' },
-    { header: 'Contractor', accessor: 'contractor_name' },
+    { header: 'Project', accessor: 'project_name' as keyof ChangeOrder },
+    { header: 'Contractor', accessor: 'contractor_name' as keyof ChangeOrder },
     {
       header: 'Description',
       accessor: (row: ChangeOrder) => (
@@ -268,7 +268,7 @@ const ChangeOrdersView: React.FC = () => {
       header: 'Cost Impact',
       accessor: (row: ChangeOrder) => (
         <span className={`text-sm font-semibold ${row.cost_impact >= 0 ? 'text-red-600' : 'text-green-600'}`}>
-          {row.cost_impact >= 0 ? '+' : ''}${row.cost_impact.toLocaleString()}
+          {row.cost_impact > 0 ? '+' : ''}{formatCurrency(row.cost_impact)}
         </span>
       ),
       align: 'right' as const
@@ -680,7 +680,7 @@ const ChangeOrdersView: React.FC = () => {
                   <div>
                     <p className="text-sm text-gray-500 mb-1">Cost Impact</p>
                     <p className={`text-xl font-bold ${selectedOrder.cost_impact >= 0 ? 'text-red-600' : 'text-green-600'}`}>
-                      {selectedOrder.cost_impact >= 0 ? '+' : ''}${selectedOrder.cost_impact.toLocaleString()}
+                      {selectedOrder.cost_impact > 0 ? '+' : ''}{formatCurrency(selectedOrder.cost_impact)}
                     </p>
                   </div>
                   <div>

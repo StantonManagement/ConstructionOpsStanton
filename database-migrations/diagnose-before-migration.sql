@@ -65,3 +65,4 @@ JOIN pg_class as source_table ON pg_depend.refobjid = source_table.oid
 WHERE source_table.relname = 'user_role'
 AND dependent_view.relkind = 'v';
 
+

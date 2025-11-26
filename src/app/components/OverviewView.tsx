@@ -374,16 +374,17 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
     setStatsLoading(true);
     try {
       // Fetch approved payments for spent calculation
+      // Using current_period_value as the standard field for consistency across all views
       const { data: approvedPayments } = await supabase
         .from('payment_applications')
-        .select('current_payment, project_id')
+        .select('current_period_value, project_id')
         .eq('status', 'approved');
 
       const approvedPaymentsByProject = (approvedPayments || []).reduce((acc: any, payment) => {
         if (!acc[payment.project_id]) {
           acc[payment.project_id] = 0;
         }
-        acc[payment.project_id] += Number(payment.current_payment) || 0;
+        acc[payment.project_id] += Number(payment.current_period_value) || 0;
         return acc;
       }, {});
 

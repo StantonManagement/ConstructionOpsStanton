@@ -3,6 +3,7 @@ import { useData, Project } from '../context/DataContext';
 import { supabase } from '@/lib/supabaseClient';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
+import { formatCurrency } from '@/lib/theme';
 
 type PaymentProcessingViewProps = {
   setSelectedProject: (project: Project) => void;
@@ -129,11 +130,7 @@ const usePaymentApplications = () => {
   return { apps, loading, error, refetch: fetchPaymentApplications };
 };
 
-// Utility functions
-const formatCurrency = (amount: number | null | undefined): string => {
-  if (amount == null) return '-';
-  return `$${amount.toLocaleString()}`;
-};
+// Utility functions - formatCurrency from theme handles null values
 
 const formatDate = (dateStr: string | null): string => {
   if (!dateStr) return '-';
@@ -332,7 +329,7 @@ const PaymentApplicationCard: React.FC<{
         <div className="text-center">
           <div className="text-xs text-gray-500 mb-1">Remaining</div>
           <div className="font-semibold text-sm text-gray-900">
-            {app.contract_amount && app.paid_to_date 
+            {app.contract_amount != null && app.paid_to_date != null 
               ? formatCurrency(app.contract_amount - app.paid_to_date)
               : '-'
             }

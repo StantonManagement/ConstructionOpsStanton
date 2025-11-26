@@ -14,6 +14,7 @@ export interface Project {
   budget: number;
   spent: number;
   permits: { [key: string]: string };
+  address?: string;
 }
 
 export interface Subcontractor {

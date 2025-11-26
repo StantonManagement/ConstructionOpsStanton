@@ -16,6 +16,9 @@ export interface Project {
   owner_entity_id?: number;
   portfolio_name?: string;
   total_units?: number;
+  // Calculated fields from enhanced queries
+  calculatedBudget?: number;
+  calculatedSpent?: number;
   stats?: {
     totalContractors: number;
     activePaymentApps: number;
@@ -40,6 +43,7 @@ export interface Subcontractor {
   email?: string;
   hasOpenPaymentApp: boolean;
   compliance: { insurance: string; license: string };
+  performance_score?: number;
 }
 
 export interface PaymentApplication {

@@ -146,3 +146,4 @@ RLS Policy: WHERE user_role.user_id = auth.uid()
 ✅ Project creation works without errors
 ✅ All admin/PM operations work correctly
 
+

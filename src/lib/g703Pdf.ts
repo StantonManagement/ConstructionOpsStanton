@@ -776,7 +776,7 @@ export async function generateG703Pdf({
       fontBold: any, 
       colors: any, 
       project: { name?: string; address?: string }, 
-      contractor: { name?: string }, 
+      contractor: { name?: string; trade?: string }, 
       changeOrders: ChangeOrder[]
     ) => {
       // Add a new page (same size as continuation sheet)

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { DataTable } from '@/components/ui/DataTable';
+import { DataTable, Column } from '@/components/ui/DataTable';
 import { SignalBadge } from '@/components/ui/SignalBadge';
 import { Warranty, WarrantyFilters, ExpiringWarrantySummary } from '@/types/warranties';
 import WarrantyFormModal from './WarrantyFormModal';
@@ -112,48 +112,51 @@ export default function WarrantiesList() {
 
       {/* Table */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
-        <DataTable
-          data={warranties}
-          loading={loading}
-          columns={[
-            { header: 'Project', accessor: 'project_name' },
-            { header: 'Contractor', accessor: 'contractor_name' },
-            { header: 'Type', accessor: 'warranty_type' },
-            { 
-              header: 'Status', 
-              accessor: (row) => (
-                <SignalBadge status={
-                  row.status === 'active' ? 'success' :
-                  row.status === 'expired' ? 'critical' :
-                  row.status === 'pending' ? 'warning' : 'neutral'
-                }>
-                  {row.status}
-                </SignalBadge>
-              )
-            },
-            { 
-              header: 'Expiration', 
-              accessor: (row) => (
-                <div className={getDaysUntilExpirationColor(row.days_until_expiration)}>
-                  {new Date(row.end_date).toLocaleDateString()}
-                  {row.days_until_expiration !== undefined && (
-                    <span className="text-xs ml-2">
-                      ({row.days_until_expiration > 0 ? `${row.days_until_expiration} days` : 'Expired'})
-                    </span>
-                  )}
-                </div>
-              )
-            },
-            {
-              header: 'Actions',
-              align: 'right',
-              accessor: () => (
-                <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">View</button>
-              )
-            }
-          ]}
-          emptyMessage="No warranties found matching your filters."
-        />
+        {loading ? (
+          <div className="p-8 text-center text-gray-500">Loading warranties...</div>
+        ) : (
+          <DataTable<Warranty>
+            data={warranties}
+            columns={[
+              { header: 'Project', accessor: 'project_name' as keyof Warranty },
+              { header: 'Contractor', accessor: 'contractor_name' as keyof Warranty },
+              { header: 'Type', accessor: 'warranty_type' as keyof Warranty },
+              { 
+                header: 'Status', 
+                accessor: (row: Warranty) => (
+                  <SignalBadge status={
+                    row.status === 'active' ? 'success' :
+                    row.status === 'expired' ? 'critical' :
+                    row.status === 'pending' ? 'warning' : 'neutral'
+                  }>
+                    {row.status}
+                  </SignalBadge>
+                )
+              },
+              { 
+                header: 'Expiration', 
+                accessor: (row: Warranty) => (
+                  <div className={getDaysUntilExpirationColor(row.days_until_expiration)}>
+                    {new Date(row.end_date).toLocaleDateString()}
+                    {row.days_until_expiration !== undefined && (
+                      <span className="text-xs ml-2">
+                        ({row.days_until_expiration > 0 ? `${row.days_until_expiration} days` : 'Expired'})
+                      </span>
+                    )}
+                  </div>
+                )
+              },
+              {
+                header: 'Actions',
+                align: 'right',
+                accessor: () => (
+                  <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">View</button>
+                )
+              }
+            ] as Column<Warranty>[]}
+            emptyMessage="No warranties found matching your filters."
+          />
+        )}
       </div>
 
       {showForm && (

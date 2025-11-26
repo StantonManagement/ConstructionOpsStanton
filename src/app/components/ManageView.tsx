@@ -11,6 +11,7 @@ import { useLineItemsState, LineItem } from '@/hooks/useLineItemsState';
 import { EditableLineItemsTable } from '@/app/components/EditableLineItemsTable';
 import { useModal } from '@/app/context/ModalContext';
 import { Project, Subcontractor, Contract } from '@/types/schema';
+import { formatCurrency } from '@/lib/theme';
 
 // Form validation utilities
 const validators = {
@@ -363,19 +364,19 @@ const ItemCard: React.FC<{
           <input
             type="checkbox"
             checked={selected}
-            onChange={() => onSelect(item.id)}
+            onChange={() => onSelect(String(item.id))}
             className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded flex-shrink-0"
           />
           <div className="flex items-center gap-2 min-w-0 flex-1">
             {getCardIcon()}
             <div className="min-w-0 flex-1">
               <h3 className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors text-sm sm:text-base truncate">
-                {type === 'project' ? item.name : 
-                 type === 'vendor' ? item.name : 
-                 (item.contract_nickname || item.project?.name || 'Unknown Project')}
+                {type === 'project' ? (item as Project).name : 
+                 type === 'vendor' ? (item as Subcontractor).name : 
+                 ((item as Contract).contract_nickname || (item as Contract).project?.name || 'Unknown Project')}
               </h3>
               <p className="text-xs sm:text-sm text-gray-500 truncate">
-                {type === 'project' ? item.client_name || 'No client' :
+                {type === 'project' ? (item as Project).client_name || 'No client' :
                  type === 'vendor' ? `ID: #${item.id}` :
                  `Contract #${item.id}`}
               </p>
@@ -388,17 +389,22 @@ const ItemCard: React.FC<{
       </div>
 
       {/* Type-specific content */}
-      {type === 'project' && (
+      {type === 'project' && (() => {
+        const proj = item as Project;
+        const budget = proj.calculatedBudget || proj.budget || 0;
+        const spent = proj.calculatedSpent || proj.spent || 0;
+        const progress = budget > 0 ? (spent / budget) * 100 : 0;
+        return (
         <div className="space-y-3">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4 text-sm">
             <div>
               <span className="text-gray-500 text-xs sm:text-sm">Phase:</span>
-              <span className="ml-1 text-gray-900 font-medium text-xs sm:text-sm truncate block">{item.current_phase || 'Not set'}</span>
+              <span className="ml-1 text-gray-900 font-medium text-xs sm:text-sm truncate block">{proj.current_phase || 'Not set'}</span>
             </div>
             <div>
               <span className="text-gray-500 text-xs sm:text-sm">Budget:</span>
               <span className="ml-1 text-gray-900 font-medium text-xs sm:text-sm">
-                ${(item.calculatedBudget || item.budget || 0).toLocaleString()}
+                {formatCurrency(budget)}
               </span>
             </div>
           </div>
@@ -406,75 +412,78 @@ const ItemCard: React.FC<{
             <div>
               <span className="text-gray-500 text-xs sm:text-sm">Spent:</span>
               <span className="ml-1 text-gray-900 font-medium text-xs sm:text-sm">
-                ${(item.calculatedSpent || item.spent || 0).toLocaleString()}
+                {formatCurrency(spent)}
               </span>
             </div>
             <div>
               <span className="text-gray-500 text-xs sm:text-sm">Remaining:</span>
               <span className="ml-1 text-gray-900 font-medium text-xs sm:text-sm">
-                ${Math.max(0, (item.calculatedBudget || item.budget || 0) - (item.calculatedSpent || item.spent || 0)).toLocaleString()}
+                {formatCurrency(Math.max(0, budget - spent))}
               </span>
             </div>
           </div>
-          {((item.calculatedBudget || item.budget) > 0) && (
+          {budget > 0 && (
             <div>
               <div className="flex items-center justify-between text-xs sm:text-sm mb-2">
                 <span className="text-gray-500">Progress</span>
                 <span className="font-medium">
-                  {((item.calculatedSpent || item.spent || 0) / (item.calculatedBudget || item.budget) * 100).toFixed(2)}%
+                  {progress.toFixed(2)}%
                 </span>
               </div>
               <div className="bg-gray-200 rounded-full h-2 sm:h-3 relative overflow-hidden">
                 <div
                   className={`h-2 sm:h-3 rounded-full transition-all duration-500 ease-out ${
-                    ((item.calculatedSpent || item.spent || 0) / (item.calculatedBudget || item.budget)) * 100 > 95 ? 'bg-gradient-to-r from-red-500 to-red-600' :
-                    ((item.calculatedSpent || item.spent || 0) / (item.calculatedBudget || item.budget)) * 100 > 90 ? 'bg-gradient-to-r from-orange-500 to-orange-600' :
-                    ((item.calculatedSpent || item.spent || 0) / (item.calculatedBudget || item.budget)) * 100 > 75 ? 'bg-gradient-to-r from-yellow-500 to-yellow-600' :
+                    progress > 95 ? 'bg-gradient-to-r from-red-500 to-red-600' :
+                    progress > 90 ? 'bg-gradient-to-r from-orange-500 to-orange-600' :
+                    progress > 75 ? 'bg-gradient-to-r from-yellow-500 to-yellow-600' :
                     'bg-gradient-to-r from-green-500 to-green-600'
                   }`}
                   style={{ 
-                    width: `${Math.min(((item.calculatedSpent || item.spent || 0) / (item.calculatedBudget || item.budget)) * 100 > 0 ? Math.max(((item.calculatedSpent || item.spent || 0) / (item.calculatedBudget || item.budget)) * 100, 1) : 0, 100)}%`,
+                    width: `${Math.min(progress > 0 ? Math.max(progress, 1) : 0, 100)}%`,
                     transition: 'width 0.5s ease-out'
                   }}
                 >
                   {/* Animated shimmer effect for high usage */}
-                  {(((item.calculatedSpent || item.spent || 0) / (item.calculatedBudget || item.budget)) * 100 > 75) && (
+                  {progress > 75 && (
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse"></div>
                   )}
                 </div>
               </div>
               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center text-xs mt-1 gap-1 sm:gap-0">
                 <span className="text-gray-500 font-medium">
-                  {((item.calculatedSpent || item.spent || 0) / (item.calculatedBudget || item.budget)) * 100 < 0.01 ? '<0.01%' : (((item.calculatedSpent || item.spent || 0) / (item.calculatedBudget || item.budget)) * 100).toFixed(3)}% utilized
+                  {progress < 0.01 ? '<0.01%' : progress.toFixed(3)}% utilized
                 </span>
                 <span className={`font-semibold ${
-                  ((item.calculatedSpent || item.spent || 0) / (item.calculatedBudget || item.budget)) * 100 > 95 ? 'text-red-600' :
-                  ((item.calculatedSpent || item.spent || 0) / (item.calculatedBudget || item.budget)) * 100 > 90 ? 'text-orange-600' :
-                  ((item.calculatedSpent || item.spent || 0) / (item.calculatedBudget || item.budget)) * 100 > 75 ? 'text-yellow-600' :
+                  progress > 95 ? 'text-red-600' :
+                  progress > 90 ? 'text-orange-600' :
+                  progress > 75 ? 'text-yellow-600' :
                   'text-green-700'
                 }`}>
-                  {((item.calculatedSpent || item.spent || 0) / (item.calculatedBudget || item.budget)) * 100 > 95 ? '⚠️ Over budget' :
-                   ((item.calculatedSpent || item.spent || 0) / (item.calculatedBudget || item.budget)) * 100 > 90 ? '⚠️ Near limit' :
-                   ((item.calculatedSpent || item.spent || 0) / (item.calculatedBudget || item.budget)) * 100 > 75 ? '⚡ High usage' :
+                  {progress > 95 ? '⚠️ Over budget' :
+                   progress > 90 ? '⚠️ Near limit' :
+                   progress > 75 ? '⚡ High usage' :
                    '✅ On track'}
                 </span>
               </div>
             </div>
           )}
         </div>
-      )}
+        );
+      })()}
 
-      {type === 'vendor' && (
+      {type === 'vendor' && (() => {
+        const vendor = item as Subcontractor;
+        return (
         <div className="space-y-3">
           <div className="flex items-center gap-2 mb-3">
             <span className="inline-flex items-center px-2 sm:px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
-              {item.trade}
+              {vendor.trade}
             </span>
           </div>
           <div className="space-y-2 text-sm">
             <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
               <span className="text-gray-500 text-xs sm:text-sm">Phone:</span>
-              <span className="text-gray-900 text-xs sm:text-sm truncate">{item.phone || 'Not provided'}</span>
+              <span className="text-gray-900 text-xs sm:text-sm truncate">{vendor.phone || 'Not provided'}</span>
             </div>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-0">
               <span className="text-gray-500 text-xs sm:text-sm">Performance:</span>
@@ -483,49 +492,53 @@ const ItemCard: React.FC<{
                   <Star
                     key={star}
                     className={`w-3 h-3 sm:w-4 sm:h-4 ${
-                      star <= ((item as any).performance_score || 0)
+                      star <= (vendor.performance_score || 0)
                         ? 'text-yellow-400 fill-current'
                         : 'text-gray-300'
                     }`}
                   />
                 ))}
                 <span className="text-xs sm:text-sm text-gray-600 ml-1">
-                  {(item as any).performance_score || 'N/A'}
+                  {vendor.performance_score || 'N/A'}
                 </span>
               </div>
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
 
-      {type === 'contract' && (
+      {type === 'contract' && (() => {
+        const contract = item as Contract;
+        return (
         <div className="space-y-3">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4 text-sm">
             <div>
               <span className="text-gray-500 text-xs sm:text-sm">Vendor:</span>
-              <span className="ml-1 text-gray-900 font-medium text-xs sm:text-sm truncate block">{item.subcontractor?.name || 'Unknown'}</span>
+              <span className="ml-1 text-gray-900 font-medium text-xs sm:text-sm truncate block">{contract.subcontractor?.name || 'Unknown'}</span>
             </div>
             <div>
               <span className="text-gray-500 text-xs sm:text-sm">Amount:</span>
-              <span className="ml-1 text-gray-900 font-medium text-xs sm:text-sm">${(item.contract_amount || 0).toLocaleString()}</span>
+              <span className="ml-1 text-gray-900 font-medium text-xs sm:text-sm">{formatCurrency(contract.contract_amount || 0)}</span>
             </div>
           </div>
           <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm">
             <div className="flex items-center gap-1">
               <Calendar className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" />
               <span className="text-gray-500 text-xs sm:text-sm">Start:</span>
-              <span className="text-gray-900 text-xs sm:text-sm">{item.start_date || 'Not set'}</span>
+              <span className="text-gray-900 text-xs sm:text-sm">{contract.start_date || 'Not set'}</span>
             </div>
-            {item.end_date && (
+            {contract.end_date && (
               <div className="flex items-center gap-1">
                 <Calendar className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" />
                 <span className="text-gray-500 text-xs sm:text-sm">End:</span>
-                <span className="text-gray-900 text-xs sm:text-sm">{item.end_date}</span>
+                <span className="text-gray-900 text-xs sm:text-sm">{contract.end_date}</span>
               </div>
             )}
           </div>
         </div>
-      )}
+        );
+      })()}
 
       <div className="mt-4 flex flex-col sm:flex-row sm:justify-end gap-2" onClick={(e) => e.stopPropagation()}>
         <button
@@ -1530,10 +1543,10 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
 
   const handleExport = () => {
     try {
-      const data = currentData as Contract[];
+      const data = currentData as unknown as Contract[];
       
       if (data.length === 0) {
-        addNotification('info', 'No data to export');
+        showToast({ message: 'No data to export', type: 'info' });
         return;
       }
       
@@ -1735,12 +1748,12 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
           {currentData.map((item) => (
             <ItemCard
               key={item.id}
-              item={item}
+              item={item as unknown as Contract}
               type="contract"
               selected={selectedItems.has(item.id.toString())}
               onSelect={(id) => handleItemSelect(id)}
-              onView={(i) => handleViewItem(i)}
-              onEdit={(i) => handleEditItem(i)}
+              onView={(i) => handleViewItem(i as unknown as Contract)}
+              onEdit={(i) => handleEditItem(i as unknown as Contract)}
               onDelete={() => {
                 setSelectedItems(new Set([item.id.toString()]));
                 setShowDeleteConfirmation(true);
@@ -1778,10 +1791,10 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
           <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full">
             <AddContractForm
               onClose={() => setOpenForm(null)}
-              onRefresh={refetchContracts}
+              onRefresh={async () => { await refetchContracts(); }}
               setDirty={setFormDirty}
-              projects={projects}
-              subcontractors={subcontractors}
+              projects={projects as unknown as Project[]}
+              subcontractors={subcontractors as unknown as Subcontractor[]}
             />
           </div>
         </div>
@@ -1805,7 +1818,7 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
               {selectedItem.contract_nickname && (
                 <div><span className="font-semibold">Contract Nickname:</span> {selectedItem.contract_nickname}</div>
               )}
-              <div><span className="font-semibold">Contract Amount:</span> ${(selectedItem.contract_amount || 0).toLocaleString()}</div>
+              <div><span className="font-semibold">Contract Amount:</span> {formatCurrency(selectedItem.contract_amount || 0)}</div>
               <div><span className="font-semibold">Start Date:</span> {selectedItem.start_date || 'Not set'}</div>
               <div><span className="font-semibold">End Date:</span> {selectedItem.end_date || 'Ongoing'}</div>
               <div><span className="font-semibold">Status:</span> {selectedItem.status || 'Active'}</div>
@@ -1829,12 +1842,12 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
           <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full">
             <AddContractForm
               onClose={handleCloseEditModal}
-              onRefresh={refetchContracts}
+              onRefresh={async () => { await refetchContracts(); }}
               setDirty={setFormDirty}
               initialData={selectedItem}
               isEdit={true}
-              projects={projects}
-              subcontractors={subcontractors}
+              projects={projects as unknown as Project[]}
+              subcontractors={subcontractors as unknown as Subcontractor[]}
             />
           </div>
         </div>

@@ -134,8 +134,12 @@ const ProjectBudgetDetail: React.FC<ProjectBudgetDetailProps> = ({ projectId, pr
   // Calculate summary
   const calculateSummary = (items: BudgetLineItem[]) => {
     const totals = items.reduce((acc, item) => {
-      acc.totalOriginal += Number(item.original_amount) || 0;
-      acc.totalRevised += Number(item.revised_amount) || 0;
+      const original = Number(item.original_amount) || 0;
+      const revised = Number(item.revised_amount) || 0;
+      const baseBudget = revised > 0 ? revised : original;
+
+      acc.totalOriginal += original;
+      acc.totalRevised += baseBudget;
       acc.totalActual += Number(item.actual_spend) || 0;
       acc.totalCommitted += Number(item.committed_costs) || 0;
       return acc;
@@ -185,7 +189,7 @@ const ProjectBudgetDetail: React.FC<ProjectBudgetDetailProps> = ({ projectId, pr
     await fetchBudget();
   };
 
-  // Handle create
+  // Handle create (single item)
   const handleCreate = async (newBudget: Partial<BudgetLineItem>) => {
     const { data: sessionData } = await supabase.auth.getSession();
     if (!sessionData.session) throw new Error('Not authenticated');
@@ -207,6 +211,34 @@ const ProjectBudgetDetail: React.FC<ProjectBudgetDetailProps> = ({ projectId, pr
       throw new Error(error.error || 'Failed to create budget');
     }
 
+    await fetchBudget();
+  };
+
+  // Handle bulk create (multiple items)
+  const handleBulkCreate = async (items: Partial<BudgetLineItem>[]) => {
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData.session) throw new Error('Not authenticated');
+
+    const response = await fetch('/api/budgets', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${sessionData.session.access_token}`
+      },
+      body: JSON.stringify({
+        project_id: projectId,
+        items: items
+      })
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to create budget items');
+    }
+
+    const result = await response.json();
+    console.log(`[Budget] Bulk created ${result.created} items`);
+    
     await fetchBudget();
   };
 
@@ -324,6 +356,7 @@ const ProjectBudgetDetail: React.FC<ProjectBudgetDetailProps> = ({ projectId, pr
         data={budgetItems}
         onUpdate={handleUpdate}
         onCreate={handleCreate}
+        onBulkCreate={handleBulkCreate}
         onDelete={handleDelete}
         isLoading={loading}
       />

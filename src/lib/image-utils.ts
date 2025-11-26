@@ -27,7 +27,7 @@ export async function extractExifData(buffer: Buffer): Promise<ImageMetadata> {
       exif: true,
       ifd0: true,
       makerNote: false, // Skip maker notes for performance
-    });
+    } as unknown as Parameters<typeof exifr.parse>[1]);
 
     if (!exif) {
       return {};

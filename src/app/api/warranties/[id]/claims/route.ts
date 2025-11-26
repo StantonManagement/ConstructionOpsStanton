@@ -97,7 +97,7 @@ export const POST = withAuth(async (request: NextRequest, context: { params: Pro
       .single();
 
     if (claimError) {
-      console.error('[Warranty Claims API] Error creating claim:', error);
+      console.error('[Warranty Claims API] Error creating claim:', claimError);
       throw new APIError('Failed to file claim', 500, 'DATABASE_ERROR');
     }
 

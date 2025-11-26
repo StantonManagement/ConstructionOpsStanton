@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import type { Photo, PhotoFilters, PhotoType } from '@/types/photos';
 import { Camera } from 'lucide-react';
@@ -19,6 +19,7 @@ export default function PhotoGalleryView() {
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [filters, setFilters] = useState<PhotoFilters>({});
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch projects
@@ -86,7 +87,7 @@ export default function PhotoGalleryView() {
     return () => {
       isMounted = false;
     };
-  }, [filters]);
+  }, [filters, refreshTrigger]);
 
   const handleFileSelect = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -128,7 +129,7 @@ export default function PhotoGalleryView() {
       }
 
       // Refresh photo list
-      await fetchPhotos();
+      setRefreshTrigger(prev => prev + 1);
       setShowUploadModal(false);
     } catch (error) {
       console.error('Error uploading photos:', error);

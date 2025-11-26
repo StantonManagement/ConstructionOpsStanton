@@ -182,23 +182,30 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ project, onBack, 
   const fetchBudgetStats = useCallback(async () => {
     setLoadingStats(true);
     try {
-      // Fetch contracts for budget total
-      const { data: contractsData } = await supabase
-        .from('project_contractors')
-        .select('contract_amount')
+      // Fetch budget line items for totals
+      const { data: budgetData } = await supabase
+        .from('property_budgets')
+        .select('original_amount, revised_amount, actual_spend, committed_costs')
         .eq('project_id', project.id)
-        .eq('contract_status', 'active');
+        .eq('is_active', true);
 
-      const totalBudget = (contractsData || []).reduce((sum, c) => sum + (c.contract_amount || 0), 0);
+      // Calculate totals from budget line items
+      const budgetTotals = (budgetData || []).reduce((acc, item) => {
+        acc.budget += Number(item.revised_amount) || Number(item.original_amount) || 0;
+        acc.spent += Number(item.actual_spend) || 0;
+        return acc;
+      }, { budget: 0, spent: 0 });
 
-      // Fetch paid amounts (approved payment applications)
-      const { data: paidData } = await supabase
-        .from('payment_applications')
-        .select('current_payment')
-        .eq('project_id', project.id)
-        .eq('status', 'approved');
+      // Fallback to contracts if no budget data
+      if (!budgetData || budgetData.length === 0) {
+        const { data: contractsData } = await supabase
+          .from('project_contractors')
+          .select('contract_amount')
+          .eq('project_id', project.id)
+          .eq('contract_status', 'active');
 
-      const totalSpent = (paidData || []).reduce((sum, p) => sum + (p.current_payment || 0), 0);
+        budgetTotals.budget = (contractsData || []).reduce((sum, c) => sum + (c.contract_amount || 0), 0);
+      }
 
       // Fetch committed amounts (submitted/needs_review payment applications)
       const { data: committedData } = await supabase
@@ -209,11 +216,11 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ project, onBack, 
 
       const totalCommitted = (committedData || []).reduce((sum, p) => sum + (p.current_payment || 0), 0);
 
-      const totalRemaining = totalBudget - totalSpent - totalCommitted;
+      const totalRemaining = budgetTotals.budget - budgetTotals.spent - totalCommitted;
 
       setBudgetStats({
-        budget: totalBudget,
-        spent: totalSpent,
+        budget: budgetTotals.budget,
+        spent: budgetTotals.spent,
         committed: totalCommitted,
         remaining: totalRemaining,
       });
