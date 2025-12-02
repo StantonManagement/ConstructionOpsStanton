@@ -1,6 +1,9 @@
 import { Suspense } from 'react';
 import PMDashboard from '../components/PMDashboard';
 
+// Force dynamic rendering since we rely on client-side search params and auth
+export const dynamic = 'force-dynamic';
+
 function LoadingFallback() {
   return (
     <div className="min-h-screen flex items-center justify-center">
