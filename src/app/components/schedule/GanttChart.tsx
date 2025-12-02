@@ -34,6 +34,14 @@ export default function GanttChart({
   const ganttRef = useRef<Gantt | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Sanitize tasks helper
+  const getSafeTasks = (taskList: GanttTask[]) => {
+    return taskList.map(t => ({
+      ...t,
+      custom_class: t.custom_class?.trim().replace(/\s+/g, '-')
+    }));
+  };
+
   useEffect(() => {
     // CSS is now loaded globally in globals.css
   }, []);
@@ -57,44 +65,55 @@ export default function GanttChart({
 
   useEffect(() => {
     if (containerRef.current && tasks.length > 0) {
-      // Clear previous instance content if re-rendering
-      containerRef.current.innerHTML = '';
+      const safeTasks = getSafeTasks(tasks);
 
-      // Sanitization step to ensure no invalid tokens reach the library
-      // Replaces spaces with hyphens to avoid "contains HTML space characters" error
-      // and ensure valid CSS class names
-      const safeTasks = tasks.map(t => ({
-        ...t,
-        custom_class: t.custom_class?.trim().replace(/\s+/g, '-')
-      }));
-
-      console.log('Gantt safeTasks:', safeTasks);
-
-      try {
-        ganttRef.current = new Gantt(containerRef.current, safeTasks, {
-          header_height: 50,
-          column_width: 30,
-          step: 24,
-          view_modes: ['Quarter Day', 'Half Day', 'Day', 'Week', 'Month'],
-          bar_height: 20,
-          bar_corner_radius: 3,
-          arrow_curve: 5,
-          padding: 18,
-          view_mode: viewMode,
-          date_format: 'YYYY-MM-DD',
-          custom_popup_html: null,
-          on_click: (task: any) => {
-            if (onTaskClick) onTaskClick(task);
-          },
-          on_date_change: (task: any, start: Date, end: Date) => {
-            if (onDateChange) onDateChange(task, start, end);
-          },
-          on_progress_change: (task: any, progress: number) => {
-            if (onProgressChange) onProgressChange(task, progress);
-          },
-        });
-      } catch (e) {
-        console.error('Error initializing Gantt:', e);
+      if (ganttRef.current) {
+        // Update existing instance
+        ganttRef.current.refresh(safeTasks);
+      } else {
+        // Create new instance
+        // Clear previous instance content if any
+        containerRef.current.innerHTML = '';
+        
+        try {
+          ganttRef.current = new Gantt(containerRef.current, safeTasks, {
+            header_height: 60, // Increased for better spacing
+            column_width: 30,
+            step: 24,
+            view_modes: ['Quarter Day', 'Half Day', 'Day', 'Week', 'Month'],
+            bar_height: 24, // Slightly taller bars
+            bar_corner_radius: 4, // More rounded
+            arrow_curve: 5,
+            padding: 20,
+            view_mode: viewMode,
+            date_format: 'YYYY-MM-DD',
+            custom_popup_html: (task: any) => {
+              // Custom tooltip
+              return `
+                <div class="p-3 rounded shadow-lg bg-white border border-gray-200 text-sm min-w-[200px] z-50">
+                  <div class="font-bold text-gray-800 mb-1">${task.name}</div>
+                  <div class="text-gray-600 text-xs mb-2">
+                    ${task.start} - ${task.end}
+                  </div>
+                  <div class="flex items-center justify-between text-xs text-gray-500">
+                    <span>Progress: ${task.progress}%</span>
+                  </div>
+                </div>
+              `;
+            },
+            on_click: (task: any) => {
+              if (onTaskClick) onTaskClick(task);
+            },
+            on_date_change: (task: any, start: Date, end: Date) => {
+              if (onDateChange) onDateChange(task, start, end);
+            },
+            on_progress_change: (task: any, progress: number) => {
+              if (onProgressChange) onProgressChange(task, progress);
+            },
+          });
+        } catch (e) {
+          console.error('Error initializing Gantt:', e);
+        }
       }
       
       // Apply selection after render if needed
@@ -104,8 +123,12 @@ export default function GanttChart({
            if (taskGroup) taskGroup.classList.add('selected-task-highlight');
         }, 100);
       }
+    } else if (tasks.length === 0 && ganttRef.current) {
+        // Clear chart if no tasks
+        ganttRef.current = null;
+        if (containerRef.current) containerRef.current.innerHTML = '';
     }
-  }, [tasks]); // Re-render when tasks change
+  }, [tasks]); // Dependency on tasks
 
   useEffect(() => {
     if (ganttRef.current) {
@@ -114,7 +137,7 @@ export default function GanttChart({
   }, [viewMode]);
 
   return (
-    <div className="overflow-x-auto bg-white rounded-lg shadow border p-4">
+    <div className="overflow-x-auto bg-white rounded-lg shadow border p-4 relative">
       <div ref={containerRef} className="gantt-target" />
       {tasks.length === 0 && (
         <div className="text-center py-12 text-gray-500">
@@ -124,48 +147,67 @@ export default function GanttChart({
       
       {/* Custom Styles for Frappe Gantt override */}
       <style jsx global>{`
-        .gantt .bar-label {
-          fill: #4b5563;
-          font-family: inherit;
-          font-size: 12px;
+        /* Header Styling */
+        .gantt .grid-header {
+          background-color: #f9fafb;
+          height: 60px;
         }
-        .gantt .bar-progress {
-          fill: #3b82f6;
+        .gantt .upper-text {
+          font-size: 14px;
+          font-weight: 600;
+          fill: #374151;
+        }
+        .gantt .lower-text {
+          font-size: 11px;
+          fill: #6b7280;
+        }
+
+        /* Bar Label Styling */
+        .gantt .bar-label {
+          fill: #374151;
+          font-family: inherit;
+          font-size: 13px;
+          font-weight: 500;
         }
         
         /* Base Bar Style */
         .gantt .bar {
           fill: #bfdbfe;
+          stroke: #60a5fa;
+          stroke-width: 1px;
         }
         
-        /* Status Colors - Targeting .bar-wrapper because custom_class is applied there */
-        .gantt .bar-wrapper[class*="milestone"] .bar {
-          fill: #ef4444 !important;
-        }
-        .gantt .bar-wrapper[class*="status-completed"] .bar {
-          fill: #22c55e !important;
-        }
-        .gantt .bar-wrapper[class*="status-delayed"] .bar {
-          fill: #f97316 !important;
+        .gantt .bar-progress {
+          fill: #3b82f6;
         }
         
-        /* Fallback selectors in case custom_class is on .bar */
+        /* Status Colors */
+        .gantt .bar-wrapper[class*="milestone"] .bar,
         .gantt .bar[class*="milestone"] {
-          fill: #ef4444 !important;
-        }
-        .gantt .bar[class*="status-completed"] {
-          fill: #22c55e !important;
-        }
-        .gantt .bar[class*="status-delayed"] {
-          fill: #f97316 !important;
+          fill: #fca5a5 !important;
+          stroke: #ef4444 !important;
         }
         
-        /* Budget Placeholder Style */
+        .gantt .bar-wrapper[class*="status-completed"] .bar,
+        .gantt .bar[class*="status-completed"] {
+          fill: #86efac !important;
+          stroke: #22c55e !important;
+        }
+        
+        .gantt .bar-wrapper[class*="status-delayed"] .bar,
+        .gantt .bar[class*="status-delayed"] {
+          fill: #fdba74 !important;
+          stroke: #f97316 !important;
+        }
+        
+        /* Budget Placeholder Style - Dashed Ghost */
         .gantt .bar[class*="bar-budget-placeholder"],
         .gantt .bar-wrapper[class*="bar-budget-placeholder"] .bar {
           fill: #f3f4f6 !important; /* Gray 100 */
           stroke: #9ca3af !important; /* Gray 400 */
           stroke-dasharray: 4, 4 !important;
+          stroke-width: 1.5px !important;
+          opacity: 0.8;
         }
         
         .gantt .bar-wrapper[class*="bar-budget-placeholder"] .bar-label {
@@ -175,16 +217,33 @@ export default function GanttChart({
         
         /* Selection Highlight */
         .gantt .bar-wrapper.selected-task-highlight .bar {
-          fill: #60a5fa !important; /* Darker blue */
-          stroke: #2563eb !important; /* Blue-600 border */
+          filter: drop-shadow(0 0 4px rgba(37, 99, 235, 0.6));
+          stroke: #1d4ed8 !important;
           stroke-width: 2px !important;
-          filter: drop-shadow(0 0 3px rgba(37, 99, 235, 0.5));
         }
         
         .gantt-container {
-          /* height: auto !important; - Removed to allow library to set height */
-          max-height: 600px;
+          max-height: 650px;
           overflow-y: auto;
+          border-radius: 8px;
+        }
+        
+        /* Fix Header Z-Index */
+        .gantt .grid-header {
+          z-index: 10;
+        }
+        
+        /* Hide scrollbars if not needed */
+        .gantt-container::-webkit-scrollbar {
+          width: 8px;
+          height: 8px;
+        }
+        .gantt-container::-webkit-scrollbar-thumb {
+          background: #d1d5db;
+          border-radius: 4px;
+        }
+        .gantt-container::-webkit-scrollbar-track {
+          background: transparent;
         }
       `}</style>
     </div>
