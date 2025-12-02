@@ -2,9 +2,10 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { Loader2, AlertCircle, ExternalLink, Calendar } from 'lucide-react';
-import Link from 'next/link';
-import SwimLaneGantt from './SwimLaneGantt';
+import { Loader2, AlertCircle, Calendar } from 'lucide-react';
+// replaced SwimLaneGantt with GanttChart and GanttToolbar
+import GanttChart, { GanttTask } from './GanttChart';
+import GanttToolbar from './GanttToolbar';
 import TaskFormModal from './TaskFormModal';
 import { ProjectSchedule, ScheduleTask } from '@/types/schedule';
 
@@ -24,9 +25,17 @@ export default function ProjectScheduleTab({ projectId }: ProjectScheduleTabProp
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [schedule, setSchedule] = useState<ProjectSchedule | null>(null);
+  
+  // Data for Modal (Context)
   const [budgetCategories, setBudgetCategories] = useState<BudgetCategory[]>([]);
   const [unassignedTasks, setUnassignedTasks] = useState<ScheduleTask[]>([]);
   
+  // Data for Gantt Chart
+  const [ganttTasks, setGanttTasks] = useState<GanttTask[]>([]);
+  const [viewMode, setViewMode] = useState<'Day' | 'Week' | 'Month'>('Week');
+  const [selectedTaskId, setSelectedTaskId] = useState<string | undefined>(undefined);
+  const [isMobile, setIsMobile] = useState(false);
+
   // Modal State
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [selectedCategoryForAdd, setSelectedCategoryForAdd] = useState<number | null>(null);
@@ -39,30 +48,48 @@ export default function ProjectScheduleTab({ projectId }: ProjectScheduleTabProp
 
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        // If no session, maybe just show empty or return
-        // throw new Error('Not authenticated');
         setLoading(false);
         return;
       }
 
-      const response = await fetch(`/api/projects/${projectId}/schedule-with-budget`, {
+      // 1. Fetch Schedule & Budget Data (for Modal context)
+      const scheduleResponse = await fetch(`/api/projects/${projectId}/schedule-with-budget`, {
         cache: 'no-store',
         headers: {
           'Authorization': `Bearer ${session.access_token}`
         }
       });
 
-      if (!response.ok) {
+      if (!scheduleResponse.ok) {
         throw new Error('Failed to fetch schedule data');
       }
 
-      const result = await response.json();
+      const scheduleResult = await scheduleResponse.json();
       
-      if (result.data) {
-        setSchedule(result.data.schedule);
-        setBudgetCategories(result.data.budgetCategories || []);
-        setUnassignedTasks(result.data.unassignedTasks || []);
+      if (scheduleResult.data) {
+        setSchedule(scheduleResult.data.schedule);
+        setBudgetCategories(scheduleResult.data.budgetCategories || []);
+        setUnassignedTasks(scheduleResult.data.unassignedTasks || []);
       }
+
+      // 2. Fetch Gantt Data (formatted for frappe-gantt with dependencies)
+      const ganttResponse = await fetch(`/api/projects/${projectId}/gantt`, {
+        cache: 'no-store',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`
+        }
+      });
+
+      if (ganttResponse.ok) {
+        const ganttResult = await ganttResponse.json();
+        if (ganttResult.data && ganttResult.data.tasks) {
+          setGanttTasks(ganttResult.data.tasks);
+        }
+      } else {
+        console.error('Failed to fetch Gantt specific data');
+        // Fallback could be implemented here if needed, but usually indicates API issue
+      }
+
     } catch (err: any) {
       console.error('Error fetching schedule:', err);
       setError(err.message || 'Failed to load schedule');
@@ -75,116 +102,35 @@ export default function ProjectScheduleTab({ projectId }: ProjectScheduleTabProp
     fetchData();
   }, [fetchData]);
 
-  const handleTaskAssign = async (taskId: string, budgetCategoryId: number | null) => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
+  // --- Gantt Chart Handlers ---
 
-      // Optimistic update
-      // Find where the task is currently
-      let taskToMove: ScheduleTask | undefined;
-      let fromCategory: number | null = null; // null means unassigned
-
-      // Check unassigned first
-      const unassignedIndex = unassignedTasks.findIndex(t => t.id === taskId);
-      if (unassignedIndex !== -1) {
-        taskToMove = unassignedTasks[unassignedIndex];
-        fromCategory = null;
-      } else {
-        // Check budget categories
-        for (const cat of budgetCategories) {
-          const idx = cat.tasks.findIndex(t => t.id === taskId);
-          if (idx !== -1) {
-            taskToMove = cat.tasks[idx];
-            fromCategory = cat.id;
-            break;
-          }
-        }
-      }
-
-      if (!taskToMove) return; // Task not found
-
-      // Don't do anything if not moving
-      if (fromCategory === budgetCategoryId) return;
-
-      const updatedTask = { ...taskToMove, budget_category_id: budgetCategoryId };
-
-      // Update state
-      if (fromCategory === null) {
-        setUnassignedTasks(prev => prev.filter(t => t.id !== taskId));
-      } else {
-        setBudgetCategories(prev => prev.map(cat => 
-          cat.id === fromCategory 
-            ? { ...cat, tasks: cat.tasks.filter(t => t.id !== taskId) }
-            : cat
-        ));
-      }
-
-      if (budgetCategoryId === null) {
-        setUnassignedTasks(prev => [...prev, updatedTask]);
-      } else {
-        setBudgetCategories(prev => prev.map(cat => 
-          cat.id === budgetCategoryId 
-            ? { ...cat, tasks: [...cat.tasks, updatedTask] }
-            : cat
-        ));
-      }
-
-      // API Call
-      const res = await fetch(`/api/schedules/tasks/${taskId}/assign-budget`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
-        },
-        body: JSON.stringify({ budget_category_id: budgetCategoryId })
-      });
-
-      if (!res.ok) {
-        // Revert on error (could implement full revert logic here, fetching data again is simpler for now)
-        console.error('Failed to assign task');
-        fetchData();
-      }
-
-    } catch (error) {
-      console.error('Error assigning task:', error);
-      fetchData(); // Revert
+  const handleGanttTaskClick = (task: GanttTask) => {
+    setSelectedTaskId(task.id);
+    // Find the full ScheduleTask object to open the modal
+    const allTasks = [
+      ...unassignedTasks,
+      ...budgetCategories.flatMap(c => c.tasks)
+    ];
+    const fullTask = allTasks.find(t => t.id === task.id);
+    
+    if (fullTask) {
+      setSelectedTaskForEdit(fullTask);
+      setShowTaskModal(true);
     }
   };
 
-  const handleUpdateTask = async (task: ScheduleTask) => {
-    // Optimistic update
-    // Find where the task is currently
-    let fromCategory: number | null = null;
-    
-    const unassignedIndex = unassignedTasks.findIndex(t => t.id === task.id);
-    if (unassignedIndex !== -1) {
-      fromCategory = null;
-    } else {
-      for (const cat of budgetCategories) {
-        if (cat.tasks.some(t => t.id === task.id)) {
-          fromCategory = cat.id;
-          break;
-        }
-      }
-    }
+  const handleGanttDateChange = async (task: GanttTask, start: Date, end: Date) => {
+    // Optimistic update for Gantt view
+    const newGanttTasks = ganttTasks.map(t => 
+      t.id === task.id ? { ...t, start: start.toISOString(), end: end.toISOString() } : t
+    );
+    setGanttTasks(newGanttTasks);
 
-    // Update state
-    if (fromCategory === null) {
-      setUnassignedTasks(prev => prev.map(t => t.id === task.id ? task : t));
-    } else {
-      setBudgetCategories(prev => prev.map(cat => 
-        cat.id === fromCategory 
-          ? { ...cat, tasks: cat.tasks.map(t => t.id === task.id ? task : t) }
-          : cat
-      ));
-    }
-
-    // API Call to save dates
     try {
       const { data: session } = await supabase.auth.getSession();
       if (!session) return;
 
+      // Call update endpoint (which handles cascade)
       const res = await fetch(`/api/schedules/tasks/${task.id}/update-dates`, {
         method: 'PUT',
         headers: {
@@ -192,14 +138,24 @@ export default function ProjectScheduleTab({ projectId }: ProjectScheduleTabProp
           'Authorization': `Bearer ${session.session?.access_token}`
         },
         body: JSON.stringify({
-          start_date: task.start_date,
-          end_date: task.end_date
+          start_date: start.toISOString().split('T')[0],
+          end_date: end.toISOString().split('T')[0]
         })
       });
 
       if (!res.ok) {
         console.error('Failed to update task dates');
         fetchData(); // Revert
+      } else {
+        // If cascade happened, we need to refresh to see changes in other tasks
+        // A lightweight way would be to just fetch gantt data again
+        const ganttResponse = await fetch(`/api/projects/${projectId}/gantt`, {
+            headers: { 'Authorization': `Bearer ${session.session?.access_token}` }
+        });
+        if (ganttResponse.ok) {
+            const res = await ganttResponse.json();
+            setGanttTasks(res.data.tasks);
+        }
       }
     } catch (error) {
       console.error('Error updating task dates:', error);
@@ -207,15 +163,71 @@ export default function ProjectScheduleTab({ projectId }: ProjectScheduleTabProp
     }
   };
 
-  const handleAddTask = (budgetCategoryId: number | null) => {
-    setSelectedCategoryForAdd(budgetCategoryId);
+  const handleGanttProgressChange = async (task: GanttTask, progress: number) => {
+    // Optimistic update
+    const newGanttTasks = ganttTasks.map(t => 
+        t.id === task.id ? { ...t, progress } : t
+    );
+    setGanttTasks(newGanttTasks);
+
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      if (!session) return;
+
+      await supabase
+        .from('schedule_tasks')
+        .update({ progress })
+        .eq('id', task.id);
+        
+    } catch (e) {
+      console.error('Failed to update task progress', e);
+      fetchData(); // Revert
+    }
+  };
+
+  // --- Modal Handlers ---
+
+  const handleAddTask = () => {
+    setSelectedCategoryForAdd(null); // or default
     setSelectedTaskForEdit(undefined);
     setShowTaskModal(true);
   };
 
-  const handleEditTask = (task: ScheduleTask) => {
-    setSelectedTaskForEdit(task);
-    setShowTaskModal(true);
+  const handleCreateSchedule = async () => {
+    try {
+      setLoading(true);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const startDate = new Date();
+      const targetEndDate = new Date();
+      targetEndDate.setDate(startDate.getDate() + 90); // Default to 90 days
+
+      const res = await fetch('/api/schedules', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          project_id: projectId,
+          start_date: startDate.toISOString().split('T')[0],
+          target_end_date: targetEndDate.toISOString().split('T')[0]
+        })
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Failed to create schedule');
+      }
+
+      // Refresh data to show the new schedule
+      fetchData();
+    } catch (err: any) {
+      console.error('Error creating schedule:', err);
+      setError(err.message || 'Failed to create schedule');
+      setLoading(false);
+    }
   };
 
   if (loading) {
@@ -242,26 +254,26 @@ export default function ProjectScheduleTab({ projectId }: ProjectScheduleTabProp
     );
   }
 
-  // Empty state: No budget categories
-  if (budgetCategories.length === 0 && unassignedTasks.length === 0 && !schedule) {
+  // Empty state
+  if (!schedule) {
     return (
       <div className="bg-white border border-gray-200 rounded-lg p-12 text-center">
         <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
         <h3 className="text-lg font-medium text-gray-900 mb-2">No Schedule Found</h3>
         <p className="text-gray-500 max-w-md mx-auto mb-6">
-          This project doesn't have a schedule yet. Go to the main Schedule view to create one.
+          This project doesn't have a schedule yet. Initialize one to start tracking tasks and dependencies.
         </p>
-        <Link 
-          href="/schedule" 
+        <button 
+          onClick={handleCreateSchedule}
           className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-primary-foreground bg-primary hover:bg-primary/90"
         >
-          Go to Schedule View
-        </Link>
+          Initialize Schedule
+        </button>
       </div>
     );
   }
 
-  // Collect all tasks for the modal
+  // Collect all tasks for the modal context
   const allTasks = [
     ...unassignedTasks,
     ...budgetCategories.flatMap(c => c.tasks)
@@ -269,48 +281,34 @@ export default function ProjectScheduleTab({ projectId }: ProjectScheduleTabProp
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900">Project Schedule</h2>
-          <p className="text-sm text-gray-500">
-            Link tasks to budget categories to track progress against spend.
-          </p>
-        </div>
-        <Link 
-          href={`/schedule?project=${projectId}`}
-          className="flex items-center gap-2 text-sm font-medium text-[var(--link)] hover:underline"
-        >
-          Open Full View
-          <ExternalLink className="w-4 h-4" />
-        </Link>
-      </div>
+      {/* Toolbar */}
+      <GanttToolbar
+        isMobile={isMobile}
+        setIsMobile={setIsMobile}
+        viewMode={viewMode}
+        setViewMode={setViewMode}
+        onAddTask={handleAddTask}
+        showBackToProjects={false} // Embedded view, no back button needed
+      />
 
-      {budgetCategories.length === 0 ? (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
-          <div className="flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5" />
-            <div>
-              <h3 className="text-sm font-medium text-yellow-800">No Budget Categories</h3>
-              <p className="text-sm text-yellow-700 mt-1">
-                You need to create budget categories before you can link schedule tasks.
-                Go to the <strong>Budget</strong> tab to set them up.
-              </p>
-            </div>
-          </div>
+      {/* Main Chart Area */}
+      {isMobile ? (
+        <div className="p-4 text-center text-gray-500">
+          Mobile List View is available in the main schedule dashboard.
+          {/* Or implement MobileTaskTimeline here if reused */}
         </div>
       ) : (
-        <SwimLaneGantt 
-          schedule={schedule} 
-          budgetCategories={budgetCategories} 
-          unassignedTasks={unassignedTasks}
-          onAssignTask={handleTaskAssign}
-          onAddTask={handleAddTask}
-          onEditTask={handleEditTask}
-          onUpdateTask={handleUpdateTask}
+        <GanttChart
+          tasks={ganttTasks}
+          viewMode={viewMode}
+          selectedTaskId={selectedTaskId}
+          onTaskClick={handleGanttTaskClick}
+          onDateChange={handleGanttDateChange}
+          onProgressChange={handleGanttProgressChange}
         />
       )}
 
-      {/* Task Creation Modal */}
+      {/* Task Creation/Edit Modal */}
       {showTaskModal && schedule && (
         <TaskFormModal
           scheduleId={schedule.id}
@@ -320,6 +318,7 @@ export default function ProjectScheduleTab({ projectId }: ProjectScheduleTabProp
           onClose={() => {
             setShowTaskModal(false);
             setSelectedTaskForEdit(undefined);
+            setSelectedTaskId(undefined);
           }}
           onSuccess={fetchData}
           initialBudgetCategoryId={selectedCategoryForAdd}
