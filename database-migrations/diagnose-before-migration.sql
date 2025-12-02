@@ -66,3 +66,6 @@ WHERE source_table.relname = 'user_role'
 AND dependent_view.relkind = 'v';
 
 
+
+
+

@@ -52,10 +52,23 @@ export interface Contract {
   subcontractor?: Subcontractor;
 }
 
+export interface BudgetCategory {
+  id: number;
+  project_id: number;
+  category_name: string;
+  original_amount: number;
+  revised_amount: number;
+  actual_spend: number;
+  committed_costs: number;
+  display_order: number;
+  is_active: boolean;
+}
+
 export interface DataContextType {
   projects: Project[];
   subcontractors: Subcontractor[];
   contracts: Contract[];
+  budgetCategories: BudgetCategory[];
   paymentApplications: PaymentApplications;
   dispatch: Dispatch<{ type: string; payload?: unknown }>;
   refreshData: () => Promise<void>;
@@ -69,6 +82,7 @@ type InitialDataType = {
   projects: Project[];
   subcontractors: Subcontractor[];
   contracts: Contract[];
+  budgetCategories: BudgetCategory[];
   paymentApplications: PaymentApplications;
 };
 
@@ -80,7 +94,8 @@ const initialData: InitialDataType = {
   },
   subcontractors: [],
   projects: [],
-  contracts: []
+  contracts: [],
+  budgetCategories: []
 };
 
 type ContractorDB = {
@@ -189,6 +204,12 @@ function dataReducer(state: InitialDataType, action: { type: string; payload?: u
         ...state,
         contracts: state.contracts.filter(contract => contract.id !== action.payload)
       };
+    case 'SET_BUDGET_CATEGORIES': {
+      return {
+        ...state,
+        budgetCategories: action.payload as BudgetCategory[],
+      };
+    }
     case 'REFRESH_DATA':
       // This will trigger a re-fetch via useEffect
       return state;
@@ -247,15 +268,16 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
         throw new Error('Invalid API response');
       }
 
-      const { projects, subcontractors, contracts, paymentApplications } = result.data;
+      const { projects, subcontractors, contracts, budgetCategories, paymentApplications } = result.data;
 
       // Dispatch data to state
       dispatch({ type: 'SET_PROJECTS', payload: projects || [] });
       dispatch({ type: 'SET_SUBCONTRACTORS', payload: subcontractors || [] });
       dispatch({ type: 'SET_CONTRACTS', payload: contracts || [] });
+      dispatch({ type: 'SET_BUDGET_CATEGORIES', payload: budgetCategories || [] });
       // paymentApplications are included in the API response but not currently used by DataContext
 
-      console.log(`[DataContext] ✓ Loaded ${projects?.length || 0} projects, ${subcontractors?.length || 0} contractors, ${contracts?.length || 0} contracts`);
+      console.log(`[DataContext] ✓ Loaded ${projects?.length || 0} projects, ${subcontractors?.length || 0} contractors, ${contracts?.length || 0} contracts, ${budgetCategories?.length || 0} budget categories`);
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
@@ -268,6 +290,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       dispatch({ type: 'SET_PROJECTS', payload: [] });
       dispatch({ type: 'SET_SUBCONTRACTORS', payload: [] });
       dispatch({ type: 'SET_CONTRACTS', payload: [] });
+      dispatch({ type: 'SET_BUDGET_CATEGORIES', payload: [] });
     } finally {
       // Always clear loading state, even on error or timeout
       console.log('[DataContext] Setting loading to false');

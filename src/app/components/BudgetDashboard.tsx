@@ -234,7 +234,7 @@ const BudgetDashboard: React.FC = () => {
   if (loading && !data) {
     return (
       <div className="flex justify-center items-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }

@@ -323,7 +323,7 @@ function ProjectOverview({ project, onCreatePaymentApps, onStatsPaymentAppClick 
 
   if (loading) {
     return (
-      <div className="bg-card rounded-lg border border-border p-6">
+      <div className="bg-card rounded border border-border p-6">
         <div className="animate-pulse">
           <div className="h-4 bg-secondary/80 rounded w-1/4 mb-4"></div>
           <div className="space-y-3">
@@ -444,7 +444,7 @@ function ProjectOverview({ project, onCreatePaymentApps, onStatsPaymentAppClick 
   return (
     <>
       <div 
-        className="bg-card rounded-lg border border-border p-6 cursor-pointer hover:shadow-md transition-all duration-200"
+        className="bg-card rounded border border-border p-6 cursor-pointer hover:shadow-md transition-all duration-200"
         onClick={handleProjectCardClick}
       >
         <div className="flex items-center justify-between mb-4">
@@ -462,7 +462,7 @@ function ProjectOverview({ project, onCreatePaymentApps, onStatsPaymentAppClick 
                 e.stopPropagation(); // Prevent triggering the card click
                 onCreatePaymentApps(project.id);
               }}
-              className="bg-primary text-primary-foreground px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium"
+              className="bg-primary text-primary-foreground px-4 py-2 rounded hover:bg-primary/90 transition-colors text-sm font-medium"
             >
               📋 Create Payment App
             </button>
@@ -471,7 +471,7 @@ function ProjectOverview({ project, onCreatePaymentApps, onStatsPaymentAppClick 
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
           <div 
-            className="bg-blue-50 p-4 rounded-lg cursor-pointer hover:shadow-md transition-all duration-200"
+            className="bg-primary/10 p-4 rounded cursor-pointer hover:shadow-md transition-all duration-200"
             onClick={(e) => {
               e.stopPropagation(); // Prevent triggering the project card click
               handleStatCardClick('contractors');
@@ -489,7 +489,7 @@ function ProjectOverview({ project, onCreatePaymentApps, onStatsPaymentAppClick 
           </div>
 
           <div 
-            className="bg-[var(--status-warning-bg)] p-4 rounded-lg cursor-pointer hover:shadow-md transition-all duration-200"
+            className="bg-[var(--status-warning-bg)] p-4 rounded cursor-pointer hover:shadow-md transition-all duration-200"
             onClick={(e) => {
               e.stopPropagation(); // Prevent triggering the project card click
               handleStatCardClick('payment_apps');
@@ -507,7 +507,7 @@ function ProjectOverview({ project, onCreatePaymentApps, onStatsPaymentAppClick 
           </div>
 
           <div 
-            className="bg-[var(--status-success-bg)] p-4 rounded-lg cursor-pointer hover:shadow-md transition-all duration-200"
+            className="bg-[var(--status-success-bg)] p-4 rounded cursor-pointer hover:shadow-md transition-all duration-200"
             onClick={(e) => {
               e.stopPropagation(); // Prevent triggering the project card click
               handleStatCardClick('completed');
@@ -556,7 +556,7 @@ function ProjectOverview({ project, onCreatePaymentApps, onStatsPaymentAppClick 
               {/* Data Modal */}
         {showDataModal && (
           <div className="fixed inset-0  bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-card rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+            <div className="bg-card rounded shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
               <div className="p-6 border-b border-border">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold text-foreground">
@@ -587,7 +587,7 @@ function ProjectOverview({ project, onCreatePaymentApps, onStatsPaymentAppClick 
         {/* Project Modal */}
         {showProjectModal && (
           <div className="fixed inset-0  bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-card rounded-lg shadow-xl w-full max-w-6xl max-h-[95vh] overflow-hidden">
+            <div className="bg-card rounded shadow-xl w-full max-w-6xl max-h-[95vh] overflow-hidden">
               <div className="p-6 border-b border-border">
                 <div className="flex items-center justify-between">
                   <h3 className="text-xl font-semibold text-foreground">
@@ -607,13 +607,13 @@ function ProjectOverview({ project, onCreatePaymentApps, onStatsPaymentAppClick 
               <div className="p-6 overflow-y-auto max-h-[calc(95vh-120px)]">
                 {loadingProjectModal ? (
                   <div className="flex items-center justify-center py-12">
-                    <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                    <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
                     <span className="ml-3 text-muted-foreground">Loading project data...</span>
                   </div>
                 ) : (
                   <div className="space-y-8">
                     {/* Project Overview */}
-                    <div className="bg-muted rounded-lg p-6">
+                    <div className="bg-muted rounded p-6">
                       <h4 className="text-lg font-semibold text-foreground mb-4">Project Overview</h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                         <div>
@@ -855,7 +855,7 @@ function ProjectOverview({ project, onCreatePaymentApps, onStatsPaymentAppClick 
         {/* Contract Details Modal */}
         {showContractModal && selectedContract && (
           <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
-            <div className="bg-card rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="bg-card rounded shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
               <div className="p-4 sm:p-6 border-b border-border flex-shrink-0">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg sm:text-xl font-semibold text-foreground">
@@ -878,7 +878,7 @@ function ProjectOverview({ project, onCreatePaymentApps, onStatsPaymentAppClick 
               <div className="p-4 sm:p-6 overflow-y-auto flex-1">
                 <div className="space-y-6">
                   {/* Contract Amount - Prominently Displayed */}
-                  <div className="bg-primary/10 rounded-lg p-6 text-center">
+                  <div className="bg-primary/10 rounded p-6 text-center">
                     <div className="text-sm font-medium text-muted-foreground mb-2">Contract Amount</div>
                     <div className="text-3xl font-bold text-primary">
                       {formatCurrency(selectedContract.contract_amount || 0)}
@@ -887,7 +887,7 @@ function ProjectOverview({ project, onCreatePaymentApps, onStatsPaymentAppClick 
 
                   {/* Contract Information */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="bg-muted rounded-lg p-4">
+                    <div className="bg-muted rounded p-4">
                       <label className="text-sm font-medium text-muted-foreground">Contractor</label>
                       <p className="text-lg font-semibold text-foreground mt-1">
                         {selectedContract.contractors?.name || 'Unknown Contractor'}
@@ -900,7 +900,7 @@ function ProjectOverview({ project, onCreatePaymentApps, onStatsPaymentAppClick 
                     </div>
 
                     {selectedContract.contract_nickname && (
-                      <div className="bg-muted rounded-lg p-4">
+                      <div className="bg-muted rounded p-4">
                         <label className="text-sm font-medium text-muted-foreground">Contract Nickname</label>
                         <p className="text-lg font-semibold text-foreground mt-1">
                           {selectedContract.contract_nickname}
@@ -911,14 +911,14 @@ function ProjectOverview({ project, onCreatePaymentApps, onStatsPaymentAppClick 
 
                   {/* Dates */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="bg-muted rounded-lg p-4">
+                    <div className="bg-muted rounded p-4">
                       <label className="text-sm font-medium text-muted-foreground">Start Date</label>
                       <p className="text-base font-medium text-foreground mt-1">
                         {selectedContract.start_date ? formatDate(selectedContract.start_date) : 'N/A'}
                       </p>
                     </div>
 
-                    <div className="bg-muted rounded-lg p-4">
+                    <div className="bg-muted rounded p-4">
                       <label className="text-sm font-medium text-muted-foreground">End Date</label>
                       <p className="text-base font-medium text-foreground mt-1">
                         {selectedContract.end_date ? formatDate(selectedContract.end_date) : 'N/A'}
@@ -928,7 +928,7 @@ function ProjectOverview({ project, onCreatePaymentApps, onStatsPaymentAppClick 
 
                   {/* Status */}
                   {selectedContract.status && (
-                    <div className="bg-muted rounded-lg p-4">
+                    <div className="bg-muted rounded p-4">
                       <label className="text-sm font-medium text-muted-foreground">Status</label>
                       <p className="text-base font-medium text-foreground mt-1 capitalize">
                         {selectedContract.status}
@@ -944,7 +944,7 @@ function ProjectOverview({ project, onCreatePaymentApps, onStatsPaymentAppClick 
                     setShowContractModal(false);
                     setSelectedContract(null);
                   }}
-                  className="px-3 sm:px-4 py-2 text-foreground bg-secondary rounded-lg hover:bg-secondary/80 text-sm sm:text-base"
+                  className="px-3 sm:px-4 py-2 text-foreground bg-secondary rounded hover:bg-secondary/80 text-sm sm:text-base"
                 >
                   Close
                 </button>
@@ -956,7 +956,7 @@ function ProjectOverview({ project, onCreatePaymentApps, onStatsPaymentAppClick 
             <div className="p-6 overflow-y-auto max-h-[60vh]">
               {loadingModalData ? (
                 <div className="flex items-center justify-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                   <span className="ml-2 text-muted-foreground">Loading data...</span>
                 </div>
               ) : modalData.length > 0 ? (
@@ -1039,7 +1039,7 @@ function ProjectOverview({ project, onCreatePaymentApps, onStatsPaymentAppClick 
                 </div>
                 <button
                   onClick={handleCloseDataModal}
-                  className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                  className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors"
                 >
                   Close
                 </button>
@@ -1226,7 +1226,7 @@ function DailyLogRequests({ projects }: { projects: any[] }) {
         <h2 className="text-xl font-bold text-foreground">Daily Log Requests</h2>
         <button
           onClick={() => setShowAddRequest(true)}
-          className="bg-primary text-primary-foreground px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"
+          className="bg-primary text-primary-foreground px-4 py-2 rounded hover:bg-primary/90 transition-colors"
         >
           📝 Add Request
         </button>
@@ -1235,7 +1235,7 @@ function DailyLogRequests({ projects }: { projects: any[] }) {
       {/* Add Request Modal */}
       {showAddRequest && (
         <div className="fixed inset-0  bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-card rounded-lg shadow-xl w-full max-w-md">
+          <div className="bg-card rounded shadow-xl w-full max-w-md">
             <div className="p-6">
               <h3 className="text-lg font-semibold text-foreground mb-4">Add Daily Log Request</h3>
 
@@ -1291,7 +1291,7 @@ function DailyLogRequests({ projects }: { projects: any[] }) {
                   </p>
                 </div>
 
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <div className="bg-primary/10 border border-blue-200 rounded p-3">
                   <p className="text-sm text-primary">
                     <strong>How it works:</strong> The system will automatically send SMS requests to the PM daily at {requestTime} EST, 
                     asking for notes about each active project. It will retry every 30 minutes until notes are received.
@@ -1302,14 +1302,14 @@ function DailyLogRequests({ projects }: { projects: any[] }) {
               <div className="flex gap-3 mt-6">
                 <button
                   onClick={() => setShowAddRequest(false)}
-                  className="flex-1 px-4 py-2 border border-border text-muted-foreground rounded-lg hover:bg-muted"
+                  className="flex-1 px-4 py-2 border border-border text-muted-foreground rounded hover:bg-muted"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleAddRequest}
                   disabled={loading || !selectedProject || !pmPhoneNumber.trim()}
-                  className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? 'Adding...' : 'Add Request'}
                 </button>
@@ -1324,7 +1324,7 @@ function DailyLogRequests({ projects }: { projects: any[] }) {
         {loading ? (
           <div className="space-y-4">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="bg-card border border-border rounded-lg p-4 animate-pulse">
+              <div key={i} className="bg-card border border-border rounded p-4 animate-pulse">
                 <div className="h-4 bg-secondary/80 rounded w-3/4 mb-2"></div>
                 <div className="h-3 bg-secondary/80 rounded w-1/2 mb-2"></div>
                 <div className="h-3 bg-secondary/80 rounded w-1/4"></div>
@@ -1395,7 +1395,7 @@ function DailyLogRequests({ projects }: { projects: any[] }) {
                 onRowClick={(row) => handleViewRequest(row)}
               />
             ) : (
-              <div className="text-center py-12 bg-card border-2 border-dashed border-border rounded-lg">
+              <div className="text-center py-12 bg-card border-2 border-dashed border-border rounded">
                 <div className="text-4xl mb-4">📝</div>
                 <p className="text-muted-foreground font-medium">No daily log requests yet</p>
                 <p className="text-sm text-muted-foreground">Add requests to automatically ask PM managers for daily notes</p>
@@ -1408,7 +1408,7 @@ function DailyLogRequests({ projects }: { projects: any[] }) {
       {/* View PM Notes Modal */}
       {showViewModal && selectedRequest && (
         <div className="fixed inset-0  bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-card rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+          <div className="bg-card rounded shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
             <div className="p-6 border-b border-border">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-foreground">
@@ -1435,7 +1435,7 @@ function DailyLogRequests({ projects }: { projects: any[] }) {
             <div className="p-6 overflow-y-auto max-h-[60vh]">
               {loadingNotes ? (
                 <div className="flex items-center justify-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                   <span className="ml-2 text-muted-foreground">Loading PM notes...</span>
                 </div>
               ) : (
@@ -1470,7 +1470,7 @@ function DailyLogRequests({ projects }: { projects: any[] }) {
                 </div>
                 <button
                   onClick={handleCloseViewModal}
-                  className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                  className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors"
                 >
                   Close
                 </button>
@@ -1488,7 +1488,7 @@ function CompactStatCard({ icon, label, value, change, color, onClick }: any) {
   if (icon === undefined || label === undefined || value === undefined) return null;
   const colorClasses: Record<string, string> = {
     orange: "border-orange-400 bg-orange-50",
-    blue: "border-blue-400 bg-blue-50",
+    blue: "border-border bg-primary/10",
     green: "border-green-400 bg-[var(--status-success-bg)]",
     purple: "border-purple-400 bg-purple-50",
     red: "border-red-400 bg-[var(--status-critical-bg)]",
@@ -1496,7 +1496,7 @@ function CompactStatCard({ icon, label, value, change, color, onClick }: any) {
 
   return (
     <div 
-      className={`p-3 sm:p-4 rounded-lg border-l-4 ${colorClasses[color]} hover:shadow-md transition-shadow cursor-pointer`}
+      className={`p-3 sm:p-4 rounded border-l-4 ${colorClasses[color]} hover:shadow-md transition-shadow cursor-pointer`}
       onClick={onClick}
     >
       <div className="flex items-center justify-between">
@@ -1617,7 +1617,7 @@ function PaymentCard({ application, isSelected, onSelect, onVerify, getDocumentF
   const doc = getDocumentForApp(application.id);
 
   return (
-    <div className={`bg-card border rounded-lg p-4 transition-all ${isSelected ? 'border-blue-500 bg-blue-50' : 'border-border hover:border-border'}`}>
+    <div className={`bg-card border rounded p-4 transition-all ${isSelected ? 'border-primary bg-primary/10' : 'border-border hover:border-border'}`}>
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-3">
           <input
@@ -1780,7 +1780,7 @@ function PaymentRow({ application, isSelected, onSelect, onVerify, getDocumentFo
 
   return (
     <>
-      <tr className={`hover:bg-muted transition-colors ${isSelected ? 'bg-blue-50' : ''}`}>
+      <tr className={`hover:bg-muted transition-colors ${isSelected ? 'bg-primary/10' : ''}`}>
         <td 
           className="px-4 py-3"
           onClick={(e) => {
@@ -1962,7 +1962,7 @@ function Pagination({ currentPage, totalPages, onPageChange, totalItems, itemsPe
                 disabled={page === '...'}
                 className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
                   page === currentPage
-                    ? 'z-10 bg-blue-50 border-primary text-primary'
+                    ? 'z-10 bg-primary/10 border-primary text-primary'
                     : page === '...'
                     ? 'border-border bg-card text-muted-foreground cursor-default'
                     : 'border-border bg-card text-muted-foreground hover:bg-muted'
@@ -2079,7 +2079,7 @@ function PaymentTable({ applications, onVerify, getDocumentForApp, sendForSignat
   ];
 
   return (
-    <div className="bg-card rounded-lg border border-border overflow-hidden">
+    <div className="bg-card rounded border border-border overflow-hidden">
       {/* Desktop Table View */}
       <div className="hidden sm:block">
          <DataTable
@@ -2156,7 +2156,7 @@ function BulkActionsBar({ selectedCount, onDeleteSelected, onApproveSelected, on
   if (selectedCount === 0) return null;
 
   return (
-    <div className="fixed bottom-4 left-2 right-2 sm:left-1/2 sm:right-auto sm:transform sm:-translate-x-1/2 bg-card rounded-lg shadow-lg border border-border px-4 sm:px-6 py-3 flex flex-col sm:flex-row items-center gap-3 sm:gap-4 z-50 max-w-md sm:max-w-none mx-auto sm:mx-0">
+    <div className="fixed bottom-4 left-2 right-2 sm:left-1/2 sm:right-auto sm:transform sm:-translate-x-1/2 bg-card rounded shadow-lg border border-border px-4 sm:px-6 py-3 flex flex-col sm:flex-row items-center gap-3 sm:gap-4 z-50 max-w-md sm:max-w-none mx-auto sm:mx-0">
       <span className="text-sm font-medium text-muted-foreground order-2 sm:order-1">
         {selectedCount} selected
       </span>
@@ -2203,7 +2203,7 @@ function ProjectCard({ project, onCreatePaymentApps }: any) {
   };
 
   return (
-    <div className="bg-card rounded-lg border border-border p-4 hover:shadow-md transition-shadow">
+    <div className="bg-card rounded border border-border p-4 hover:shadow-md transition-shadow">
       <div className="mb-3">
         <h3 className="font-semibold text-lg text-foreground">{project.name}</h3>
         <p className="text-sm text-muted-foreground">{project.client_name}</p>
@@ -2293,7 +2293,7 @@ function ContractorSelectionModal({
 
   return (
     <div className="fixed inset-0 bg-card-500 bg-opacity-30 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
-      <div className="bg-card rounded-lg sm:rounded-xl shadow-xl w-full max-w-2xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden">
+      <div className="bg-card rounded sm:rounded-lg shadow-xl w-full max-w-2xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden">
         {/* Header */}
         <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-4 sm:p-6 text-white">
           <div className="flex items-center justify-between">
@@ -2303,7 +2303,7 @@ function ContractorSelectionModal({
             </div>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-card/20 rounded-lg transition-colors flex-shrink-0"
+              className="p-2 hover:bg-card/20 rounded transition-colors flex-shrink-0"
             >
               <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -2340,9 +2340,9 @@ function ContractorSelectionModal({
               {contractors.map((contractor: any) => (
                 <div
                   key={contractor.id}
-                  className={`border rounded-lg p-3 sm:p-4 cursor-pointer transition-all ${
+                  className={`border rounded p-3 sm:p-4 cursor-pointer transition-all ${
                     selectedContractors.includes(contractor.id)
-                      ? 'border-blue-500 bg-blue-50'
+                      ? 'border-primary bg-primary/10'
                       : 'border-border hover:border-border'
                   }`}
                   onClick={() => onContractorToggle(contractor.id)}
@@ -2386,14 +2386,14 @@ function ContractorSelectionModal({
               <button
                 onClick={onClose}
                 disabled={creating}
-                className="flex-1 sm:flex-initial px-4 py-2 border border-border text-muted-foreground rounded-lg hover:bg-muted disabled:opacity-50 transition-colors text-sm"
+                className="flex-1 sm:flex-initial px-4 py-2 border border-border text-muted-foreground rounded hover:bg-muted disabled:opacity-50 transition-colors text-sm"
               >
                 Cancel
               </button>
               <button
                 onClick={onCreatePaymentApps}
                 disabled={creating || noneSelected || contractors.length === 0}
-                className="flex-1 sm:flex-initial px-4 sm:px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 text-sm"
+                className="flex-1 sm:flex-initial px-4 sm:px-6 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 text-sm"
               >
                 {creating ? (
                   <>
@@ -2434,7 +2434,7 @@ function MobileFilterDrawer({ show, onClose, statusFilter, setStatusFilter, proj
             </h3>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-secondary rounded-lg"
+              className="p-2 hover:bg-secondary rounded"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -2505,7 +2505,7 @@ function MobileFilterDrawer({ show, onClose, statusFilter, setStatusFilter, proj
           <div className="mt-6 pt-4 border-t border-border">
             <button
               onClick={onClose}
-              className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors"
+              className="w-full py-3 bg-primary text-primary-foreground rounded font-medium hover:bg-primary/90 transition-colors"
             >
               Apply Filters
             </button>
@@ -2519,7 +2519,7 @@ function MobileFilterDrawer({ show, onClose, statusFilter, setStatusFilter, proj
 // Desktop Sidebar Filters
 function FilterSidebar({ statusFilter, setStatusFilter, projectFilter, setProjectFilter, projects, sortBy, setSortBy, sortDir, setSortDir, onFilterChange }: any) {
   return (
-    <div className="hidden sm:block w-64 bg-card rounded-lg border border-border p-4 h-fit">
+    <div className="hidden sm:block w-64 bg-card rounded border border-border p-4 h-fit">
       <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2">
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.207A1 1 0 013 6.5V4z" />
@@ -3183,7 +3183,7 @@ export default function PMDashboard() {
               </span>
             </p>
             {error && (
-              <div className="mt-2 p-3 bg-[var(--status-critical-bg)] border border-[var(--status-critical-border)] rounded-lg">
+              <div className="mt-2 p-3 bg-[var(--status-critical-bg)] border border-[var(--status-critical-border)] rounded">
                 <div className="flex items-center gap-2">
                   <span className="text-[var(--status-critical-text)]">⚠️</span>
                   <span className="text-sm text-[var(--status-critical-text)]">{error}</span>
@@ -3203,7 +3203,7 @@ export default function PMDashboard() {
           <div className="flex items-center justify-between sm:justify-end gap-3">
             <button
               onClick={() => setShowMobileFilters(!showMobileFilters)}
-              className="sm:hidden flex items-center gap-2 px-3 py-2 bg-card border border-border rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted"
+              className="sm:hidden flex items-center gap-2 px-3 py-2 bg-card border border-border rounded text-sm font-medium text-muted-foreground hover:bg-muted"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.207A1 1 0 013 6.5V4z" />
@@ -3213,7 +3213,7 @@ export default function PMDashboard() {
             <button
               onClick={loadDashboardData}
               disabled={isRefreshing}
-              className="flex items-center gap-2 px-3 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-2 px-3 py-2 bg-primary text-primary-foreground rounded text-sm font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isRefreshing ? (
                 <>
@@ -3237,49 +3237,49 @@ export default function PMDashboard() {
           <h2 className="text-lg font-semibold text-foreground mb-4">Dashboard Overview</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             {/* Total Projects Card */}
-            <div className="bg-card border border-border rounded-lg p-4 hover:shadow-md transition-shadow">
+            <div className="bg-card border border-border rounded p-4 hover:shadow-md transition-shadow">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Total Projects</p>
                   <p className="text-2xl font-bold text-foreground">{stats.total_projects}</p>
                   <p className="text-xs text-muted-foreground">{stats.active_projects} active</p>
                 </div>
-                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                <div className="w-12 h-12 bg-blue-100 rounded flex items-center justify-center">
                   <span className="text-primary text-xl">🏗️</span>
                 </div>
               </div>
             </div>
 
             {/* Total Budget Card */}
-            <div className="bg-card border border-border rounded-lg p-4 hover:shadow-md transition-shadow">
+            <div className="bg-card border border-border rounded p-4 hover:shadow-md transition-shadow">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Total Budget</p>
                   <p className="text-2xl font-bold text-foreground">{formatCurrency(stats.total_budget)}</p>
                   <p className="text-xs text-muted-foreground">Contract value</p>
                 </div>
-                <div className="w-12 h-12 bg-[var(--status-success-bg)] rounded-lg flex items-center justify-center">
+                <div className="w-12 h-12 bg-[var(--status-success-bg)] rounded flex items-center justify-center">
                   <span className="text-[var(--status-success-text)] text-xl">💰</span>
                 </div>
               </div>
             </div>
 
             {/* Total Spent Card */}
-            <div className="bg-card border border-border rounded-lg p-4 hover:shadow-md transition-shadow">
+            <div className="bg-card border border-border rounded p-4 hover:shadow-md transition-shadow">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Total Spent</p>
                   <p className="text-2xl font-bold text-foreground">{formatCurrency(stats.total_spent)}</p>
                   <p className="text-xs text-muted-foreground">Approved payments</p>
                 </div>
-                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                <div className="w-12 h-12 bg-purple-100 rounded flex items-center justify-center">
                   <span className="text-purple-600 text-xl">💳</span>
                 </div>
               </div>
             </div>
 
             {/* Completion Progress Card */}
-            <div className="bg-card border border-border rounded-lg p-4 hover:shadow-md transition-shadow">
+            <div className="bg-card border border-border rounded p-4 hover:shadow-md transition-shadow">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Progress</p>
@@ -3288,7 +3288,7 @@ export default function PMDashboard() {
                     {stats.completion_percentage > 90 ? '⚠️ Over budget' : '✅ On track'}
                   </p>
                 </div>
-                <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                <div className="w-12 h-12 bg-orange-100 rounded flex items-center justify-center">
                   <span className="text-orange-600 text-xl">📊</span>
                 </div>
               </div>
@@ -3296,7 +3296,7 @@ export default function PMDashboard() {
           </div>
 
           {/* Progress Bar */}
-          <div className="bg-card border border-border rounded-lg p-4">
+          <div className="bg-card border border-border rounded p-4">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium text-muted-foreground">Budget Utilization</span>
               <span className="text-sm text-muted-foreground">
@@ -3389,7 +3389,7 @@ export default function PMDashboard() {
               <ProjectOverview key={project.id} project={project} onCreatePaymentApps={handleCreatePaymentApps} onStatsPaymentAppClick={handleStatsPaymentAppClick} />
             ))}
             {projects.length === 0 && (
-              <div className="text-center py-12 bg-card border-2 border-dashed border-border rounded-lg">
+              <div className="text-center py-12 bg-card border-2 border-dashed border-border rounded">
                 <div className="text-4xl mb-4">🏗️</div>
                 <p className="text-muted-foreground font-medium">No active projects</p>
                 <p className="text-sm text-muted-foreground">Create a new project to get started</p>
@@ -3437,7 +3437,7 @@ export default function PMDashboard() {
         {/* Stats Modal */}
         {showStatsModal && (
           <div className="fixed inset-0  bg-opacity-50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-card rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+            <div className="bg-card rounded shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
               <div className="flex items-center justify-between p-6 border-b border-border">
                 <h2 className="text-xl font-semibold text-foreground">{statsModalTitle}</h2>
                 <button
@@ -3453,7 +3453,7 @@ export default function PMDashboard() {
               <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
                 {loadingStatsModal ? (
                   <div className="flex items-center justify-center py-12">
-                    <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                    <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
                     <span className="ml-3 text-muted-foreground">Loading data...</span>
                   </div>
                 ) : statsModalData.length === 0 ? (
@@ -3471,7 +3471,7 @@ export default function PMDashboard() {
                         return (
                           <div
                             key={item.id}
-                            className="bg-muted rounded-lg p-4 hover:bg-secondary transition-colors cursor-pointer"
+                            className="bg-muted rounded p-4 hover:bg-secondary transition-colors cursor-pointer"
                             onClick={() => handleStatsPaymentAppClick(app.id)}
                           >
                             <div className="flex items-center justify-between">
@@ -3507,7 +3507,7 @@ export default function PMDashboard() {
                         return (
                           <div
                             key={item.id}
-                            className="bg-muted rounded-lg p-4 hover:bg-secondary transition-colors cursor-pointer"
+                            className="bg-muted rounded p-4 hover:bg-secondary transition-colors cursor-pointer"
                             onClick={() => handleStatsPaymentAppClick(item.id)}
                           >
                             <div className="flex items-center justify-between">

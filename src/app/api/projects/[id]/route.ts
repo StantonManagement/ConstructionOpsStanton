@@ -128,7 +128,7 @@ export const PUT = withAuth(async (request: NextRequest, context: { params: Prom
     const allowedFields = [
       'name', 'client_name', 'address', 'current_phase', 'status',
       'start_date', 'target_completion_date', 'end_date', 'budget',
-      'total_units', 'portfolio_name', 'at_risk', 'owner_entity_id'
+      'total_units', 'portfolio_name', 'at_risk', 'owner_entity_id', 'starting_balance'
     ];
 
     for (const field of allowedFields) {

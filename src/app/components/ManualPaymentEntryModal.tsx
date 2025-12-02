@@ -329,7 +329,7 @@ const ManualPaymentEntryModal: React.FC<ManualPaymentEntryModalProps> = ({
                               value={currentPercent}
                               onChange={(e) => handlePercentageChange(item.id, e.target.value)}
                               disabled={submitting}
-                              className={`w-full px-3 py-2 text-sm text-right border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed ${
+                              className={`w-full px-3 py-2 text-sm text-right border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-primary disabled:bg-gray-100 disabled:cursor-not-allowed ${
                                 hasError ? 'border-red-300 bg-red-50' : 'border-gray-300'
                               }`}
                               onClick={(e) => e.stopPropagation()}
@@ -357,7 +357,7 @@ const ManualPaymentEntryModal: React.FC<ManualPaymentEntryModalProps> = ({
                     }
                   ]}
                   footer={
-                    <tfoot className="bg-blue-50 border-t-2 border-blue-200">
+                    <tfoot className="bg-primary/10 border-t-2 border-blue-200">
                       <tr>
                         <td colSpan={2} className="px-6 py-3 text-sm font-bold text-gray-900">
                           TOTALS
@@ -367,7 +367,7 @@ const ManualPaymentEntryModal: React.FC<ManualPaymentEntryModalProps> = ({
                         </td>
                         <td className="px-6 py-3"></td>
                         <td className="px-6 py-3"></td>
-                        <td className="px-6 py-3 text-sm font-bold text-blue-600 text-right">
+                        <td className="px-6 py-3 text-sm font-bold text-primary text-right">
                           {formatCurrency(totals.totalThisPeriod)}
                         </td>
                       </tr>
@@ -388,7 +388,7 @@ const ManualPaymentEntryModal: React.FC<ManualPaymentEntryModalProps> = ({
                   disabled={submitting}
                   rows={3}
                   placeholder="Add any notes about this payment application..."
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed text-sm"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-primary disabled:bg-gray-100 disabled:cursor-not-allowed text-sm"
                 />
               </div>
 
@@ -406,7 +406,7 @@ const ManualPaymentEntryModal: React.FC<ManualPaymentEntryModalProps> = ({
                   </div>
                   <div>
                     <p className="text-xs text-gray-600 mb-1">Current Payment</p>
-                    <p className="text-lg font-bold text-blue-600">{formatCurrency(totals.totalThisPeriod)}</p>
+                    <p className="text-lg font-bold text-primary">{formatCurrency(totals.totalThisPeriod)}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-600 mb-1">Total Paid To Date</p>
@@ -431,7 +431,7 @@ const ManualPaymentEntryModal: React.FC<ManualPaymentEntryModalProps> = ({
             <button
               onClick={handleSubmit}
               disabled={submitting || loading || (lineItems.length === 0)}
-              className="px-6 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="px-6 py-2.5 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {submitting ? (
                 <>

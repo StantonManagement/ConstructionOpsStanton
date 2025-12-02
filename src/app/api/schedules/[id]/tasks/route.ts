@@ -20,7 +20,11 @@ export const POST = withAuth(async (request: NextRequest, { params }: { params: 
       status, 
       progress, 
       parent_task_id,
-      predecessors 
+      predecessors,
+      budget_category_id,
+      // New fields
+      duration_days,
+      is_milestone
     } = body;
 
     if (!task_name || !start_date || !end_date) {
@@ -51,8 +55,12 @@ export const POST = withAuth(async (request: NextRequest, { params }: { params: 
         status: status || 'not_started',
         progress: progress || 0,
         parent_task_id,
+        budget_category_id,
         sort_order: nextSortOrder,
-        created_by: user.id
+        created_by: user.id,
+        // New fields
+        duration_days: duration_days ? parseInt(duration_days) : undefined,
+        is_milestone: is_milestone || false
       })
       .select()
       .single();

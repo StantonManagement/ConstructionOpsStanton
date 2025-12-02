@@ -129,7 +129,7 @@ const AddForm: React.FC<AddFormProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-card rounded-xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl">
+      <div className="bg-card rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl">
         <div className="flex justify-between items-center mb-6">
           <h3 className="text-xl font-semibold text-foreground flex items-center gap-2">
             {icon}{title}
@@ -155,7 +155,7 @@ const AddForm: React.FC<AddFormProps> = ({
                 value={formData[field.name] !== undefined ? formData[field.name] : (field.defaultValue || '')}
                 onChange={handleChange}
                 onBlur={handleBlur}
-                className={`w-full px-4 py-3 text-base border rounded-lg focus:ring-2 focus:ring-primary transition-all duration-200 bg-secondary text-foreground placeholder-gray-400 ${
+                className={`w-full px-4 py-3 text-base border rounded focus:ring-2 focus:ring-primary transition-all duration-200 bg-secondary text-foreground placeholder-gray-400 ${
                   errors[field.name] && touched[field.name] 
                     ? 'border-[var(--status-critical-border)] focus:border-[var(--status-critical-border)] focus:ring-[var(--status-critical-border)]' 
                     : 'border-border focus:border-primary'
@@ -173,14 +173,14 @@ const AddForm: React.FC<AddFormProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-3 text-foreground bg-secondary rounded-lg hover:bg-secondary/80 transition-colors font-medium"
+              className="flex-1 px-4 py-3 text-foreground bg-secondary rounded hover:bg-secondary/80 transition-colors font-medium"
               disabled={isLoading}
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-3 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors font-medium disabled:opacity-50"
+              className="flex-1 px-4 py-3 bg-primary text-white rounded hover:bg-primary/90 transition-colors font-medium disabled:opacity-50"
               disabled={isLoading}
             >
               {isLoading ? 'Creating...' : 'Create Project'}
@@ -962,7 +962,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setShowNewProjectForm(true)}
-                className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-green-600 text-white rounded-lg text-xs sm:text-sm font-medium hover:bg-green-700"
+                className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-green-600 text-white rounded text-xs sm:text-sm font-medium hover:bg-green-700"
               >
                 <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
                 <span className="hidden sm:inline">New Project</span>
@@ -971,7 +971,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
               <button
                 onClick={handleRefresh}
                 disabled={isRefreshing}
-                className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-primary text-white rounded-lg text-xs sm:text-sm font-medium hover:bg-primary/90 disabled:opacity-50"
+                className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-primary text-white rounded text-xs sm:text-sm font-medium hover:bg-primary/90 disabled:opacity-50"
               >
                 <RefreshCw className={`w-3 h-3 sm:w-4 sm:h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
                 <span className="hidden sm:inline">Refresh</span>
@@ -982,7 +982,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
 
           {/* Error Display */}
           {error && (
-            <div className="bg-[var(--status-critical-bg)] border border-[var(--status-critical-border)] rounded-lg p-4">
+            <div className="bg-[var(--status-critical-bg)] border border-[var(--status-critical-border)] rounded p-4">
               <div className="flex items-center gap-2">
                 <AlertCircle className="w-5 h-5 text-[var(--status-critical-text)]" />
                 <span className="text-[var(--status-critical-text)]">{error}</span>
@@ -1002,12 +1002,12 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
           {/* Loading State */}
           {loading ? (
             <div className="flex items-center justify-center py-12">
-              <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+              <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
               <span className="ml-3 text-muted-foreground">Loading projects...</span>
             </div>
           ) : projects.length === 0 ? (
             /* Empty State */
-            <div className="bg-card border border-border rounded-lg">
+            <div className="bg-card border border-border rounded">
               <EmptyState
                 icon={FolderKanban}
                 title="No projects yet"
@@ -1022,7 +1022,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
               {filteredProjects.map((project) => (
                 <div
                   key={project.id}
-                  className="bg-card rounded-lg border border-border p-4 sm:p-6 hover:shadow-lg transition-shadow duration-200 cursor-pointer"
+                  className="bg-card rounded border border-border p-4 sm:p-6 hover:shadow-lg transition-shadow duration-200 cursor-pointer"
                   onClick={() => handleProjectClick(project)}
                 >
                   {/* Project Header */}
@@ -1054,7 +1054,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
                   {/* Interactive Stat Cards */}
                   <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-3 sm:mb-4">
                     <div 
-                      className="bg-blue-50 p-2 sm:p-3 rounded-lg cursor-pointer hover:shadow-md transition-all duration-200"
+                      className="bg-primary/10 p-2 sm:p-3 rounded cursor-pointer hover:shadow-md transition-all duration-200"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleStatCardClick(project, 'contractors');
@@ -1073,7 +1073,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
                     </div>
 
                     <div 
-                      className="bg-[var(--status-warning-bg)] p-2 sm:p-3 rounded-lg cursor-pointer hover:shadow-md transition-all duration-200"
+                      className="bg-[var(--status-warning-bg)] p-2 sm:p-3 rounded cursor-pointer hover:shadow-md transition-all duration-200"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleStatCardClick(project, 'payment_apps');
@@ -1092,7 +1092,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
                     </div>
 
                     <div 
-                      className="bg-[var(--status-success-bg)] p-2 sm:p-3 rounded-lg cursor-pointer hover:shadow-md transition-all duration-200"
+                      className="bg-[var(--status-success-bg)] p-2 sm:p-3 rounded cursor-pointer hover:shadow-md transition-all duration-200"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleStatCardClick(project, 'completed');
@@ -1214,7 +1214,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
                           e.stopPropagation();
                           handleOpenEditForm(project);
                         }}
-                        className="flex items-center justify-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-xs sm:text-sm font-medium"
+                        className="flex items-center justify-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 bg-primary text-white rounded hover:bg-primary/90 transition-colors text-xs sm:text-sm font-medium"
                       >
                         <Edit2 className="w-3 h-3 sm:w-4 sm:h-4" />
                         <span>Edit</span>
@@ -1224,7 +1224,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
                           e.stopPropagation();
                           handleOpenDeleteConfirmation(project);
                         }}
-                        className="flex items-center justify-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-xs sm:text-sm font-medium"
+                        className="flex items-center justify-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-xs sm:text-sm font-medium"
                       >
                         <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
                         <span>Delete</span>
@@ -1239,7 +1239,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
                         params.set('project', project.id.toString());
                         router.replace(`/?${params.toString()}`, { scroll: false });
                       }}
-                      className="w-full flex items-center justify-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors text-xs sm:text-sm font-medium"
+                      className="w-full flex items-center justify-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 bg-primary text-white rounded hover:bg-primary/90 transition-colors text-xs sm:text-sm font-medium"
                     >
                       <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
                       <span className="hidden sm:inline">Create Payment App</span>
@@ -1253,7 +1253,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
 
           {/* Empty State */}
           {!loading && filteredProjects.length === 0 && (
-            <div className="text-center py-12 bg-card border-2 border-dashed border-border rounded-lg">
+            <div className="text-center py-12 bg-card border-2 border-dashed border-border rounded">
               <div className="text-4xl mb-4">🏗️</div>
               <p className="text-muted-foreground font-medium">No projects found</p>
               <p className="text-sm text-muted-foreground">
@@ -1269,7 +1269,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
       {/* Data Modal (Contractors, Payment Apps List) */}
       {showDataModal && (
         <div className="fixed inset-0  bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
-          <div className="bg-card rounded-lg shadow-xl w-full max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden">
+          <div className="bg-card rounded shadow-xl w-full max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden">
             <div className="p-4 sm:p-6 border-b border-border">
               <div className="flex items-center justify-between">
                 <h3 className="text-base sm:text-lg font-semibold text-foreground truncate pr-2">
@@ -1289,7 +1289,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
             <div className="p-4 sm:p-6 overflow-y-auto max-h-[calc(95vh-120px)] sm:max-h-[calc(90vh-120px)]">
               {loadingModalData ? (
                 <div className="flex items-center justify-center py-12">
-                  <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                  <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
                   <span className="ml-3 text-muted-foreground">Loading data...</span>
                 </div>
               ) : (
@@ -1377,7 +1377,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
       {showProjectModal && selectedProject && (
         <div className="fixed inset-0  bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
           {/* ... Modal Content ... */}
-          <div className="bg-card rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] sm:max-h-[95vh] overflow-hidden flex flex-col">
+          <div className="bg-card rounded shadow-xl w-full max-w-6xl max-h-[90vh] sm:max-h-[95vh] overflow-hidden flex flex-col">
              <div className="p-4 sm:p-6 border-b border-border flex-shrink-0">
                <div className="flex items-center justify-between">
                  <h3 className="text-lg sm:text-xl font-semibold text-foreground truncate pr-2">
@@ -1397,13 +1397,13 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
              <div className="p-4 sm:p-6 overflow-y-auto flex-1">
               {loadingProjectModal ? (
                 <div className="flex items-center justify-center py-12">
-                  <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                  <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
                   <span className="ml-3 text-muted-foreground">Loading project data...</span>
                 </div>
               ) : (
                 <div className="space-y-8">
                   {/* Project Overview */}
-                  <div className="bg-secondary rounded-lg p-6">
+                  <div className="bg-secondary rounded p-6">
                     <h4 className="text-lg font-semibold text-foreground mb-4">Project Overview</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                       <div>
@@ -1439,7 +1439,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
              <div className="flex items-center justify-end gap-3 p-4 sm:p-6 border-t border-border flex-shrink-0">
                <button
                  onClick={handleCloseModal}
-                 className="px-3 sm:px-4 py-2 text-foreground bg-secondary rounded-lg hover:bg-secondary/80 text-sm sm:text-base"
+                 className="px-3 sm:px-4 py-2 text-foreground bg-secondary rounded hover:bg-secondary/80 text-sm sm:text-base"
                >
                  Close
                </button>
@@ -1451,7 +1451,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
       {/* Budget Details Modal */}
       {showBudgetModal && (
         <div className="fixed inset-0  bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-card rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+          <div className="bg-card rounded shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
             {/* ... budget modal content ... */}
             <div className="p-6 border-b border-border">
               <div className="flex items-center justify-between">
@@ -1471,7 +1471,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
             <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
               {loadingBudgetModal ? (
                 <div className="flex items-center justify-center py-12">
-                  <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                  <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
                   <span className="ml-3 text-muted-foreground">Loading data...</span>
                 </div>
               ) : (
@@ -1481,15 +1481,15 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
                   {budgetModalType === 'remaining' ? (
                     <div className="space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                            <div className="bg-blue-50 p-4 rounded-lg">
+                            <div className="bg-primary/10 p-4 rounded">
                                 <div className="text-sm text-primary font-medium">Total Budget</div>
                                 <div className="text-2xl font-bold text-blue-900">{formatCurrency(budgetModalData.totalBudget)}</div>
                             </div>
-                            <div className="bg-purple-50 p-4 rounded-lg">
+                            <div className="bg-purple-50 p-4 rounded">
                                 <div className="text-sm text-purple-600 font-medium">Total Spent</div>
                                 <div className="text-2xl font-bold text-purple-900">{formatCurrency(budgetModalData.totalSpent)}</div>
                             </div>
-                            <div className="bg-[var(--status-success-bg)] p-4 rounded-lg">
+                            <div className="bg-[var(--status-success-bg)] p-4 rounded">
                                 <div className="text-sm text-[var(--status-success-text)] font-medium">Remaining</div>
                                 <div className="text-2xl font-bold text-green-900">{formatCurrency(budgetModalData.remainingBudget)}</div>
                             </div>
@@ -1502,7 +1502,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
                     </div>
                   ) : (
                     <div className="space-y-4">
-                        <div className="bg-secondary p-4 rounded-lg mb-6">
+                        <div className="bg-secondary p-4 rounded mb-6">
                             <div className="text-sm text-muted-foreground">Total Spent</div>
                             <div className="text-2xl font-bold text-foreground">{formatCurrency(budgetModalData.total)}</div>
                         </div>
@@ -1523,7 +1523,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
       {/* Contract Details Modal */}
       {showContractModal && selectedContract && (
         <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
-          <div className="bg-card rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+          <div className="bg-card rounded shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
             {/* ... contract modal content ... */}
             <div className="p-4 sm:p-6 border-b border-border flex-shrink-0">
               <div className="flex items-center justify-between">
@@ -1545,7 +1545,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
             </div>
             <div className="p-4 sm:p-6 overflow-y-auto flex-1">
                 <div className="space-y-6">
-                    <div className="bg-primary/10 rounded-lg p-6 text-center">
+                    <div className="bg-primary/10 rounded p-6 text-center">
                         <div className="text-sm font-medium text-muted-foreground mb-2">Contract Amount</div>
                         <div className="text-3xl font-bold text-primary">
                             {formatCurrency(selectedContract.contract_amount || 0)}
@@ -1553,7 +1553,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
                     </div>
                     {/* ... other contract details ... */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="bg-secondary rounded-lg p-4">
+                        <div className="bg-secondary rounded p-4">
                             <label className="text-sm font-medium text-muted-foreground">Contractor</label>
                             <p className="text-lg font-semibold text-foreground mt-1">
                                 {selectedContract.contractors?.name || 'Unknown Contractor'}
@@ -1569,7 +1569,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
                   setShowContractModal(false);
                   setSelectedContract(null);
                 }}
-                className="px-3 sm:px-4 py-2 text-foreground bg-secondary rounded-lg hover:bg-secondary/80 text-sm sm:text-base"
+                className="px-3 sm:px-4 py-2 text-foreground bg-secondary rounded hover:bg-secondary/80 text-sm sm:text-base"
               >
                 Close
               </button>
@@ -1616,7 +1616,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
       {/* Delete Confirmation Modal */}
       {showDeleteConfirmation && deletingProject && (
         <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-card rounded-lg shadow-xl w-full max-w-md">
+          <div className="bg-card rounded shadow-xl w-full max-w-md">
             <div className="p-6 border-b border-border">
               <div className="flex items-center gap-3">
                 <div className="flex-shrink-0 w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
@@ -1637,7 +1637,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
                 This will set the project status to &quot;deleted&quot;. You can only delete projects with no contractors or payment applications.
               </p>
               {error && (
-                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded">
                   <p className="text-sm text-red-600">{error}</p>
                 </div>
               )}
@@ -1651,14 +1651,14 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
                   setError(null);
                 }}
                 disabled={isDeletingProject}
-                className="px-4 py-2 text-foreground bg-secondary rounded-lg hover:bg-secondary/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 text-foreground bg-secondary rounded hover:bg-secondary/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancel
               </button>
               <button
                 onClick={handleDeleteProject}
                 disabled={isDeletingProject}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 {isDeletingProject ? (
                   <>

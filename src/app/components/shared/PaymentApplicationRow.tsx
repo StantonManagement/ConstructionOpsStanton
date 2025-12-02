@@ -12,6 +12,7 @@ export interface PaymentApplication {
   contractor?: { id: number; name: string };
   total_amount?: number;
   current_period_amount?: number;
+  due_date?: string;
   [key: string]: any;
 }
 
@@ -78,7 +79,7 @@ const PaymentApplicationRow: React.FC<PaymentApplicationRowProps> = ({
           className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
             isCompleted
               ? 'bg-gray-600 text-white hover:bg-gray-700'
-              : 'bg-blue-600 text-white hover:bg-blue-700'
+              : 'bg-primary text-white hover:bg-primary/90'
           }`}
           title={isCompleted ? 'View details' : 'Review and verify'}
         >
@@ -104,7 +105,7 @@ const PaymentApplicationRow: React.FC<PaymentApplicationRowProps> = ({
   return (
     <tr 
       className={`border-b border-gray-200 hover:bg-gray-50 transition-colors ${
-        isSelected ? 'bg-blue-50' : ''
+        isSelected ? 'bg-primary/10' : ''
       } ${onRowClick ? 'cursor-pointer' : ''}`}
       onClick={() => onRowClick?.(application)}
     >
@@ -120,7 +121,7 @@ const PaymentApplicationRow: React.FC<PaymentApplicationRowProps> = ({
             type="checkbox"
             checked={isSelected}
             onChange={(e) => onSelect(application.id, e.target.checked)}
-            className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 cursor-pointer"
+            className="w-4 h-4 text-primary rounded focus:ring-blue-500 cursor-pointer"
             onClick={(e) => e.stopPropagation()}
           />
         </td>

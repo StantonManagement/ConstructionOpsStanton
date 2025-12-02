@@ -60,7 +60,7 @@ const QuickActions: React.FC<{
   return (
     <div className="flex flex-wrap items-center gap-2 sm:gap-3">
       {selectedCount > 0 && (
-        <div className="flex items-center gap-3 px-4 py-3 bg-destructive/10 border-2 border-destructive/20 rounded-lg shadow-sm">
+        <div className="flex items-center gap-3 px-4 py-3 bg-destructive/10 border-2 border-destructive/20 rounded shadow-sm">
           <div className="flex items-center gap-2">
             <AlertCircle className="w-5 h-5 text-destructive" />
             <span className="text-sm font-semibold text-destructive">
@@ -70,7 +70,7 @@ const QuickActions: React.FC<{
           <div className="flex items-center gap-2">
             <button
               onClick={onBulkDelete}
-              className="flex items-center gap-2 px-4 py-2 bg-destructive text-destructive-foreground rounded-lg hover:bg-destructive/90 transition-all duration-200 font-medium shadow-sm hover:shadow-md transform hover:scale-105"
+              className="flex items-center gap-2 px-4 py-2 bg-destructive text-destructive-foreground rounded hover:bg-destructive/90 transition-all duration-200 font-medium shadow-sm hover:shadow-md transform hover:scale-105"
             >
               <Trash2 className="w-4 h-4" />
               Delete {selectedCount > 1 ? `${selectedCount} Items` : 'Item'}
@@ -84,14 +84,14 @@ const QuickActions: React.FC<{
 
       <button
         onClick={onSelectAll}
-        className="flex items-center gap-2 px-3 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors text-sm font-medium"
+        className="flex items-center gap-2 px-3 py-2 bg-secondary text-secondary-foreground rounded hover:bg-secondary/80 transition-colors text-sm font-medium"
       >
         {selectedCount === totalCount && totalCount > 0 ? 'Deselect All' : 'Select All'}
       </button>
 
       <button
         onClick={onAddNew}
-        className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium shadow-sm"
+        className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors font-medium shadow-sm"
       >
         {getIcon()}
         <span className="hidden sm:inline">{getAddLabel()}</span>
@@ -101,7 +101,7 @@ const QuickActions: React.FC<{
       {onExport && (
         <button
           onClick={onExport}
-          className="flex items-center gap-2 px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors font-medium"
+          className="flex items-center gap-2 px-4 py-2 bg-secondary text-secondary-foreground rounded hover:bg-secondary/80 transition-colors font-medium"
         >
           <Archive className="w-4 h-4" />
           <span className="hidden sm:inline">Export</span>
@@ -142,7 +142,7 @@ const SearchFilterBar: React.FC<{
           placeholder={`Search ${activeTab}...`}
           value={searchTerm}
           onChange={(e) => onSearchChange(e.target.value)}
-          className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder-gray-500"
+          className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-primary text-gray-900 placeholder-gray-500"
         />
       </div>
 
@@ -150,7 +150,7 @@ const SearchFilterBar: React.FC<{
       <div className="flex items-center justify-between">
         <button
           onClick={() => setShowFilters(!showFilters)}
-          className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors ${
+          className={`flex items-center gap-2 px-3 py-2 rounded border transition-colors ${
             hasActiveFilters 
               ? 'bg-primary/10 border-primary text-primary' 
               : 'bg-card border-border text-foreground hover:bg-accent'
@@ -177,11 +177,11 @@ const SearchFilterBar: React.FC<{
 
       {/* Filter Options */}
       {showFilters && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-4 bg-gray-50 rounded-lg border">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-4 bg-gray-50 rounded border">
           <select
             value={filters.status}
             onChange={(e) => onFilterChange('status', e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
+            className="px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 text-gray-900"
           >
             <option value="all">All Status</option>
             <option value="active">Active</option>
@@ -195,7 +195,7 @@ const SearchFilterBar: React.FC<{
               <select
                 value={filters.trade}
                 onChange={(e) => onFilterChange('trade', e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
+                className="px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 text-gray-900"
               >
                 <option value="all">All Trades</option>
                 <option value="electrical">Electrical</option>
@@ -212,7 +212,7 @@ const SearchFilterBar: React.FC<{
               <select
                 value={filters.performance}
                 onChange={(e) => onFilterChange('performance', e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
+                className="px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 text-gray-900"
               >
                 <option value="all">All Performance</option>
                 <option value="high">High (4-5 stars)</option>
@@ -227,7 +227,7 @@ const SearchFilterBar: React.FC<{
               <select
                 value={filters.contractValue}
                 onChange={(e) => onFilterChange('contractValue', e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
+                className="px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 text-gray-900"
               >
                 <option value="all">All Values</option>
                 <option value="high">High ($100k+)</option>
@@ -238,7 +238,7 @@ const SearchFilterBar: React.FC<{
               <select
                 value={filters.expiry}
                 onChange={(e) => onFilterChange('expiry', e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
+                className="px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 text-gray-900"
               >
                 <option value="all">All Expiry</option>
                 <option value="expiring">Expiring Soon (≤30 days)</option>
@@ -267,7 +267,7 @@ const TabNavigation: React.FC<{
     <>
       {/* Mobile Tab Navigation */}
       <div className="sm:hidden">
-        <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
+        <div className="flex space-x-1 bg-gray-100 p-1 rounded">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             return (
@@ -338,7 +338,7 @@ const ItemCard: React.FC<{
 }> = ({ item, type, selected, onSelect, onView, onEdit, onDelete }) => {
   const getCardIcon = () => {
     switch (type) {
-      case 'project': return <Building className="w-5 h-5 text-blue-600" />;
+      case 'project': return <Building className="w-5 h-5 text-primary" />;
       case 'vendor': return <UserPlus className="w-5 h-5 text-green-600" />;
       case 'contract': return <FilePlus className="w-5 h-5 text-purple-600" />;
     }
@@ -356,7 +356,7 @@ const ItemCard: React.FC<{
 
   return (
     <div 
-      className="group bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-5 cursor-pointer hover:shadow-md hover:border-gray-300 transition-all duration-200"
+      className="group bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-5 cursor-pointer hover:shadow-md hover:border-gray-300 transition-all duration-200"
       onClick={() => onView(item)}
     >
       <div className="flex items-start justify-between mb-3 sm:mb-4">
@@ -365,12 +365,12 @@ const ItemCard: React.FC<{
             type="checkbox"
             checked={selected}
             onChange={() => onSelect(String(item.id))}
-            className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded flex-shrink-0"
+            className="mt-1 h-4 w-4 text-primary focus:ring-blue-500 border-gray-300 rounded flex-shrink-0"
           />
           <div className="flex items-center gap-2 min-w-0 flex-1">
             {getCardIcon()}
             <div className="min-w-0 flex-1">
-              <h3 className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors text-sm sm:text-base truncate">
+              <h3 className="font-semibold text-gray-900 group-hover:text-primary transition-colors text-sm sm:text-base truncate">
                 {type === 'project' ? (item as Project).name : 
                  type === 'vendor' ? (item as Subcontractor).name : 
                  ((item as Contract).contract_nickname || (item as Contract).project?.name || 'Unknown Project')}
@@ -476,7 +476,7 @@ const ItemCard: React.FC<{
         return (
         <div className="space-y-3">
           <div className="flex items-center gap-2 mb-3">
-            <span className="inline-flex items-center px-2 sm:px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
+            <span className="inline-flex items-center px-2 sm:px-2.5 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary border border-border">
               {vendor.trade}
             </span>
           </div>
@@ -543,21 +543,21 @@ const ItemCard: React.FC<{
       <div className="mt-4 flex flex-col sm:flex-row sm:justify-end gap-2" onClick={(e) => e.stopPropagation()}>
         <button
           onClick={() => onView(item)}
-          className="flex items-center justify-center gap-1 px-2 sm:px-3 py-1.5 text-gray-600 hover:text-blue-600 text-xs sm:text-sm font-medium border border-gray-300 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors"
+          className="flex items-center justify-center gap-1 px-2 sm:px-3 py-1.5 text-gray-600 hover:text-primary text-xs sm:text-sm font-medium border border-gray-300 rounded hover:border-blue-300 hover:bg-primary/10 transition-colors"
         >
           <Eye className="w-3 h-3" />
           View
         </button>
         <button
           onClick={() => onEdit(item)}
-          className="flex items-center justify-center gap-1 px-2 sm:px-3 py-1.5 text-blue-600 hover:text-blue-700 text-xs sm:text-sm font-medium border border-blue-300 rounded-lg hover:bg-blue-50 transition-colors"
+          className="flex items-center justify-center gap-1 px-2 sm:px-3 py-1.5 text-primary hover:text-primary/80 text-xs sm:text-sm font-medium border border-border rounded hover:bg-primary/10 transition-colors"
         >
           <Edit3 className="w-3 h-3" />
           Edit
         </button>
         <button
           onClick={() => onDelete(item)}
-          className="flex items-center justify-center gap-1 px-2 sm:px-3 py-1.5 text-red-600 hover:text-red-700 text-xs sm:text-sm font-medium border border-red-300 rounded-lg hover:bg-red-50 transition-all duration-200 hover:shadow-sm"
+          className="flex items-center justify-center gap-1 px-2 sm:px-3 py-1.5 text-red-600 hover:text-red-700 text-xs sm:text-sm font-medium border border-red-300 rounded hover:bg-red-50 transition-all duration-200 hover:shadow-sm"
         >
           <Trash2 className="w-3 h-3" />
           Delete
@@ -684,7 +684,7 @@ const AddForm: React.FC<AddFormProps> = ({
     str.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 
   return (
-    <div className="bg-white rounded-xl p-6 w-full shadow-2xl max-h-[90vh] overflow-y-auto">
+    <div className="bg-white rounded-lg p-6 w-full shadow-2xl max-h-[90vh] overflow-y-auto">
       <div className="flex justify-between items-center mb-6">
         <h3 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
           {icon}
@@ -712,10 +712,10 @@ const AddForm: React.FC<AddFormProps> = ({
               onChange={handleChange}
               onBlur={handleBlur}
               className={`
-                w-full px-4 py-3 text-base border rounded-lg focus:ring-2 focus:ring-blue-500 transition-all duration-200 bg-white text-gray-900 placeholder-gray-500
+                w-full px-4 py-3 text-base border rounded focus:ring-2 focus:ring-blue-500 transition-all duration-200 bg-white text-gray-900 placeholder-gray-500
                 ${errors[field.name] && touched[field.name] 
                   ? 'border-red-300 focus:border-red-500 focus:ring-red-500' 
-                  : 'border-gray-300 focus:border-blue-500'
+                  : 'border-gray-300 focus:border-primary'
                 }
               `}
               placeholder={field.placeholder}
@@ -734,7 +734,7 @@ const AddForm: React.FC<AddFormProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="px-6 py-2.5 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors duration-200 font-medium"
+            className="px-6 py-2.5 text-gray-700 bg-gray-100 rounded hover:bg-gray-200 transition-colors duration-200 font-medium"
             disabled={isLoading}
           >
             Cancel
@@ -742,7 +742,7 @@ const AddForm: React.FC<AddFormProps> = ({
           <button
             type="submit"
             disabled={isLoading}
-            className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 disabled:bg-blue-400 flex items-center gap-2 font-medium"
+            className="px-6 py-2.5 bg-primary text-white rounded hover:bg-primary/90 transition-colors duration-200 disabled:opacity-50 flex items-center gap-2 font-medium"
           >
             {isLoading ? (
               <>
@@ -1100,10 +1100,10 @@ const AddContractForm: React.FC<{
   };
 
   return (
-    <div className="bg-white rounded-xl p-6 w-full shadow-2xl max-h-[90vh] overflow-y-auto">
+    <div className="bg-white rounded-lg p-6 w-full shadow-2xl max-h-[90vh] overflow-y-auto">
       <div className="flex justify-between items-center mb-6">
         <h3 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
-          <FilePlus className="w-6 h-6 text-blue-600" />
+          <FilePlus className="w-6 h-6 text-primary" />
           {isEdit ? 'Edit Contract' : 'Add Contract'}
         </h3>
         <button 
@@ -1123,7 +1123,7 @@ const AddContractForm: React.FC<{
             value={formData.projectId}
             onChange={handleInputChange('projectId')}
             className={`
-              w-full px-4 py-3 text-base border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white text-gray-900
+              w-full px-4 py-3 text-base border rounded focus:ring-2 focus:ring-blue-500 bg-white text-gray-900
               ${errors.projectId ? 'border-red-300' : 'border-gray-300'}
             `}
             disabled={loading}
@@ -1149,7 +1149,7 @@ const AddContractForm: React.FC<{
             value={formData.subcontractorId}
             onChange={handleInputChange('subcontractorId')}
             className={`
-              w-full px-4 py-3 text-base border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white text-gray-900
+              w-full px-4 py-3 text-base border rounded focus:ring-2 focus:ring-blue-500 bg-white text-gray-900
               ${errors.subcontractorId ? 'border-red-300' : 'border-gray-300'}
             `}
             disabled={loading}
@@ -1178,7 +1178,7 @@ const AddContractForm: React.FC<{
             value={formData.contractAmount}
             onChange={handleInputChange('contractAmount')}
             className={`
-              w-full px-4 py-3 text-base border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white text-gray-900
+              w-full px-4 py-3 text-base border rounded focus:ring-2 focus:ring-blue-500 bg-white text-gray-900
               ${errors.contractAmount ? 'border-red-300' : 'border-gray-300'}
             `}
             placeholder="0.00"
@@ -1201,7 +1201,7 @@ const AddContractForm: React.FC<{
             value={formData.contractNickname}
             onChange={handleInputChange('contractNickname')}
             className={`
-              w-full px-4 py-3 text-base border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white text-gray-900
+              w-full px-4 py-3 text-base border rounded focus:ring-2 focus:ring-blue-500 bg-white text-gray-900
               ${errors.contractNickname ? 'border-red-300' : 'border-gray-300'}
             `}
             placeholder="e.g., Plumbing Phase 1, Electrical Rough-In"
@@ -1225,7 +1225,7 @@ const AddContractForm: React.FC<{
               value={formData.startDate}
               onChange={handleInputChange('startDate')}
               className={`
-                w-full px-4 py-3 text-base border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white text-gray-900
+                w-full px-4 py-3 text-base border rounded focus:ring-2 focus:ring-blue-500 bg-white text-gray-900
                 ${errors.startDate ? 'border-red-300' : 'border-gray-300'}
               `}
               disabled={loading}
@@ -1246,7 +1246,7 @@ const AddContractForm: React.FC<{
               onChange={handleInputChange('endDate')}
               min={formData.startDate}
               className={`
-                w-full px-4 py-3 text-base border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white text-gray-900
+                w-full px-4 py-3 text-base border rounded focus:ring-2 focus:ring-blue-500 bg-white text-gray-900
                 ${errors.endDate ? 'border-red-300' : 'border-gray-300'}
               `}
               disabled={loading}
@@ -1262,7 +1262,7 @@ const AddContractForm: React.FC<{
 
         {/* Contract Locking Warning */}
         {isContractLocked && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+          <div className="bg-yellow-50 border border-yellow-200 rounded p-4 mb-4">
             <div className="flex items-center gap-2 text-yellow-800">
               <AlertCircle className="w-5 h-5" />
               <p className="font-medium">Contract Locked</p>
@@ -1278,7 +1278,7 @@ const AddContractForm: React.FC<{
           <button
             type="button"
             disabled
-            className="flex items-center gap-2 px-4 py-2 text-sm bg-gray-100 text-gray-400 border border-gray-300 rounded-lg cursor-not-allowed"
+            className="flex items-center gap-2 px-4 py-2 text-sm bg-gray-100 text-gray-400 border border-gray-300 rounded cursor-not-allowed"
             title="CSV import functionality coming in Phase 2"
           >
             <Upload className="w-4 h-4" />
@@ -1310,7 +1310,7 @@ const AddContractForm: React.FC<{
           
           {/* Validation Messages */}
           {validationError && (
-            <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded">
               <p className="text-sm text-red-700 flex items-center gap-2">
                 <AlertCircle className="w-4 h-4" />
                 {validationError}
@@ -1337,7 +1337,7 @@ const AddContractForm: React.FC<{
           <button
             type="button"
             onClick={onClose}
-            className="px-6 py-2.5 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors duration-200 font-medium"
+            className="px-6 py-2.5 text-gray-700 bg-gray-100 rounded hover:bg-gray-200 transition-colors duration-200 font-medium"
             disabled={loading}
           >
             Cancel
@@ -1345,7 +1345,7 @@ const AddContractForm: React.FC<{
           <button
             type="submit"
             disabled={loading}
-            className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 disabled:bg-blue-400 flex items-center gap-2 font-medium"
+            className="px-6 py-2.5 bg-primary text-white rounded hover:bg-primary/90 transition-colors duration-200 disabled:opacity-50 flex items-center gap-2 font-medium"
           >
             {loading ? (
               <>
@@ -1730,10 +1730,10 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
 
         {/* Help Text for New Users */}
         {currentData.length > 0 && (
-          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-            <div className="flex items-center gap-2 text-sm text-blue-700">
+          <div className="mb-4 p-3 bg-primary/10 border border-border rounded">
+            <div className="flex items-center gap-2 text-sm text-primary">
               <div className="w-5 h-5 rounded-full bg-blue-200 flex items-center justify-center flex-shrink-0">
-                <span className="text-blue-600 text-xs font-bold">?</span>
+                <span className="text-primary text-xs font-bold">?</span>
               </div>
               <span>
                 <strong>Quick Actions:</strong> Select items using checkboxes, or use individual action buttons on each card. 
@@ -1776,7 +1776,7 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
             </p>
             <button
               onClick={() => handleOpenForm('contract')}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded hover:bg-primary/90 transition-colors font-medium"
             >
               <FilePlus className="w-4 h-4" />
               Add Contract
@@ -1788,7 +1788,7 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
       {/* Modal Forms */}
       {openForm === 'contract' && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full">
+          <div className="bg-white rounded-lg shadow-2xl max-w-4xl w-full">
             <AddContractForm
               onClose={() => setOpenForm(null)}
               onRefresh={async () => { await refetchContracts(); }}
@@ -1803,7 +1803,7 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
       {/* View Modals */}
       {viewModal && selectedItem && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full p-6">
+          <div className="bg-white rounded-lg shadow-2xl max-w-2xl w-full p-6">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-xl font-semibold text-gray-800">
                 Contract Details
@@ -1826,7 +1826,7 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
             <div className="mt-6 flex justify-end">
               <button
                 onClick={() => handleEditItem(selectedItem)}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="px-4 py-2 bg-primary text-white rounded hover:bg-primary/90 transition-colors"
               >
                 Edit Contract
               </button>
@@ -1839,7 +1839,7 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
 
       {editModal === 'contract' && selectedItem && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full">
+          <div className="bg-white rounded-lg shadow-2xl max-w-4xl w-full">
             <AddContractForm
               onClose={handleCloseEditModal}
               onRefresh={async () => { await refetchContracts(); }}
@@ -1860,7 +1860,7 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
           onClick={() => setShowDeleteConfirmation(false)}
         >
           <div 
-            className="bg-card rounded-xl shadow-2xl max-w-lg w-full p-6 border border-border"
+            className="bg-card rounded-lg shadow-2xl max-w-lg w-full p-6 border border-border"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header with Warning Icon */}
@@ -1875,7 +1875,7 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
             </div>
 
             {/* Warning Message */}
-            <div className="bg-[var(--status-critical-bg)] border border-[var(--status-critical-border)] rounded-lg p-4 mb-6">
+            <div className="bg-[var(--status-critical-bg)] border border-[var(--status-critical-border)] rounded p-4 mb-6">
               <div className="flex items-start gap-3">
                 <div className="w-6 h-6 rounded-full bg-[var(--status-critical-border)] flex items-center justify-center flex-shrink-0 mt-0.5">
                   <span className="text-[var(--status-critical-icon)] text-sm font-bold">!</span>
@@ -1897,14 +1897,14 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
             <div className="flex flex-col sm:flex-row gap-3 sm:justify-end">
               <button 
                 onClick={() => setShowDeleteConfirmation(false)} 
-                className="flex-1 sm:flex-none px-6 py-3 bg-muted text-muted-foreground rounded-lg hover:bg-muted/80 transition-colors font-medium border border-border"
+                className="flex-1 sm:flex-none px-6 py-3 bg-muted text-muted-foreground rounded hover:bg-muted/80 transition-colors font-medium border border-border"
                 disabled={deleteLoading}
               >
                 Cancel
               </button>
               <button 
                 onClick={confirmBulkDelete} 
-                className="flex-1 sm:flex-none px-6 py-3 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white rounded-lg transition-colors disabled:opacity-50 font-medium flex items-center justify-center gap-2 shadow-lg"
+                className="flex-1 sm:flex-none px-6 py-3 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white rounded transition-colors disabled:opacity-50 font-medium flex items-center justify-center gap-2 shadow-lg"
                 disabled={deleteLoading}
               >
                 {deleteLoading ? (
@@ -1938,11 +1938,11 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
           onClick={handleCancelSwitch}
         >
           <div 
-            className="bg-card rounded-xl shadow-2xl max-w-md w-full p-6 border border-border"
+            className="bg-card rounded-lg shadow-2xl max-w-md w-full p-6 border border-border"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-xl bg-[var(--status-warning-bg)] flex items-center justify-center">
+              <div className="w-12 h-12 rounded-lg bg-[var(--status-warning-bg)] flex items-center justify-center">
                 <AlertCircle className="w-7 h-7 text-[var(--status-warning-icon)]" />
               </div>
               <h3 className="text-lg font-semibold text-foreground">Unsaved Changes</h3>
@@ -1953,13 +1953,13 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
             <div className="flex justify-end gap-3">
               <button 
                 onClick={handleCancelSwitch} 
-                className="px-4 py-2 bg-muted text-muted-foreground rounded-lg hover:bg-muted/80 transition-colors border border-border"
+                className="px-4 py-2 bg-muted text-muted-foreground rounded hover:bg-muted/80 transition-colors border border-border"
               >
                 Cancel
               </button>
               <button 
                 onClick={handleConfirmSwitch} 
-                className="px-4 py-2 bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 text-white rounded-lg transition-colors shadow-lg"
+                className="px-4 py-2 bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 text-white rounded transition-colors shadow-lg"
               >
                 Discard Changes
               </button>

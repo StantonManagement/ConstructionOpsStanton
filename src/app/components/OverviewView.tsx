@@ -549,7 +549,7 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
                 className="flex items-center gap-3 cursor-pointer group"
                 onClick={() => navigateToTab('projects')}
               >
-                <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center text-blue-600 border border-blue-100">
+                <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center text-primary border border-blue-100">
                   🏗️
                 </div>
                 <div>

@@ -38,6 +38,7 @@ const ProjectFormWithEntity: React.FC<ProjectFormProps> = ({
     address: initialData.address || '',
     client_name: initialData.client_name || '',
     budget: initialData.budget || '',
+    starting_balance: initialData.starting_balance || '',
     start_date: initialData.start_date || '',
     target_completion_date: initialData.target_completion_date || '',
     status: initialData.status || 'active',
@@ -88,8 +89,8 @@ const ProjectFormWithEntity: React.FC<ProjectFormProps> = ({
       return 'This field is required';
     }
 
-    // Number validation for budget
-    if (name === 'budget' && value && isNaN(Number(value))) {
+    // Number validation for budget and starting_balance
+    if (['budget', 'starting_balance'].includes(name) && value && isNaN(Number(value))) {
       return 'Please enter a valid number';
     }
 
@@ -142,6 +143,7 @@ const ProjectFormWithEntity: React.FC<ProjectFormProps> = ({
     const submitData = {
       ...formData,
       budget: formData.budget ? Number(formData.budget) : null,
+      starting_balance: formData.starting_balance ? Number(formData.starting_balance) : 0,
       owner_entity_id: formData.owner_entity_id ? Number(formData.owner_entity_id) : null,
       total_units: formData.total_units ? Number(formData.total_units) : 1,
       target_completion_date: formData.target_completion_date || null,
@@ -336,6 +338,24 @@ const ProjectFormWithEntity: React.FC<ProjectFormProps> = ({
                 className="w-full px-4 py-3 text-base border border-border rounded-lg focus:ring-2 focus:ring-primary transition-all duration-200 bg-secondary text-foreground placeholder-gray-400"
                 placeholder="Enter project budget"
                 min="0"
+                step="0.01"
+                disabled={isLoading}
+              />
+            </div>
+
+            {/* Starting Balance */}
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1.5">
+                Starting Balance
+              </label>
+              <input
+                type="number"
+                name="starting_balance"
+                value={formData.starting_balance}
+                onChange={handleChange}
+                onBlur={(e) => handleBlur('starting_balance', e.target.value)}
+                className="w-full px-4 py-3 text-base border border-border rounded-lg focus:ring-2 focus:ring-primary transition-all duration-200 bg-secondary text-foreground placeholder-gray-400"
+                placeholder="Initial cash on hand"
                 step="0.01"
                 disabled={isLoading}
               />

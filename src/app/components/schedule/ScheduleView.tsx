@@ -1,13 +1,14 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ViewMode, Task } from 'gantt-task-react';
 import { supabase } from '@/lib/supabaseClient';
-import GanttChartContainer from './GanttChartContainer';
+import { useRouter, useSearchParams } from 'next/navigation';
 import MobileTaskTimeline from './MobileTaskTimeline';
 import TaskFormModal from './TaskFormModal';
+import GanttChart, { GanttTask } from './GanttChart';
+import GanttToolbar from './GanttToolbar';
 import type { ProjectSchedule, ScheduleTask } from '@/types/schedule';
-import { Plus, Smartphone, Monitor } from 'lucide-react';
+import { Plus } from 'lucide-react';
 
 interface ScheduleViewProps {
   projectId?: number;
@@ -19,18 +20,34 @@ interface Project {
 }
 
 export default function ScheduleView({ projectId: initialProjectId }: ScheduleViewProps) {
-  const [selectedProjectId, setSelectedProjectId] = useState<number | undefined>(initialProjectId);
+  const searchParams = useSearchParams();
+  const projectFromUrl = searchParams.get('project');
+  
+  const [selectedProjectId, setSelectedProjectId] = useState<number | undefined>(
+    initialProjectId || (projectFromUrl ? parseInt(projectFromUrl) : undefined)
+  );
   const [projects, setProjects] = useState<Project[]>([]);
   
   const [schedule, setSchedule] = useState<ProjectSchedule | null>(null);
   const [tasks, setTasks] = useState<ScheduleTask[]>([]);
+  const [ganttTasks, setGanttTasks] = useState<GanttTask[]>([]);
   const [loading, setLoading] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.Month);
+  const [viewMode, setViewMode] = useState<'Day' | 'Week' | 'Month'>('Week');
   
   // Modal states
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [selectedTask, setSelectedTask] = useState<ScheduleTask | undefined>(undefined);
+
+  // Sync with URL or Props
+  useEffect(() => {
+    if (initialProjectId) {
+      setSelectedProjectId(initialProjectId);
+    } else if (projectFromUrl) {
+      const pid = parseInt(projectFromUrl);
+      if (!isNaN(pid)) setSelectedProjectId(pid);
+    }
+  }, [initialProjectId, projectFromUrl]);
 
   // Check screen size
   useEffect(() => {
@@ -53,7 +70,6 @@ export default function ScheduleView({ projectId: initialProjectId }: ScheduleVi
             return;
           }
           
-          console.log('Fetching projects list...');
           const response = await fetch('/api/projects/list', {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${session.session.access_token}` },
@@ -62,13 +78,8 @@ export default function ScheduleView({ projectId: initialProjectId }: ScheduleVi
           
           if (response.ok) {
             const result = await response.json();
-            console.log('Projects response:', result);
-            // Handle both wrapped { data: { projects: [] } } and unwrapped { projects: [] } formats
             const projectsList = result.data?.projects || result.projects || [];
-            console.log('Projects parsed:', projectsList.length);
             setProjects(projectsList);
-          } else {
-            console.error('Failed to fetch projects:', response.status, await response.text());
           }
         } catch (error) {
           console.error('Error fetching projects:', error);
@@ -80,49 +91,52 @@ export default function ScheduleView({ projectId: initialProjectId }: ScheduleVi
     }
   }, [initialProjectId]);
 
-  // Fetch Schedule Data
+  // Fetch Schedule Data & Budget Categories
   const fetchScheduleData = async () => {
     if (!selectedProjectId) return;
     
     try {
       setLoading(true);
       const { data: session } = await supabase.auth.getSession();
-      if (!session?.session?.access_token) return;
+      const token = session?.session?.access_token;
+      if (!token) return;
 
-      // 1. Find Schedule ID for Project
-      const response = await fetch(`/api/schedules?project_id=${selectedProjectId}`, {
-        headers: { 'Authorization': `Bearer ${session.session.access_token}` }
+      // 1. Fetch Schedule ID for Project
+      const scheduleResponse = await fetch(`/api/schedules?project_id=${selectedProjectId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
       });
-      const result = await response.json();
-      console.log('Schedule response:', result);
       
+      const result = await scheduleResponse.json();
       const schedulesList = result.data?.data || result.data || [];
       
       if (schedulesList && schedulesList.length > 0) {
         const scheduleId = schedulesList[0].id;
-        
-        // 2. Fetch Full Details
-        const response = await fetch(`/api/schedules/${scheduleId}`, {
-          headers: { 'Authorization': `Bearer ${session.session.access_token}` }
+        setSchedule(schedulesList[0]);
+
+        // 2. Fetch Gantt-specific data (includes dependencies formatted for frappe)
+        const ganttResponse = await fetch(`/api/projects/${selectedProjectId}/gantt`, {
+          headers: { 'Authorization': `Bearer ${token}` }
         });
-        
-        if (response.ok) {
-          const result = await response.json();
-          // Handle wrapped response: { success: true, data: { schedule: {...}, tasks: [...] } }
-          const scheduleData = result.data?.data || result.data || result;
+
+        if (ganttResponse.ok) {
+          const ganttData = await ganttResponse.json();
+          setGanttTasks(ganttData.tasks || []);
           
-          // Ensure we have the actual schedule object and tasks array
-          if (scheduleData.schedule) {
-            setSchedule(scheduleData.schedule);
-            setTasks(scheduleData.tasks || []);
-          } else {
-            console.warn('Schedule data missing in response', scheduleData);
-            setSchedule(null);
+          // Let's fetch full details for editing as before
+          const detailResponse = await fetch(`/api/schedules/${scheduleId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          
+          if (detailResponse.ok) {
+            const detailResult = await detailResponse.json();
+            const scheduleData = detailResult.data?.data || detailResult.data || detailResult;
+            if (scheduleData.tasks) setTasks(scheduleData.tasks);
           }
         }
       } else {
         setSchedule(null);
         setTasks([]);
+        setGanttTasks([]);
       }
     } catch (error) {
       console.error('Error fetching schedule:', error);
@@ -156,7 +170,6 @@ export default function ScheduleView({ projectId: initialProjectId }: ScheduleVi
       });
 
       if (response.ok || response.status === 409) {
-        // If created or already exists, fetch data
         fetchScheduleData();
       } else {
         console.error('Failed to create schedule:', response.status);
@@ -171,14 +184,14 @@ export default function ScheduleView({ projectId: initialProjectId }: ScheduleVi
     setShowTaskModal(true);
   };
 
-  const handleGanttTaskClick = (ganttTask: Task) => {
+  const handleGanttTaskClick = (ganttTask: GanttTask) => {
     const task = tasks.find(t => t.id === ganttTask.id);
     if (task) {
       handleTaskClick(task);
     }
   };
 
-  const handleGanttTaskUpdate = async (task: Task) => {
+  const handleGanttDateChange = async (task: GanttTask, start: Date, end: Date) => {
     try {
       const { data: session } = await supabase.auth.getSession();
       if (!session?.session?.access_token || !schedule) return;
@@ -190,34 +203,34 @@ export default function ScheduleView({ projectId: initialProjectId }: ScheduleVi
           'Authorization': `Bearer ${session.session.access_token}`
         },
         body: JSON.stringify({
-          start_date: task.start.toISOString().split('T')[0],
-          end_date: task.end.toISOString().split('T')[0],
-          progress: task.progress
+          start_date: start.toISOString().split('T')[0],
+          end_date: end.toISOString().split('T')[0]
         })
       });
+      // Optimistic update or refresh (Cascade happens on server)
       fetchScheduleData();
     } catch (e) {
-      console.error('Failed to update task', e);
+      console.error('Failed to update task dates', e);
     }
   };
 
-  const handleDeleteTask = async (task: Task) => {
-    if (!confirm('Are you sure you want to delete this task?')) return;
-    
+  const handleGanttProgressChange = async (task: GanttTask, progress: number) => {
     try {
       const { data: session } = await supabase.auth.getSession();
       if (!session?.session?.access_token || !schedule) return;
 
-      const response = await fetch(`/api/schedules/${schedule.id}/tasks/${task.id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${session.session.access_token}` }
+      await fetch(`/api/schedules/${schedule.id}/tasks/${task.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.session.access_token}`
+        },
+        body: JSON.stringify({
+          progress: progress
+        })
       });
-
-      if (response.ok) {
-        fetchScheduleData();
-      }
-    } catch (error) {
-      console.error('Error deleting task:', error);
+    } catch (e) {
+      console.error('Failed to update task progress', e);
     }
   };
 
@@ -228,7 +241,7 @@ export default function ScheduleView({ projectId: initialProjectId }: ScheduleVi
         <h2 className="text-xl font-semibold text-gray-900 mb-4">Select a Project to View Schedule</h2>
         {loading ? (
           <div className="flex justify-center p-4">
-            <div className="animate-spin h-6 w-6 border-b-2 border-blue-600 rounded-full"></div>
+            <div className="animate-spin h-6 w-6 border-b-2 border-primary rounded-full"></div>
           </div>
         ) : (
           <div className="max-w-md mx-auto">
@@ -254,8 +267,8 @@ export default function ScheduleView({ projectId: initialProjectId }: ScheduleVi
     );
   }
 
-  if (loading) {
-    return <div className="p-8 text-center"><div className="animate-spin h-8 w-8 border-b-2 border-blue-600 rounded-full mx-auto"></div></div>;
+  if (loading && !schedule) {
+    return <div className="p-8 text-center"><div className="animate-spin h-8 w-8 border-b-2 border-primary rounded-full mx-auto"></div></div>;
   }
 
   if (!schedule) {
@@ -274,7 +287,7 @@ export default function ScheduleView({ projectId: initialProjectId }: ScheduleVi
           <p className="text-gray-500 mb-6">This project doesn't have a timeline yet.</p>
           <button
             onClick={handleCreateSchedule}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 mx-auto"
+            className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors flex items-center gap-2 mx-auto"
           >
             <Plus className="w-4 h-4" />
             Create Schedule
@@ -286,62 +299,18 @@ export default function ScheduleView({ projectId: initialProjectId }: ScheduleVi
 
   return (
     <div className="space-y-4">
-      {/* Toolbar */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 rounded-lg shadow-sm border">
-        <div className="flex items-center gap-4">
-          {!initialProjectId && (
-            <button 
-              onClick={() => setSelectedProjectId(undefined)}
-              className="text-gray-400 hover:text-gray-600"
-              title="Switch Project"
-            >
-              ←
-            </button>
-          )}
-          <h2 className="text-lg font-semibold text-gray-900">Project Schedule</h2>
-          <div className="flex bg-gray-100 p-1 rounded-lg text-sm">
-            <button
-              onClick={() => setIsMobile(false)}
-              className={`px-3 py-1 rounded-md flex items-center gap-2 ${!isMobile ? 'bg-white shadow text-blue-600' : 'text-gray-600'}`}
-            >
-              <Monitor className="w-4 h-4" />
-              <span className="hidden sm:inline">Gantt</span>
-            </button>
-            <button
-              onClick={() => setIsMobile(true)}
-              className={`px-3 py-1 rounded-md flex items-center gap-2 ${isMobile ? 'bg-white shadow text-blue-600' : 'text-gray-600'}`}
-            >
-              <Smartphone className="w-4 h-4" />
-              <span className="hidden sm:inline">List</span>
-            </button>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          {!isMobile && (
-            <select
-              value={viewMode}
-              onChange={(e) => setViewMode(e.target.value as ViewMode)}
-              className="px-3 py-2 border rounded-lg text-sm bg-white"
-            >
-              <option value={ViewMode.Day}>Day View</option>
-              <option value={ViewMode.Week}>Week View</option>
-              <option value={ViewMode.Month}>Month View</option>
-            </select>
-          )}
-          
-          <button
-            onClick={() => {
-              setSelectedTask(undefined);
-              setShowTaskModal(true);
-            }}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm w-full sm:w-auto justify-center"
-          >
-            <Plus className="w-4 h-4" />
-            Add Task
-          </button>
-        </div>
-      </div>
+      <GanttToolbar
+        isMobile={isMobile}
+        viewMode={viewMode}
+        projectId={initialProjectId ? undefined : selectedProjectId} // Only show back button if not initial
+        onToggleView={setIsMobile}
+        onViewModeChange={setViewMode}
+        onAddTask={() => {
+          setSelectedTask(undefined);
+          setShowTaskModal(true);
+        }}
+        onClearProject={() => setSelectedProjectId(undefined)}
+      />
 
       {/* Content */}
       {isMobile ? (
@@ -350,13 +319,12 @@ export default function ScheduleView({ projectId: initialProjectId }: ScheduleVi
           onTaskClick={handleTaskClick} 
         />
       ) : (
-        <GanttChartContainer
-          tasks={tasks}
+        <GanttChart
+          tasks={ganttTasks}
           viewMode={viewMode}
-          onUpdate={handleGanttTaskUpdate}
-          onEdit={handleGanttTaskClick}
-          onDelete={handleDeleteTask}
-          onExpanderClick={(task) => console.log('Expand:', task)}
+          onTaskClick={handleGanttTaskClick}
+          onDateChange={handleGanttDateChange}
+          onProgressChange={handleGanttProgressChange}
         />
       )}
 
@@ -364,6 +332,7 @@ export default function ScheduleView({ projectId: initialProjectId }: ScheduleVi
       {showTaskModal && (
         <TaskFormModal
           scheduleId={schedule.id}
+          projectId={selectedProjectId}
           existingTask={selectedTask}
           allTasks={tasks}
           onClose={() => setShowTaskModal(false)}

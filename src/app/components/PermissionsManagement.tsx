@@ -137,7 +137,7 @@ export default function PermissionsManagement() {
 
   const roleColors = {
     admin: 'bg-red-100 text-red-800 border-red-300',
-    pm: 'bg-blue-100 text-blue-800 border-blue-300',
+    pm: 'bg-blue-100 text-primary border-blue-300',
     staff: 'bg-green-100 text-green-800 border-green-300'
   };
 
@@ -150,7 +150,7 @@ export default function PermissionsManagement() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <RefreshCw className="w-6 h-6 animate-spin text-blue-600" />
+        <RefreshCw className="w-6 h-6 animate-spin text-primary" />
         <span className="ml-2 text-gray-600">Loading permissions...</span>
       </div>
     );
@@ -161,7 +161,7 @@ export default function PermissionsManagement() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Shield className="w-6 h-6 text-blue-600" />
+          <Shield className="w-6 h-6 text-primary" />
           <div>
             <h2 className="text-2xl font-bold text-foreground">Permission Management</h2>
             <p className="text-sm text-muted-foreground">
@@ -244,7 +244,7 @@ export default function PermissionsManagement() {
                       onClick={() => handleTogglePermission(perm.permission_key)}
                       className={`p-3 rounded-md border text-left transition-all ${
                         isGranted
-                          ? 'bg-blue-50 border-blue-300 hover:bg-blue-100'
+                          ? 'bg-primary/10 border-blue-300 hover:bg-blue-100'
                           : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
                       }`}
                     >
@@ -258,7 +258,7 @@ export default function PermissionsManagement() {
                           </p>
                         </div>
                         <div className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center ${
-                          isGranted ? 'bg-blue-600' : 'bg-gray-300'
+                          isGranted ? 'bg-primary' : 'bg-gray-300'
                         }`}>
                           {isGranted ? (
                             <Check className="w-3 h-3 text-white" />

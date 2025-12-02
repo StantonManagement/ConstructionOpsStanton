@@ -212,7 +212,7 @@ export default function ContractorPortalPage() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading punch lists...</p>
         </div>
       </div>
@@ -241,7 +241,7 @@ export default function ContractorPortalPage() {
         <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <ListChecks className="w-8 h-8 text-blue-600" />
+              <ListChecks className="w-8 h-8 text-primary" />
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Punch Lists</h1>
                 {contractor && (
@@ -260,10 +260,10 @@ export default function ContractorPortalPage() {
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-blue-600 font-medium">Assigned</p>
-                <p className="text-2xl font-bold text-blue-900">{stats.assigned}</p>
+                <p className="text-sm text-primary font-medium">Assigned</p>
+                <p className="text-2xl font-bold text-primary">{stats.assigned}</p>
               </div>
-              <Clock className="w-6 h-6 text-blue-600" />
+              <Clock className="w-6 h-6 text-primary" />
             </div>
           </div>
 
@@ -415,7 +415,7 @@ export default function ContractorPortalPage() {
                           Mark Complete
                         </button>
                       )}
-                      <label className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium cursor-pointer inline-flex items-center gap-2">
+                      <label className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium cursor-pointer inline-flex items-center gap-2">
                         <Upload className="w-4 h-4" />
                         {uploading === item.id ? 'Uploading...' : 'Upload Photo'}
                         <input
@@ -478,7 +478,7 @@ export default function ContractorPortalPage() {
                       <h4 className="text-sm font-medium text-gray-700 mb-2">Timeline:</h4>
                       <div className="space-y-2 text-sm">
                         <div className="flex items-center gap-2 text-gray-600">
-                          <div className="w-2 h-2 rounded-full bg-blue-600"></div>
+                          <div className="w-2 h-2 rounded-full bg-primary"></div>
                           <span>Assigned: {new Date(item.assigned_at).toLocaleString()}</span>
                         </div>
                         {item.started_at && (

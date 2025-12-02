@@ -86,7 +86,7 @@ const PaymentApplicationTable: React.FC<PaymentApplicationTableProps> = ({
     return (
       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
         <div className="p-8 text-center">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           <p className="mt-2 text-sm text-gray-500">Loading payment applications...</p>
         </div>
       </div>
@@ -157,6 +157,11 @@ const PaymentApplicationTable: React.FC<PaymentApplicationTableProps> = ({
       accessor: (app) => <span className="text-sm">{formatDate(app.created_at)}</span>
     },
 
+    { 
+      header: 'Due Date', 
+      accessor: (app) => <span className="text-sm">{app.due_date ? formatDate(app.due_date) : '-'}</span>,
+      className: 'hidden md:table-cell'
+    },
     {
       header: 'Status',
       accessor: (app) => (
@@ -221,7 +226,7 @@ const PaymentApplicationTable: React.FC<PaymentApplicationTableProps> = ({
     <div className="space-y-4">
       {/* Bulk Actions Bar */}
       {enableBulkActions && selectedIds.length > 0 && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center justify-between">
+        <div className="bg-primary/10 border border-blue-200 rounded-lg p-4 flex items-center justify-between">
           <span className="text-sm font-medium text-blue-900">
             {selectedIds.length} item{selectedIds.length !== 1 ? 's' : ''} selected
           </span>

@@ -150,7 +150,7 @@ export default function PunchListDetailModal({ item: initialItem, onClose, onUpd
                 <Camera size={18} />
                 Photos ({item.photo_count || 0})
               </h3>
-              <button className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+              <button className="text-sm text-primary hover:text-primary/80 font-medium">
                 + Add Photo
               </button>
             </div>
@@ -170,7 +170,7 @@ export default function PunchListDetailModal({ item: initialItem, onClose, onUpd
             <div className="space-y-4">
               <div className="flex gap-2">
                 <textarea
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-primary"
                   placeholder="Add a comment..."
                   rows={2}
                 />
@@ -188,7 +188,7 @@ export default function PunchListDetailModal({ item: initialItem, onClose, onUpd
             <button
               onClick={() => handleStatusUpdate('complete')}
               disabled={actionLoading}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+              className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 disabled:opacity-50"
             >
               <CheckCircle size={18} />
               Mark Complete

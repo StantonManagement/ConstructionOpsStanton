@@ -77,7 +77,7 @@ const ProjectCard: React.FC<Props> = ({ project, onSelect, onBudgetClick, isLoad
 
       {/* Budget Information - Clickable when onBudgetClick is provided */}
       <div 
-        className={`mb-3 ${onBudgetClick ? 'cursor-pointer hover:bg-blue-50 rounded-lg p-2 -mx-2 transition-colors' : ''}`}
+        className={`mb-3 ${onBudgetClick ? 'cursor-pointer hover:bg-primary/10 rounded-lg p-2 -mx-2 transition-colors' : ''}`}
         onClick={onBudgetClick ? handleBudgetClick : undefined}
         onKeyDown={onBudgetClick ? handleBudgetKeyDown : undefined}
         role={onBudgetClick ? 'button' : undefined}
@@ -152,7 +152,7 @@ const ProjectCard: React.FC<Props> = ({ project, onSelect, onBudgetClick, isLoad
         
         {/* Budget click hint */}
         {onBudgetClick && (
-          <div className="text-xs text-blue-600 mt-1 opacity-70">
+          <div className="text-xs text-primary mt-1 opacity-70">
             Click for budget details
           </div>
         )}
@@ -180,7 +180,7 @@ const ProjectCard: React.FC<Props> = ({ project, onSelect, onBudgetClick, isLoad
       {/* Action Indicator */}
       {onSelect && (
         <div className="pt-2 border-t border-gray-100">
-          <div className="text-xs text-blue-600 font-medium flex items-center gap-1">
+          <div className="text-xs text-primary font-medium flex items-center gap-1">
             <span>👆</span>
             Click to view payments & details
           </div>

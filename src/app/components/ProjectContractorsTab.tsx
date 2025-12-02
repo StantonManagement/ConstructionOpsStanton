@@ -225,7 +225,7 @@ function ContractorCard({ contract, onRequestPayment, onEditContract, onViewLine
           </div>
           <div>
             <p className="text-xs text-gray-500 mb-1">Current Total</p>
-            <p className="text-sm font-semibold text-blue-600">
+            <p className="text-sm font-semibold text-primary">
               {formatCurrency(currentAmount)}
             </p>
           </div>
@@ -255,7 +255,7 @@ function ContractorCard({ contract, onRequestPayment, onEditContract, onViewLine
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
             <div
-              className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+              className="bg-primary h-2 rounded-full transition-all duration-300"
               style={{ width: `${percentComplete}%` }}
             />
           </div>
@@ -292,7 +292,7 @@ function ContractorCard({ contract, onRequestPayment, onEditContract, onViewLine
             onRequestPayment(contract.contractor_id, contract.id);
           }}
           disabled={isRequesting}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isRequesting ? (
             <>
@@ -724,7 +724,7 @@ const ProjectContractorsTab: React.FC<ProjectContractorsTabProps> = ({
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -741,7 +741,7 @@ const ProjectContractorsTab: React.FC<ProjectContractorsTabProps> = ({
         </p>
         <button 
           onClick={openAddContractorModal}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
         >
           <Plus className="w-4 h-4" />
           <span>Add Contractor</span>
@@ -767,7 +767,7 @@ const ProjectContractorsTab: React.FC<ProjectContractorsTabProps> = ({
               onClick={() => setViewMode('card')}
               className={`flex items-center gap-2 px-3 py-1.5 rounded-md transition-colors ${
                 viewMode === 'card'
-                  ? 'bg-white text-blue-600 shadow-sm'
+                  ? 'bg-white text-primary shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
               }`}
               title="Card View"
@@ -779,7 +779,7 @@ const ProjectContractorsTab: React.FC<ProjectContractorsTabProps> = ({
               onClick={() => setViewMode('table')}
               className={`flex items-center gap-2 px-3 py-1.5 rounded-md transition-colors ${
                 viewMode === 'table'
-                  ? 'bg-white text-blue-600 shadow-sm'
+                  ? 'bg-white text-primary shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
               }`}
               title="Table View"
@@ -790,7 +790,7 @@ const ProjectContractorsTab: React.FC<ProjectContractorsTabProps> = ({
           </div>
           <button 
             onClick={openAddContractorModal}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
           >
             <Plus className="w-4 h-4" />
             <span>Add Contractor</span>
@@ -1006,7 +1006,7 @@ const ProjectContractorsTab: React.FC<ProjectContractorsTabProps> = ({
                         handleRequestPayment(row.contractor_id, row.id);
                       }}
                       disabled={requestingPayment === row.id}
-                      className="px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-xs font-medium flex items-center gap-1"
+                      className="px-3 py-1.5 bg-primary text-white rounded hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-xs font-medium flex items-center gap-1"
                       title="Request Payment"
                     >
                       {requestingPayment === row.id ? (
@@ -1064,7 +1064,7 @@ const ProjectContractorsTab: React.FC<ProjectContractorsTabProps> = ({
             
             {loadingContractors ? (
               <div className="flex items-center justify-center py-8">
-                <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+                <Loader2 className="w-6 h-6 animate-spin text-primary" />
                 <span className="ml-2 text-gray-600">Loading contractors...</span>
               </div>
             ) : (
@@ -1077,7 +1077,7 @@ const ProjectContractorsTab: React.FC<ProjectContractorsTabProps> = ({
                       const value = e.target.value;
                       setSelectedContractorId(value ? parseInt(value) : null);
                     }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-primary"
                     required
                   >
                     <option value="">-- Select a contractor --</option>
@@ -1098,7 +1098,7 @@ const ProjectContractorsTab: React.FC<ProjectContractorsTabProps> = ({
                     type="number"
                     value={newContract.contract_amount}
                     onChange={(e) => setNewContract({ ...newContract, contract_amount: parseFloat(e.target.value) || 0 })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-primary"
                     placeholder="0.00"
                     step="0.01"
                     min="0"
@@ -1111,7 +1111,7 @@ const ProjectContractorsTab: React.FC<ProjectContractorsTabProps> = ({
                   <select
                     value={newContract.budget_item_id}
                     onChange={(e) => setNewContract({ ...newContract, budget_item_id: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-primary"
                   >
                     <option value="">-- Unassigned --</option>
                     {budgetItems.map((item) => (
@@ -1140,7 +1140,7 @@ const ProjectContractorsTab: React.FC<ProjectContractorsTabProps> = ({
                 <button
                   onClick={handleAddContractor}
                   disabled={!selectedContractorId || newContract.contract_amount <= 0}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Add to Project
                 </button>

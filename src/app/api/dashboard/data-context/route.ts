@@ -24,7 +24,7 @@ export const POST = withAuth(async (request: NextRequest, user: any) => {
     const startTime = Date.now();
 
     // Fetch all data in parallel using relationship queries
-    const [projectsResponse, contractorsResponse, contractsResponse] = await Promise.all([
+    const [projectsResponse, contractorsResponse, contractsResponse, budgetCategoriesResponse] = await Promise.all([
       // Projects (exclude deleted)
       supabaseAdmin
         .from('projects')
@@ -45,7 +45,14 @@ export const POST = withAuth(async (request: NextRequest, user: any) => {
           projects:project_id (id, name, client_name),
           contractors:contractor_id (id, name, trade)
         `)
-        .eq('contract_status', 'active')
+        .eq('contract_status', 'active'),
+
+      // Budget Categories (property_budgets) - active only
+      supabaseAdmin
+        .from('property_budgets')
+        .select('*')
+        .eq('is_active', true)
+        .order('display_order', { ascending: true })
     ]);
 
     const fetchTime = Date.now() - startTime;
@@ -111,10 +118,20 @@ export const POST = withAuth(async (request: NextRequest, user: any) => {
       console.log(`[DataContext API] Fetched ${contracts.length} contracts`);
     }
 
+    // Handle budget categories
+    let budgetCategories: any[] = [];
+    if (budgetCategoriesResponse.error) {
+      console.error('[DataContext API] Error fetching budget categories:', budgetCategoriesResponse.error);
+    } else if (budgetCategoriesResponse.data) {
+      budgetCategories = budgetCategoriesResponse.data;
+      console.log(`[DataContext API] Fetched ${budgetCategories.length} budget categories`);
+    }
+
     const response = successResponse({
       projects,
       subcontractors: contractors,
       contracts,
+      budgetCategories,
       paymentApplications: {
         awaitingSMS: [],
         pmReview: [],

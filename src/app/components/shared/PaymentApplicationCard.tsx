@@ -56,7 +56,7 @@ const PaymentApplicationCard: React.FC<PaymentApplicationCardProps> = ({
   return (
     <div
       className={`bg-white border rounded-lg p-4 transition-all ${
-        isSelected ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'
+        isSelected ? 'border-primary bg-primary/10' : 'border-gray-200 hover:border-gray-300'
       } ${onClick ? 'cursor-pointer' : ''}`}
       onClick={() => onClick?.(application)}
     >
@@ -71,7 +71,7 @@ const PaymentApplicationCard: React.FC<PaymentApplicationCardProps> = ({
                 e.stopPropagation();
                 onSelect(application.id, e.target.checked);
               }}
-              className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 cursor-pointer mt-1"
+              className="w-4 h-4 text-primary rounded focus:ring-blue-500 cursor-pointer mt-1"
               onClick={(e) => e.stopPropagation()}
             />
           )}
@@ -122,7 +122,7 @@ const PaymentApplicationCard: React.FC<PaymentApplicationCardProps> = ({
                   className={`flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-semibold transition-colors ${
                     isCompleted
                       ? 'bg-gray-600 text-white hover:bg-gray-700'
-                      : 'bg-blue-600 text-white hover:bg-blue-700'
+                      : 'bg-primary text-white hover:bg-primary/90'
                   }`}
                 >
                   {isCompleted ? (

@@ -130,6 +130,7 @@ export async function POST(req: NextRequest) {
           total_contract_amount: contractAmountNum, // Set this so the trigger doesn't use 0
           current_payment: 0,
           payment_period_end: new Date().toISOString().split('T')[0], // Current date as YYYY-MM-DD
+          due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Default Net 30
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         })

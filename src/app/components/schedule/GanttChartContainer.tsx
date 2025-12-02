@@ -7,6 +7,7 @@ import type { ScheduleTask } from '@/types/schedule';
 
 interface GanttChartContainerProps {
   tasks: ScheduleTask[];
+  budgetCategories?: any[];
   onUpdate?: (task: Task) => void; // For date/progress changes
   onEdit?: (task: Task) => void;   // For opening modal (double click)
   onDelete?: (task: Task) => void;
@@ -16,6 +17,7 @@ interface GanttChartContainerProps {
 
 export default function GanttChartContainer({
   tasks,
+  budgetCategories = [],
   onUpdate,
   onEdit,
   onDelete,
@@ -24,18 +26,54 @@ export default function GanttChartContainer({
 }: GanttChartContainerProps) {
   
   // Convert ScheduleTask to Gantt Task
-  const ganttTasks: Task[] = tasks.map(t => ({
-    start: new Date(t.start_date),
-    end: new Date(t.end_date),
-    name: t.task_name,
-    id: t.id,
-    type: 'task', // Simple logic
-    progress: t.progress,
-    isDisabled: false,
-    styles: { progressColor: '#3B82F6', progressSelectedColor: '#2563EB' },
-    dependencies: t.dependencies,
-    project: t.parent_task_id
-  }));
+  const ganttTasks: Task[] = tasks.map(t => {
+    const isBudgetLinked = !!t.budget_category_id;
+    return {
+      start: new Date(t.start_date),
+      end: new Date(t.end_date),
+      name: t.task_name + (isBudgetLinked ? ' 💲' : ''), // Visual indicator
+      id: t.id,
+      type: 'task', // Simple logic
+      progress: t.progress,
+      isDisabled: false,
+      styles: { 
+        progressColor: isBudgetLinked ? '#059669' : '#3B82F6', // Green for budget linked
+        progressSelectedColor: isBudgetLinked ? '#047857' : '#2563EB',
+        backgroundColor: isBudgetLinked ? '#D1FAE5' : undefined
+      },
+      dependencies: t.dependencies,
+      project: t.parent_task_id
+    };
+  });
+
+  const CustomTooltip = ({ task, fontSize, fontFamily }: { task: Task; fontSize: string; fontFamily: string }) => {
+    const originalTask = tasks.find(t => t.id === task.id);
+    const categoryId = originalTask?.budget_category_id;
+    const category = categoryId ? budgetCategories.find(c => c.id === categoryId) : null;
+
+    return (
+      <div className="bg-white p-4 shadow-lg rounded border border-gray-200 z-50 text-sm max-w-xs">
+        <div className="font-bold mb-1">{originalTask?.task_name}</div>
+        <div className="text-gray-600 mb-2">
+          {task.start.toLocaleDateString()} - {task.end.toLocaleDateString()}
+        </div>
+        <div className="mb-1">
+          Progress: <b>{task.progress}%</b>
+        </div>
+        {category && (
+          <div className="mt-2 pt-2 border-t border-gray-100">
+            <div className="flex items-center gap-1 text-green-700 font-medium">
+              <span>💲 Linked to Budget:</span>
+            </div>
+            <div className="text-gray-800">{category.category_name}</div>
+            <div className="text-xs text-gray-500">
+              Budget: ${category.revised_amount?.toLocaleString()}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   // Handle empty state
   if (ganttTasks.length === 0) {
@@ -59,6 +97,7 @@ export default function GanttChartContainer({
         onDoubleClick={onEdit}
         onDelete={onDelete}
         onExpanderClick={onExpanderClick}
+        TooltipContent={CustomTooltip}
         listCellWidth="155px"
         columnWidth={viewMode === ViewMode.Month ? 300 : 65}
         barFill={60}

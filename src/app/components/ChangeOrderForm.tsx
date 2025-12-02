@@ -322,7 +322,7 @@ const ChangeOrderForm: React.FC<ChangeOrderFormProps> = ({
                 <p className="text-xs text-gray-500 mt-1">
                   Approval Tier: <span className={
                     approvalTier === 'Auto-Approve' ? 'text-green-600 font-semibold' :
-                    approvalTier === 'Standard' ? 'text-blue-600 font-semibold' :
+                    approvalTier === 'Standard' ? 'text-primary font-semibold' :
                     'text-orange-600 font-semibold'
                   }>{approvalTier}</span>
                 </p>
@@ -380,7 +380,7 @@ const ChangeOrderForm: React.FC<ChangeOrderFormProps> = ({
                   type="checkbox"
                   checked={formData.auto_submit}
                   onChange={(e) => setFormData({ ...formData, auto_submit: e.target.checked })}
-                  className="w-4 h-4 text-blue-600"
+                  className="w-4 h-4 text-primary"
                   disabled={isSubmitting}
                 />
                 <span className="text-sm text-gray-700">

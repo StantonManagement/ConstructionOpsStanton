@@ -87,9 +87,11 @@ export default function PunchListsTab({ projectId, onCreatePunchList }: PunchLis
         return;
       }
 
+      // Optimistic check for session to avoid flash of loading
       const { data: session } = await supabase.auth.getSession();
       if (!session?.session?.access_token) {
-        throw new Error('Not authenticated');
+        // Silent fail if just checking or redirect? For tab component, error state is better.
+        throw new Error('Authentication required'); 
       }
 
       let url = `/api/punch-lists/${validProjectId}`;
@@ -219,7 +221,7 @@ export default function PunchListsTab({ projectId, onCreatePunchList }: PunchLis
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'assigned': return 'text-blue-700 bg-blue-50';
+      case 'assigned': return 'text-primary bg-primary/10';
       case 'in_progress': return 'text-yellow-700 bg-yellow-50';
       case 'complete': return 'text-green-700 bg-green-50';
       case 'verified': return 'text-purple-700 bg-purple-50';
@@ -241,7 +243,7 @@ export default function PunchListsTab({ projectId, onCreatePunchList }: PunchLis
     return (
       <div className="flex items-center justify-center py-12">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading punch lists...</p>
         </div>
       </div>
@@ -267,7 +269,7 @@ export default function PunchListsTab({ projectId, onCreatePunchList }: PunchLis
       {/* Header with Stats */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <ListChecks className="w-8 h-8 text-blue-600" />
+          <ListChecks className="w-8 h-8 text-primary" />
           <div>
             <h2 className="text-2xl font-bold text-gray-900">Punch Lists</h2>
             <p className="text-sm text-gray-600">Manage project closeout items</p>
@@ -275,7 +277,7 @@ export default function PunchListsTab({ projectId, onCreatePunchList }: PunchLis
         </div>
         <button
           onClick={onCreatePunchList}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
         >
           <Plus className="w-5 h-5" />
           Create Punch List
@@ -284,13 +286,13 @@ export default function PunchListsTab({ projectId, onCreatePunchList }: PunchLis
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="bg-primary/10 border border-blue-200 rounded-lg p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-blue-600 font-medium">Assigned</p>
+              <p className="text-sm text-primary font-medium">Assigned</p>
               <p className="text-2xl font-bold text-blue-900">{stats.assigned}</p>
             </div>
-            <Clock className="w-8 h-8 text-blue-600" />
+            <Clock className="w-8 h-8 text-primary" />
           </div>
         </div>
 

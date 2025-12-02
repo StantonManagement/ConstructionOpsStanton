@@ -79,7 +79,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
                 <span className="text-sm text-muted-foreground">View all active projects</span>
               </div>
               <div className="flex items-center gap-3">
-                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                <div className="w-2 h-2 bg-primary rounded-full"></div>
                 <span className="text-sm text-muted-foreground">Track project progress</span>
               </div>
               <div className="flex items-center gap-3">
@@ -92,7 +92,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
           <div className="bg-primary/10 p-4 rounded-lg">
             <h4 className="font-medium text-primary mb-2">Quick Actions</h4>
             <div className="grid grid-cols-2 gap-2 text-sm">
-              <button className="bg-blue-600 text-white px-3 py-2 rounded text-xs">
+              <button className="bg-primary text-white px-3 py-2 rounded text-xs">
                 Create Payment App
               </button>
               <button className="bg-gray-600 text-white px-3 py-2 rounded text-xs">
@@ -115,7 +115,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
             <div className="space-y-3">
               <div className="flex items-center gap-3">
                 <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
-                  <span className="text-xs font-medium text-blue-600">1</span>
+                  <span className="text-xs font-medium text-primary">1</span>
                 </div>
                 <span className="text-sm text-muted-foreground">Select project and contractor</span>
               </div>
@@ -161,7 +161,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
                 <span className="text-sm text-muted-foreground">Contractor submissions</span>
               </div>
               <div className="flex items-center gap-3">
-                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                <div className="w-3 h-3 bg-primary rounded-full"></div>
                 <span className="text-sm text-muted-foreground">Project updates</span>
               </div>
               <div className="flex items-center gap-3">
@@ -202,7 +202,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
           
           <div className="bg-primary/10 p-4 rounded-lg mt-6">
             <h4 className="font-medium text-primary mb-2">Need Help?</h4>
-            <p className="text-sm text-blue-800">
+            <p className="text-sm text-primary">
               • Use the help icon (?) in the top right for quick tips<br/>
               • Contact support for technical issues<br/>
               • Check the mobile app for field workers
@@ -267,7 +267,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
         {/* Progress Bar */}
         <div className="w-full bg-gray-200 h-1">
           <div 
-            className="bg-blue-600 h-1 transition-all duration-300"
+            className="bg-primary h-1 transition-all duration-300"
             style={{ width: `${progress}%` }}
           />
         </div>
@@ -298,7 +298,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
             
             <button
               onClick={handleNext}
-              className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="flex items-center gap-2 px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
             >
               {currentStep === steps.length - 1 ? 'Get Started' : 'Next'}
               {currentStep < steps.length - 1 && <ArrowRight className="w-4 h-4" />}

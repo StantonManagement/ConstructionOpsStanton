@@ -154,7 +154,7 @@ const PropertyBudgetView: React.FC<PropertyBudgetViewProps> = ({ projectId, proj
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -177,7 +177,7 @@ const PropertyBudgetView: React.FC<PropertyBudgetViewProps> = ({ projectId, proj
         </div>
         <div className="bg-card p-4 rounded-lg border border-border shadow-none">
           <p className="text-sm text-muted-foreground">Revised Budget</p>
-          <p className="text-2xl font-bold text-blue-600">{formatCurrency(totals.revised)}</p>
+          <p className="text-2xl font-bold text-primary">{formatCurrency(totals.revised)}</p>
           {totals.revised !== totals.original && (
             <p className="text-xs text-muted-foreground">
               {totals.revised > totals.original ? '+' : ''}

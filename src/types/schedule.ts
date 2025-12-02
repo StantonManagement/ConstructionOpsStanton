@@ -32,6 +32,8 @@ export interface ScheduleTask {
   created_at: string;
   updated_at: string;
   created_by?: string;
+  budget_category_id?: number | null;
+  is_milestone?: boolean;
   // For UI:
   dependencies?: string[]; // Array of predecessor task IDs
 }
@@ -71,7 +73,10 @@ export interface CreateTaskRequest {
   status?: TaskStatus;
   progress?: number;
   parent_task_id?: string;
+  budget_category_id?: number | null;
   predecessors?: string[]; // IDs of tasks that this task depends on (default Finish-to-Start)
+  duration_days?: number;
+  is_milestone?: boolean;
 }
 
 export interface UpdateTaskRequest {
@@ -83,6 +88,8 @@ export interface UpdateTaskRequest {
   status?: TaskStatus;
   progress?: number;
   parent_task_id?: string;
+  budget_category_id?: number | null;
   predecessors?: string[]; // Full replacement of dependencies
+  duration_days?: number;
+  is_milestone?: boolean;
 }
-

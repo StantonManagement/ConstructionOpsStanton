@@ -79,14 +79,14 @@ const OptimizedContractorCard = memo<OptimizedContractorCardProps>(({
 
         <div className="flex items-center space-x-2">
           {contractor.hasOpenPaymentApp && (
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-primary">
               Payment Pending
             </span>
           )}
           {onSendSMS && contractor.phone && (
             <button
               onClick={handleSendSMS}
-              className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
+              className="p-2 text-gray-400 hover:text-primary transition-colors"
               title="Send SMS"
             >
               <MessageSquare className="h-4 w-4" />
@@ -100,7 +100,7 @@ const OptimizedContractorCard = memo<OptimizedContractorCardProps>(({
         {contractor.phone && (
           <div className="flex items-center space-x-2 text-sm">
             <Phone className="h-4 w-4 text-gray-400" />
-            <a href={`tel:${contractor.phone}`} className="text-blue-600 hover:text-blue-800">
+            <a href={`tel:${contractor.phone}`} className="text-primary hover:text-primary/80">
               {contractor.phone}
             </a>
           </div>
@@ -108,7 +108,7 @@ const OptimizedContractorCard = memo<OptimizedContractorCardProps>(({
         {contractor.email && (
           <div className="flex items-center space-x-2 text-sm">
             <Mail className="h-4 w-4 text-gray-400" />
-            <a href={`mailto:${contractor.email}`} className="text-blue-600 hover:text-blue-800">
+            <a href={`mailto:${contractor.email}`} className="text-primary hover:text-primary/80">
               {contractor.email}
             </a>
           </div>
@@ -146,7 +146,7 @@ const OptimizedContractorCard = memo<OptimizedContractorCardProps>(({
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
             <div
-              className="bg-blue-600 h-2 rounded-full"
+              className="bg-primary h-2 rounded-full"
               style={{ width: `${Math.min((contractor.paidToDate / contractor.contractAmount) * 100, 100)}%` }}
             />
           </div>

@@ -62,7 +62,7 @@ export default function WarrantiesList() {
       {/* Summary Cards */}
       {summary && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-white rounded-lg shadow p-4 border-l-4 border-blue-500">
+          <div className="bg-white rounded-lg shadow p-4 border-l-4 border-primary">
             <div className="text-sm font-medium text-gray-500">Active Warranties</div>
             <div className="text-2xl font-bold text-gray-900 mt-1">{summary.total_active}</div>
           </div>
@@ -89,12 +89,12 @@ export default function WarrantiesList() {
             placeholder="Search warranties..."
             value={filters.search || ''}
             onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-            className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500 w-64"
+            className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-primary w-64"
           />
           <select
             value={filters.status || ''}
             onChange={(e) => setFilters({ ...filters, status: e.target.value as any })}
-            className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
+            className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-primary"
           >
             <option value="">All Statuses</option>
             <option value="active">Active</option>
@@ -104,7 +104,7 @@ export default function WarrantiesList() {
         </div>
         <button
           onClick={() => setShowForm(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+          className="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium"
         >
           + Add Warranty
         </button>
@@ -150,7 +150,7 @@ export default function WarrantiesList() {
                 header: 'Actions',
                 align: 'right',
                 accessor: () => (
-                  <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">View</button>
+                  <button className="text-primary hover:text-primary/80 text-sm font-medium">View</button>
                 )
               }
             ] as Column<Warranty>[]}

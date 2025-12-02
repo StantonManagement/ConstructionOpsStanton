@@ -161,7 +161,7 @@ function CompanySettingsTab({ showToast }: { showToast: (message: string, type: 
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
         <span className="ml-3 text-gray-600">Loading settings...</span>
       </div>
     );
@@ -178,7 +178,7 @@ function CompanySettingsTab({ showToast }: { showToast: (message: string, type: 
               type="text"
               value={companySettings.company_name}
               onChange={(e) => setCompanySettings({ ...companySettings, company_name: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-primary"
               placeholder="Enter company name"
             />
           </div>
@@ -188,7 +188,7 @@ function CompanySettingsTab({ showToast }: { showToast: (message: string, type: 
               type="text"
               value={companySettings.address}
               onChange={(e) => setCompanySettings({ ...companySettings, address: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-primary"
               placeholder="Enter company address"
             />
           </div>
@@ -199,7 +199,7 @@ function CompanySettingsTab({ showToast }: { showToast: (message: string, type: 
                 type="tel"
                 value={companySettings.phone}
                 onChange={(e) => setCompanySettings({ ...companySettings, phone: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-primary"
                 placeholder="Enter phone number"
               />
             </div>
@@ -209,7 +209,7 @@ function CompanySettingsTab({ showToast }: { showToast: (message: string, type: 
                 type="email"
                 value={companySettings.email}
                 onChange={(e) => setCompanySettings({ ...companySettings, email: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-primary"
                 placeholder="Enter email address"
               />
             </div>
@@ -232,7 +232,7 @@ function CompanySettingsTab({ showToast }: { showToast: (message: string, type: 
               <button
                 onClick={handleSave}
                 disabled={saving || !hasChanges}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {saving ? 'Saving...' : 'Save Changes'}
               </button>
@@ -303,10 +303,10 @@ function IntegrationsTab() {
           ))}
         </div>
         
-        <div className="mt-6 pt-6 border-t border-gray-200 bg-blue-50/30 rounded-lg p-4">
+        <div className="mt-6 pt-6 border-t border-gray-200 bg-primary/10/30 rounded-lg p-4">
           <div className="flex items-start gap-3">
             <div className="flex-shrink-0">
-              <svg className="w-5 h-5 text-blue-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+              <svg className="w-5 h-5 text-primary mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd"/>
               </svg>
             </div>
@@ -416,7 +416,7 @@ function PreferencesTab({ showToast }: { showToast: (message: string, type: 'suc
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
         <span className="ml-3 text-gray-600">Loading preferences...</span>
       </div>
     );
@@ -439,7 +439,7 @@ function PreferencesTab({ showToast }: { showToast: (message: string, type: 'suc
                 checked={preferences.emailNotifications}
                 onChange={() => handleToggle('emailNotifications')}
               />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
             </label>
           </div>
           
@@ -455,7 +455,7 @@ function PreferencesTab({ showToast }: { showToast: (message: string, type: 'suc
                 checked={preferences.smsNotifications}
                 onChange={() => handleToggle('smsNotifications')}
               />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
             </label>
           </div>
           
@@ -471,7 +471,7 @@ function PreferencesTab({ showToast }: { showToast: (message: string, type: 'suc
                 checked={preferences.darkMode}
                 onChange={() => handleToggle('darkMode')}
               />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
             </label>
           </div>
           

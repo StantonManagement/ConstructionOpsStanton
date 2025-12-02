@@ -106,7 +106,7 @@ const ContractorCard: React.FC<{
     <div
       className={`relative bg-card border-2 rounded-xl p-6 cursor-pointer transition-all duration-200 transform hover:-translate-y-1 ${
         isSelected
-          ? 'border-blue-500 shadow-lg shadow-blue-500/25 bg-gradient-to-br from-blue-50 to-white'
+          ? 'border-primary shadow-lg shadow-blue-500/25 bg-gradient-to-br from-blue-50 to-white'
           : 'border-border shadow-sm hover:border-border hover:shadow-md'
       }`}
       onClick={() => onToggle(contract.subcontractor_id)}
@@ -178,7 +178,7 @@ const ContractorCard: React.FC<{
       {/* Selection Badge */}
       {isSelected && (
         <div className="absolute -top-2 -right-2">
-          <div className="bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center shadow-lg">
+          <div className="bg-primary text-white rounded-full w-6 h-6 flex items-center justify-center shadow-lg">
             <span className="text-xs font-bold">✓</span>
           </div>
         </div>
@@ -234,7 +234,7 @@ const ActionBar: React.FC<{
         </p>
       </div>
       {selectedCount > 0 && (
-        <div className="bg-blue-100 text-blue-700 px-4 py-2 rounded-full font-medium">
+        <div className="bg-primary/10 text-primary px-4 py-2 rounded-full font-medium">
           {selectedCount} Selected
         </div>
       )}
@@ -256,7 +256,7 @@ const ActionBar: React.FC<{
       <button
         onClick={onSend}
         disabled={selectedCount === 0 || sending}
-        className="flex-2 bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+        className="flex-2 bg-primary hover:bg-primary/90 text-white font-medium py-3 px-6 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
       >
         {sending ? (
           <>
@@ -422,7 +422,7 @@ const SubcontractorSelectionView: React.FC<Props> = ({ selectedProject, setSelec
               params.set('tab', 'projects');
               router.replace(`/?${params.toString()}`, { scroll: false });
             }}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-medium text-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:-translate-y-1"
+            className="bg-primary hover:bg-primary/90 text-white px-8 py-3 rounded-lg font-medium text-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:-translate-y-1"
           >
             Back to Projects Now
           </button>
@@ -454,7 +454,7 @@ const SubcontractorSelectionView: React.FC<Props> = ({ selectedProject, setSelec
             <div className="flex items-center space-x-4">
               <button
                 onClick={handleSelectAll}
-                className="text-blue-600 hover:text-blue-700 font-medium text-sm transition-colors"
+                className="text-primary hover:text-primary/80 font-medium text-sm transition-colors"
               >
                 {selectedSubs.length === contracts.length ? 'Deselect All' : 'Select All'}
               </button>

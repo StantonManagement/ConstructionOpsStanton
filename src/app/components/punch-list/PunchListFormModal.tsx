@@ -121,7 +121,7 @@ export default function PunchListFormModal({ projectId, onClose, onSuccess }: Pu
                 <select
                   value={formData.project_id || ''}
                   onChange={(e) => setFormData({ ...formData, project_id: Number(e.target.value) })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-primary"
                   required
                 >
                   <option value="">Select Project</option>
@@ -138,7 +138,7 @@ export default function PunchListFormModal({ projectId, onClose, onSuccess }: Pu
               <textarea
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-primary"
                 rows={3}
                 required
                 placeholder="Describe the issue..."
@@ -152,7 +152,7 @@ export default function PunchListFormModal({ projectId, onClose, onSuccess }: Pu
                 type="text"
                 value={formData.location}
                 onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-primary"
                 placeholder="e.g., Kitchen, Master Bath"
               />
             </div>
@@ -164,7 +164,7 @@ export default function PunchListFormModal({ projectId, onClose, onSuccess }: Pu
                 type="text"
                 value={formData.unit_number}
                 onChange={(e) => setFormData({ ...formData, unit_number: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-primary"
                 placeholder="Optional"
               />
             </div>
@@ -175,7 +175,7 @@ export default function PunchListFormModal({ projectId, onClose, onSuccess }: Pu
               <select
                 value={formData.trade_category}
                 onChange={(e) => setFormData({ ...formData, trade_category: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-primary"
               >
                 <option value="">Select Category</option>
                 {categories.map(c => (
@@ -190,7 +190,7 @@ export default function PunchListFormModal({ projectId, onClose, onSuccess }: Pu
               <select
                 value={formData.severity}
                 onChange={(e) => setFormData({ ...formData, severity: e.target.value as PunchListSeverity })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-primary"
                 required
               >
                 <option value="low">Low</option>
@@ -206,7 +206,7 @@ export default function PunchListFormModal({ projectId, onClose, onSuccess }: Pu
               <select
                 value={formData.assigned_to || ''}
                 onChange={(e) => setFormData({ ...formData, assigned_to: e.target.value ? Number(e.target.value) : undefined })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-primary"
               >
                 <option value="">Unassigned</option>
                 {subcontractors.map(s => (
@@ -222,7 +222,7 @@ export default function PunchListFormModal({ projectId, onClose, onSuccess }: Pu
                 type="date"
                 value={formData.due_date}
                 onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-primary"
               />
             </div>
 
@@ -232,7 +232,7 @@ export default function PunchListFormModal({ projectId, onClose, onSuccess }: Pu
               <textarea
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-primary"
                 rows={2}
               />
             </div>
@@ -249,7 +249,7 @@ export default function PunchListFormModal({ projectId, onClose, onSuccess }: Pu
             </button>
             <button
               type="submit"
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
+              className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-primary/90 disabled:opacity-50"
               disabled={loading}
             >
               {loading ? 'Creating...' : 'Create Item'}

@@ -132,11 +132,11 @@ const LazyLoadingExample = memo(() => {
       </section>
 
       {/* Performance Info */}
-      <section className="bg-blue-50 rounded-lg p-6">
+      <section className="bg-primary/10 rounded-lg p-6">
         <h2 className="text-xl font-semibold text-blue-900 mb-3">
           Performance Benefits
         </h2>
-        <ul className="space-y-2 text-blue-800">
+        <ul className="space-y-2 text-primary">
           <li>✅ <strong>Only visible cards are rendered</strong> - Cards 100px outside viewport start loading</li>
           <li>✅ <strong>Smooth animations</strong> - Cards fade in as they load</li>
           <li>✅ <strong>Memory efficient</strong> - Intersection observers are reused and optimized</li>

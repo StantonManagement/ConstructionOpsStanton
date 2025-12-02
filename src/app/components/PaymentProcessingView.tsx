@@ -192,9 +192,9 @@ const StatCard: React.FC<{
   const v = variants[variant];
 
   return (
-    <div className={`${v.bg} ${v.border} border rounded-xl p-5 shadow-sm hover:shadow-md transition-all duration-200 transform hover:-translate-y-0.5`}>
+    <div className={`${v.bg} ${v.border} border rounded-lg p-5 shadow-sm hover:shadow-md transition-all duration-200 transform hover:-translate-y-0.5`}>
       <div className="flex items-start justify-between mb-3">
-        <div className={`w-10 h-10 ${v.accent} flex items-center justify-center text-xl bg-card/60 rounded-lg`}>
+        <div className={`w-10 h-10 ${v.accent} flex items-center justify-center text-xl bg-card/60 rounded`}>
           {icon}
         </div>
         {trend && (
@@ -212,8 +212,8 @@ const StatCard: React.FC<{
 const LoadingSpinner: React.FC = () => (
   <div className="flex items-center justify-center py-12">
     <div className="relative">
-      <div className="w-12 h-12 border-4 border-blue-200 rounded-full animate-spin"></div>
-      <div className="absolute inset-0 w-12 h-12 border-4 border-transparent border-t-blue-600 rounded-full animate-spin"></div>
+      <div className="w-12 h-12 border-4 border-border rounded-full animate-spin"></div>
+      <div className="absolute inset-0 w-12 h-12 border-4 border-transparent border-t-primary rounded-full animate-spin"></div>
     </div>
   </div>
 );
@@ -222,7 +222,7 @@ const ErrorMessage: React.FC<{ message: string; onRetry?: () => void }> = ({
   message, 
   onRetry 
 }) => (
-  <div className="bg-gradient-to-r from-red-50 to-pink-50 border border-red-200 rounded-xl p-6 shadow-sm">
+  <div className="bg-gradient-to-r from-red-50 to-pink-50 border border-red-200 rounded-lg p-6 shadow-sm">
     <div className="flex items-center mb-3">
       <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center mr-3">
         <span className="text-red-600">⚠️</span>
@@ -233,7 +233,7 @@ const ErrorMessage: React.FC<{ message: string; onRetry?: () => void }> = ({
     {onRetry && (
       <button
         onClick={onRetry}
-        className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 shadow-sm hover:shadow-md"
+        className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm font-medium transition-colors duration-200 shadow-sm hover:shadow-md"
       >
         Try Again
       </button>
@@ -269,11 +269,11 @@ const PaymentApplicationCard: React.FC<{
       badge: 'bg-amber-100 text-amber-700 border-amber-200'
     },
     info: {
-      border: 'border-blue-200',
-      bg: 'bg-gradient-to-br from-blue-50 to-white',
+      border: 'border-border',
+      bg: 'bg-gradient-to-br from-muted to-white',
       hover: 'hover:from-blue-100 hover:to-blue-50',
-      button: 'bg-blue-600 hover:bg-blue-700 text-white',
-      badge: 'bg-blue-100 text-blue-700 border-blue-200'
+      button: 'bg-primary hover:bg-primary/90 text-white',
+      badge: 'bg-primary/10 text-primary border-border'
     }
   };
 
@@ -282,7 +282,7 @@ const PaymentApplicationCard: React.FC<{
   const actionType = isOutstanding ? 'remind' : 'prepare';
 
   return (
-    <div className={`${v.bg} ${v.hover} ${v.border} border rounded-xl p-6 shadow-sm hover:shadow-md transition-all duration-200 transform hover:-translate-y-0.5`}>
+    <div className={`${v.bg} ${v.hover} ${v.border} border rounded-lg p-6 shadow-sm hover:shadow-md transition-all duration-200 transform hover:-translate-y-0.5`}>
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1">
@@ -304,7 +304,7 @@ const PaymentApplicationCard: React.FC<{
 
       {/* Due Date */}
       <div className="mb-4">
-        <div className="inline-flex items-center px-3 py-1 bg-white/70 rounded-lg border border-gray-200">
+        <div className="inline-flex items-center px-3 py-1 bg-white/70 rounded border border-gray-200">
           <span className="text-gray-500 mr-2">📅</span>
           <span className="text-sm font-medium text-gray-700">
             Due: {formatDate(app.payment_period_end)}
@@ -344,7 +344,7 @@ const PaymentApplicationCard: React.FC<{
             <span className="mr-2">📋</span>
             Line Items ({app.line_items.length})
           </div>
-          <div className="bg-white/50 rounded-lg p-3 max-h-32 overflow-y-auto">
+          <div className="bg-white/50 rounded p-3 max-h-32 overflow-y-auto">
             <div className="space-y-2">
               {app.line_items.slice(0, 3).map((li, idx) => (
                 <div key={`${app.id}-${idx}`} className="flex items-center justify-between text-xs">
@@ -353,7 +353,7 @@ const PaymentApplicationCard: React.FC<{
                   </span>
                   <div className="flex items-center space-x-2 text-right">
                     <span className="text-green-700 font-medium">{formatCurrency(li.scheduled_value)}</span>
-                    <span className="text-blue-600 font-medium">{li.percent_completed ?? 0}%</span>
+                    <span className="text-primary font-medium">{li.percent_completed ?? 0}%</span>
                   </div>
                 </div>
               ))}
@@ -369,7 +369,7 @@ const PaymentApplicationCard: React.FC<{
 
       {/* Action Button */}
       <button
-        className={`w-full ${v.button} px-4 py-3 rounded-lg font-medium transition-all duration-200 shadow-sm hover:shadow-md transform hover:-translate-y-0.5`}
+        className={`w-full ${v.button} px-4 py-3 rounded font-medium transition-all duration-200 shadow-sm hover:shadow-md transform hover:-translate-y-0.5`}
         onClick={() => onAction(app, actionType)}
       >
         {buttonText}
@@ -383,12 +383,12 @@ const ProjectCard: React.FC<{
   onSelect: (project: Project) => void;
 }> = ({ project, onSelect }) => (
   <div 
-    className="bg-gradient-to-br from-white to-gray-50 border border-gray-200 rounded-xl p-6 shadow-sm hover:shadow-lg cursor-pointer transition-all duration-200 transform hover:-translate-y-1 group"
+    className="bg-gradient-to-br from-white to-gray-50 border border-gray-200 rounded-lg p-6 shadow-sm hover:shadow-lg cursor-pointer transition-all duration-200 transform hover:-translate-y-1 group"
     onClick={() => onSelect(project)}
   >
     <div className="flex items-start justify-between mb-4">
-      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center group-hover:bg-blue-200 transition-colors">
-        <span className="text-blue-600 text-lg">🏗️</span>
+      <div className="w-10 h-10 bg-primary/10 rounded flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+        <span className="text-primary text-lg">🏗️</span>
       </div>
       <div className="w-2 h-2 bg-green-400 rounded-full"></div>
     </div>
@@ -398,7 +398,7 @@ const ProjectCard: React.FC<{
     </h4>
     <p className="text-sm text-gray-600 mb-4">{project.client_name}</p>
     
-    <button className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg font-medium transition-all duration-200 shadow-sm hover:shadow-md">
+    <button className="w-full bg-primary hover:bg-primary/90 text-white px-4 py-2.5 rounded font-medium transition-all duration-200 shadow-sm hover:shadow-md">
       Create Payment Apps
     </button>
   </div>
@@ -597,7 +597,7 @@ const PaymentProcessingView: React.FC<PaymentProcessingViewProps> = ({
             params.set('tab', 'projects');
             router.replace(`/?${params.toString()}`, { scroll: false });
           }}
-          className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+          className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Projects
@@ -654,9 +654,9 @@ const PaymentProcessingView: React.FC<PaymentProcessingViewProps> = ({
               placeholder="Search projects..."
               value={projectSearch}
               onChange={e => setProjectSearch(e.target.value)}
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-full md:w-64 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all duration-200 bg-white"
+              className="border border-gray-300 rounded px-3 py-2 text-sm w-full md:w-64 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all duration-200 bg-white"
             />
-            <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-medium ml-2">
+            <span className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm font-medium ml-2">
               {projects.length} project{projects.length !== 1 ? 's' : ''}
             </span>
           </div>
@@ -700,7 +700,7 @@ const PaymentProcessingView: React.FC<PaymentProcessingViewProps> = ({
             placeholder="Search contractor or project..."
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all duration-200 bg-white"
+            className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all duration-200 bg-white"
           />
           {search && (
             <button
@@ -714,7 +714,7 @@ const PaymentProcessingView: React.FC<PaymentProcessingViewProps> = ({
         <button
           onClick={refetch}
           disabled={loading}
-          className="bg-white border border-gray-300 hover:bg-gray-50 px-4 py-3 rounded-lg font-medium transition-all duration-200 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+          className="bg-white border border-gray-300 hover:bg-gray-50 px-4 py-3 rounded font-medium transition-all duration-200 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
         >
           <span className={loading ? 'animate-spin' : ''}>{loading ? '↻' : '🔄'}</span>
           <span>Refresh</span>
@@ -725,7 +725,7 @@ const PaymentProcessingView: React.FC<PaymentProcessingViewProps> = ({
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-8">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
+            <div className="w-8 h-8 bg-red-100 rounded flex items-center justify-center">
               <span className="text-red-600">⚠️</span>
             </div>
             <div>
@@ -766,7 +766,7 @@ const PaymentProcessingView: React.FC<PaymentProcessingViewProps> = ({
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-8">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
+            <div className="w-8 h-8 bg-amber-100 rounded flex items-center justify-center">
               <span className="text-amber-600">📅</span>
             </div>
             <div>
@@ -806,11 +806,11 @@ const PaymentProcessingView: React.FC<PaymentProcessingViewProps> = ({
       {/* Send Reminder Modal */}
       {showReminderModal && selectedApp && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-6 max-w-lg w-full">
+          <div className="bg-white rounded p-6 max-w-lg w-full">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Send Reminder</h3>
             
             <div className="space-y-4">
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="bg-primary/10 border border-blue-200 rounded p-4">
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <div>
                     <span className="font-medium text-gray-700">Project:</span>
@@ -840,7 +840,7 @@ const PaymentProcessingView: React.FC<PaymentProcessingViewProps> = ({
                       value="sms"
                       checked={reminderType === 'sms'}
                       onChange={(e) => setReminderType(e.target.value as 'sms')}
-                      className="w-4 h-4 text-blue-600"
+                      className="w-4 h-4 text-primary"
                     />
                     <span className="ml-2 text-sm text-gray-700">📱 SMS</span>
                   </label>
@@ -850,7 +850,7 @@ const PaymentProcessingView: React.FC<PaymentProcessingViewProps> = ({
                       value="email"
                       checked={reminderType === 'email'}
                       onChange={(e) => setReminderType(e.target.value as 'email')}
-                      className="w-4 h-4 text-blue-600"
+                      className="w-4 h-4 text-primary"
                     />
                     <span className="ml-2 text-sm text-gray-700">✉️ Email</span>
                   </label>
@@ -862,7 +862,7 @@ const PaymentProcessingView: React.FC<PaymentProcessingViewProps> = ({
                 <textarea
                   value={reminderMessage}
                   onChange={(e) => setReminderMessage(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                  className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-primary resize-none"
                   rows={4}
                   placeholder="Enter your reminder message"
                 />
@@ -879,14 +879,14 @@ const PaymentProcessingView: React.FC<PaymentProcessingViewProps> = ({
                   setReminderMessage('');
                 }}
                 disabled={sendingReminder}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSendReminder}
                 disabled={sendingReminder || !reminderMessage.trim()}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 px-4 py-2 bg-primary text-white rounded hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {sendingReminder ? 'Sending...' : 'Send Reminder'}
               </button>
@@ -898,11 +898,11 @@ const PaymentProcessingView: React.FC<PaymentProcessingViewProps> = ({
       {/* Prepare Payment Modal */}
       {showPreparePaymentModal && selectedApp && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-6 max-w-lg w-full">
+          <div className="bg-white rounded p-6 max-w-lg w-full">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Prepare Payment</h3>
             
             <div className="space-y-4">
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <div className="bg-green-50 border border-green-200 rounded p-4">
                 <h4 className="font-semibold text-green-900 mb-3">Payment Summary</h4>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
@@ -929,14 +929,14 @@ const PaymentProcessingView: React.FC<PaymentProcessingViewProps> = ({
                 <textarea
                   value={paymentNotes}
                   onChange={(e) => setPaymentNotes(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                  className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-primary resize-none"
                   rows={3}
                   placeholder="Add any notes about this payment..."
                 />
               </div>
 
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                <p className="text-sm text-blue-800">
+              <div className="bg-primary/10 border border-blue-200 rounded p-3">
+                <p className="text-sm text-primary">
                   <strong>Note:</strong> Preparing this payment will update the status to "Approved" and mark it as ready for check generation.
                 </p>
               </div>
@@ -949,14 +949,14 @@ const PaymentProcessingView: React.FC<PaymentProcessingViewProps> = ({
                   setPaymentNotes('');
                 }}
                 disabled={preparingPayment}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
                 onClick={handlePreparePayment}
                 disabled={preparingPayment}
-                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {preparingPayment ? 'Preparing...' : 'Prepare Payment'}
               </button>

@@ -245,7 +245,7 @@ export default function CreatePunchListModal({
         <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
           <div className="flex items-center justify-between max-w-2xl mx-auto">
             <div className="flex items-center gap-2">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 1 ? 'bg-blue-600 text-white' : 'bg-gray-300 text-gray-600'}`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 1 ? 'bg-primary text-white' : 'bg-gray-300 text-gray-600'}`}>
                 1
               </div>
               <span className={`text-sm font-medium ${step >= 1 ? 'text-gray-900' : 'text-gray-500'}`}>
@@ -254,7 +254,7 @@ export default function CreatePunchListModal({
             </div>
             <div className="flex-1 h-1 bg-gray-300 mx-4"></div>
             <div className="flex items-center gap-2">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 2 ? 'bg-blue-600 text-white' : 'bg-gray-300 text-gray-600'}`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 2 ? 'bg-primary text-white' : 'bg-gray-300 text-gray-600'}`}>
                 2
               </div>
               <span className={`text-sm font-medium ${step >= 2 ? 'text-gray-900' : 'text-gray-500'}`}>
@@ -263,7 +263,7 @@ export default function CreatePunchListModal({
             </div>
             <div className="flex-1 h-1 bg-gray-300 mx-4"></div>
             <div className="flex items-center gap-2">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 3 ? 'bg-blue-600 text-white' : 'bg-gray-300 text-gray-600'}`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 3 ? 'bg-primary text-white' : 'bg-gray-300 text-gray-600'}`}>
                 3
               </div>
               <span className={`text-sm font-medium ${step >= 3 ? 'text-gray-900' : 'text-gray-500'}`}>
@@ -289,7 +289,7 @@ export default function CreatePunchListModal({
                 <h3 className="text-lg font-semibold text-gray-900">Punch List Items</h3>
                 <button
                   onClick={addItem}
-                  className="flex items-center gap-2 px-3 py-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                  className="flex items-center gap-2 px-3 py-2 text-primary hover:bg-primary/10 rounded-lg transition-colors"
                 >
                   <Plus className="w-4 h-4" />
                   Add Item
@@ -396,7 +396,7 @@ export default function CreatePunchListModal({
               
               {loadingContractors ? (
                 <div className="text-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
                   <p className="mt-2 text-gray-600">Loading contractors...</p>
                 </div>
               ) : contractors.length === 0 ? (
@@ -411,7 +411,7 @@ export default function CreatePunchListModal({
                       onClick={() => setSelectedContractor(contractor.id)}
                       className={`text-left p-4 border-2 rounded-lg transition-all ${
                         selectedContractor === contractor.id
-                          ? 'border-blue-600 bg-blue-50'
+                          ? 'border-primary bg-primary/10'
                           : 'border-gray-200 hover:border-gray-300'
                       }`}
                     >
@@ -422,7 +422,7 @@ export default function CreatePunchListModal({
                           <p className="text-sm text-gray-500 mt-1">{contractor.phone}</p>
                         </div>
                         {selectedContractor === contractor.id && (
-                          <CheckCircle2 className="w-6 h-6 text-blue-600" />
+                          <CheckCircle2 className="w-6 h-6 text-primary" />
                         )}
                       </div>
                     </button>
@@ -442,12 +442,12 @@ export default function CreatePunchListModal({
                 </p>
               </div>
 
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="bg-primary/10 border border-blue-200 rounded-lg p-4">
                 <h4 className="font-medium text-blue-900 mb-2">Contractor</h4>
-                <p className="text-blue-800">
+                <p className="text-primary">
                   {contractors.find(c => c.id === selectedContractor)?.name}
                 </p>
-                <p className="text-sm text-blue-700 mt-1">
+                <p className="text-sm text-primary mt-1">
                   {contractors.find(c => c.id === selectedContractor)?.trade}
                 </p>
               </div>
@@ -490,20 +490,20 @@ export default function CreatePunchListModal({
 
               {/* SMS Notification Toggle */}
               {selectedContractor && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="bg-primary/10 border border-blue-200 rounded-lg p-4">
                   <label className="flex items-start gap-3 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={sendSMS}
                       onChange={(e) => setSendSMS(e.target.checked)}
-                      className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      className="mt-1 w-4 h-4 text-primary border-gray-300 rounded focus:ring-blue-500"
                     />
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <Send className="w-5 h-5 text-blue-600" />
+                        <Send className="w-5 h-5 text-primary" />
                         <h4 className="font-medium text-blue-900">Send SMS Notification</h4>
                       </div>
-                      <p className="text-sm text-blue-700 mt-1">
+                      <p className="text-sm text-primary mt-1">
                         The contractor will receive an SMS with a link to view and manage these punch list items.
                       </p>
                     </div>
@@ -553,7 +553,7 @@ export default function CreatePunchListModal({
             {step < 3 ? (
               <button
                 onClick={handleNext}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
               >
                 Next
                 <ChevronRight className="w-4 h-4" />

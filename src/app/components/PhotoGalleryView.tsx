@@ -11,16 +11,26 @@ interface Project {
   name: string;
 }
 
-export default function PhotoGalleryView() {
+interface PhotoGalleryViewProps {
+  initialProjectId?: number;
+}
+
+export default function PhotoGalleryView({ initialProjectId }: PhotoGalleryViewProps = {}) {
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
-  const [filters, setFilters] = useState<PhotoFilters>({});
+  const [filters, setFilters] = useState<PhotoFilters>(initialProjectId ? { project_id: initialProjectId } : {});
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (initialProjectId) {
+      setFilters(prev => ({ ...prev, project_id: initialProjectId }));
+    }
+  }, [initialProjectId]);
 
   // Fetch projects
   useEffect(() => {
@@ -158,7 +168,7 @@ export default function PhotoGalleryView() {
 
   const getPhotoTypeColor = (type: PhotoType) => {
     switch (type) {
-      case 'before': return 'bg-blue-100 text-blue-800';
+      case 'before': return 'bg-blue-100 text-primary';
       case 'after': return 'bg-green-100 text-green-800';
       case 'in_progress': return 'bg-yellow-100 text-yellow-800';
       case 'issue': return 'bg-red-100 text-red-800';
@@ -170,7 +180,7 @@ export default function PhotoGalleryView() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -186,7 +196,7 @@ export default function PhotoGalleryView() {
           </div>
           <button
             onClick={() => setShowUploadModal(true)}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+            className="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2"
           >
             <Camera className="w-4 h-4" />
             <span>Upload Photos</span>
@@ -215,7 +225,7 @@ export default function PhotoGalleryView() {
         </div>
         <button
           onClick={() => setShowUploadModal(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+          className="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2"
         >
           <Camera className="w-4 h-4" />
           <span>Upload Photos</span>
@@ -229,6 +239,7 @@ export default function PhotoGalleryView() {
             value={filters.project_id || ''}
             onChange={(e) => setFilters({ ...filters, project_id: e.target.value ? parseInt(e.target.value) : undefined })}
             className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            disabled={!!initialProjectId}
           >
             <option value="">All Projects</option>
             {projects.map(project => (
@@ -285,7 +296,7 @@ export default function PhotoGalleryView() {
           <p className="text-gray-600 mb-6">Upload your first photo to get started</p>
           <button
             onClick={() => setShowUploadModal(true)}
-            className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
+            className="bg-primary text-white px-6 py-3 rounded-lg hover:bg-primary/90 transition-colors"
           >
             Upload Photos
           </button>
@@ -347,7 +358,7 @@ export default function PhotoGalleryView() {
             <div
               onDragOver={handleDragOver}
               onDrop={handleDrop}
-              className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-500 transition-colors"
+              className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-primary transition-colors"
             >
               <input
                 ref={fileInputRef}
@@ -368,7 +379,7 @@ export default function PhotoGalleryView() {
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploading}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
               >
                 {uploading ? 'Uploading...' : 'Select Files'}
               </button>

@@ -1,6 +1,7 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { withAuth, successResponse, errorResponse } from '@/lib/apiHelpers';
 import { supabaseAdmin } from '@/lib/supabaseClient';
+import { cascadeTaskUpdates } from '@/lib/scheduling/cascade';
 
 export const PUT = withAuth(async (request: NextRequest, { params }: { params: Promise<{ id: string; taskId: string }> }) => {
   const { id, taskId } = await params;
@@ -20,7 +21,11 @@ export const PUT = withAuth(async (request: NextRequest, { params }: { params: P
       status, 
       progress, 
       parent_task_id,
-      predecessors 
+      predecessors,
+      budget_category_id,
+      // New fields
+      duration_days,
+      is_milestone
     } = body;
 
     // 1. Update Task
@@ -35,7 +40,10 @@ export const PUT = withAuth(async (request: NextRequest, { params }: { params: P
         status,
         progress,
         parent_task_id,
-        updated_at: new Date().toISOString()
+        budget_category_id,
+        updated_at: new Date().toISOString(),
+        duration_days: duration_days ? parseInt(duration_days) : undefined,
+        is_milestone
       })
       .eq('id', taskId)
       .eq('schedule_id', id) // Safety check
@@ -43,6 +51,7 @@ export const PUT = withAuth(async (request: NextRequest, { params }: { params: P
       .single();
 
     if (taskError) {
+      console.error('Error updating task (DB):', taskError);
       return errorResponse(taskError.message, 500);
     }
 
@@ -68,8 +77,16 @@ export const PUT = withAuth(async (request: NextRequest, { params }: { params: P
       }
     }
 
+    // 3. Trigger Cascade Updates
+    // If dates changed, update dependents
+    if (start_date || end_date) {
+      // Note: task.end_date comes from the DB update above
+      await cascadeTaskUpdates(supabaseAdmin, taskId, task.end_date, id);
+    }
+
     return successResponse({ data: task });
   } catch (error) {
+    console.error('Error updating task:', error);
     return errorResponse('Invalid request', 400);
   }
 });

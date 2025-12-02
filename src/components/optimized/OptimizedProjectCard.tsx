@@ -43,7 +43,7 @@ const OptimizedProjectCard = memo<OptimizedProjectCardProps>(({
   const getStatusColor = (status?: string) => {
     switch (status?.toLowerCase()) {
       case 'active': return 'text-green-600 bg-green-100';
-      case 'completed': return 'text-blue-600 bg-blue-100';
+      case 'completed': return 'text-primary bg-blue-100';
       case 'on-hold': return 'text-yellow-600 bg-yellow-100';
       case 'cancelled': return 'text-red-600 bg-red-100';
       default: return 'text-gray-600 bg-gray-100';
@@ -63,8 +63,8 @@ const OptimizedProjectCard = memo<OptimizedProjectCardProps>(({
     >
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center space-x-3">
-          <div className="p-2 bg-blue-50 rounded-lg">
-            <Building className="h-6 w-6 text-blue-600" />
+          <div className="p-2 bg-primary/10 rounded-lg">
+            <Building className="h-6 w-6 text-primary" />
           </div>
           <div>
             <h3 className="text-lg font-semibold text-gray-900">{project.name}</h3>
@@ -130,7 +130,7 @@ const OptimizedProjectCard = memo<OptimizedProjectCardProps>(({
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
             <div
-              className="bg-blue-600 h-2 rounded-full"
+              className="bg-primary h-2 rounded-full"
               style={{ width: `${Math.min((project.spent / project.budget) * 100, 100)}%` }}
             />
           </div>

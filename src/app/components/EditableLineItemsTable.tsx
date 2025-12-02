@@ -139,7 +139,7 @@ const EditableCell: React.FC<EditableCellProps> = ({
         onChange={(e) => setEditValue(e.target.value)}
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
-        className={`w-full px-3 py-2 text-sm border-2 border-blue-500 focus:outline-none ${
+        className={`w-full px-3 py-2 text-sm border-2 border-primary focus:outline-none ${
           isError ? 'bg-red-50' : 'bg-white'
         }`}
         placeholder={placeholder}
@@ -370,7 +370,7 @@ export const EditableLineItemsTable: React.FC<EditableLineItemsTableProps> = ({
 
       {/* Bulk Actions */}
       {isEditable && selectedIds.length > 0 && (
-        <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+        <div className="flex items-center gap-3 p-3 bg-primary/10 border border-blue-200 rounded-lg">
           <span className="text-sm font-medium text-blue-900">
             {selectedIds.length} item{selectedIds.length !== 1 ? 's' : ''} selected
           </span>
@@ -468,7 +468,7 @@ export const EditableLineItemsTable: React.FC<EditableLineItemsTableProps> = ({
       {isEditable && items.length < maxItems && (
         <button
           onClick={onAdd}
-          className="w-full py-2 text-sm text-blue-600 border-2 border-dashed border-blue-300 rounded-lg hover:bg-blue-50 transition-colors"
+          className="w-full py-2 text-sm text-primary border-2 border-dashed border-blue-300 rounded-lg hover:bg-primary/10 transition-colors"
         >
           + Add Line Item
         </button>

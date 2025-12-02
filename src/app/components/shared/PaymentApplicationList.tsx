@@ -50,7 +50,7 @@ const PaymentApplicationList: React.FC<PaymentApplicationListProps> = ({
     return (
       <div className="bg-white rounded-xl border border-gray-200 p-6">
         <div className="flex items-center justify-center py-8">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           <p className="ml-3 text-sm text-gray-500">Loading payment applications...</p>
         </div>
       </div>
@@ -115,7 +115,7 @@ const PaymentApplicationList: React.FC<PaymentApplicationListProps> = ({
                   {isSubmitted && onReview && (
                     <button
                       onClick={() => onReview(app.id)}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white rounded-md text-xs font-semibold hover:bg-blue-700 transition-colors"
+                      className="inline-flex items-center gap-1 px-3 py-1.5 bg-primary text-white rounded-md text-xs font-semibold hover:bg-primary/90 transition-colors"
                     >
                       <Eye className="w-3 h-3" />
                       Review

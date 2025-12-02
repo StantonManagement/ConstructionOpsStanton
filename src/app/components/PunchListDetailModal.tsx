@@ -136,7 +136,7 @@ export default function PunchListDetailModal({ item, onClose, onUpdate }: PunchL
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'open': return 'bg-blue-100 text-blue-800';
+      case 'open': return 'bg-blue-100 text-primary';
       case 'in_progress': return 'bg-purple-100 text-purple-800';
       case 'completed': return 'bg-green-100 text-green-800';
       case 'verified': return 'bg-emerald-100 text-emerald-800';
@@ -245,7 +245,7 @@ export default function PunchListDetailModal({ item, onClose, onUpdate }: PunchL
                   <button
                     onClick={handleAddComment}
                     disabled={submitting || !newComment.trim()}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {submitting ? '...' : 'Add'}
                   </button>

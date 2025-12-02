@@ -2,19 +2,13 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Clock, User, LogOut, Menu, X, Bell, Settings, Search, ChevronDown, DollarSign, FileText, AlertCircle, Building, Check } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useProject } from '../context/ProjectContext';
 
 interface UserData {
   name: string;
   email: string;
   avatar_url: string;
   role: string;
-}
-
-interface Project {
-  id: number;
-  name: string;
-  status: string;
-  current_phase?: string;
 }
 
 interface Notification {
@@ -42,13 +36,16 @@ interface HeaderProps {
   userData: UserData | null;
   onSearch?: (query: string) => void;
   searchQuery?: string;
+  // Deprecated props, kept for compatibility but ignored in favor of context
   selectedProjectId?: number | null;
   onProjectSelect?: (projectId: number | null) => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ onShowProfile, onLogout, userData, onSearch, searchQuery = '', selectedProjectId, onProjectSelect }) => {
+const Header: React.FC<HeaderProps> = ({ onShowProfile, onLogout, userData, onSearch, searchQuery = '', onProjectSelect }) => {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { projects, selectedProject, setSelectedProjectId, isLoading: isLoadingProjects } = useProject();
+  
   const [time, setTime] = useState<string | null>(null);
   const [date, setDate] = useState<string | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -58,44 +55,13 @@ const Header: React.FC<HeaderProps> = ({ onShowProfile, onLogout, userData, onSe
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoadingNotifications, setIsLoadingNotifications] = useState(false);
   const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery);
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [isLoadingProjects, setIsLoadingProjects] = useState(false);
-
-  // Fetch active projects for the selector
-  const fetchProjects = useCallback(async () => {
-    setIsLoadingProjects(true);
-    try {
-      const { data: projectsData, error } = await supabase
-        .from('projects')
-        .select('id, name, status, current_phase')
-        .in('status', ['active', 'in_progress', 'planning'])
-        .order('name', { ascending: true });
-
-      if (error) {
-        console.error('Error fetching projects:', error);
-        return;
-      }
-
-      setProjects(projectsData || []);
-    } catch (error) {
-      console.error('Error fetching projects:', error);
-    } finally {
-      setIsLoadingProjects(false);
-    }
-  }, []);
-
-  // Load projects on mount
-  useEffect(() => {
-    fetchProjects();
-  }, [fetchProjects]);
-
-  // Get selected project from URL or props
-  const currentProjectId = selectedProjectId ?? (searchParams.get('project') ? parseInt(searchParams.get('project')!) : null);
-  const selectedProject = projects.find(p => p.id === currentProjectId);
 
   const handleProjectSelect = (projectId: number | null) => {
     setIsProjectSelectorOpen(false);
     
+    // Update Context
+    setSelectedProjectId(projectId);
+
     // Update URL params
     const params = new URLSearchParams(searchParams.toString());
     if (projectId) {
@@ -105,7 +71,7 @@ const Header: React.FC<HeaderProps> = ({ onShowProfile, onLogout, userData, onSe
     }
     router.replace(`?${params.toString()}`, { scroll: false });
     
-    // Call parent callback if provided
+    // Call parent callback if provided (for backward compatibility)
     if (onProjectSelect) {
       onProjectSelect(projectId);
     }
@@ -117,7 +83,7 @@ const Header: React.FC<HeaderProps> = ({ onShowProfile, onLogout, userData, onSe
       case 'in_progress':
         return 'bg-green-500';
       case 'planning':
-        return 'bg-blue-500';
+        return 'bg-primary';
       case 'on_hold':
         return 'bg-yellow-500';
       case 'completed':
@@ -200,16 +166,6 @@ const Header: React.FC<HeaderProps> = ({ onShowProfile, onLogout, userData, onSe
     if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
     if (diffInSeconds < 2592000) return `${Math.floor(diffInSeconds / 86400)}d ago`;
     return `${Math.floor(diffInSeconds / 2592000)}mo ago`;
-  };
-
-  // Helper function to get time value for sorting
-  const getTimeValue = (timeStr: string): number => {
-    if (timeStr === 'Just now') return 0;
-    if (timeStr.includes('m ago')) return parseInt(timeStr) * 60;
-    if (timeStr.includes('h ago')) return parseInt(timeStr) * 3600;
-    if (timeStr.includes('d ago')) return parseInt(timeStr) * 86400;
-    if (timeStr.includes('mo ago')) return parseInt(timeStr) * 2592000;
-    return 0;
   };
 
   // Load notifications on component mount
@@ -316,7 +272,7 @@ const Header: React.FC<HeaderProps> = ({ onShowProfile, onLogout, userData, onSe
       case 'payment':
         return <DollarSign className="w-4 h-4 text-green-600" />;
       case 'contract':
-        return <FileText className="w-4 h-4 text-blue-600" />;
+        return <FileText className="w-4 h-4 text-primary" />;
       case 'project':
         return <Building className="w-4 h-4 text-purple-600" />;
       case 'alert':
@@ -346,6 +302,8 @@ const Header: React.FC<HeaderProps> = ({ onShowProfile, onLogout, userData, onSe
       onSearch(localSearchQuery);
     }
   };
+
+  const currentProjectId = selectedProject?.id;
 
   return (
     <div className="bg-card shadow-sm border-b border-border fixed top-0 left-0 right-0 z-40 lg:left-64 transition-all duration-300 h-16">
@@ -416,7 +374,7 @@ const Header: React.FC<HeaderProps> = ({ onShowProfile, onLogout, userData, onSe
                 {/* Loading State */}
                 {isLoadingProjects && (
                   <div className="px-3 py-4 text-center text-gray-500 text-sm">
-                    <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                    <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2" />
                     Loading projects...
                   </div>
                 )}
@@ -457,7 +415,7 @@ const Header: React.FC<HeaderProps> = ({ onShowProfile, onLogout, userData, onSe
                 placeholder="Search projects, contracts..."
                 value={localSearchQuery}
                 onChange={handleSearchChange}
-                className="pl-10 pr-10 py-2 w-64 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50"
+                className="pl-10 pr-10 py-2 w-64 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-primary bg-gray-50"
                 aria-label="Search projects and contracts"
               />
               {localSearchQuery && (
@@ -513,12 +471,12 @@ const Header: React.FC<HeaderProps> = ({ onShowProfile, onLogout, userData, onSe
                     <h3 className="text-sm font-semibold text-gray-900">Notifications</h3>
           <div className="flex items-center gap-2">
                       {isLoadingNotifications && (
-                        <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" aria-label="Loading notifications"></div>
+                        <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" aria-label="Loading notifications"></div>
                       )}
                       {unreadCount > 0 && (
                         <button
                           onClick={markAllAsRead}
-                          className="text-xs text-blue-600 hover:text-blue-800"
+                          className="text-xs text-primary hover:text-primary/80"
                           aria-label="Mark all notifications as read"
                         >
                           Mark all as read
@@ -534,14 +492,14 @@ const Header: React.FC<HeaderProps> = ({ onShowProfile, onLogout, userData, onSe
                         key={notification.id}
                         onClick={() => handleNotificationClick(notification)}
                         className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors ${
-                          notification.unread ? 'bg-blue-50' : ''
+                          notification.unread ? 'bg-primary/10' : ''
                         }`}
                         role="menuitem"
                         aria-label={`${notification.title}: ${notification.message}`}
                       >
                         <div className="flex items-start gap-3">
                           <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
-                            notification.unread ? 'bg-blue-500' : 'bg-gray-300'
+                            notification.unread ? 'bg-primary' : 'bg-gray-300'
                           }`} aria-hidden="true" />
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
@@ -605,7 +563,7 @@ const Header: React.FC<HeaderProps> = ({ onShowProfile, onLogout, userData, onSe
                 <div className="px-4 py-3 border-b border-gray-100">
                   <p className="text-sm font-medium text-gray-900">{userData?.name || 'User'}</p>
                   <p className="text-xs text-gray-500">{userData?.email}</p>
-                  <p className="text-xs text-blue-600 font-medium mt-1">Version 0.01</p>
+                  <p className="text-xs text-primary font-medium mt-1">Version 0.01</p>
                 </div>
                 <div className="py-1">
                   <button
@@ -625,7 +583,7 @@ const Header: React.FC<HeaderProps> = ({ onShowProfile, onLogout, userData, onSe
                   >
                     <Settings className="w-4 h-4" />
                     Preferences
-            </button>
+                  </button>
           </div>
                 <div className="border-t border-gray-100 pt-1">
           <button
@@ -672,7 +630,7 @@ const Header: React.FC<HeaderProps> = ({ onShowProfile, onLogout, userData, onSe
                     placeholder="Search..."
                     value={localSearchQuery}
                     onChange={handleSearchChange}
-                    className="w-full pl-10 pr-10 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50"
+                    className="w-full pl-10 pr-10 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-primary bg-gray-50"
                     aria-label="Search projects and contracts"
                   />
                   {localSearchQuery && (
@@ -715,7 +673,7 @@ const Header: React.FC<HeaderProps> = ({ onShowProfile, onLogout, userData, onSe
                   <div
                     key={notification.id}
                     className={`p-3 rounded-lg border ${
-                      notification.unread ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'
+                      notification.unread ? 'bg-primary/10 border-blue-200' : 'bg-gray-50 border-gray-200'
                     }`}
                     role="button"
                     tabIndex={0}
@@ -763,7 +721,7 @@ const Header: React.FC<HeaderProps> = ({ onShowProfile, onLogout, userData, onSe
                 <div className="flex-1">
                   <p className="font-medium text-gray-900">{userData?.name || 'User'}</p>
                   <p className="text-sm text-gray-500 capitalize">{userData?.role || 'User'}</p>
-                  <p className="text-xs text-blue-600 font-medium">Version 0.01</p>
+                  <p className="text-xs text-primary font-medium">Version 0.01</p>
                 </div>
               </div>
               <div className="space-y-2">

@@ -96,7 +96,7 @@ export default function PunchListView({ projectId }: PunchListViewProps) {
   // Get status color
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'open': return 'bg-blue-100 text-blue-800';
+      case 'open': return 'bg-blue-100 text-primary';
       case 'in_progress': return 'bg-purple-100 text-purple-800';
       case 'completed': return 'bg-green-100 text-green-800';
       case 'verified': return 'bg-emerald-100 text-emerald-800';
@@ -108,7 +108,7 @@ export default function PunchListView({ projectId }: PunchListViewProps) {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -120,7 +120,7 @@ export default function PunchListView({ projectId }: PunchListViewProps) {
         <h2 className="text-2xl font-bold text-gray-900">Punch List</h2>
         <button
           onClick={() => setShowForm(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+          className="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2"
         >
           <span>+</span>
           <span>Add Item</span>
@@ -204,7 +204,7 @@ export default function PunchListView({ projectId }: PunchListViewProps) {
               type="checkbox"
               checked={filters.overdue || false}
               onChange={(e) => setFilters({ ...filters, overdue: e.target.checked || undefined })}
-              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              className="rounded border-gray-300 text-primary focus:ring-blue-500"
             />
             <span className="text-sm text-gray-700">Overdue Only</span>
           </label>
@@ -212,13 +212,13 @@ export default function PunchListView({ projectId }: PunchListViewProps) {
           <div className="ml-auto flex gap-2">
             <button
               onClick={() => setViewMode('list')}
-              className={`px-3 py-2 rounded-lg ${viewMode === 'list' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+              className={`px-3 py-2 rounded-lg ${viewMode === 'list' ? 'bg-primary text-white' : 'bg-gray-200 text-gray-700'}`}
             >
               List
             </button>
             <button
               onClick={() => setViewMode('kanban')}
-              className={`px-3 py-2 rounded-lg ${viewMode === 'kanban' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+              className={`px-3 py-2 rounded-lg ${viewMode === 'kanban' ? 'bg-primary text-white' : 'bg-gray-200 text-gray-700'}`}
             >
               Board
             </button>

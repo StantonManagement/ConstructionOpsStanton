@@ -17,7 +17,7 @@ export default function MobileTaskTimeline({ tasks, onTaskClick }: MobileTaskTim
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'completed': return 'bg-green-100 text-green-800 border-green-200';
-      case 'in_progress': return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'in_progress': return 'bg-primary/10 text-primary border-border';
       case 'on_hold': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
       default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
@@ -49,7 +49,7 @@ export default function MobileTaskTimeline({ tasks, onTaskClick }: MobileTaskTim
             {/* Timeline Dot */}
             <div className={`absolute left-0 top-3 w-4 h-4 rounded-full border-2 bg-white ${
               task.status === 'completed' ? 'border-green-500 bg-green-500' : 
-              isOverdue ? 'border-red-500' : 'border-blue-500'
+              isOverdue ? 'border-red-500' : 'border-primary'
             }`} />
 
             {/* Card */}
@@ -93,7 +93,7 @@ export default function MobileTaskTimeline({ tasks, onTaskClick }: MobileTaskTim
                 </div>
                 <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
                   <div 
-                    className={`h-full rounded-full ${task.status === 'completed' ? 'bg-green-500' : 'bg-blue-500'}`}
+                    className={`h-full rounded-full ${task.status === 'completed' ? 'bg-green-500' : 'bg-primary'}`}
                     style={{ width: `${task.progress}%` }}
                   />
                 </div>

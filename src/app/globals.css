@@ -51,10 +51,10 @@
 
 :root {
   /* Border radius system */
-  --radius: 0.5rem; /* 8px - matches style guide */
-  --radius-sm: 0.25rem; /* 4px */
-  --radius-md: 0.375rem; /* 6px */
-  --radius-lg: 0.5rem; /* 8px */
+  --radius: 0.25rem; /* 4px - Professional tight radius */
+  --radius-sm: 0.125rem; /* 2px */
+  --radius-md: 0.25rem; /* 4px */
+  --radius-lg: 0.375rem; /* 6px */
   --radius-xl: 0.75rem; /* 12px */
   
   /* Base colors from style guide */
@@ -66,7 +66,7 @@
   --popover-foreground: #1A1A1A;
   
   /* Action colors */
-  --primary: #2563EB; /* Blue primary */
+  --primary: #18181b; /* Dark neutral primary (Professional) */
   --primary-foreground: #FFFFFF;
   --secondary: #F3F4F6; /* Light gray secondary */
   --secondary-foreground: #1A1A1A;
@@ -77,10 +77,16 @@
   --destructive: #DC2626; /* Red destructive */
   --destructive-foreground: #FFFFFF;
   
+  /* Professional UI tokens */
+  --link: #1e40af; /* Professional navy blue */
+  --label: #6b7280; /* Muted label color */
+  --input-border: #d1d5db; /* Subtle input border */
+  --input-border-focus: #18181b; /* Dark focus state */
+  
   /* Borders and inputs */
   --border: #E5E7EB; /* Medium gray border */
   --input: #F9FAFB; /* Input background */
-  --ring: #2563EB; /* Focus ring */
+  --ring: #18181b; /* Focus ring (matched to primary) */
   
   /* Status colors for construction operations (New System) */
   --status-critical: #DC2626;
@@ -162,8 +168,8 @@
   --popover-foreground: #FAFAF8;
   
   /* Action colors - adjusted for dark mode */
-  --primary: #3B82F6; /* Lighter blue for dark mode */
-  --primary-foreground: #FFFFFF;
+  --primary: #fafafa; /* Light primary for dark mode */
+  --primary-foreground: #18181b;
   --secondary: #262626; /* Dark gray */
   --secondary-foreground: #FAFAF8;
   --muted: #262626;
@@ -173,10 +179,15 @@
   --destructive: #EF4444; /* Lighter red for dark mode */
   --destructive-foreground: #FFFFFF;
   
+  /* Professional UI tokens */
+  --link: #60a5fa; /* Light blue for dark mode */
+  --input-border: #374151;
+  --input-border-focus: #fafafa;
+  
   /* Borders and inputs */
   --border: #374151;
   --input: #1F2937;
-  --ring: #3B82F6;
+  --ring: #fafafa;
   
   /* Status colors - adjusted for dark mode (New System) */
   --status-critical: #EF4444;
@@ -239,5 +250,8 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+  a {
+    @apply text-[var(--link)] hover:underline;
   }
 }

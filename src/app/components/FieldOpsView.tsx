@@ -22,7 +22,7 @@ export default function FieldOpsView() {
             onClick={() => setActiveSubTab('schedule')}
             className={`px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap ${
               activeSubTab === 'schedule'
-                ? 'bg-blue-600 text-white'
+                ? 'bg-primary text-white'
                 : 'text-gray-600 hover:bg-gray-100'
             }`}
           >
@@ -32,7 +32,7 @@ export default function FieldOpsView() {
             onClick={() => setActiveSubTab('photos')}
             className={`px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap ${
               activeSubTab === 'photos'
-                ? 'bg-blue-600 text-white'
+                ? 'bg-primary text-white'
                 : 'text-gray-600 hover:bg-gray-100'
             }`}
           >
@@ -42,7 +42,7 @@ export default function FieldOpsView() {
             onClick={() => setActiveSubTab('warranties')}
             className={`px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap ${
               activeSubTab === 'warranties'
-                ? 'bg-blue-600 text-white'
+                ? 'bg-primary text-white'
                 : 'text-gray-600 hover:bg-gray-100'
             }`}
           >

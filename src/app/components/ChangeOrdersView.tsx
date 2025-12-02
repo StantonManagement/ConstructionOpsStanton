@@ -296,7 +296,7 @@ const ChangeOrdersView: React.FC = () => {
         row.photo_count > 0 ? (
           <button
             onClick={(e) => { e.stopPropagation(); handleViewPhotos(row); }}
-            className="text-blue-600 hover:text-blue-800 flex items-center gap-1 mx-auto"
+            className="text-primary hover:text-primary/80 flex items-center gap-1 mx-auto"
           >
             <ImageIcon className="w-4 h-4" />
             <span className="text-xs">{row.photo_count}</span>
@@ -313,7 +313,7 @@ const ChangeOrdersView: React.FC = () => {
         <div className="flex items-center justify-center gap-2" onClick={(e) => e.stopPropagation()}>
           <button
             onClick={() => handleViewDetails(row)}
-            className="text-blue-600 hover:text-blue-800"
+            className="text-primary hover:text-primary/80"
             title="View details"
           >
             <Eye className="w-4 h-4" />
@@ -442,7 +442,7 @@ const ChangeOrdersView: React.FC = () => {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -471,7 +471,7 @@ const ChangeOrdersView: React.FC = () => {
           </div>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90"
           >
             <Plus className="w-4 h-4" />
             New Change Order
@@ -510,7 +510,7 @@ const ChangeOrdersView: React.FC = () => {
           </button>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90"
           >
             <Plus className="w-4 h-4" />
             New Change Order
@@ -536,8 +536,8 @@ const ChangeOrdersView: React.FC = () => {
           <p className="text-sm text-red-700">Rejected</p>
           <p className="text-2xl font-bold text-red-900">{stats.rejected}</p>
         </div>
-        <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-          <p className="text-sm text-blue-700">Approved $</p>
+        <div className="bg-primary/10 p-4 rounded-lg border border-blue-200">
+          <p className="text-sm text-primary">Approved $</p>
           <p className="text-xl font-bold text-blue-900">${(stats.totalCost / 1000).toFixed(0)}k</p>
         </div>
         <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
@@ -588,7 +588,7 @@ const ChangeOrdersView: React.FC = () => {
                     setSearchQuery('');
                     setStatusFilter('all');
                   }}
-                  className="text-blue-600 underline mt-2"
+                  className="text-primary underline mt-2"
                 >
                   Clear filters
                 </button>
@@ -622,7 +622,7 @@ const ChangeOrdersView: React.FC = () => {
                 <p className="text-sm">You can create change orders from the project budget view or use the API directly.</p>
                 <button
                   onClick={() => setShowCreateModal(false)}
-                  className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  className="mt-4 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90"
                 >
                   Close
                 </button>
@@ -729,7 +729,7 @@ const ChangeOrdersView: React.FC = () => {
                   <div>
                     <button
                       onClick={() => handleViewPhotos(selectedOrder)}
-                      className="flex items-center gap-2 text-blue-600 hover:text-blue-800"
+                      className="flex items-center gap-2 text-primary hover:text-primary/80"
                     >
                       <ImageIcon className="w-5 h-5" />
                       View {selectedOrder.photo_count} Photo{selectedOrder.photo_count !== 1 ? 's' : ''}

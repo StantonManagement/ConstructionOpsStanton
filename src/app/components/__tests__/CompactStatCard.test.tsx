@@ -8,7 +8,7 @@ const CompactStatCard = ({ icon, label, value, change, color, onClick, isActive 
     <div 
       className={`bg-white border rounded-lg p-3 sm:p-4 cursor-pointer transition-all hover:shadow-md ${
         isActive 
-          ? 'border-blue-500 bg-blue-50 shadow-md' 
+          ? 'border-primary bg-primary/10 shadow-md' 
           : 'border-gray-200 hover:border-blue-300'
       } ${onClick ? 'hover:border-blue-300' : ''}`}
       onClick={onClick}
@@ -55,7 +55,7 @@ describe('CompactStatCard', () => {
     
     // Find the outermost div that contains the card
     const card = screen.getByText('📱').closest('div')?.parentElement?.parentElement?.parentElement
-    expect(card).toHaveClass('border-blue-500', 'bg-blue-50', 'shadow-md')
+    expect(card).toHaveClass('border-primary', 'bg-primary/10', 'shadow-md')
   })
 
   it('applies inactive styling when isActive is false', () => {
@@ -64,7 +64,7 @@ describe('CompactStatCard', () => {
     // Find the outermost div that contains the card
     const card = screen.getByText('📱').closest('div')?.parentElement?.parentElement?.parentElement
     expect(card).toHaveClass('border-gray-200')
-    expect(card).not.toHaveClass('border-blue-500', 'bg-blue-50')
+    expect(card).not.toHaveClass('border-primary', 'bg-primary/10')
   })
 
   it('calls onClick when clicked', () => {

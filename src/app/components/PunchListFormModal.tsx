@@ -181,7 +181,7 @@ export default function PunchListFormModal({ projectId, onClose, onSuccess }: Pu
 
           {loading ? (
             <div className="py-8 text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
             </div>
           ) : (
             <div className="space-y-4">
@@ -353,7 +353,7 @@ export default function PunchListFormModal({ projectId, onClose, onSuccess }: Pu
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   disabled={submitting}
                 >
                   {submitting ? (

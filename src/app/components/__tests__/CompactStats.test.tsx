@@ -18,7 +18,7 @@ const CompactStats = ({ pendingSMS, reviewQueue, readyChecks, weeklyTotal, onSta
       <div 
         className={`bg-white border rounded-lg p-3 sm:p-4 cursor-pointer transition-all hover:shadow-md ${
           currentFilter === 'sms_sent' 
-            ? 'border-blue-500 bg-blue-50 shadow-md' 
+            ? 'border-primary bg-primary/10 shadow-md' 
             : 'border-gray-200 hover:border-blue-300'
         }`}
         onClick={() => onStatClick('sms_pending')}
@@ -38,7 +38,7 @@ const CompactStats = ({ pendingSMS, reviewQueue, readyChecks, weeklyTotal, onSta
       <div 
         className={`bg-white border rounded-lg p-3 sm:p-4 cursor-pointer transition-all hover:shadow-md ${
           currentFilter === 'submitted' 
-            ? 'border-blue-500 bg-blue-50 shadow-md' 
+            ? 'border-primary bg-primary/10 shadow-md' 
             : 'border-gray-200 hover:border-blue-300'
         }`}
         onClick={() => onStatClick('review_queue')}
@@ -58,7 +58,7 @@ const CompactStats = ({ pendingSMS, reviewQueue, readyChecks, weeklyTotal, onSta
       <div 
         className={`bg-white border rounded-lg p-3 sm:p-4 cursor-pointer transition-all hover:shadow-md ${
           currentFilter === 'approved' 
-            ? 'border-blue-500 bg-blue-50 shadow-md' 
+            ? 'border-primary bg-primary/10 shadow-md' 
             : 'border-gray-200 hover:border-blue-300'
         }`}
         onClick={() => onStatClick('ready_checks')}
@@ -78,14 +78,14 @@ const CompactStats = ({ pendingSMS, reviewQueue, readyChecks, weeklyTotal, onSta
       <div 
         className={`bg-white border rounded-lg p-3 sm:p-4 cursor-pointer transition-all hover:shadow-md ${
           currentFilter === 'approved' 
-            ? 'border-blue-500 bg-blue-50 shadow-md' 
+            ? 'border-primary bg-primary/10 shadow-md' 
             : 'border-gray-200 hover:border-blue-300'
         }`}
         onClick={() => onStatClick('weekly_total')}
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 sm:gap-3">
-            <div className={`w-8 h-8 sm:w-10 sm:h-10 ${currentFilter === 'approved' ? 'bg-blue-600' : 'bg-blue-500'} rounded-lg flex items-center justify-center text-white`}>
+            <div className={`w-8 h-8 sm:w-10 sm:h-10 ${currentFilter === 'approved' ? 'bg-primary' : 'bg-primary'} rounded-lg flex items-center justify-center text-white`}>
               <span className="text-sm sm:text-lg">📊</span>
             </div>
             <div className="min-w-0 flex-1">
@@ -157,7 +157,7 @@ describe('CompactStats', () => {
     render(<CompactStats {...defaultProps} currentFilter="sms_sent" />)
     
     const smsCard = screen.getByText('📱').closest('div')?.parentElement?.parentElement?.parentElement
-    expect(smsCard).toHaveClass('border-blue-500', 'bg-blue-50', 'shadow-md')
+    expect(smsCard).toHaveClass('border-primary', 'bg-primary/10', 'shadow-md')
   })
 
   it('applies inactive styling when currentFilter does not match', () => {
@@ -165,7 +165,7 @@ describe('CompactStats', () => {
     
     const smsCard = screen.getByText('📱').closest('div')?.parentElement?.parentElement?.parentElement
     expect(smsCard).toHaveClass('border-gray-200')
-    expect(smsCard).not.toHaveClass('border-blue-500', 'bg-blue-50')
+    expect(smsCard).not.toHaveClass('border-primary', 'bg-primary/10')
   })
 
   it('formats currency correctly for weekly total', () => {

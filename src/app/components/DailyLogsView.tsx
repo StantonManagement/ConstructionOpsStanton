@@ -271,7 +271,7 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
         <span className="ml-3 text-muted-foreground">Loading daily log requests...</span>
       </div>
     );
@@ -395,7 +395,7 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
                   )}
                 </div>
                 
-                <div className="mt-2 text-xs text-blue-600 font-medium">
+                <div className="mt-2 text-xs text-primary font-medium">
                   💬 Click to view Daily Logs and replies
                 </div>
               </div>
@@ -448,7 +448,7 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
                     const project = projects.find(p => p.id === Number(e.target.value));
                     setSelectedProject(project);
                   }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-primary"
                 >
                   <option value="">Select a project</option>
                   {projects.map(project => (
@@ -468,7 +468,7 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
                     setPmPhoneNumber(e.target.value);
                     if (phoneError) setPhoneError('');
                   }}
-                  className={`w-full px-3 py-2 border rounded-md focus:ring-blue-500 focus:border-blue-500 ${
+                  className={`w-full px-3 py-2 border rounded-md focus:ring-blue-500 focus:border-primary ${
                     phoneError ? 'border-red-300' : 'border-gray-300'
                   }`}
                   placeholder="+1234567890"
@@ -484,15 +484,15 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
                   type="time"
                   value={requestTime}
                   onChange={(e) => setRequestTime(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-primary"
                 />
                 <p className="text-xs text-gray-500 mt-1">
                   Select the time when the system should send daily SMS requests (EST timezone)
                 </p>
               </div>
 
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                <p className="text-sm text-blue-800">
+              <div className="bg-primary/10 border border-blue-200 rounded-lg p-3">
+                <p className="text-sm text-primary">
                   <strong>How it works:</strong> The system will automatically send SMS requests to the PM daily at {requestTime} EST, 
                   asking for notes about each active project. It will retry every 30 minutes until notes are received.
                 </p>
@@ -509,7 +509,7 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
               <button
                 onClick={handleAddRequest}
                 disabled={!selectedProject || !pmPhoneNumber.trim()}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Add Request
               </button>
@@ -548,7 +548,7 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
             <div className="p-6 overflow-y-auto max-h-[60vh]">
               {loadingNotes ? (
                 <div className="flex items-center justify-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                   <span className="ml-2 text-muted-foreground">Loading PM notes...</span>
                 </div>
               ) : pmNotes.length > 0 ? (
@@ -565,7 +565,7 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
                         <span className={`text-xs px-2 py-1 rounded-full ${
                           note.status === 'approved' ? 'bg-green-100 text-green-800' :
                           note.status === 'rejected' ? 'bg-red-100 text-red-800' :
-                          note.status === 'submitted' ? 'bg-blue-100 text-blue-800' :
+                          note.status === 'submitted' ? 'bg-blue-100 text-primary' :
                           'bg-gray-100 text-gray-800'
                         }`}>
                           {note.status}

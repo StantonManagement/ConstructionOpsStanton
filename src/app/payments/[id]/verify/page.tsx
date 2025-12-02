@@ -1672,7 +1672,7 @@ const lineItemsForTable = lineItems.map((li, idx) => {
                         id="notify-contractor"
                         checked={sendContractorNotification}
                         onChange={(e) => setSendContractorNotification(e.target.checked)}
-                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                        className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary focus:ring-2"
                       />
                       <label htmlFor="notify-contractor" className="text-sm text-gray-700 cursor-pointer select-none">
                         Send notification to contractor about this approval

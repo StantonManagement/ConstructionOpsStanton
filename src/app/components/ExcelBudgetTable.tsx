@@ -667,8 +667,8 @@ export const ExcelBudgetTable: React.FC<ExcelBudgetTableProps> = ({
           onFocus={() => setFocusedCell({ rowIndex, colKey })}
           disabled={isLocked}
           className={`
-            w-full px-2 py-1 text-right rounded
-            ${!isLocked ? 'bg-background border border-input focus:ring-2 focus:ring-primary' : 'bg-gray-100 cursor-not-allowed'}
+            w-full px-2 py-1 text-right rounded transition-colors
+            ${!isLocked ? 'bg-green-50 border border-green-200 focus:bg-white focus:border-green-500 focus:ring-2 focus:ring-green-200' : 'bg-gray-100 cursor-not-allowed'}
             ${isModified ? 'bg-yellow-50 border-yellow-300' : ''}
             ${isSaving ? 'opacity-50' : ''}
           `}
@@ -687,7 +687,7 @@ export const ExcelBudgetTable: React.FC<ExcelBudgetTableProps> = ({
             <>
               <button
                 onClick={addNewRow}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
               >
                 <Plus className="w-4 h-4" />
                 Add Line
@@ -750,10 +750,10 @@ export const ExcelBudgetTable: React.FC<ExcelBudgetTableProps> = ({
           <thead className="bg-muted">
             <tr>
               <th className="px-4 py-3 text-left text-sm font-semibold text-foreground border-b border-border">Category</th>
-              <th className="px-4 py-3 text-right text-sm font-semibold text-foreground border-b border-border">Original</th>
-              <th className="px-4 py-3 text-right text-sm font-semibold text-foreground border-b border-border">Revised</th>
-              <th className="px-4 py-3 text-right text-sm font-semibold text-foreground border-b border-border">Actual</th>
-              <th className="px-4 py-3 text-right text-sm font-semibold text-foreground border-b border-border">Committed</th>
+              <th className={`px-4 py-3 text-right text-sm font-semibold border-b border-border ${editMode ? 'bg-green-100 text-green-900' : 'text-foreground'}`}>Original</th>
+              <th className={`px-4 py-3 text-right text-sm font-semibold border-b border-border ${editMode ? 'bg-green-100 text-green-900' : 'text-foreground'}`}>Revised</th>
+              <th className={`px-4 py-3 text-right text-sm font-semibold border-b border-border ${editMode ? 'bg-green-100 text-green-900' : 'text-foreground'}`}>Actual</th>
+              <th className={`px-4 py-3 text-right text-sm font-semibold border-b border-border ${editMode ? 'bg-green-100 text-green-900' : 'text-foreground'}`}>Committed</th>
               <th className="px-4 py-3 text-right text-sm font-semibold text-foreground border-b border-border">Remaining</th>
               <th className="px-4 py-3 text-center text-sm font-semibold text-foreground border-b border-border">% Spent</th>
               <th className="px-4 py-3 text-center text-sm font-semibold text-foreground border-b border-border">Status</th>
@@ -810,7 +810,7 @@ export const ExcelBudgetTable: React.FC<ExcelBudgetTableProps> = ({
 
             {/* New Row (single) */}
             {newRow && (
-              <tr className="bg-blue-50 border-2 border-blue-300">
+              <tr className="bg-primary/10 border-2 border-blue-300">
                 <td className="px-4 py-2 border-b border-border">
                   <input
                     type="text"
@@ -1046,7 +1046,7 @@ export const ExcelBudgetTable: React.FC<ExcelBudgetTableProps> = ({
       )}
 
       {editMode && (
-        <div className="text-sm text-muted-foreground bg-blue-50 border border-blue-200 rounded p-3">
+        <div className="text-sm text-muted-foreground bg-primary/10 border border-blue-200 rounded p-3">
           <strong>Edit Mode Active:</strong> Use arrow keys to navigate. Tab to move forward. Enter to move down. Escape to cancel changes.
         </div>
       )}

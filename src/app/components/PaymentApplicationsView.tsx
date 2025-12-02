@@ -93,7 +93,7 @@ function CompactStats({ pendingSMS, reviewQueue, readyChecks, weeklyTotal, onSta
         icon="📊"
         label="Weekly Total"
         value={formatCurrency(weeklyTotal)}
-        color={currentFilter === 'approved' ? 'bg-blue-600' : 'bg-blue-500'}
+        color={currentFilter === 'approved' ? 'bg-primary' : 'bg-primary'}
         onClick={() => onStatClick('weekly_total')}
         isActive={currentFilter === 'approved'}
       />
@@ -119,7 +119,7 @@ function PaymentCard({ application, isSelected, onSelect, onVerify, getDocumentF
       icon: "⚠️"
     },
     sms_complete: { 
-      color: "bg-blue-100 text-blue-800 border-blue-200", 
+      color: "bg-blue-100 text-primary border-blue-200", 
       priority: "READY",
       icon: "📱"
     },
@@ -145,7 +145,7 @@ function PaymentCard({ application, isSelected, onSelect, onVerify, getDocumentF
 
   return (
     <div 
-      className={`bg-white border rounded-lg p-3 sm:p-4 transition-all cursor-pointer ${isSelected ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300 hover:shadow-md'}`}
+      className={`bg-white border rounded-lg p-3 sm:p-4 transition-all cursor-pointer ${isSelected ? 'border-primary bg-primary/10' : 'border-gray-200 hover:border-gray-300 hover:shadow-md'}`}
       onClick={() => onCardClick && onCardClick(application)}
     >
       <div className="flex items-start justify-between mb-3">
@@ -155,7 +155,7 @@ function PaymentCard({ application, isSelected, onSelect, onVerify, getDocumentF
             checked={isSelected}
             onChange={(e) => onSelect(application.id, e.target.checked)}
             onClick={(e) => e.stopPropagation()}
-            className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 mt-1 flex-shrink-0"
+            className="w-4 h-4 text-primary rounded focus:ring-blue-500 mt-1 flex-shrink-0"
           />
           <div className="min-w-0 flex-1">
             <h3 className="font-semibold text-gray-900 text-sm truncate">{application.project?.name}</h3>
@@ -203,7 +203,7 @@ function PaymentCard({ application, isSelected, onSelect, onVerify, getDocumentF
                 ? "bg-red-600 text-white hover:bg-red-700"
                 : config.priority === "URGENT" 
                 ? "bg-red-600 text-white hover:bg-red-700" 
-                : "bg-blue-600 text-white hover:bg-blue-700"
+                : "bg-primary text-white hover:bg-primary/90"
             }`}
           >
             {application.status === "approved" || application.status === "rejected" ? "View" : config.priority === "URGENT" ? "URGENT" : "Verify"}
@@ -280,7 +280,7 @@ function Pagination({ currentPage, totalPages, onPageChange, totalItems, itemsPe
             onClick={() => onPageChange(page)}
             className={`px-2 sm:px-3 py-1 text-xs sm:text-sm font-medium rounded-md ${
               page === currentPage
-                ? 'bg-blue-600 text-white'
+                ? 'bg-primary text-white'
                 : 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-50'
             }`}
           >
@@ -313,7 +313,7 @@ function PaymentTable({ applications, onVerify, getDocumentForApp, sendForSignat
           checked={allSelected}
           ref={(input) => { if (input) input.indeterminate = someSelected; }}
           onChange={(e) => onSelectAll(e.target.checked)}
-          className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+          className="w-4 h-4 text-primary rounded focus:ring-blue-500"
         />
       ),
       accessor: (row: any) => (
@@ -322,7 +322,7 @@ function PaymentTable({ applications, onVerify, getDocumentForApp, sendForSignat
             type="checkbox"
             checked={selectedItems.includes(row.id)}
             onChange={(e) => onSelectItem(row.id, e.target.checked)}
-            className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 cursor-pointer"
+            className="w-4 h-4 text-primary rounded focus:ring-blue-500 cursor-pointer"
           />
         </div>
       ),
@@ -400,7 +400,7 @@ function PaymentTable({ applications, onVerify, getDocumentForApp, sendForSignat
                   ? "bg-red-600 text-white hover:bg-red-700"
                   : config.priority === "URGENT" 
                   ? "bg-red-600 text-white hover:bg-red-700" 
-                  : "bg-blue-600 text-white hover:bg-blue-700"
+                  : "bg-primary text-white hover:bg-primary/90"
               }`}
             >
               {row.status === "approved" || row.status === "rejected" ? "View" : config.priority === "URGENT" ? "URGENT" : "Verify"}
@@ -552,7 +552,7 @@ function FilterSidebar({ statusFilter, setStatusFilter, projectFilter, setProjec
                   setStatusFilter(e.target.value);
                   onFilterChange();
                 }}
-                className="w-3 h-3 text-blue-600 border-gray-300 focus:ring-blue-500"
+                className="w-3 h-3 text-primary border-gray-300 focus:ring-blue-500"
               />
               <span className="ml-2 text-xs text-gray-700">{status.label}</span>
             </label>
@@ -599,7 +599,7 @@ function FilterSidebar({ statusFilter, setStatusFilter, projectFilter, setProjec
                   setSortBy(e.target.value as any);
                   onFilterChange();
                 }}
-                className="w-3 h-3 text-blue-600 border-gray-300 focus:ring-blue-500"
+                className="w-3 h-3 text-primary border-gray-300 focus:ring-blue-500"
               />
               <span className="ml-2 text-xs text-gray-700">{sort.label}</span>
             </label>
@@ -615,7 +615,7 @@ function FilterSidebar({ statusFilter, setStatusFilter, projectFilter, setProjec
                 setSortDir(e.target.checked ? 'desc' : 'asc');
                 onFilterChange();
               }}
-              className="w-3 h-3 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              className="w-3 h-3 text-primary border-gray-300 rounded focus:ring-blue-500"
             />
             <span className="ml-2 text-xs text-gray-700">Descending</span>
           </label>
@@ -1182,7 +1182,7 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
         <span className="ml-3 text-gray-600">Loading payment applications...</span>
       </div>
     );
@@ -1224,7 +1224,7 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
           <button
             onClick={handleRefresh}
             disabled={isRefreshing}
-            className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-3 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isRefreshing ? (
               <>
@@ -1475,7 +1475,7 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
                           }
                         }
                       }}
-                      className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                      className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2"
                     >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -1593,13 +1593,13 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
                 />
                 
                 {/* Notification Checkbox */}
-                <div className="flex items-center gap-3 p-4 bg-blue-50 border border-blue-200 rounded-lg mb-4">
+                <div className="flex items-center gap-3 p-4 bg-primary/10 border border-blue-200 rounded-lg mb-4">
                   <input
                     type="checkbox"
                     id="notify-contractor-apps"
                     checked={sendContractorNotification}
                     onChange={(e) => setSendContractorNotification(e.target.checked)}
-                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                    className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
                   />
                   <label htmlFor="notify-contractor-apps" className="text-sm text-gray-700 cursor-pointer select-none">
                     Send notification to contractor about this approval

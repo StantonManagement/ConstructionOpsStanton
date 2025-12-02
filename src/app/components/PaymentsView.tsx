@@ -35,7 +35,7 @@ const formatCurrency = (amount: number) => {
 function CompactStatCard({ icon, label, value, change, color, onClick, isActive }: any) {
   return (
     <div 
-      className={`bg-card border rounded-lg p-3 sm:p-4 cursor-pointer transition-all duration-200 hover:shadow-md ${
+      className={`bg-card border rounded p-3 sm:p-4 cursor-pointer transition-all duration-200 hover:shadow-md ${
         isActive 
           ? 'border-primary bg-primary/5 shadow-md' 
           : 'border-border hover:border-primary/50'
@@ -44,7 +44,7 @@ function CompactStatCard({ icon, label, value, change, color, onClick, isActive 
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 sm:gap-3">
-          <div className={`w-8 h-8 sm:w-10 sm:h-10 ${color} rounded-lg flex items-center justify-center text-white`}>
+          <div className={`w-8 h-8 sm:w-10 sm:h-10 ${color} rounded flex items-center justify-center text-white`}>
             <span className="text-sm sm:text-lg">{icon}</span>
           </div>
           <div className="min-w-0 flex-1">
@@ -94,7 +94,7 @@ function CompactStats({ pendingSMS, reviewQueue, readyChecks, weeklyTotal, onSta
         icon="📊"
         label="Weekly Total"
         value={formatCurrency(weeklyTotal)}
-        color={currentFilter === 'approved' ? 'bg-blue-600' : 'bg-blue-500'}
+        color={currentFilter === 'approved' ? 'bg-primary' : 'bg-primary'}
         onClick={() => onStatClick('weekly_total')}
         isActive={currentFilter === 'approved'}
       />
@@ -120,7 +120,7 @@ function PaymentCard({ application, isSelected, onSelect, onVerify, getDocumentF
       icon: "⚠️"
     },
     sms_complete: { 
-      color: "bg-blue-100 text-blue-800 border-blue-200", 
+      color: "bg-blue-100 text-primary border-blue-200", 
       priority: "READY",
       icon: "📱"
     },
@@ -146,7 +146,7 @@ function PaymentCard({ application, isSelected, onSelect, onVerify, getDocumentF
 
   return (
     <div 
-      className={`bg-white border rounded-lg p-3 sm:p-4 transition-all cursor-pointer ${isSelected ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300 hover:shadow-md'}`}
+      className={`bg-white border rounded p-3 sm:p-4 transition-all cursor-pointer ${isSelected ? 'border-primary bg-primary/10' : 'border-gray-200 hover:border-gray-300 hover:shadow-md'}`}
       onClick={() => onCardClick && onCardClick(application)}
     >
       <div className="flex items-start justify-between mb-3">
@@ -156,7 +156,7 @@ function PaymentCard({ application, isSelected, onSelect, onVerify, getDocumentF
             checked={isSelected}
             onChange={(e) => onSelect(application.id, e.target.checked)}
             onClick={(e) => e.stopPropagation()}
-            className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 mt-1 flex-shrink-0"
+            className="w-4 h-4 text-primary rounded focus:ring-blue-500 mt-1 flex-shrink-0"
           />
           <div className="min-w-0 flex-1">
             <h3 className="font-semibold text-gray-900 text-sm truncate">{application.project?.name}</h3>
@@ -204,7 +204,7 @@ function PaymentCard({ application, isSelected, onSelect, onVerify, getDocumentF
                 ? "bg-red-600 text-white hover:bg-red-700"
                 : config.priority === "URGENT" 
                 ? "bg-red-600 text-white hover:bg-red-700" 
-                : "bg-blue-600 text-white hover:bg-blue-700"
+                : "bg-primary text-white hover:bg-primary/90"
             }`}
           >
             {application.status === "approved" || application.status === "rejected" ? "View" : config.priority === "URGENT" ? "URGENT" : "Verify"}
@@ -281,7 +281,7 @@ function Pagination({ currentPage, totalPages, onPageChange, totalItems, itemsPe
             onClick={() => onPageChange(page)}
             className={`px-2 sm:px-3 py-1 text-xs sm:text-sm font-medium rounded-md ${
               page === currentPage
-                ? 'bg-blue-600 text-white'
+                ? 'bg-primary text-white'
                 : 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-50'
             }`}
           >
@@ -317,7 +317,7 @@ function PaymentTable({ applications, onVerify, getDocumentForApp, sendForSignat
           checked={allSelected}
           ref={(input) => { if (input) input.indeterminate = someSelected; }}
           onChange={(e) => onSelectAll(e.target.checked)}
-          className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+          className="w-4 h-4 text-primary rounded focus:ring-blue-500"
         />
       ),
       accessor: (row: any) => (
@@ -326,7 +326,7 @@ function PaymentTable({ applications, onVerify, getDocumentForApp, sendForSignat
             type="checkbox"
             checked={selectedItems.includes(row.id)}
             onChange={(e) => onSelectItem(row.id, e.target.checked)}
-            className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 cursor-pointer"
+            className="w-4 h-4 text-primary rounded focus:ring-blue-500 cursor-pointer"
           />
         </div>
       ),
@@ -404,7 +404,7 @@ function PaymentTable({ applications, onVerify, getDocumentForApp, sendForSignat
                   ? "bg-red-600 text-white hover:bg-red-700"
                   : config.priority === "URGENT" 
                   ? "bg-red-600 text-white hover:bg-red-700" 
-                  : "bg-blue-600 text-white hover:bg-blue-700"
+                  : "bg-primary text-white hover:bg-primary/90"
               }`}
             >
               {row.status === "approved" || row.status === "rejected" ? "View" : config.priority === "URGENT" ? "URGENT" : "Verify"}
@@ -432,7 +432,7 @@ function PaymentTable({ applications, onVerify, getDocumentForApp, sendForSignat
   ];
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+    <div className="bg-white border border-gray-200 rounded overflow-hidden shadow-sm">
       {/* Mobile Card View */}
       <div className="lg:hidden space-y-3 p-4">
         {applications.map((application: any) => (
@@ -554,7 +554,7 @@ function ContractorPaymentGroup({
     .reduce((sum, app) => sum + (app.current_period_value || 0), 0);
 
   return (
-    <div className="bg-card border border-border rounded-lg overflow-hidden mb-4">
+    <div className="bg-card border border-border rounded overflow-hidden mb-4">
       {/* Contractor Header */}
       <div 
         className="px-4 py-3 bg-muted/30 border-b border-border cursor-pointer hover:bg-muted/50 transition-colors"
@@ -596,7 +596,7 @@ function ContractorPaymentGroup({
                   e.stopPropagation();
                   onPayReady(group.contractor?.id, readyAppIds);
                 }}
-                className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors flex items-center gap-1"
+                className="px-3 py-1.5 bg-green-600 text-white rounded text-sm font-medium hover:bg-green-700 transition-colors flex items-center gap-1"
               >
                 <span className="hidden sm:inline">Pay Ready Items</span>
                 <span className="sm:hidden">Pay</span>
@@ -656,9 +656,9 @@ function ContractorPaymentGroup({
 }
 
 // Compact Filter Sidebar Component
-function FilterSidebar({ statusFilter, setStatusFilter, projectFilter, setProjectFilter, projects, sortBy, setSortBy, sortDir, setSortDir, onFilterChange }: any) {
+function FilterSidebar({ statusFilter, setStatusFilter, projectFilter, setProjectFilter, projects, sortBy, setSortBy, sortDir, setSortDir, onFilterChange, hideProjectFilter }: any) {
   return (
-    <div className="w-full sm:w-48 bg-white border border-gray-200 rounded-lg p-3 sm:p-4 h-fit">
+    <div className="w-full sm:w-48 bg-white border border-gray-200 rounded p-3 sm:p-4 h-fit">
       <h3 className="text-sm font-semibold text-gray-900 mb-3 sm:mb-4">Quick Filters</h3>
 
       {/* Status Filter */}
@@ -684,7 +684,7 @@ function FilterSidebar({ statusFilter, setStatusFilter, projectFilter, setProjec
                   setStatusFilter(e.target.value);
                   onFilterChange();
                 }}
-                className="w-3 h-3 text-blue-600 border-gray-300 focus:ring-blue-500"
+                className="w-3 h-3 text-primary border-gray-300 focus:ring-blue-500"
               />
               <span className="ml-2 text-xs text-gray-700">{status.label}</span>
             </label>
@@ -693,24 +693,26 @@ function FilterSidebar({ statusFilter, setStatusFilter, projectFilter, setProjec
       </div>
 
       {/* Project Filter */}
-      <div className="mb-3 sm:mb-4">
-        <h4 className="text-xs font-medium text-gray-700 mb-2">Project</h4>
-        <select
-          value={projectFilter}
-          onChange={(e) => {
-            setProjectFilter(e.target.value);
-            onFilterChange();
-          }}
-          className="w-full px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent"
-        >
-          <option value="all">All Projects</option>
-          {projects.map((project: any) => (
-            <option key={project.id} value={project.id}>
-              {project.name}
-            </option>
-          ))}
-        </select>
-      </div>
+      {!hideProjectFilter && (
+        <div className="mb-3 sm:mb-4">
+          <h4 className="text-xs font-medium text-gray-700 mb-2">Project</h4>
+          <select
+            value={projectFilter}
+            onChange={(e) => {
+              setProjectFilter(e.target.value);
+              onFilterChange();
+            }}
+            className="w-full px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="all">All Projects</option>
+            {projects.map((project: any) => (
+              <option key={project.id} value={project.id}>
+                {project.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {/* Sort Options */}
       <div className="mb-3 sm:mb-4">
@@ -731,7 +733,7 @@ function FilterSidebar({ statusFilter, setStatusFilter, projectFilter, setProjec
                   setSortBy(e.target.value as any);
                   onFilterChange();
                 }}
-                className="w-3 h-3 text-blue-600 border-gray-300 focus:ring-blue-500"
+                className="w-3 h-3 text-primary border-gray-300 focus:ring-blue-500"
               />
               <span className="ml-2 text-xs text-gray-700">{sort.label}</span>
             </label>
@@ -747,7 +749,7 @@ function FilterSidebar({ statusFilter, setStatusFilter, projectFilter, setProjec
                 setSortDir(e.target.checked ? 'desc' : 'asc');
                 onFilterChange();
               }}
-              className="w-3 h-3 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              className="w-3 h-3 text-primary border-gray-300 rounded focus:ring-blue-500"
             />
             <span className="ml-2 text-xs text-gray-700">Descending</span>
           </label>
@@ -796,9 +798,10 @@ function MobileFilterDrawer({ show, onClose, statusFilter, setStatusFilter, proj
 
 interface PaymentApplicationsViewProps {
   searchQuery?: string;
+  projectId?: number;
 }
 
-const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searchQuery = '' }) => {
+const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searchQuery = '', projectId }) => {
   const searchParams = useSearchParams();
   const { showToast, showConfirm } = useModal();
   const [applications, setApplications] = useState<any[]>([]);
@@ -809,7 +812,7 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
     searchParams.get('statusFilter') || 'submitted'
   );
   const [projectFilter, setProjectFilter] = useState<string>(
-    searchParams.get('project') || 'all'
+    projectId ? projectId.toString() : (searchParams.get('project') || 'all')
   );
   const [groupBy, setGroupBy] = useState<'status' | 'contractor'>('status');
   const [sortBy, setSortBy] = useState<'status' | 'date' | 'amount'>('date');
@@ -985,16 +988,20 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
     }
   }, [searchParams]);
 
-  // Sync project filter from URL (Header project selector)
+  // Sync project filter from URL (Header project selector) or prop
   useEffect(() => {
-    const urlProjectFilter = searchParams?.get('project') || 'all';
-    if (urlProjectFilter !== projectFilter) {
-      setProjectFilter(urlProjectFilter);
-      // Clear selections when project filter changes from URL
-      setSelectedItems([]);
-      setCurrentPage(1);
+    if (projectId) {
+      setProjectFilter(projectId.toString());
+    } else {
+      const urlProjectFilter = searchParams?.get('project') || 'all';
+      if (urlProjectFilter !== projectFilter) {
+        setProjectFilter(urlProjectFilter);
+        // Clear selections when project filter changes from URL
+        setSelectedItems([]);
+        setCurrentPage(1);
+      }
     }
-  }, [searchParams]);
+  }, [searchParams, projectId]);
 
   useEffect(() => {
     fetchApplications();
@@ -1541,7 +1548,7 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
         <span className="ml-3 text-gray-600">Loading payment applications...</span>
       </div>
     );
@@ -1549,7 +1556,7 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+      <div className="bg-red-50 border border-red-200 rounded p-4">
         <div className="flex items-center">
           <AlertCircle className="w-5 h-5 text-red-600 mr-2" />
           <span className="text-red-800">{error}</span>
@@ -1561,7 +1568,7 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
   // Empty state when no payment applications exist
   if (applications.length === 0 && !loading) {
     return (
-      <div className="bg-card border border-border rounded-lg">
+      <div className="bg-card border border-border rounded">
         <EmptyState
           icon={DollarSign}
           title="No payment applications yet"
@@ -1594,7 +1601,7 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
         <div className="flex items-center justify-between sm:justify-end gap-3">
           <button
             onClick={() => setShowMobileFilters(!showMobileFilters)}
-            className="sm:hidden flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
+            className="sm:hidden flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 rounded text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
             <Filter className="w-4 h-4" />
             Filters
@@ -1602,7 +1609,7 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
           <button
             onClick={handleRefresh}
             disabled={isRefreshing}
-            className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-3 py-2 bg-primary text-white rounded text-sm font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isRefreshing ? (
               <>
@@ -1632,7 +1639,7 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
       {/* Group By Toggle */}
       <div className="flex gap-2 mb-4">
         <button
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+          className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
             groupBy === 'status'
               ? 'bg-primary text-primary-foreground shadow-sm'
               : 'bg-muted text-muted-foreground hover:bg-muted/80'
@@ -1642,7 +1649,7 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
           By Status
         </button>
         <button
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+          className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
             groupBy === 'contractor'
               ? 'bg-primary text-primary-foreground shadow-sm'
               : 'bg-muted text-muted-foreground hover:bg-muted/80'
@@ -1669,6 +1676,7 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
               sortDir={sortDir}
               setSortDir={setSortDir}
               onFilterChange={handleFilterChange}
+              hideProjectFilter={!!projectId}
             />
           </div>
         )}
@@ -1679,7 +1687,7 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
             /* Contractor-Grouped View */
             <div className="space-y-4">
               {groupedByContractor.length === 0 ? (
-                <div className="bg-card border border-border rounded-lg p-8 text-center">
+                <div className="bg-card border border-border rounded p-8 text-center">
                   <p className="text-muted-foreground">No payment applications found</p>
                 </div>
               ) : (
@@ -1755,7 +1763,7 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
                 <button
                   type="button"
                   onClick={handleVerificationClose}
-                  className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                  className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -1773,7 +1781,7 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
 
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             {/* Payment Application Header */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-8">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-8">
               <div className="px-6 py-4 border-b border-gray-200">
                 <h1 className="text-2xl font-bold text-gray-900">Payment Application Review</h1>
                 <p className="text-gray-600 mt-1">Review and approve or reject this payment request</p>
@@ -1808,7 +1816,7 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
             </div>
 
             {/* PM Notes Section */}
-            <div className="bg-yellow-50 border-l-4 border-yellow-400 rounded-xl shadow-sm mb-8 px-6 py-4">
+            <div className="bg-yellow-50 border-l-4 border-yellow-400 rounded-lg shadow-sm mb-8 px-6 py-4">
               <div className="flex items-start gap-3">
                 <svg className="w-6 h-6 text-yellow-400 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 20h.01" />
@@ -1823,7 +1831,7 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
             </div>
 
             {/* PDF Generation */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-8">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-8">
               <div className="px-6 py-4 border-b border-gray-200">
                 <div className="flex items-center justify-between">
                   <div>
@@ -1868,7 +1876,7 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
                           }
                         }
                       }}
-                      className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                      className="px-6 py-3 bg-primary text-white rounded hover:bg-primary/90 transition-colors flex items-center gap-2"
                     >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -1881,12 +1889,12 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
             </div>
 
             {/* Action Buttons */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <div className="flex flex-col sm:flex-row gap-4 justify-end">
                 <button
                   onClick={() => setShowConfirmDialog('reject')}
                   disabled={actionLoading}
-                  className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                  className="px-6 py-3 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -1896,7 +1904,7 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
                 <button
                   onClick={() => setShowConfirmDialog('approve')}
                   disabled={actionLoading}
-                  className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                  className="px-6 py-3 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -1919,18 +1927,18 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
           }}
         >
           <div 
-            className="bg-card border border-border rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl"
+            className="bg-card border border-border rounded-lg p-6 max-w-md w-full mx-4 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             {showConfirmDialog === 'delete' && (
               <>
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="w-12 h-12 rounded-xl bg-[var(--status-critical-bg)] flex items-center justify-center">
+                  <div className="w-12 h-12 rounded-lg bg-[var(--status-critical-bg)] flex items-center justify-center">
                     <AlertCircle className="w-6 h-6 text-[var(--status-critical-icon)]" />
                   </div>
                   <h3 className="text-lg font-semibold text-foreground">Confirm Deletion</h3>
                 </div>
-                <div className="bg-[var(--status-critical-bg)] border border-[var(--status-critical-border)] rounded-lg p-4 mb-6">
+                <div className="bg-[var(--status-critical-bg)] border border-[var(--status-critical-border)] rounded p-4 mb-6">
                   <p className="text-[var(--status-critical-text)] font-medium">
                     {Array.isArray(deleteTarget) 
                       ? `Are you sure you want to delete ${deleteTarget.length} payment application(s)? This action cannot be undone.`
@@ -1944,14 +1952,14 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
                       setShowConfirmDialog(null);
                       setDeleteTarget(null);
                     }}
-                    className="px-4 py-2 text-muted-foreground hover:text-foreground border border-border rounded-lg bg-muted hover:bg-muted/80 transition-colors"
+                    className="px-4 py-2 text-muted-foreground hover:text-foreground border border-border rounded bg-muted hover:bg-muted/80 transition-colors"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={confirmDelete}
                     disabled={actionLoading}
-                    className="px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white rounded-lg shadow-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    className="px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white rounded shadow-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
                     {actionLoading ? (
                       <>
@@ -1969,30 +1977,30 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
             {showConfirmDialog === 'approve' && (
               <>
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="w-12 h-12 rounded-xl bg-[var(--status-success-bg)] flex items-center justify-center">
+                  <div className="w-12 h-12 rounded-lg bg-[var(--status-success-bg)] flex items-center justify-center">
                     <CheckCircle2 className="w-6 h-6 text-[var(--status-success-icon)]" />
                   </div>
                   <h3 className="text-lg font-semibold text-foreground">Confirm Approval</h3>
                 </div>
-                <div className="bg-[var(--status-success-bg)] border border-[var(--status-success-border)] rounded-lg p-4 mb-4">
+                <div className="bg-[var(--status-success-bg)] border border-[var(--status-success-border)] rounded p-4 mb-4">
                   <p className="text-[var(--status-success-text)] font-medium">Are you sure you want to approve this payment application?</p>
                 </div>
                 <textarea
                   value={approvalNotes}
                   onChange={(e) => setApprovalNotes(e.target.value)}
                   placeholder="Add approval notes (optional)"
-                  className="w-full p-3 border border-border rounded-lg mb-4 resize-none bg-card text-foreground focus:ring-2 focus:ring-primary focus:border-primary transition-all"
+                  className="w-full p-3 border border-border rounded mb-4 resize-none bg-card text-foreground focus:ring-2 focus:ring-primary focus:border-primary transition-all"
                   rows={3}
                 />
                 
                 {/* Notification Checkbox */}
-                <div className="flex items-center gap-3 p-4 bg-blue-50 border border-blue-200 rounded-lg mb-4">
+                <div className="flex items-center gap-3 p-4 bg-primary/10 border border-blue-200 rounded mb-4">
                   <input
                     type="checkbox"
                     id="notify-contractor-payments"
                     checked={sendContractorNotification}
                     onChange={(e) => setSendContractorNotification(e.target.checked)}
-                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                    className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
                   />
                   <label htmlFor="notify-contractor-payments" className="text-sm text-gray-700 cursor-pointer select-none">
                     Send notification to contractor about this approval
@@ -2002,7 +2010,7 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
                 <div className="flex gap-3 justify-end">
                   <button
                     onClick={() => setShowConfirmDialog(null)}
-                    className="px-4 py-2 text-muted-foreground hover:text-foreground border border-border rounded-lg bg-muted hover:bg-muted/80 transition-colors"
+                    className="px-4 py-2 text-muted-foreground hover:text-foreground border border-border rounded bg-muted hover:bg-muted/80 transition-colors"
                   >
                     Cancel
                   </button>
@@ -2043,7 +2051,7 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
                       }
                     }}
                     disabled={actionLoading}
-                    className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed shadow-lg transition-colors"
+                    className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed shadow-lg transition-colors"
                   >
                     {actionLoading ? 'Approving...' : 'Approve'}
                   </button>
@@ -2054,26 +2062,26 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
             {showConfirmDialog === 'reject' && (
               <>
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="w-12 h-12 rounded-xl bg-[var(--status-warning-bg)] flex items-center justify-center">
+                  <div className="w-12 h-12 rounded-lg bg-[var(--status-warning-bg)] flex items-center justify-center">
                     <XCircle className="w-6 h-6 text-[var(--status-warning-icon)]" />
                   </div>
                   <h3 className="text-lg font-semibold text-foreground">Confirm Rejection</h3>
                 </div>
-                <div className="bg-[var(--status-warning-bg)] border border-[var(--status-warning-border)] rounded-lg p-4 mb-4">
+                <div className="bg-[var(--status-warning-bg)] border border-[var(--status-warning-border)] rounded p-4 mb-4">
                   <p className="text-[var(--status-warning-text)] font-medium">Are you sure you want to reject this payment application?</p>
                 </div>
                 <textarea
                   value={rejectionNotes}
                   onChange={(e) => setRejectionNotes(e.target.value)}
                   placeholder="Add rejection reason (required)"
-                  className="w-full p-3 border border-border rounded-lg mb-4 resize-none bg-card text-foreground focus:ring-2 focus:ring-primary focus:border-primary transition-all"
+                  className="w-full p-3 border border-border rounded mb-4 resize-none bg-card text-foreground focus:ring-2 focus:ring-primary focus:border-primary transition-all"
                   rows={3}
                   required
                 />
                 <div className="flex gap-3 justify-end">
                   <button
                     onClick={() => setShowConfirmDialog(null)}
-                    className="px-4 py-2 text-muted-foreground hover:text-foreground border border-border rounded-lg bg-muted hover:bg-muted/80 transition-colors"
+                    className="px-4 py-2 text-muted-foreground hover:text-foreground border border-border rounded bg-muted hover:bg-muted/80 transition-colors"
                   >
                     Cancel
                   </button>
@@ -2119,7 +2127,7 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
                       }
                     }}
                     disabled={actionLoading || !rejectionNotes.trim()}
-                    className="px-4 py-2 bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed shadow-lg transition-colors"
+                    className="px-4 py-2 bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed shadow-lg transition-colors"
                   >
                     {actionLoading ? 'Rejecting...' : 'Reject'}
                   </button>

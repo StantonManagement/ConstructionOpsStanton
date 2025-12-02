@@ -198,7 +198,7 @@ const AuthScreen: React.FC = () => {
                   <input
                     id="password"
                     type={showPassword ? "text" : "password"}
-                    className="block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder-gray-500 transition-colors"
+                    className="block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-primary text-gray-900 placeholder-gray-500 transition-colors"
                     placeholder="Enter your password"
                     value={password}
                     onChange={e => setPassword(e.target.value)}
@@ -304,7 +304,7 @@ const AuthScreen: React.FC = () => {
               {!showReset && (
                 <button
                   type="button"
-                  className="text-blue-600 hover:text-blue-800 text-sm font-medium transition-colors"
+                  className="text-primary hover:text-primary/80 text-sm font-medium transition-colors"
                   onClick={() => {
                     setIsSignUp(!isSignUp);
                     setError(null);
@@ -334,7 +334,7 @@ const AuthScreen: React.FC = () => {
               {showReset && (
                 <button
                   type="button"
-                  className="text-blue-600 hover:text-blue-800 text-sm font-medium transition-colors"
+                  className="text-primary hover:text-primary/80 text-sm font-medium transition-colors"
                   onClick={() => {
                     setShowReset(false);
                     setResetError(null);

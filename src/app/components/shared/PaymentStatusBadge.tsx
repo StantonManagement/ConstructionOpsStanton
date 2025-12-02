@@ -31,7 +31,7 @@ const PaymentStatusBadge: React.FC<PaymentStatusBadgeProps> = ({
       case 'sms_sent':
         return {
           bg: 'bg-blue-100',
-          text: 'text-blue-800',
+          text: 'text-primary',
           border: 'border-blue-200',
           label: 'Pending SMS',
           icon: <Clock className={`w-${iconSize} h-${iconSize}`} />,

@@ -84,7 +84,7 @@ const LineItemEditor: React.FC<Props> = ({ lineItems, setLineItems }) => {
       <div className="flex items-center gap-4">
         <button
           type="button"
-          className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+          className="px-3 py-1 bg-primary text-white rounded hover:bg-primary/90"
           onClick={handleAddRow}
         >
           + Add Line Item

@@ -4,6 +4,7 @@ import "./globals.css";
 import { AuthProvider } from "@/providers/AuthProvider";
 import { ReactQueryProvider } from "@/providers/ReactQueryProvider";
 import { ModalProvider } from "./context/ModalContext";
+import { ProjectProvider } from "./context/ProjectContext";
 import ErrorBoundary from "./components/ErrorBoundary";
 
 const geistSans = Geist({
@@ -41,9 +42,11 @@ export default function RootLayout({
         <ErrorBoundary>
           <ReactQueryProvider>
             <AuthProvider>
-              <ModalProvider>
-                {children}
-              </ModalProvider>
+              <ProjectProvider>
+                <ModalProvider>
+                  {children}
+                </ModalProvider>
+              </ProjectProvider>
             </AuthProvider>
           </ReactQueryProvider>
         </ErrorBoundary>

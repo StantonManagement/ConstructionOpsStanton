@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { ArrowLeft, Building, Users, DollarSign, FileText, CheckCircle, XCircle, TrendingUp, AlertCircle, ListChecks, Edit2 } from 'lucide-react';
+import ProjectScheduleTab from './schedule/ProjectScheduleTab';
+import { ArrowLeft, Building, Users, DollarSign, FileText, CheckCircle, XCircle, TrendingUp, AlertCircle, ListChecks, Edit2, Calendar } from 'lucide-react';
 import { Project } from '../context/DataContext';
 import { supabase } from '@/lib/supabaseClient';
 import ProjectContractorsTab from './ProjectContractorsTab';
@@ -9,7 +10,11 @@ import ContractorDetailView from './ContractorDetailView';
 import ProjectBudgetDetail from './ProjectBudgetDetail';
 import PunchListsTab from './PunchListsTab';
 import CreatePunchListModal from './CreatePunchListModal';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import LoanBudgetView from './loan/LoanBudgetView';
+import CashFlowView from './CashFlowView';
+import PaymentApplicationsView from './PaymentsView';
+import DocumentsView from './DocumentsView';
 
 interface ProjectDetailViewProps {
   project: Project;
@@ -17,18 +22,21 @@ interface ProjectDetailViewProps {
   onEdit?: (project: Project) => void;
 }
 
-type SubTab = 'details' | 'contractors' | 'budget' | 'payments' | 'documents' | 'punchlists';
+  type SubTab = 'summary' | 'contractors' | 'budget' | 'schedule' | 'loan' | 'cashflow' | 'payments' | 'documents' | 'punchlists';
 
-// Sub-tab Navigation Component
-function SubTabNavigation({ activeSubTab, onSubTabChange }: { activeSubTab: SubTab; onSubTabChange: (tab: SubTab) => void }) {
-  const subTabs = [
-    { id: 'details' as const, label: 'Details', icon: Building },
-    { id: 'contractors' as const, label: 'Contractors', icon: Users },
-    { id: 'budget' as const, label: 'Budget', icon: TrendingUp },
-    { id: 'payments' as const, label: 'Payments', icon: DollarSign },
-    { id: 'punchlists' as const, label: 'Punch Lists', icon: ListChecks },
-    { id: 'documents' as const, label: 'Documents', icon: FileText }
-  ];
+  // Sub-tab Navigation Component
+  function SubTabNavigation({ activeSubTab, onSubTabChange }: { activeSubTab: SubTab; onSubTabChange: (tab: SubTab) => void }) {
+    const subTabs = [
+      { id: 'summary' as const, label: 'Summary', icon: Building },
+      { id: 'contractors' as const, label: 'Contractors', icon: Users },
+      { id: 'budget' as const, label: 'Budget', icon: TrendingUp },
+      { id: 'schedule' as const, label: 'Schedule', icon: Calendar },
+      { id: 'loan' as const, label: 'Loan', icon: DollarSign },
+      { id: 'cashflow' as const, label: 'Cash Flow', icon: TrendingUp },
+      { id: 'payments' as const, label: 'Payments', icon: DollarSign },
+      { id: 'punchlists' as const, label: 'Punch Lists', icon: ListChecks },
+      { id: 'documents' as const, label: 'Documents', icon: FileText }
+    ];
 
   return (
     <div className="border-b border-gray-200 mb-6">
@@ -55,8 +63,8 @@ function SubTabNavigation({ activeSubTab, onSubTabChange }: { activeSubTab: SubT
   );
 }
 
-// Details Tab Component
-function DetailsTab({ project }: { project: Project }) {
+// Summary Tab Component
+function SummaryTab({ project }: { project: Project }) {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -128,29 +136,42 @@ function DetailsTab({ project }: { project: Project }) {
   );
 }
 
-// Placeholder for Payments Tab
-function PaymentsTab({ project }: { project: Project }) {
-  return (
-    <div className="bg-white rounded-lg border border-gray-200 p-6">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4">Payment Applications</h3>
-      <p className="text-gray-600">Payment applications for this project will be displayed here.</p>
-    </div>
-  );
-}
-
-// Placeholder for Documents Tab
-function DocumentsTab({ project }: { project: Project }) {
-  return (
-    <div className="bg-white rounded-lg border border-gray-200 p-6">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4">Project Documents</h3>
-      <p className="text-gray-600">Project documents and files will be displayed here.</p>
-    </div>
-  );
-}
+// Remove unused Placeholders
+// function PaymentsTab...
+// function DocumentsTab...
 
 const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ project, onBack, onEdit }) => {
   const router = useRouter();
-  const [activeSubTab, setActiveSubTab] = useState<SubTab>('contractors');
+  const searchParams = useSearchParams();
+  
+  // Initialize from URL or default to 'contractors'
+  const getInitialSubTab = (): SubTab => {
+    const subtab = searchParams.get('subtab');
+    const validTabs: SubTab[] = ['summary', 'contractors', 'budget', 'schedule', 'loan', 'cashflow', 'payments', 'documents', 'punchlists'];
+    return (subtab && validTabs.includes(subtab as SubTab)) ? (subtab as SubTab) : 'contractors';
+  };
+
+  const [activeSubTab, setActiveSubTab] = useState<SubTab>(getInitialSubTab);
+
+  // Sync with URL changes
+  useEffect(() => {
+    const subtab = searchParams.get('subtab');
+    if (subtab && subtab !== activeSubTab) {
+      const validTabs: SubTab[] = ['summary', 'contractors', 'budget', 'schedule', 'loan', 'cashflow', 'payments', 'documents', 'punchlists'];
+      if (validTabs.includes(subtab as SubTab)) {
+        setActiveSubTab(subtab as SubTab);
+      }
+    }
+  }, [searchParams]);
+
+  // Update URL when tab changes
+  const handleSubTabChange = (tab: SubTab) => {
+    setActiveSubTab(tab);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('subtab', tab);
+    router.replace(`/?${params.toString()}`, { scroll: false });
+  };
+
   const [paymentSuccess, setPaymentSuccess] = useState<string | null>(null);
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [selectedContract, setSelectedContract] = useState<any>(null);
@@ -355,7 +376,7 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ project, onBack, 
             <p className="text-gray-600">{project.client_name}</p>
           </div>
           <div className="flex items-center gap-2">
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-primary">
               {project.current_phase || 'Active'}
             </span>
           </div>
@@ -363,49 +384,65 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ project, onBack, 
       </div>
 
       {/* Budget Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <DollarSign className="w-5 h-5 text-blue-500" />
-            <h3 className="text-sm font-medium text-gray-500">Budget</h3>
+      <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 ${activeSubTab === 'summary' ? 'gap-4' : 'gap-2'}`}>
+        <div className={`bg-card rounded-md border border-border ${activeSubTab === 'summary' ? 'p-4' : 'p-3'}`}>
+          <div className={`flex ${activeSubTab === 'summary' ? 'flex-col items-start' : 'flex-row items-center justify-between'}`}>
+            <div className={`flex items-center gap-2 ${activeSubTab === 'summary' ? 'mb-2' : ''}`}>
+              <DollarSign className={`${activeSubTab === 'summary' ? 'w-5 h-5' : 'w-4 h-4'} text-primary`} />
+              <h3 className="text-sm font-medium text-muted-foreground">Budget</h3>
+            </div>
+            <p className={`${activeSubTab === 'summary' ? 'text-2xl' : 'text-xl'} font-bold text-foreground`}>
+              {loadingStats ? '...' : formatCurrency(budgetStats.budget)}
+            </p>
           </div>
-          <p className="text-2xl font-bold text-gray-900">
-            {loadingStats ? '...' : formatCurrency(budgetStats.budget)}
-          </p>
-          <p className="text-xs text-gray-500 mt-1">Total project budget</p>
+          {activeSubTab === 'summary' && (
+            <p className="text-xs text-muted-foreground mt-1">Total project budget</p>
+          )}
         </div>
 
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <CheckCircle className="w-5 h-5 text-green-500" />
-            <h3 className="text-sm font-medium text-gray-500">Spent</h3>
+        <div className={`bg-card rounded-md border border-border ${activeSubTab === 'summary' ? 'p-4' : 'p-3'}`}>
+          <div className={`flex ${activeSubTab === 'summary' ? 'flex-col items-start' : 'flex-row items-center justify-between'}`}>
+            <div className={`flex items-center gap-2 ${activeSubTab === 'summary' ? 'mb-2' : ''}`}>
+              <CheckCircle className={`${activeSubTab === 'summary' ? 'w-5 h-5' : 'w-4 h-4'} text-muted-foreground`} />
+              <h3 className="text-sm font-medium text-muted-foreground">Spent</h3>
+            </div>
+            <p className={`${activeSubTab === 'summary' ? 'text-2xl' : 'text-xl'} font-bold text-foreground`}>
+              {loadingStats ? '...' : formatCurrency(budgetStats.spent)}
+            </p>
           </div>
-          <p className="text-2xl font-bold text-green-600">
-            {loadingStats ? '...' : formatCurrency(budgetStats.spent)}
-          </p>
-          <p className="text-xs text-gray-500 mt-1">Paid to date</p>
+          {activeSubTab === 'summary' && (
+            <p className="text-xs text-muted-foreground mt-1">Paid to date</p>
+          )}
         </div>
 
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <TrendingUp className="w-5 h-5 text-orange-500" />
-            <h3 className="text-sm font-medium text-gray-500">Committed</h3>
+        <div className={`bg-card rounded-md border border-border ${activeSubTab === 'summary' ? 'p-4' : 'p-3'}`}>
+          <div className={`flex ${activeSubTab === 'summary' ? 'flex-col items-start' : 'flex-row items-center justify-between'}`}>
+            <div className={`flex items-center gap-2 ${activeSubTab === 'summary' ? 'mb-2' : ''}`}>
+              <TrendingUp className={`${activeSubTab === 'summary' ? 'w-5 h-5' : 'w-4 h-4'} text-[var(--status-warning-text)]`} />
+              <h3 className="text-sm font-medium text-muted-foreground">Committed</h3>
+            </div>
+            <p className={`${activeSubTab === 'summary' ? 'text-2xl' : 'text-xl'} font-bold text-[var(--status-warning-text)]`}>
+              {loadingStats ? '...' : formatCurrency(budgetStats.committed)}
+            </p>
           </div>
-          <p className="text-2xl font-bold text-orange-600">
-            {loadingStats ? '...' : formatCurrency(budgetStats.committed)}
-          </p>
-          <p className="text-xs text-gray-500 mt-1">Approved but unpaid</p>
+          {activeSubTab === 'summary' && (
+            <p className="text-xs text-muted-foreground mt-1">Approved but unpaid</p>
+          )}
         </div>
 
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <AlertCircle className="w-5 h-5 text-purple-500" />
-            <h3 className="text-sm font-medium text-gray-500">Remaining</h3>
+        <div className={`bg-card rounded-md border border-border ${activeSubTab === 'summary' ? 'p-4' : 'p-3'}`}>
+          <div className={`flex ${activeSubTab === 'summary' ? 'flex-col items-start' : 'flex-row items-center justify-between'}`}>
+            <div className={`flex items-center gap-2 ${activeSubTab === 'summary' ? 'mb-2' : ''}`}>
+              <AlertCircle className={`${activeSubTab === 'summary' ? 'w-5 h-5' : 'w-4 h-4'} text-[var(--status-success-text)]`} />
+              <h3 className="text-sm font-medium text-muted-foreground">Remaining</h3>
+            </div>
+            <p className={`${activeSubTab === 'summary' ? 'text-2xl' : 'text-xl'} font-bold text-[var(--status-success-text)]`}>
+              {loadingStats ? '...' : formatCurrency(budgetStats.remaining)}
+            </p>
           </div>
-          <p className="text-2xl font-bold text-purple-600">
-            {loadingStats ? '...' : formatCurrency(budgetStats.remaining)}
-          </p>
-          <p className="text-xs text-gray-500 mt-1">Available budget</p>
+          {activeSubTab === 'summary' && (
+            <p className="text-xs text-muted-foreground mt-1">Available budget</p>
+          )}
         </div>
       </div>
 
@@ -432,11 +469,11 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ project, onBack, 
       )}
 
       {/* Sub-tab Navigation */}
-      <SubTabNavigation activeSubTab={activeSubTab} onSubTabChange={setActiveSubTab} />
+      <SubTabNavigation activeSubTab={activeSubTab} onSubTabChange={handleSubTabChange} />
 
       {/* Sub-tab Content */}
       <div>
-        {activeSubTab === 'details' && <DetailsTab project={project} />}
+        {activeSubTab === 'summary' && <SummaryTab project={project} />}
         {activeSubTab === 'contractors' && (
           <ProjectContractorsTab
             project={project}
@@ -452,7 +489,16 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ project, onBack, 
             projectName={project.name}
           />
         )}
-        {activeSubTab === 'payments' && <PaymentsTab project={project} />}
+        {activeSubTab === 'schedule' && (
+          <ProjectScheduleTab projectId={project.id} />
+        )}
+        {activeSubTab === 'loan' && (
+          <LoanBudgetView projectId={project.id} />
+        )}
+        {activeSubTab === 'cashflow' && (
+          <CashFlowView projectId={project.id} />
+        )}
+        {activeSubTab === 'payments' && <PaymentApplicationsView projectId={project.id} />}
         {activeSubTab === 'punchlists' && (
           <>
             {project.id ? (
@@ -469,7 +515,7 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ project, onBack, 
             )}
           </>
         )}
-        {activeSubTab === 'documents' && <DocumentsTab project={project} />}
+        {activeSubTab === 'documents' && <DocumentsView projectId={project.id} />}
       </div>
 
       {/* Punch List Modal */}

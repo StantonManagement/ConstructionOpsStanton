@@ -758,7 +758,7 @@ const ContractorDetailView: React.FC<ContractorDetailViewProps> = ({ contract, c
                     value={selectedBudgetItemId || ''}
                     onChange={(e) => handleBudgetCategoryChange(e.target.value ? parseInt(e.target.value) : null)}
                     disabled={savingBudgetItem}
-                    className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white disabled:opacity-50 disabled:cursor-not-allowed min-w-[200px]"
+                    className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-primary bg-white disabled:opacity-50 disabled:cursor-not-allowed min-w-[200px]"
                   >
                     <option value="">-- Unassigned --</option>
                     {budgetItems.map((item) => (
@@ -768,7 +768,7 @@ const ContractorDetailView: React.FC<ContractorDetailViewProps> = ({ contract, c
                     ))}
                   </select>
                   {savingBudgetItem && (
-                    <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                    <Loader2 className="w-4 h-4 animate-spin text-primary" />
                   )}
                   {!savingBudgetItem && selectedBudgetItemId && (
                     <Check className="w-4 h-4 text-green-600" />

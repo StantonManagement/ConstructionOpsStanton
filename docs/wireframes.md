@@ -1,6 +1,6 @@
 # ConstructionOps Wireframes
 
-This document translates the current Next.js 15 application into text-first wireframes that a UI consultant can quickly digest. It is based on the live React components in `src/app/components` and related modules as of Nov 25 2025.
+This document translates the current Next.js 15 application into text-first wireframes that a UI consultant can quickly digest. It is based on the live React components in `src/app/components` and related modules as of Dec 1 2025.
 
 ## How to Use This Document
 - Skim the **View Inventory** to confirm coverage.
@@ -37,6 +37,7 @@ Every view description follows the same checklist so designers can extract requi
 - `src/app/components/ManageView.tsx` – legacy power-user surface for contracts/entities with bulk actions.
 - `src/app/components/FieldOpsView.tsx` + `schedule/ScheduleView.tsx` + `PhotoGalleryView.tsx` + `warranties/WarrantiesList.tsx` – field operations center (schedule, media, warranty ledger).
 - `src/app/components/PaymentsView.tsx` + `PaymentApplicationsView.tsx` + `PaymentProcessingView.tsx` + `ManualPaymentEntryModal.tsx` – payment pipeline management.
+- `src/app/payments/[id]/verify/page.tsx` – dedicated payment verification page with line-item review, change orders, and PDF generation.
 - `src/app/components/ContractorsView.tsx` + `ContractorDetailView.tsx` + `VendorDetailView.tsx` – contractor CRM with messaging and performance stats.
 - `src/app/components/SubcontractorsView.tsx` – dedicated subcontractor directory with compliance tracking.
 - `src/app/components/ChangeOrdersView.tsx` + `ChangeOrderForm.tsx` – change-order list, detail, approval workflow.
@@ -53,6 +54,7 @@ Every view description follows the same checklist so designers can extract requi
 - `src/app/components/punch-list/PunchListDetailModal.tsx` – detail view with status updates and photos.
 - `src/app/components/punch-list/PunchListFormModal.tsx` – create/edit form modal.
 - `src/app/components/RemoveFromProjectModal.tsx` – contractor removal confirmation.
+- `src/app/contractor-portal/[token]/page.tsx` – contractor-facing punch list portal with status updates and photo uploads.
 
 ### Schedule System
 - `src/app/components/schedule/ScheduleView.tsx` – main schedule view with calendar/list modes.
@@ -300,6 +302,32 @@ Every view description follows the same checklist so designers can extract requi
 - **Responsive & State Notes**:
   - Card layout default on mobile; table visible on ≥md.
   - Checkboxes use indeterminate state for partial selection; detail drawer becomes full-screen overlay on mobile.
+
+#### Payment Verification Page (`payments/[id]/verify/page.tsx`)
+- **Purpose**: Provide a focused, full-screen workspace for PMs/admins to verify payment application line items, manage change orders, generate G703 PDFs, and approve, reject, or recall a single application.
+- **Layout Regions**:
+  1. Sticky glass-effect header with back-to-dashboard button, payment ID badge, and status pill.
+  2. Compact payment summary card showing project, contractor, submission date, and total requested amount.
+  3. PM notes block combining existing `pm_notes` and an editable “Add Your Notes” textarea.
+  4. Supporting documents section with inline PDF iframe preview (when a stored document exists) and an “Open” link in a new tab.
+  5. PDF download strip with a primary “Download PDF” CTA that calls `generateG703Pdf` using computed line-item totals and optional change orders.
+  6. Line items breakdown table showing item number, description, scheduled value, previous/this-period/PM-verified percentages, dollar breakdowns, progress bar, and a grand-total footer row.
+  7. Change Orders panel listing editable change orders, a summary (total and % of contract), and a toggle to include a change-order page in the PDF.
+  8. Decision block with buttons to Approve, Reject, or Recall (for already-approved apps), each driving a rich confirmation dialog.
+- **Primary Interactions**:
+  - Edit PM-verified percentages inline per line item (enter value, save/cancel inline); recalculations immediately update totals and the grand total.
+  - Add/delete change orders and control whether a dedicated change-order page is appended to the generated PDF.
+  - Open an existing stored document in a new tab, or generate a fresh G703 PDF with owner, client, and contractor contact fields populated from project/contractor records.
+  - Approve, reject, or recall the payment application with optional notes; optionally trigger a vendor notification (SMS/email) via a checkbox.
+  - Navigate back via the `returnTo` query parameter, defaulting to the Payment Applications tab with a status filter applied (for example, approved or rejected).
+- **Data & Dependencies**:
+  - Reads from Supabase `payment_applications`, `projects` (with `owner_entities`), `contractors`, `project_line_items`, `payment_line_item_progress`, and `payment_documents`.
+  - Uses API routes such as `/api/payments/:id/approve`, `/api/payments/:id/reject`, `/api/payments/:id/recall`, `/api/payments/:id/update-percentage`, and `/api/notifications/vendor`.
+  - PDF generation relies on `generateG703Pdf` and uses prior approved payment data to calculate the billing period and “previous application” values.
+- **Responsive & State Notes**:
+  - Full-height page with sticky header; cards and tables stack vertically on small screens while preserving the verification flow order.
+  - Dedicated loading and error screens wrap the entire page, with retry/back-to-dashboard affordances when fetch fails.
+  - Inline editing, downloads, and server calls expose per-action loading states; invalid or missing data (such as no documents) is handled with safe fallbacks and explanatory copy.
 
 #### Contractors Tab (`ContractorsView.tsx`, `ContractorDetailView.tsx`, `VendorDetailView.tsx`)
 - **Purpose**: Serve as contractor CRM for sourcing, performance tracking, communications.
@@ -551,6 +579,28 @@ Every view description follows the same checklist so designers can extract requi
   - Scrollable content area.
   - Timeline shows chronological updates.
 
+#### Contractor Portal (`contractor-portal/[token]/page.tsx`)
+- **Purpose**: Give subcontractors a secure, login-free portal to review, update, and document their assigned punch list items across projects.
+- **Layout Regions**:
+  1. Sticky header bar with “Punch Lists” title and contractor name/trade pulled from the decoded token payload.
+  2. Stats row with four colored cards showing counts for Assigned, In Progress, Complete, and Verified items.
+  3. Filter panel card with project dropdown, status dropdown, and summary copy explaining applied filters.
+  4. Items list of card rows showing priority chip, status pill (with icon), description, project name, location, due date, expand/collapse chevron, and action buttons.
+  5. Expanded details region per card including GC notes, contractor notes, a responsive photo grid, and a vertical timeline of state changes (assigned, started, completed, verified).
+- **Primary Interactions**:
+  - Filter by project and status to narrow the punch list set for the current contractor.
+  - For each item, start work (status → in_progress), mark complete (with optional notes via a prompt), and upload one or more photos.
+  - Expand/collapse an item to see notes, photos, and timeline without navigating away or reloading.
+  - Upload images via a file input bound to `/api/punch-lists/items/:id/photos`, showing “Uploading…” feedback per item.
+- **Data & Dependencies**:
+  - Uses a tokenized URL parameter decoded client-side to determine `contractorId` and secure access.
+  - Fetches items and contractor metadata from `/api/punch-lists/contractor/{contractorId}?token=...&projectId=&status=`.
+  - Updates item state through a PUT to `/api/punch-lists/contractor/{contractorId}` and photo uploads through `/api/punch-lists/items/{itemId}/photos`.
+- **Responsive & State Notes**:
+  - Mobile-first single-column layout; stat cards and filters wrap gracefully on small screens.
+  - Loading and access-error states take over the full viewport with clear messaging when tokens are invalid or expired.
+  - Per-item uploading state and optimistic UI around status buttons keep the experience responsive for field users on slower connections.
+
 ### Schedule System
 
 #### Schedule View (`schedule/ScheduleView.tsx`)
@@ -791,6 +841,25 @@ Every view description follows the same checklist so designers can extract requi
   - Sticky headers, inline editing for certain cells, conditional formatting (critical/warning).
   - Row grouping by division/trade with collapsible sections.
 
+#### Line Item Form Modal (`LineItemFormModal.tsx`)
+- **Purpose**: Lightweight modal to create or edit individual budget/payment line items from spreadsheet-style views.
+- **Highlights**:
+  - Centered overlay with dimmed backdrop, title that switches between "Add" and "Edit" based on `initialValues`, and a close icon.
+  - Simple form inputs for item number, description, scheduled value, previous/this-period amounts, material stored, and % G/C, prefilled when editing.
+  - Save submits the in-memory `LineItem` back to the caller and closes; Cancel or the close icon dismiss without persisting changes.
+
+#### Line Item Verification Shell (`LineItemVerification.tsx`)
+- **Purpose**: Placeholder route-level component reserved for a future, dedicated line item verification experience separate from the main payment verification page.
+- **Highlights**:
+  - Currently renders a simple stub view ("Line Item Verification") to anchor future design work.
+  - Intended to host a more granular review workflow if the organization splits line-item review from full payment application approvals.
+
+#### Lien Waiver Manager (`LienWaiverManager.tsx`)
+- **Purpose**: Placeholder screen for managing lien waiver documents within the broader payments workflow.
+- **Highlights**:
+  - Currently a skeletal "Lien Waiver Manager" view, earmarked to evolve into a dashboard for tracking lien waiver requests, statuses, and associated documents.
+  - Will eventually align with payment application states and PDF generation to ensure waivers are coordinated with approvals and payouts.
+
 ### Performance Components
 
 #### Virtualized Lists (`src/components/ui/VirtualizedList.tsx`, `optimized/VirtualizedProjectList.tsx`)
@@ -826,7 +895,9 @@ Every view description follows the same checklist so designers can extract requi
 | `PunchListView` | Punch Lists | List/kanban, severity tracking |
 | `SettingsView` | Settings | Users, permissions, integrations |
 | `DailyLogsView` | Daily Logs | SMS automation, PM notes |
+| `PaymentVerificationPage` | Payments (verify route) | Line-item review, change orders, PDF |
+| `ContractorPortalPage` | External / Contractors | Punch lists, status updates, photo uploads |
 
 ---
 
-These wireframes reflect the current production components. Hand this document to the UI consultant alongside access to the repository so they can explore detailed states within each referenced file.
+These wireframes reflect the current production components as of Dec 1 2025. Hand this document to the UI consultant alongside access to the repository so they can explore detailed states within each referenced file.
