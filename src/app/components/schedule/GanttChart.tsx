@@ -61,36 +61,43 @@ export default function GanttChart({
       containerRef.current.innerHTML = '';
 
       // Sanitization step to ensure no invalid tokens reach the library
-      // Replaces spaces with double underscores to avoid "contains HTML space characters" error
+      // Replaces spaces with hyphens to avoid "contains HTML space characters" error
+      // and ensure valid CSS class names
       const safeTasks = tasks.map(t => ({
         ...t,
-        custom_class: t.custom_class?.trim().replace(/\s+/g, '__')
+        custom_class: t.custom_class?.trim().replace(/\s+/g, '-')
       }));
 
-      ganttRef.current = new Gantt(containerRef.current, safeTasks, {
-        header_height: 50,
-        column_width: 30,
-        step: 24,
-        view_modes: ['Quarter Day', 'Half Day', 'Day', 'Week', 'Month'],
-        bar_height: 20,
-        bar_corner_radius: 3,
-        arrow_curve: 5,
-        padding: 18,
-        view_mode: viewMode,
-        date_format: 'YYYY-MM-DD',
-        custom_popup_html: null, // We can customize this later
-        on_click: (task: any) => {
-          if (onTaskClick) onTaskClick(task);
-        },
-        on_date_change: (task: any, start: Date, end: Date) => {
-          if (onDateChange) onDateChange(task, start, end);
-        },
-        on_progress_change: (task: any, progress: number) => {
-          if (onProgressChange) onProgressChange(task, progress);
-        },
-      });
+      console.log('Gantt safeTasks:', safeTasks);
+
+      try {
+        ganttRef.current = new Gantt(containerRef.current, safeTasks, {
+          header_height: 50,
+          column_width: 30,
+          step: 24,
+          view_modes: ['Quarter Day', 'Half Day', 'Day', 'Week', 'Month'],
+          bar_height: 20,
+          bar_corner_radius: 3,
+          arrow_curve: 5,
+          padding: 18,
+          view_mode: viewMode,
+          date_format: 'YYYY-MM-DD',
+          custom_popup_html: null,
+          on_click: (task: any) => {
+            if (onTaskClick) onTaskClick(task);
+          },
+          on_date_change: (task: any, start: Date, end: Date) => {
+            if (onDateChange) onDateChange(task, start, end);
+          },
+          on_progress_change: (task: any, progress: number) => {
+            if (onProgressChange) onProgressChange(task, progress);
+          },
+        });
+      } catch (e) {
+        console.error('Error initializing Gantt:', e);
+      }
       
-      // Apply selection after render if needed (handled by the other useEffect, but good to ensure)
+      // Apply selection after render if needed
       if (selectedTaskId) {
         setTimeout(() => {
            const taskGroup = containerRef.current?.querySelector(`.bar-wrapper[data-id="${selectedTaskId}"]`);
@@ -125,25 +132,42 @@ export default function GanttChart({
         .gantt .bar-progress {
           fill: #3b82f6;
         }
+        
+        /* Base Bar Style */
         .gantt .bar {
           fill: #bfdbfe;
         }
+        
+        /* Status Colors - Targeting .bar-wrapper because custom_class is applied there */
+        .gantt .bar-wrapper[class*="milestone"] .bar {
+          fill: #ef4444 !important;
+        }
+        .gantt .bar-wrapper[class*="status-completed"] .bar {
+          fill: #22c55e !important;
+        }
+        .gantt .bar-wrapper[class*="status-delayed"] .bar {
+          fill: #f97316 !important;
+        }
+        
+        /* Fallback selectors in case custom_class is on .bar */
         .gantt .bar[class*="milestone"] {
-          fill: #ef4444;
+          fill: #ef4444 !important;
         }
         .gantt .bar[class*="status-completed"] {
-          fill: #22c55e;
+          fill: #22c55e !important;
         }
         .gantt .bar[class*="status-delayed"] {
-          fill: #f97316;
+          fill: #f97316 !important;
         }
         
         /* Budget Placeholder Style */
-        .gantt .bar[class*="bar-budget-placeholder"] {
+        .gantt .bar[class*="bar-budget-placeholder"],
+        .gantt .bar-wrapper[class*="bar-budget-placeholder"] .bar {
           fill: #f3f4f6 !important; /* Gray 100 */
           stroke: #9ca3af !important; /* Gray 400 */
           stroke-dasharray: 4, 4 !important;
         }
+        
         .gantt .bar-wrapper[class*="bar-budget-placeholder"] .bar-label {
           fill: #6b7280 !important; /* Gray 500 */
           font-style: italic;
