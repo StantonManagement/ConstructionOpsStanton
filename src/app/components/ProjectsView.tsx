@@ -599,6 +599,11 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
       // Refresh the projects list
       await fetchProjects();
       
+      // If in detail view, go back to list
+      if (showDetailView) {
+        handleBackToList();
+      }
+
       // Close the confirmation modal
       setShowDeleteConfirmation(false);
       setDeletingProject(null);
@@ -948,6 +953,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
           project={selectedProject} 
           onBack={handleBackToList}
           onEdit={handleOpenEditForm}
+          onDelete={handleOpenDeleteConfirmation}
         />
       ) : (
         <>
@@ -1208,28 +1214,18 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
 
                   {/* Action Buttons */}
                   <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-100 space-y-2">
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleOpenEditForm(project);
-                        }}
-                        className="flex items-center justify-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 bg-primary text-white rounded hover:bg-primary/90 transition-colors text-xs sm:text-sm font-medium"
-                      >
-                        <Edit2 className="w-3 h-3 sm:w-4 sm:h-4" />
-                        <span>Edit</span>
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleOpenDeleteConfirmation(project);
-                        }}
-                        className="flex items-center justify-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-xs sm:text-sm font-medium"
-                      >
-                        <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
-                        <span>Delete</span>
-                      </button>
-                    </div>
+                    {/* REMOVED DELETE BUTTON FROM HERE */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenEditForm(project);
+                      }}
+                      className="w-full flex items-center justify-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 bg-secondary text-foreground hover:bg-secondary/80 rounded transition-colors text-xs sm:text-sm font-medium"
+                    >
+                      <Edit2 className="w-3 h-3 sm:w-4 sm:h-4" />
+                      <span>Edit</span>
+                    </button>
+                    
                     <button
                       onClick={(e) => {
                         e.stopPropagation();

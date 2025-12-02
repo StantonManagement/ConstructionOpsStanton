@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import ProjectScheduleTab from './schedule/ProjectScheduleTab';
-import { ArrowLeft, Building, Users, DollarSign, FileText, CheckCircle, XCircle, TrendingUp, AlertCircle, ListChecks, Edit2, Calendar } from 'lucide-react';
+import { ArrowLeft, Building, Users, DollarSign, FileText, CheckCircle, XCircle, TrendingUp, AlertCircle, ListChecks, Edit2, Calendar, Trash2 } from 'lucide-react';
 import { Project } from '../context/DataContext';
 import { supabase } from '@/lib/supabaseClient';
 import ProjectContractorsTab from './ProjectContractorsTab';
@@ -20,6 +20,7 @@ interface ProjectDetailViewProps {
   project: Project;
   onBack: () => void;
   onEdit?: (project: Project) => void;
+  onDelete?: (project: Project) => void;
 }
 
   type SubTab = 'summary' | 'contractors' | 'budget' | 'schedule' | 'loan' | 'cashflow' | 'payments' | 'documents' | 'punchlists';
@@ -136,11 +137,7 @@ function SummaryTab({ project }: { project: Project }) {
   );
 }
 
-// Remove unused Placeholders
-// function PaymentsTab...
-// function DocumentsTab...
-
-const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ project, onBack, onEdit }) => {
+const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ project, onBack, onEdit, onDelete }) => {
   const router = useRouter();
   const searchParams = useSearchParams();
   
@@ -357,15 +354,26 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ project, onBack, 
             <span className="text-sm font-medium">Back to Projects</span>
           </button>
         </div>
-        {onEdit && (
-          <button
-            onClick={() => onEdit(project)}
-            className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
-          >
-            <Edit2 className="w-4 h-4" />
-            <span>Edit Project</span>
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {onEdit && (
+            <button
+              onClick={() => onEdit(project)}
+              className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
+            >
+              <Edit2 className="w-4 h-4" />
+              <span>Edit Project</span>
+            </button>
+          )}
+          {onDelete && (
+            <button
+              onClick={() => onDelete(project)}
+              className="flex items-center gap-2 px-3 py-2 bg-white border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition-colors text-sm font-medium"
+            >
+              <Trash2 className="w-4 h-4" />
+              <span>Delete Project</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Project Header */}
