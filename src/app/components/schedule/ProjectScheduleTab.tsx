@@ -99,10 +99,13 @@ export default function ProjectScheduleTab({ projectId }: ProjectScheduleTabProp
               // Check if this category has no tasks
               if (!cat.tasks || cat.tasks.length === 0) {
                 // Check if it has remaining budget (revised - actual > 0)
-                // Note: using Number() to ensure safe math if API returns strings
+                // Use original_amount if revised_amount is 0 (assuming initial state)
+                const original = Number(cat.original_amount) || 0;
                 const revised = Number(cat.revised_amount) || 0;
+                const budget = revised > 0 ? revised : original;
+                
                 const actual = Number(cat.actual_spend) || 0;
-                const remaining = revised - actual;
+                const remaining = budget - actual;
 
                 if (remaining > 0) {
                    // Create a virtual task
@@ -383,6 +386,7 @@ export default function ProjectScheduleTab({ projectId }: ProjectScheduleTabProp
           }}
           onSuccess={fetchData}
           initialBudgetCategoryId={selectedCategoryForAdd}
+          budgetCategories={budgetCategories} // Correctly passing the prop
         />
       )}
     </div>
