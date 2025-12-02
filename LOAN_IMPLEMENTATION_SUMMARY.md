@@ -48,3 +48,5 @@ The "Loan" tab has been added to `ProjectDetailView.tsx`.
 10. Use the checkmark/dollar icon in draws list to approve/fund the draw.
 
 
+
+

@@ -18,3 +18,5 @@ CREATE INDEX IF NOT EXISTS idx_schedule_tasks_budget_category_id ON schedule_tas
 COMMENT ON COLUMN schedule_tasks.budget_category_id IS 'Link to property_budgets table for cash flow projections';
 
 
+
+

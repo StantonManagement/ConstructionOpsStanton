@@ -28,3 +28,5 @@ WHERE due_date IS NULL AND payment_period_end IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_payment_applications_due_date ON payment_applications(due_date);
 
 
+
+

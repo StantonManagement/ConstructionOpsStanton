@@ -111,3 +111,5 @@ CREATE POLICY "Mapping updateable by authenticated" ON budget_category_loan_mapp
 CREATE POLICY "Mapping deletable by authenticated" ON budget_category_loan_mapping FOR DELETE TO authenticated USING (true);
 
 
+
+

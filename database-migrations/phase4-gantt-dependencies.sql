@@ -48,3 +48,5 @@ WHERE duration_days IS NULL;
 COMMIT;
 
 
+
+
