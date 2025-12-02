@@ -182,7 +182,7 @@ export default function GanttChart({
         }
         
         .gantt-container {
-          height: auto !important;
+          /* height: auto !important; - Removed to allow library to set height */
           max-height: 600px;
           overflow-y: auto;
         }
