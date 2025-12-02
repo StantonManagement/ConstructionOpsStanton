@@ -5,12 +5,19 @@ import { supabase } from '@/lib/supabaseClient';
 import type { ScheduleTask, CreateTaskRequest, TaskStatus } from '@/types/schedule';
 import { DollarSign, Move, X, Calendar, CheckSquare, Square, AlertCircle } from 'lucide-react';
 
+interface BudgetCategory {
+  id: number;
+  category_name: string;
+  revised_amount: number;
+}
+
 interface TaskFormModalProps {
   scheduleId: string;
   projectId?: number;
   existingTask?: ScheduleTask;
   initialBudgetCategoryId?: number | null;
   allTasks: ScheduleTask[];
+  budgetCategories?: BudgetCategory[]; // Added prop
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -20,24 +27,19 @@ interface Contractor {
   name: string;
 }
 
-interface BudgetCategory {
-  id: number;
-  category_name: string;
-  revised_amount: number;
-}
-
 export default function TaskFormModal({ 
   scheduleId,
   projectId, 
   existingTask, 
   initialBudgetCategoryId,
   allTasks, 
+  budgetCategories: propBudgetCategories,
   onClose, 
   onSuccess 
 }: TaskFormModalProps) {
   const [loading, setLoading] = useState(false);
   const [contractors, setContractors] = useState<Contractor[]>([]);
-  const [budgetCategories, setBudgetCategories] = useState<BudgetCategory[]>([]);
+  const [budgetCategories, setBudgetCategories] = useState<BudgetCategory[]>(propBudgetCategories || []);
   
   // Draggable state
   const [position, setPosition] = useState({ x: 100, y: 100 });
@@ -64,7 +66,6 @@ export default function TaskFormModal({
     is_milestone: false
   });
 
-  // Validation state
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
@@ -72,15 +73,21 @@ export default function TaskFormModal({
   useEffect(() => {
     if (typeof window !== 'undefined') {
       setPosition({
-        x: Math.max(0, window.innerWidth / 2 - 450), // Center horizontally (900px width)
+        x: Math.max(0, window.innerWidth / 2 - 450),
         y: 100
       });
     }
   }, []);
 
+  // Update local state if prop changes (e.g. if data loads after modal opens)
+  useEffect(() => {
+    if (propBudgetCategories) {
+      setBudgetCategories(propBudgetCategories);
+    }
+  }, [propBudgetCategories]);
+
   useEffect(() => {
     if (existingTask) {
-      // Calculate duration if not present
       let duration = existingTask.duration_days;
       if (!duration && existingTask.start_date && existingTask.end_date) {
         const start = new Date(existingTask.start_date);
@@ -105,7 +112,7 @@ export default function TaskFormModal({
     }
   }, [existingTask]);
 
-  // Fetch contractors and budget categories
+  // Fetch contractors and budget categories (if not provided)
   useEffect(() => {
     const fetchData = async () => {
       const { data: session } = await supabase.auth.getSession();
@@ -118,8 +125,8 @@ export default function TaskFormModal({
         .order('name');
       if (contractorsData) setContractors(contractorsData);
 
-      // Fetch Budget Categories if project ID is available
-      if (projectId && token) {
+      // Fetch Budget Categories ONLY if not provided via props
+      if (!propBudgetCategories && projectId && token) {
         try {
           const res = await fetch(`/api/budgets?project_id=${projectId}`, {
             headers: { 'Authorization': `Bearer ${token}` }
@@ -134,7 +141,7 @@ export default function TaskFormModal({
       }
     };
     fetchData();
-  }, [projectId]);
+  }, [projectId, propBudgetCategories]);
 
   // Drag Handlers
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -266,7 +273,6 @@ export default function TaskFormModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate all fields
     const newErrors: Record<string, string> = {};
     const fieldsToValidate = ['task_name', 'start_date', 'end_date'];
     let hasErrors = false;
@@ -334,11 +340,9 @@ export default function TaskFormModal({
     setFormData({ ...formData, predecessors: newPredecessors });
   };
 
-  // Filter out self and circular dependencies (basic check: exclude self)
   const availablePredecessors = allTasks.filter(t => t.id !== existingTask?.id);
 
   return (
-    // Changed border to border-2 border-primary for better visibility and to indicate active editing
     <div 
       ref={modalRef}
       style={{ 
@@ -346,7 +350,7 @@ export default function TaskFormModal({
         top: position.y,
         width: size.width,
         height: size.height,
-        transform: 'none' // Ensure no transform interferes
+        transform: 'none'
       }}
       className="fixed bg-white rounded-lg shadow-2xl border border-border z-50 flex flex-col"
     >
@@ -627,7 +631,7 @@ export default function TaskFormModal({
           Cancel
         </button>
         <button
-          onClick={handleSubmit} // Trigger form submit via js
+          onClick={handleSubmit}
           className="px-6 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90 disabled:opacity-50 transition-colors font-medium"
           disabled={loading}
         >
