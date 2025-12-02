@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 // @ts-ignore - frappe-gantt has no official types yet
 import Gantt from 'frappe-gantt';
 
@@ -33,6 +33,8 @@ export default function GanttChart({
 }: GanttChartProps) {
   const ganttRef = useRef<Gantt | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const taskListRef = useRef<HTMLDivElement>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   // Sanitize tasks helper
   const getSafeTasks = (taskList: GanttTask[]) => {
@@ -55,13 +57,21 @@ export default function GanttChart({
     previouslySelected.forEach(el => el.classList.remove('selected-task-highlight'));
 
     if (selectedTaskId) {
-      // Frappe Gantt puts `data-id` on the group `.bar-wrapper`
+      // Highlight in Gantt
       const taskGroup = containerRef.current.querySelector(`.bar-wrapper[data-id="${selectedTaskId}"]`);
       if (taskGroup) {
         taskGroup.classList.add('selected-task-highlight');
       }
+      
+      // Scroll task list to selected item
+      if (taskListRef.current) {
+        const selectedItem = taskListRef.current.querySelector(`[data-task-id="${selectedTaskId}"]`);
+        if (selectedItem) {
+          selectedItem.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
+      }
     }
-  }, [selectedTaskId, tasks]); // Run when selection changes or tasks re-render
+  }, [selectedTaskId, tasks]);
 
   useEffect(() => {
     if (containerRef.current && tasks.length > 0) {
@@ -70,25 +80,25 @@ export default function GanttChart({
       if (ganttRef.current) {
         // Update existing instance
         ganttRef.current.refresh(safeTasks);
+        // Re-attach scroll listener after refresh as DOM might change
+        attachScrollListener();
       } else {
         // Create new instance
-        // Clear previous instance content if any
         containerRef.current.innerHTML = '';
         
         try {
           ganttRef.current = new Gantt(containerRef.current, safeTasks, {
-            header_height: 60, // Increased for better spacing
+            header_height: 60,
             column_width: 30,
             step: 24,
             view_modes: ['Quarter Day', 'Half Day', 'Day', 'Week', 'Month'],
-            bar_height: 24, // Slightly taller bars
-            bar_corner_radius: 4, // More rounded
+            bar_height: 24,
+            bar_corner_radius: 4,
             arrow_curve: 5,
             padding: 20,
             view_mode: viewMode,
             date_format: 'YYYY-MM-DD',
             custom_popup_html: (task: any) => {
-              // Custom tooltip
               return `
                 <div class="p-3 rounded shadow-lg bg-white border border-gray-200 text-sm min-w-[200px] z-50">
                   <div class="font-bold text-gray-800 mb-1">${task.name}</div>
@@ -111,6 +121,10 @@ export default function GanttChart({
               if (onProgressChange) onProgressChange(task, progress);
             },
           });
+          
+          // Attach scroll listener after initialization
+          setTimeout(attachScrollListener, 100);
+          
         } catch (e) {
           console.error('Error initializing Gantt:', e);
         }
@@ -124,26 +138,74 @@ export default function GanttChart({
         }, 100);
       }
     } else if (tasks.length === 0 && ganttRef.current) {
-        // Clear chart if no tasks
         ganttRef.current = null;
         if (containerRef.current) containerRef.current.innerHTML = '';
     }
-  }, [tasks]); // Dependency on tasks
+  }, [tasks]);
 
   useEffect(() => {
     if (ganttRef.current) {
       ganttRef.current.change_view_mode(viewMode);
+      setTimeout(attachScrollListener, 100);
     }
   }, [viewMode]);
 
+  const attachScrollListener = () => {
+    const ganttScrollContainer = containerRef.current?.querySelector('.gantt-container');
+    if (ganttScrollContainer && taskListRef.current) {
+      // Remove existing listener to avoid duplicates
+      ganttScrollContainer.onscroll = null;
+      
+      ganttScrollContainer.onscroll = (e: Event) => {
+        if (taskListRef.current) {
+          taskListRef.current.scrollTop = (e.target as HTMLElement).scrollTop;
+        }
+      };
+    }
+  };
+
   return (
-    <div className="overflow-x-auto bg-white rounded-lg shadow border p-4 relative">
-      <div ref={containerRef} className="gantt-target" />
-      {tasks.length === 0 && (
-        <div className="text-center py-12 text-gray-500">
-          No tasks to display. Add a task to get started.
+    <div className="flex h-[600px] bg-white rounded-lg shadow border overflow-hidden">
+      {/* Left Panel: Task List */}
+      <div className="w-72 flex-shrink-0 border-r flex flex-col bg-white z-20">
+        <div className="h-[60px] bg-gray-50 border-b p-4 flex items-center font-semibold text-sm text-gray-700 select-none">
+          Task Name
         </div>
-      )}
+        <div 
+          ref={taskListRef} 
+          className="flex-1 overflow-hidden bg-white"
+          style={{ scrollBehavior: 'auto' }} // Disable smooth scroll for sync
+        >
+          {tasks.map((task) => (
+            <div 
+              key={task.id}
+              data-task-id={task.id}
+              className={`
+                flex items-center px-4 border-b border-gray-100 text-sm text-gray-700 cursor-pointer truncate transition-colors
+                ${selectedTaskId === task.id ? 'bg-blue-50 text-blue-700 font-medium' : 'hover:bg-gray-50'}
+              `}
+              style={{ height: '44px', boxSizing: 'border-box' }} // Exact match: bar_height (24) + padding (20)
+              onClick={() => onTaskClick?.(task)}
+              title={task.name}
+            >
+              <div className={`w-2 h-2 rounded-full mr-2 flex-shrink-0 ${
+                task.custom_class?.includes('milestone') ? 'bg-red-500' :
+                task.custom_class?.includes('status-completed') ? 'bg-green-500' :
+                task.custom_class?.includes('bar-budget-placeholder') ? 'bg-gray-300 border border-dashed border-gray-400' :
+                'bg-blue-500'
+              }`} />
+              <span className="truncate">{task.name}</span>
+            </div>
+          ))}
+          {/* Add padding at bottom to match chart if needed */}
+          <div style={{ height: '20px' }}></div>
+        </div>
+      </div>
+
+      {/* Right Panel: Gantt Chart */}
+      <div className="flex-1 min-w-0 relative flex flex-col">
+        <div ref={containerRef} className="gantt-target flex-1" />
+      </div>
       
       {/* Custom Styles for Frappe Gantt override */}
       <style jsx global>{`
@@ -151,9 +213,10 @@ export default function GanttChart({
         .gantt .grid-header {
           background-color: #f9fafb;
           height: 60px;
+          border-bottom: 1px solid #e5e7eb;
         }
         .gantt .upper-text {
-          font-size: 14px;
+          font-size: 12px;
           font-weight: 600;
           fill: #374151;
         }
@@ -162,12 +225,9 @@ export default function GanttChart({
           fill: #6b7280;
         }
 
-        /* Bar Label Styling */
+        /* Bar Label Styling - Hide in chart since we have list */
         .gantt .bar-label {
-          fill: #374151;
-          font-family: inherit;
-          font-size: 13px;
-          font-weight: 500;
+          display: none; 
         }
         
         /* Base Bar Style */
@@ -200,19 +260,14 @@ export default function GanttChart({
           stroke: #f97316 !important;
         }
         
-        /* Budget Placeholder Style - Dashed Ghost */
+        /* Budget Placeholder Style */
         .gantt .bar[class*="bar-budget-placeholder"],
         .gantt .bar-wrapper[class*="bar-budget-placeholder"] .bar {
-          fill: #f3f4f6 !important; /* Gray 100 */
-          stroke: #9ca3af !important; /* Gray 400 */
+          fill: #f3f4f6 !important;
+          stroke: #9ca3af !important;
           stroke-dasharray: 4, 4 !important;
           stroke-width: 1.5px !important;
           opacity: 0.8;
-        }
-        
-        .gantt .bar-wrapper[class*="bar-budget-placeholder"] .bar-label {
-          fill: #6b7280 !important; /* Gray 500 */
-          font-style: italic;
         }
         
         /* Selection Highlight */
@@ -223,9 +278,10 @@ export default function GanttChart({
         }
         
         .gantt-container {
-          max-height: 650px;
+          height: 100%; /* Fill the flex parent */
+          max-height: 600px; /* Match parent height */
           overflow-y: auto;
-          border-radius: 8px;
+          border-left: 1px solid #e5e7eb;
         }
         
         /* Fix Header Z-Index */
