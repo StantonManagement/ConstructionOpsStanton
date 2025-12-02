@@ -108,7 +108,9 @@ function PageContent() {
   // Admin/Staff dashboard (wrapped in DataProvider for now, will migrate later)
   return (
     <DataProvider>
-      <DashboardWithLoading />
+      <Suspense fallback={<ConstructionLoader />}>
+        <DashboardWithLoading />
+      </Suspense>
     </DataProvider>
   );
 }
