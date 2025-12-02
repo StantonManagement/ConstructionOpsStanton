@@ -150,7 +150,7 @@ export default function DocumentsView({ projectId }: DocumentsViewProps) {
       title: 'Delete Document',
       message: `Are you sure you want to delete "${doc.name}"? This action cannot be undone.`,
       confirmText: 'Delete',
-      variant: 'danger'
+      variant: 'delete'
     });
 
     if (!confirmed) return;
