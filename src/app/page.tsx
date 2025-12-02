@@ -9,7 +9,6 @@ import AuthScreen from './components/AuthScreen';
 
 // Force dynamic rendering since we rely on client-side search params and auth
 export const dynamic = 'force-dynamic';
-export const runtime = 'nodejs'; // Ensure we're using Node runtime
 
 // Simple loading component
 const ConstructionLoader = () => {
