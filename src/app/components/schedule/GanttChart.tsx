@@ -35,15 +35,7 @@ export default function GanttChart({
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Dynamically load CSS if not present
-    const linkId = 'frappe-gantt-css';
-    if (!document.getElementById(linkId)) {
-      const link = document.createElement('link');
-      link.id = linkId;
-      link.rel = 'stylesheet';
-      link.href = 'https://cdn.jsdelivr.net/npm/frappe-gantt@0.6.1/dist/frappe-gantt.css';
-      document.head.appendChild(link);
-    }
+    // CSS is now loaded globally in globals.css
   }, []);
 
   // Selection Effect - Highlights the bar without re-rendering the whole chart
@@ -68,7 +60,14 @@ export default function GanttChart({
       // Clear previous instance content if re-rendering
       containerRef.current.innerHTML = '';
 
-      ganttRef.current = new Gantt(containerRef.current, tasks, {
+      // Sanitization step to ensure no invalid tokens reach the library
+      // Replaces spaces with double underscores to avoid "contains HTML space characters" error
+      const safeTasks = tasks.map(t => ({
+        ...t,
+        custom_class: t.custom_class?.trim().replace(/\s+/g, '__')
+      }));
+
+      ganttRef.current = new Gantt(containerRef.current, safeTasks, {
         header_height: 50,
         column_width: 30,
         step: 24,
@@ -129,23 +128,23 @@ export default function GanttChart({
         .gantt .bar {
           fill: #bfdbfe;
         }
-        .gantt .bar.milestone {
+        .gantt .bar[class*="milestone"] {
           fill: #ef4444;
         }
-        .gantt .bar.status-completed {
+        .gantt .bar[class*="status-completed"] {
           fill: #22c55e;
         }
-        .gantt .bar.status-delayed {
+        .gantt .bar[class*="status-delayed"] {
           fill: #f97316;
         }
         
         /* Budget Placeholder Style */
-        .gantt .bar.bar-budget-placeholder {
+        .gantt .bar[class*="bar-budget-placeholder"] {
           fill: #f3f4f6 !important; /* Gray 100 */
           stroke: #9ca3af !important; /* Gray 400 */
           stroke-dasharray: 4, 4 !important;
         }
-        .gantt .bar-wrapper.bar-budget-placeholder .bar-label {
+        .gantt .bar-wrapper[class*="bar-budget-placeholder"] .bar-label {
           fill: #6b7280 !important; /* Gray 500 */
           font-style: italic;
         }
