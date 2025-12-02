@@ -37,7 +37,7 @@ export default function ProjectScheduleTab({ projectId }: ProjectScheduleTabProp
   const [viewMode, setViewMode] = useState<'Day' | 'Week' | 'Month'>('Week');
   const [selectedTaskId, setSelectedTaskId] = useState<string | undefined>(undefined);
   const [isMobile, setIsMobile] = useState(false);
-
+  
   // Modal State
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [selectedCategoryForAdd, setSelectedCategoryForAdd] = useState<number | null>(null);
@@ -132,7 +132,7 @@ export default function ProjectScheduleTab({ projectId }: ProjectScheduleTabProp
           }
           
           setGanttTasks(loadedTasks);
-        }
+      }
       } else {
         console.error('Failed to fetch Gantt specific data');
       }
@@ -152,9 +152,7 @@ export default function ProjectScheduleTab({ projectId }: ProjectScheduleTabProp
   // --- Gantt Chart Handlers ---
 
   const handleGanttTaskClick = (task: GanttTask) => {
-    setSelectedTaskId(task.id);
-
-    // Check if it's a virtual budget task
+    // Check if it's a virtual budget task (always open modal immediately as it's for creation)
     if (task.id.startsWith('budget-')) {
       const budgetId = parseInt(task.id.replace('budget-', ''));
       if (!isNaN(budgetId)) {
@@ -164,16 +162,22 @@ export default function ProjectScheduleTab({ projectId }: ProjectScheduleTabProp
       }
     }
 
-    // Find the full ScheduleTask object to open the modal
-    const allTasks = [
-      ...unassignedTasks,
-      ...budgetCategories.flatMap(c => c.tasks)
-    ];
-    const fullTask = allTasks.find(t => t.id === task.id);
-    
-    if (fullTask) {
-      setSelectedTaskForEdit(fullTask);
-      setShowTaskModal(true);
+    // For regular tasks: Select on first click, Open modal on second click
+    if (selectedTaskId === task.id) {
+      // Already selected -> Open Edit Modal
+      const allTasks = [
+        ...unassignedTasks,
+        ...budgetCategories.flatMap(c => c.tasks)
+      ];
+      const fullTask = allTasks.find(t => t.id === task.id);
+      
+      if (fullTask) {
+        setSelectedTaskForEdit(fullTask);
+        setShowTaskModal(true);
+      }
+    } else {
+      // Not selected -> Select it (GanttChart will handle scrolling)
+      setSelectedTaskId(task.id);
     }
   };
 

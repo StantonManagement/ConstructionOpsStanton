@@ -36,6 +36,11 @@ export default function GanttChart({
   const taskListRef = useRef<HTMLDivElement>(null);
   const [isSyncing, setIsSyncing] = useState(false);
 
+  // Drag to Scroll State
+  const isDragging = useRef(false);
+  const startX = useRef(0);
+  const scrollLeft = useRef(0);
+
   // Sanitize tasks helper
   const getSafeTasks = (taskList: GanttTask[]) => {
     return taskList.map(t => ({
@@ -61,6 +66,26 @@ export default function GanttChart({
       const taskGroup = containerRef.current.querySelector(`.bar-wrapper[data-id="${selectedTaskId}"]`);
       if (taskGroup) {
         taskGroup.classList.add('selected-task-highlight');
+        
+        // Scroll Chart to Task
+        // We find the .gantt-container inside our containerRef
+        const ganttScrollContainer = containerRef.current.querySelector('.gantt-container');
+        if (ganttScrollContainer) {
+            // We can't use scrollIntoView on SVG elements consistently across browsers relative to a specific container
+            // So we calculate offset.
+            // taskGroup is an SVG Group <g>. It has a transform translate(x, y).
+            // We can try to parse it or get bounding box.
+            const rect = taskGroup.getBoundingClientRect();
+            const containerRect = ganttScrollContainer.getBoundingClientRect();
+            
+            // Calculate center position
+            const scrollOffsetX = (rect.left - containerRect.left) + ganttScrollContainer.scrollLeft - (containerRect.width / 2) + (rect.width / 2);
+            
+            ganttScrollContainer.scrollTo({
+                left: Math.max(0, scrollOffsetX),
+                behavior: 'smooth'
+            });
+        }
       }
       
       // Scroll task list to selected item
@@ -81,7 +106,7 @@ export default function GanttChart({
         // Update existing instance
         ganttRef.current.refresh(safeTasks);
         // Re-attach scroll listener after refresh as DOM might change
-        attachScrollListener();
+        attachListeners();
       } else {
         // Create new instance
         containerRef.current.innerHTML = '';
@@ -112,6 +137,8 @@ export default function GanttChart({
               `;
             },
             on_click: (task: any) => {
+              // If dragging, don't trigger click
+              if (isDragging.current) return;
               if (onTaskClick) onTaskClick(task);
             },
             on_date_change: (task: any, start: Date, end: Date) => {
@@ -122,8 +149,8 @@ export default function GanttChart({
             },
           });
           
-          // Attach scroll listener after initialization
-          setTimeout(attachScrollListener, 100);
+          // Attach listeners after initialization
+          setTimeout(attachListeners, 100);
           
         } catch (e) {
           console.error('Error initializing Gantt:', e);
@@ -146,22 +173,63 @@ export default function GanttChart({
   useEffect(() => {
     if (ganttRef.current) {
       ganttRef.current.change_view_mode(viewMode);
-      setTimeout(attachScrollListener, 100);
+      setTimeout(attachListeners, 100);
     }
   }, [viewMode]);
 
-  const attachScrollListener = () => {
-    const ganttScrollContainer = containerRef.current?.querySelector('.gantt-container');
-    if (ganttScrollContainer && taskListRef.current) {
-      // Remove existing listener to avoid duplicates
-      ganttScrollContainer.onscroll = null;
-      
+  const attachListeners = () => {
+    const ganttScrollContainer = containerRef.current?.querySelector('.gantt-container') as HTMLElement;
+    if (ganttScrollContainer) {
+      // Scroll Sync Listener
       ganttScrollContainer.onscroll = (e: Event) => {
         if (taskListRef.current) {
           taskListRef.current.scrollTop = (e.target as HTMLElement).scrollTop;
         }
       };
+
+      // Drag to Scroll Listeners
+      ganttScrollContainer.style.cursor = 'grab';
+      ganttScrollContainer.onmousedown = handleMouseDown;
+      ganttScrollContainer.onmouseleave = handleMouseLeave;
+      ganttScrollContainer.onmouseup = handleMouseUp;
+      ganttScrollContainer.onmousemove = handleMouseMove;
     }
+  };
+
+  // Drag Handlers
+  const handleMouseDown = (e: MouseEvent) => {
+    // Prevent dragging if clicking on a task bar (let frappe-gantt handle task dragging)
+    // Usually bars have class 'bar' or are inside 'bar-wrapper'
+    if ((e.target as Element).closest('.bar-wrapper')) {
+        return; 
+    }
+
+    isDragging.current = true;
+    const container = e.currentTarget as HTMLElement;
+    container.style.cursor = 'grabbing';
+    startX.current = e.pageX - container.offsetLeft;
+    scrollLeft.current = container.scrollLeft;
+  };
+
+  const handleMouseLeave = (e: MouseEvent) => {
+    isDragging.current = false;
+    const container = e.currentTarget as HTMLElement;
+    if (container) container.style.cursor = 'grab';
+  };
+
+  const handleMouseUp = (e: MouseEvent) => {
+    isDragging.current = false;
+    const container = e.currentTarget as HTMLElement;
+    if (container) container.style.cursor = 'grab';
+  };
+
+  const handleMouseMove = (e: MouseEvent) => {
+    if (!isDragging.current) return;
+    e.preventDefault();
+    const container = e.currentTarget as HTMLElement;
+    const x = e.pageX - container.offsetLeft;
+    const walk = (x - startX.current) * 1.5; // Scroll speed multiplier
+    container.scrollLeft = scrollLeft.current - walk;
   };
 
   return (
