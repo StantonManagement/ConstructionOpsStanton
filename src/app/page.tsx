@@ -1,10 +1,14 @@
 "use client";
 
+import { Suspense } from 'react';
 import { useAuth } from '@/providers/AuthProvider';
 import { DataProvider, useData } from './context/DataContext';
 import ConstructionDashboard from './components/ConstructionDashboard';
 import PMDashboard from './components/PMDashboard';
 import AuthScreen from './components/AuthScreen';
+
+// Force dynamic rendering since we rely on client-side search params and auth
+export const dynamic = 'force-dynamic';
 
 // Simple loading component
 const ConstructionLoader = () => {
@@ -66,7 +70,7 @@ const DashboardWithLoading = () => {
   return <ConstructionDashboard />;
 };
 
-export default function Page() {
+function PageContent() {
   const { user, role, isLoading, error } = useAuth();
 
   // Show loading state while auth is initializing
@@ -106,5 +110,13 @@ export default function Page() {
     <DataProvider>
       <DashboardWithLoading />
     </DataProvider>
+  );
+}
+
+export default function Page() {
+  return (
+    <Suspense fallback={<ConstructionLoader />}>
+      <PageContent />
+    </Suspense>
   );
 }
