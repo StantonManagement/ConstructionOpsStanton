@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { generateG703Pdf } from '@/lib/g703Pdf';
@@ -46,7 +46,7 @@ interface Document {
   [key: string]: any;
 }
 
-export default function PaymentVerificationPage() {
+function PaymentVerificationContent() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -1860,5 +1860,20 @@ const lineItemsForTable = lineItems.map((li, idx) => {
         </div>
       )}
     </div>
+  );
+}
+
+export default function PaymentVerificationPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50">
+        <div className="text-center px-4">
+          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-6"></div>
+          <h2 className="text-xl font-semibold text-foreground mb-2">Loading...</h2>
+        </div>
+      </div>
+    }>
+      <PaymentVerificationContent />
+    </Suspense>
   );
 }
