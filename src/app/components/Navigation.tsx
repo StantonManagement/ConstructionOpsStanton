@@ -31,15 +31,20 @@ type NavButtonProps = {
   href?: string;
   badge?: number;
   isActive?: boolean;
+  onMobileClick?: () => void;
 };
 
-const NavButton: React.FC<NavButtonProps> = ({ id, activeTab, setActiveTab, icon, children, href, badge, isActive, onClick }) => {
+const NavButton: React.FC<NavButtonProps> = ({ id, activeTab, setActiveTab, icon, children, href, badge, isActive, onClick, onMobileClick }) => {
   const router = useRouter();
   const active = isActive !== undefined ? isActive : activeTab === id;
   
   return (
     <button
       onClick={() => {
+        if (onMobileClick) {
+          onMobileClick();
+        }
+
         if (onClick) {
           onClick();
           return;
@@ -55,7 +60,7 @@ const NavButton: React.FC<NavButtonProps> = ({ id, activeTab, setActiveTab, icon
         }
       }}
       className={`
-        w-full flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-colors duration-200 mb-1
+        w-full flex items-center px-4 py-3 md:py-2 text-sm font-medium rounded-lg transition-colors duration-200 mb-1
         ${active 
           ? 'bg-primary/10 text-primary border-r-2 border-primary' 
           : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
@@ -167,6 +172,8 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab }) => {
 
   const isProjectActive = activeTab === 'projects' && !!selectedProjectId;
 
+  const closeMobileMenu = () => setIsMobileMenuOpen(false);
+
   return (
     <>
       {/* Mobile Menu Button */}
@@ -220,6 +227,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab }) => {
             setActiveTab={setActiveTab}
             icon={<Home className="w-5 h-5"/>}
             href="/?tab=overview"
+            onMobileClick={closeMobileMenu}
           >
             Overview
           </NavButton>
@@ -231,6 +239,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab }) => {
             icon={<Building className="w-5 h-5"/>}
             href="/?tab=projects"
             isActive={activeTab === 'projects' && !selectedProjectId}
+            onMobileClick={closeMobileMenu}
           >
             All Projects
           </NavButton>
@@ -258,6 +267,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab }) => {
                 onClick={() => handleProjectNav('summary')}
                 icon={<Building className="w-4 h-4"/>}
                 isActive={isProjectActive && currentSubTab === 'summary'}
+                onMobileClick={closeMobileMenu}
               >
                 Summary
               </NavButton>
@@ -268,6 +278,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab }) => {
                 onClick={() => handleProjectNav('contractors')}
                 icon={<Users className="w-4 h-4"/>}
                 isActive={isProjectActive && (currentSubTab === 'contractors' || !currentSubTab)}
+                onMobileClick={closeMobileMenu}
               >
                 Contractors
               </NavButton>
@@ -278,6 +289,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab }) => {
                 onClick={() => handleProjectNav('budget')}
                 icon={<BarChart2 className="w-4 h-4"/>}
                 isActive={isProjectActive && currentSubTab === 'budget'}
+                onMobileClick={closeMobileMenu}
               >
                 Budget
               </NavButton>
@@ -288,6 +300,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab }) => {
                 onClick={() => handleProjectNav('schedule')}
                 icon={<Calendar className="w-4 h-4"/>}
                 isActive={isProjectActive && currentSubTab === 'schedule'}
+                onMobileClick={closeMobileMenu}
               >
                 Schedule
               </NavButton>
@@ -298,6 +311,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab }) => {
                 onClick={() => handleProjectNav('loan')}
                 icon={<Wallet className="w-4 h-4"/>}
                 isActive={isProjectActive && currentSubTab === 'loan'}
+                onMobileClick={closeMobileMenu}
               >
                 Loan Draw
               </NavButton>
@@ -308,6 +322,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab }) => {
                 onClick={() => handleProjectNav('cashflow')}
                 icon={<CreditCard className="w-4 h-4"/>}
                 isActive={isProjectActive && currentSubTab === 'cashflow'}
+                onMobileClick={closeMobileMenu}
               >
                 Cash Flow
               </NavButton>
@@ -318,6 +333,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab }) => {
                 onClick={() => handleProjectNav('punchlists')}
                 icon={<ListChecks className="w-4 h-4"/>}
                 isActive={isProjectActive && currentSubTab === 'punchlists'}
+                onMobileClick={closeMobileMenu}
               >
                 Punch Lists
               </NavButton>
@@ -332,6 +348,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab }) => {
                 }}
                 icon={<Image className="w-4 h-4"/>}
                 isActive={pathname?.includes('/photos')}
+                onMobileClick={closeMobileMenu}
               >
                 Photos
               </NavButton>
@@ -342,6 +359,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab }) => {
                 onClick={() => handleProjectNav('documents')}
                 icon={<FileText className="w-4 h-4"/>}
                 isActive={isProjectActive && currentSubTab === 'documents'}
+                onMobileClick={closeMobileMenu}
               >
                 Documents
               </NavButton>
@@ -357,6 +375,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab }) => {
                 icon={<Clipboard className="w-5 h-5"/>}
                 href="/?tab=daily-logs"
                 badge={notificationCounts['daily-logs']}
+                onMobileClick={closeMobileMenu}
               >
                 Daily Logs
               </NavButton>
@@ -369,6 +388,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab }) => {
               icon={<DollarSign className="w-5 h-5"/>}
               href="/?tab=payments"
               badge={notificationCounts['payment']}
+              onMobileClick={closeMobileMenu}
             >
               Payments
             </NavButton>
@@ -379,6 +399,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab }) => {
               setActiveTab={setActiveTab}
               icon={<HardHat className="w-5 h-5"/>}
               href="/?tab=contractors"
+              onMobileClick={closeMobileMenu}
             >
               Contractors
             </NavButton>
@@ -391,6 +412,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab }) => {
                   setActiveTab={setActiveTab}
                   icon={<GitBranch className="w-5 h-5"/>}
                   href="/?tab=change-orders"
+                  onMobileClick={closeMobileMenu}
                 >
                   Change Orders
                 </NavButton>
@@ -400,6 +422,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab }) => {
                   setActiveTab={setActiveTab}
                   icon={<BarChart2 className="w-5 h-5"/>}
                   href="/?tab=budget"
+                  onMobileClick={closeMobileMenu}
                 >
                   Budget Dashboard
                 </NavButton>
@@ -412,6 +435,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab }) => {
               setActiveTab={setActiveTab}
               icon={<Settings className="w-5 h-5"/>}
               href="/?tab=settings"
+              onMobileClick={closeMobileMenu}
             >
               Settings
             </NavButton>
