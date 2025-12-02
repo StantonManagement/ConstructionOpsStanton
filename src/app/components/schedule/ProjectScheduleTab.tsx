@@ -18,6 +18,8 @@ interface BudgetCategory {
   category_name: string;
   original_amount: number;
   revised_amount: number;
+  actual_spend: number; // Added field
+  committed_costs: number; // Added field
   tasks: ScheduleTask[];
 }
 
@@ -65,10 +67,14 @@ export default function ProjectScheduleTab({ projectId }: ProjectScheduleTabProp
       }
 
       const scheduleResult = await scheduleResponse.json();
+      let currentSchedule = null;
+      let categories: BudgetCategory[] = [];
       
       if (scheduleResult.data) {
-        setSchedule(scheduleResult.data.schedule);
-        setBudgetCategories(scheduleResult.data.budgetCategories || []);
+        currentSchedule = scheduleResult.data.schedule;
+        setSchedule(currentSchedule);
+        categories = scheduleResult.data.budgetCategories || [];
+        setBudgetCategories(categories);
         setUnassignedTasks(scheduleResult.data.unassignedTasks || []);
       }
 
@@ -83,11 +89,49 @@ export default function ProjectScheduleTab({ projectId }: ProjectScheduleTabProp
       if (ganttResponse.ok) {
         const ganttResult = await ganttResponse.json();
         if (ganttResult.data && ganttResult.data.tasks) {
-          setGanttTasks(ganttResult.data.tasks);
+          let loadedTasks: GanttTask[] = ganttResult.data.tasks;
+
+          // 3. Inject virtual tasks for empty budget categories WITH REMAINING BUDGET
+          if (currentSchedule && categories.length > 0) {
+            const virtualTasks: GanttTask[] = [];
+            
+            categories.forEach(cat => {
+              // Check if this category has no tasks
+              if (!cat.tasks || cat.tasks.length === 0) {
+                // Check if it has remaining budget (revised - actual > 0)
+                // Note: using Number() to ensure safe math if API returns strings
+                const revised = Number(cat.revised_amount) || 0;
+                const actual = Number(cat.actual_spend) || 0;
+                const remaining = revised - actual;
+
+                if (remaining > 0) {
+                   // Create a virtual task
+                  // Start date: Project start or today
+                  const startDate = (currentSchedule as ProjectSchedule).start_date || new Date().toISOString().split('T')[0];
+                  // End date: 1 day later
+                  const endDate = new Date(new Date(startDate).getTime() + 86400000).toISOString().split('T')[0];
+
+                  virtualTasks.push({
+                    id: `budget-${cat.id}`,
+                    name: `${cat.category_name} (Unscheduled)`,
+                    start: startDate,
+                    end: endDate,
+                    progress: 0,
+                    dependencies: '',
+                    custom_class: 'bar-budget-placeholder'
+                  });
+                }
+              }
+            });
+
+            // Combine real tasks and virtual tasks
+            loadedTasks = [...loadedTasks, ...virtualTasks];
+          }
+          
+          setGanttTasks(loadedTasks);
         }
       } else {
         console.error('Failed to fetch Gantt specific data');
-        // Fallback could be implemented here if needed, but usually indicates API issue
       }
 
     } catch (err: any) {
@@ -106,6 +150,17 @@ export default function ProjectScheduleTab({ projectId }: ProjectScheduleTabProp
 
   const handleGanttTaskClick = (task: GanttTask) => {
     setSelectedTaskId(task.id);
+
+    // Check if it's a virtual budget task
+    if (task.id.startsWith('budget-')) {
+      const budgetId = parseInt(task.id.replace('budget-', ''));
+      if (!isNaN(budgetId)) {
+        // Open Add Task modal with this category pre-selected
+        handleAddTask(budgetId);
+        return;
+      }
+    }
+
     // Find the full ScheduleTask object to open the modal
     const allTasks = [
       ...unassignedTasks,
@@ -120,6 +175,9 @@ export default function ProjectScheduleTab({ projectId }: ProjectScheduleTabProp
   };
 
   const handleGanttDateChange = async (task: GanttTask, start: Date, end: Date) => {
+    // Ignore virtual tasks for date changes
+    if (task.id.startsWith('budget-')) return;
+
     // Optimistic update for Gantt view
     const newGanttTasks = ganttTasks.map(t => 
       t.id === task.id ? { ...t, start: start.toISOString(), end: end.toISOString() } : t
@@ -148,13 +206,13 @@ export default function ProjectScheduleTab({ projectId }: ProjectScheduleTabProp
         fetchData(); // Revert
       } else {
         // If cascade happened, we need to refresh to see changes in other tasks
-        // A lightweight way would be to just fetch gantt data again
         const ganttResponse = await fetch(`/api/projects/${projectId}/gantt`, {
             headers: { 'Authorization': `Bearer ${session.session?.access_token}` }
         });
         if (ganttResponse.ok) {
             const res = await ganttResponse.json();
-            setGanttTasks(res.data.tasks);
+            // We need to re-inject virtual tasks here too, ideally we extract the injection logic
+            fetchData(); 
         }
       }
     } catch (error) {
@@ -164,6 +222,8 @@ export default function ProjectScheduleTab({ projectId }: ProjectScheduleTabProp
   };
 
   const handleGanttProgressChange = async (task: GanttTask, progress: number) => {
+    if (task.id.startsWith('budget-')) return;
+
     // Optimistic update
     const newGanttTasks = ganttTasks.map(t => 
         t.id === task.id ? { ...t, progress } : t
@@ -187,8 +247,8 @@ export default function ProjectScheduleTab({ projectId }: ProjectScheduleTabProp
 
   // --- Modal Handlers ---
 
-  const handleAddTask = () => {
-    setSelectedCategoryForAdd(null); // or default
+  const handleAddTask = (budgetCategoryId?: number | null) => {
+    setSelectedCategoryForAdd(budgetCategoryId ?? null); 
     setSelectedTaskForEdit(undefined);
     setShowTaskModal(true);
   };
@@ -284,11 +344,12 @@ export default function ProjectScheduleTab({ projectId }: ProjectScheduleTabProp
       {/* Toolbar */}
       <GanttToolbar
         isMobile={isMobile}
-        setIsMobile={setIsMobile}
         viewMode={viewMode}
-        setViewMode={setViewMode}
-        onAddTask={handleAddTask}
-        showBackToProjects={false} // Embedded view, no back button needed
+        onToggleView={setIsMobile}
+        onViewModeChange={setViewMode}
+        onAddTask={() => handleAddTask(null)}
+        onClearProject={() => {}} 
+        // projectId is not passed to avoid showing back button
       />
 
       {/* Main Chart Area */}

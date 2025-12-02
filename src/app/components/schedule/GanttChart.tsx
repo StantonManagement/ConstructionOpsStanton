@@ -139,6 +139,17 @@ export default function GanttChart({
           fill: #f97316;
         }
         
+        /* Budget Placeholder Style */
+        .gantt .bar.bar-budget-placeholder {
+          fill: #f3f4f6 !important; /* Gray 100 */
+          stroke: #9ca3af !important; /* Gray 400 */
+          stroke-dasharray: 4, 4 !important;
+        }
+        .gantt .bar-wrapper.bar-budget-placeholder .bar-label {
+          fill: #6b7280 !important; /* Gray 500 */
+          font-style: italic;
+        }
+        
         /* Selection Highlight */
         .gantt .bar-wrapper.selected-task-highlight .bar {
           fill: #60a5fa !important; /* Darker blue */
