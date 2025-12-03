@@ -297,6 +297,40 @@ export default function ProjectScheduleTab({ projectId }: ProjectScheduleTabProp
     }
   };
 
+  const handleAutoSchedule = async () => {
+    if (!confirm('This will auto-schedule all unscheduled tasks sequentially based on project defaults. Continue?')) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const { data: session } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const res = await fetch(`/api/projects/${projectId}/auto-schedule`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.session?.access_token}`
+        }
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to auto-schedule tasks');
+      }
+      
+      const result = await res.json();
+      console.log('Auto-schedule result:', result);
+      
+      // Refresh data
+      fetchData();
+    } catch (err: any) {
+      console.error('Auto-schedule error:', err);
+      alert('Failed to auto-schedule: ' + err.message);
+      setLoading(false);
+    }
+  };
+
+
   if (loading) {
     return (
       <div className="flex items-center justify-center p-12">
@@ -355,6 +389,7 @@ export default function ProjectScheduleTab({ projectId }: ProjectScheduleTabProp
         onToggleView={setIsMobile}
         onViewModeChange={setViewMode}
         onAddTask={() => handleAddTask(null)}
+        onAutoSchedule={handleAutoSchedule}
         onClearProject={() => {}} 
         // projectId is not passed to avoid showing back button
       />

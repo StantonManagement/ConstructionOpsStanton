@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Plus, Smartphone, Monitor } from 'lucide-react';
+import { Plus, Smartphone, Monitor, Wand2 } from 'lucide-react';
 import { ViewMode } from 'gantt-task-react';
 
 interface GanttToolbarProps {
@@ -11,6 +11,7 @@ interface GanttToolbarProps {
   onToggleView: (mobile: boolean) => void;
   onViewModeChange: (mode: 'Day' | 'Week' | 'Month') => void;
   onAddTask: () => void;
+  onAutoSchedule?: () => void;
   onClearProject: () => void;
 }
 
@@ -21,6 +22,7 @@ export default function GanttToolbar({
   onToggleView,
   onViewModeChange,
   onAddTask,
+  onAutoSchedule,
   onClearProject
 }: GanttToolbarProps) {
   return (
@@ -65,6 +67,17 @@ export default function GanttToolbar({
             <option value="Week">Week View</option>
             <option value="Month">Month View</option>
           </select>
+        )}
+        
+        {onAutoSchedule && !isMobile && (
+          <button
+            onClick={onAutoSchedule}
+            className="px-3 py-2 bg-white border border-gray-200 text-gray-700 rounded hover:bg-gray-50 transition-colors flex items-center gap-2 text-sm"
+            title="Auto-schedule unscheduled tasks"
+          >
+            <Wand2 className="w-4 h-4" />
+            <span className="hidden sm:inline">Auto-Schedule</span>
+          </button>
         )}
         
         <button
