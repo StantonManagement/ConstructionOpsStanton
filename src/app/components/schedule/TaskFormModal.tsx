@@ -343,17 +343,24 @@ export default function TaskFormModal({
   const availablePredecessors = allTasks.filter(t => t.id !== existingTask?.id);
 
   return (
-    <div 
-      ref={modalRef}
-      style={{ 
-        left: position.x, 
-        top: position.y,
-        width: size.width,
-        height: size.height,
-        transform: 'none'
-      }}
-      className="fixed bg-white rounded-lg shadow-2xl border border-border z-[2000] flex flex-col"
-    >
+    <>
+      {/* Backdrop */}
+      <div 
+        className="fixed inset-0 bg-black/50 z-[1999] backdrop-blur-sm transition-opacity" 
+        onClick={onClose}
+      />
+
+      <div 
+        ref={modalRef}
+        style={{ 
+          left: position.x, 
+          top: position.y,
+          width: size.width,
+          height: size.height,
+          transform: 'none'
+        }}
+        className="fixed bg-white rounded-lg shadow-2xl border border-border z-[2000] flex flex-col"
+      >
       {/* Draggable Header */}
       <div 
         onMouseDown={handleMouseDown}
@@ -650,5 +657,6 @@ export default function TaskFormModal({
         />
       </div>
     </div>
+    </>
   );
 }
