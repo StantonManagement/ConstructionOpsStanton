@@ -352,7 +352,7 @@ export default function TaskFormModal({
         height: size.height,
         transform: 'none'
       }}
-      className="fixed bg-white rounded-lg shadow-2xl border border-border z-50 flex flex-col"
+      className="fixed bg-white rounded-lg shadow-2xl border border-border z-[2000] flex flex-col"
     >
       {/* Draggable Header */}
       <div 
@@ -370,7 +370,7 @@ export default function TaskFormModal({
         >
           <X className="w-5 h-5" />
         </button>
-      </div>
+          </div>
 
       <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -378,29 +378,29 @@ export default function TaskFormModal({
           <div className="space-y-4">
             <h4 className="text-sm font-bold text-gray-900 border-b pb-2 mb-4">Task Details</h4>
             
-            {projectId && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  <div className="flex items-center gap-1">
-                    <DollarSign className="w-3 h-3" />
-                    Budget Category
-                  </div>
-                </label>
-                <select
-                  value={formData.budget_category_id || ''}
-                  onChange={e => setFormData({...formData, budget_category_id: e.target.value ? parseInt(e.target.value) : null})}
+          {projectId && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                <div className="flex items-center gap-1">
+                  <DollarSign className="w-3 h-3" />
+                  Budget Category
+                </div>
+              </label>
+              <select
+                value={formData.budget_category_id || ''}
+                onChange={e => setFormData({...formData, budget_category_id: e.target.value ? parseInt(e.target.value) : null})}
                   className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-primary"
-                >
-                  <option value="">(None)</option>
-                  {budgetCategories.map(c => (
-                    <option key={c.id} value={c.id}>
-                      {c.category_name} (${c.revised_amount?.toLocaleString()})
-                    </option>
-                  ))}
-                </select>
-                <p className="text-xs text-gray-500 mt-1">Links this task to a budget category for cash flow projections</p>
-              </div>
-            )}
+              >
+                <option value="">(None)</option>
+                {budgetCategories.map(c => (
+                  <option key={c.id} value={c.id}>
+                    {c.category_name} (${c.revised_amount?.toLocaleString()})
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 mt-1">Links this task to a budget category for cash flow projections</p>
+            </div>
+          )}
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Task Name *</label>
@@ -520,7 +520,7 @@ export default function TaskFormModal({
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">End Date *</label>
                 <input
@@ -550,33 +550,33 @@ export default function TaskFormModal({
             </div>
 
             <div className="grid grid-cols-2 gap-4 pt-2">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                <select
-                  value={formData.status}
-                  onChange={e => setFormData({...formData, status: e.target.value as TaskStatus})}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+              <select
+                value={formData.status}
+                onChange={e => setFormData({...formData, status: e.target.value as TaskStatus})}
                   className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-primary"
-                >
-                  <option value="not_started">Not Started</option>
-                  <option value="in_progress">In Progress</option>
-                  <option value="completed">Completed</option>
-                  <option value="on_hold">On Hold</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Progress (%)</label>
-                <input
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={formData.progress}
-                  onChange={e => setFormData({...formData, progress: parseInt(e.target.value)})}
+              >
+                <option value="not_started">Not Started</option>
+                <option value="in_progress">In Progress</option>
+                <option value="completed">Completed</option>
+                <option value="on_hold">On Hold</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Progress (%)</label>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                value={formData.progress}
+                onChange={e => setFormData({...formData, progress: parseInt(e.target.value)})}
                   className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-primary"
-                />
+              />
               </div>
             </div>
+            </div>
           </div>
-        </div>
 
         {/* Bottom Section: Predecessors */}
         <div className="mt-8 pt-4 border-t">
@@ -617,26 +617,26 @@ export default function TaskFormModal({
             )}
           </div>
           <p className="text-xs text-gray-500 mt-1">Select tasks that must be completed before this one starts.</p>
-        </div>
+          </div>
       </form>
 
       {/* Footer Actions */}
       <div className="flex justify-end gap-3 p-4 bg-gray-50 border-t rounded-b-lg relative">
-        <button
-          type="button"
-          onClick={onClose}
+            <button
+              type="button"
+              onClick={onClose}
           className="px-4 py-2 border border-gray-300 rounded text-gray-700 hover:bg-white transition-colors"
-          disabled={loading}
-        >
-          Cancel
-        </button>
-        <button
+              disabled={loading}
+            >
+              Cancel
+            </button>
+            <button
           onClick={handleSubmit}
           className="px-6 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90 disabled:opacity-50 transition-colors font-medium"
-          disabled={loading}
-        >
-          {loading ? 'Saving...' : 'Save Task'}
-        </button>
+              disabled={loading}
+            >
+              {loading ? 'Saving...' : 'Save Task'}
+            </button>
         
         {/* Resize Handle */}
         <div
