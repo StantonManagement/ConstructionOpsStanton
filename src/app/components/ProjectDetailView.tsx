@@ -449,7 +449,7 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ project, onBack, 
             </p>
           </div>
           {activeSubTab === 'summary' && (
-            <p className="text-xs text-muted-foreground mt-1">Available budget</p>
+            <p className="text-xs text-muted-foreground mt-1">Budget remaining</p>
           )}
         </div>
       </div>

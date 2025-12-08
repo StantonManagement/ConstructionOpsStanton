@@ -8,6 +8,7 @@ import { LoadingSpinner } from './LoadingStates';
 import { Project } from '../context/DataContext';
 import { supabase } from '@/lib/supabaseClient';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useProject } from '../context/ProjectContext';
 // Removed progressive loading hook to fix refresh issues
 
 // Lazy load heavy components
@@ -32,6 +33,7 @@ interface UserData {
 const ConstructionDashboard: React.FC = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { selectedProject: contextSelectedProject, selectedProjectId } = useProject();
   const [activeTab, setActiveTab] = useState<string>('overview');
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [showProfile, setShowProfile] = useState(false);
@@ -215,7 +217,7 @@ const ConstructionDashboard: React.FC = () => {
             {activeTab === 'field-ops' && <FieldOpsView />}
             
             {/* Payments Tab */}
-            {activeTab === 'payments' && <PaymentsView searchQuery={searchQuery} />}
+            {activeTab === 'payments' && <PaymentsView searchQuery={searchQuery} projectId={selectedProjectId || undefined} />}
             
             {/* Contractors Tab */}
             {activeTab === 'contractors' && <ContractorsView searchQuery={searchQuery} />}

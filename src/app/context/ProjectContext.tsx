@@ -16,6 +16,7 @@ interface ProjectContextType {
   selectedProject: Project | null;
   selectedProjectId: number | null;
   setSelectedProjectId: (id: number | null) => void;
+  clearProject: () => void;
   projects: Project[];
   isLoading: boolean;
   error: string | null;
@@ -33,6 +34,19 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
+
+  // Load from localStorage on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('selectedProjectId');
+      if (saved) {
+        const id = parseInt(saved, 10);
+        if (!isNaN(id)) {
+          setSelectedProjectIdState(id);
+        }
+      }
+    }
+  }, []);
 
   // Fetch projects from Supabase
   const fetchProjects = useCallback(async () => {
@@ -95,12 +109,22 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   const setSelectedProjectId = useCallback((id: number | null) => {
     setSelectedProjectIdState(id);
     
-    // Update URL if needed (this logic might need to be more sophisticated depending on current page)
-    // For now, we update the state. The components calling this might handle navigation/URL updates
-    // or we can add a simple query param update here if we are not on a specific project route.
-    
-    // Note: We intentionally don't force navigation here to give the caller (e.g. Selector) control
-    // over whether to navigate to a new route or just update the param.
+    // Persist to localStorage
+    if (typeof window !== 'undefined') {
+      if (id !== null) {
+        localStorage.setItem('selectedProjectId', id.toString());
+      } else {
+        localStorage.removeItem('selectedProjectId');
+      }
+    }
+  }, []);
+
+  // Clear project selection
+  const clearProject = useCallback(() => {
+    setSelectedProjectIdState(null);
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('selectedProjectId');
+    }
   }, []);
 
   const selectedProject = projects.find(p => p.id === selectedProjectId) || null;
@@ -110,6 +134,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
       selectedProject,
       selectedProjectId,
       setSelectedProjectId,
+      clearProject,
       projects,
       isLoading,
       error,

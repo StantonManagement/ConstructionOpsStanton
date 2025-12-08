@@ -49,19 +49,48 @@ const LoadingSkeleton: React.FC = () => (
   </div>
 );
 
+interface ActionItem {
+  id: string;
+  type: 'payment_application' | 'change_order';
+  referenceNumber: string;
+  contractorName: string;
+  projectName: string;
+  projectId: number;
+  amount: number;
+  status: string;
+  description: string;
+  submittedAt: string;
+  daysOld: number;
+}
+
+interface QueueData {
+  urgent: ActionItem[];
+  needsReview: ActionItem[];
+  readyToPay: ActionItem[];
+  totals: {
+    urgent: number;
+    needsReview: number;
+    readyToPay: number;
+    total: number;
+  };
+}
+
 const DecisionQueueCards: React.FC<{ role: string | null, setError: (msg: string) => void }> = ({ role, setError }) => {
-  const [queue, setQueue] = useState<PaymentApplication[]>([]);
+  const [queueData, setQueueData] = useState<QueueData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setLocalError] = useState<string | null>(null);
+  const [expandedSection, setExpandedSection] = useState<string | null>('urgent');
 
   const navigateToPaymentApp = (paymentAppId: string) => {
-    // Navigate to verify page with return parameter to go back to construction dashboard
     window.location.href = `/payments/${paymentAppId}/verify?returnTo=/`;
   };
 
+  const navigateToChangeOrder = (coId: string) => {
+    window.location.href = `/?tab=change-orders&id=${coId}`;
+  };
+
   const navigateToPaymentApplications = () => {
-    // Navigate to payment applications view instead of pm-dashboard
-    window.location.href = "/?tab=payment-applications";
+    window.location.href = "/?tab=payments";
   };
 
   const fetchQueue = useCallback(async () => {
@@ -69,39 +98,23 @@ const DecisionQueueCards: React.FC<{ role: string | null, setError: (msg: string
       setLocalError(null);
       setLoading(true);
 
-      const { data, error } = await supabase
-        .from('payment_applications')
-        .select(`
-          id,
-          status,
-          current_payment,
-          current_period_value,
-          created_at,
-          project_id,
-          contractor_id,
-          project:projects!inner(id, name),
-          contractor:contractors!inner(id, name)
-        `)
-        .in('status', ['needs_review', 'submitted'])
-        .order('created_at', { ascending: false })
-        .limit(20);
-
-      if (error) {
-        console.error('Supabase error:', error);
-        throw new Error(`Database error: ${error.message}`);
+      const { data: session } = await supabase.auth.getSession();
+      if (!session?.session?.access_token) {
+        throw new Error('Not authenticated');
       }
 
-      const processedQueue = (data || []).map((item: any) => ({
-        id: item.id,
-        status: item.status,
-        current_payment: Number(item.current_payment) || 0,
-        current_period_value: Number(item.current_period_value) || 0,
-        created_at: item.created_at,
-        project: item.project || { id: null, name: 'Unknown Project' },
-        contractor: item.contractor || { id: null, name: 'Unknown Contractor' },
-      }));
+      const response = await fetch('/api/dashboard/queue', {
+        headers: {
+          'Authorization': `Bearer ${session.session.access_token}`
+        }
+      });
 
-      setQueue(processedQueue);
+      if (!response.ok) {
+        throw new Error('Failed to fetch queue');
+      }
+
+      const result = await response.json();
+      setQueueData(result.data);
     } catch (err: any) {
       console.error('Error fetching queue:', err);
       setLocalError(err.message || 'Failed to load decision queue');
@@ -116,32 +129,40 @@ const DecisionQueueCards: React.FC<{ role: string | null, setError: (msg: string
     return () => clearInterval(interval);
   }, [fetchQueue]);
 
-  // Group queue by project and determine highest priority
-  const projectQueueSummary = useMemo(() => {
-    const map: Record<string, { projectName: string, count: number, total: number, highestPriority: string }> = {};
-    const priorityOrder = ['urgent', 'high', 'medium', 'low'];
-    queue.forEach(app => {
-      const projectName = app.project?.name || 'Unknown Project';
-      const priority = (app as any).priority || 'medium';
-      if (!map[projectName]) {
-        map[projectName] = { projectName, count: 0, total: 0, highestPriority: priority };
-      }
-      map[projectName].count += 1;
-      map[projectName].total += app.current_period_value || 0;
-      if (priorityOrder.indexOf(priority) < priorityOrder.indexOf(map[projectName].highestPriority)) {
-        map[projectName].highestPriority = priority;
-      }
-    });
-    return Object.values(map);
-  }, [queue]);
+  const handleQuickApprove = async (item: ActionItem) => {
+    if (!confirm(`Approve ${item.referenceNumber} for ${formatCurrency(item.amount)}?`)) return;
+    
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      if (!session?.session?.access_token) return;
 
-  // Priority badge config - NOW USING SEMANTIC COLORS
-  const priorityBadge = {
-    urgent: { color: 'bg-red-50 text-status-critical border-red-200', label: 'Urgent', icon: '🚨' },
-    high: { color: 'bg-amber-50 text-status-warning border-amber-200', label: 'High', icon: '⚡' },
-    medium: { color: 'bg-amber-50 text-status-warning border-amber-200', label: 'Medium', icon: '⚠️' },
-    low: { color: 'bg-gray-50 text-status-neutral border-gray-200', label: 'Low', icon: '📌' },
+      const endpoint = item.type === 'payment_application' 
+        ? `/api/payment-applications/${item.id}`
+        : `/api/change-orders/${item.id}`;
+
+      const response = await fetch(endpoint, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${session.session.access_token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ status: 'approved' })
+      });
+
+      if (response.ok) {
+        fetchQueue();
+      }
+    } catch (err) {
+      console.error('Error approving:', err);
+    }
   };
+
+  // Section config
+  const sections = [
+    { key: 'urgent', label: 'Urgent', icon: '🔴', color: 'border-red-200 bg-red-50', items: queueData?.urgent || [] },
+    { key: 'needsReview', label: 'Needs Review', icon: '🟡', color: 'border-amber-200 bg-amber-50', items: queueData?.needsReview || [] },
+    { key: 'readyToPay', label: 'Ready to Pay', icon: '✅', color: 'border-green-200 bg-green-50', items: queueData?.readyToPay || [] },
+  ];
 
   if (error) {
     return (
@@ -174,138 +195,124 @@ const DecisionQueueCards: React.FC<{ role: string | null, setError: (msg: string
     );
   }
 
+  const totalItems = (queueData?.totals?.total || 0);
+
   return (
     <div className="bg-card rounded-xl border border-border p-4 sm:p-6 h-full">
-      <h3 className="text-lg font-semibold text-foreground mb-4 sm:mb-6 flex items-center gap-2">
-        📋 Decisions Queue
-      </h3>
+      <div className="flex items-center justify-between mb-4 sm:mb-6">
+        <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+          📋 Action Queue
+        </h3>
+        <button
+          onClick={fetchQueue}
+          disabled={loading}
+          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          {loading ? '...' : '↻ Refresh'}
+        </button>
+      </div>
       
       {loading ? (
         <LoadingSkeleton />
-      ) : projectQueueSummary.length === 0 ? (
+      ) : totalItems === 0 ? (
         <div className="text-center py-12 flex flex-col items-center gap-4">
           <div className="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center text-2xl border border-emerald-100">
             ✅
           </div>
-          <span className="text-foreground font-medium">No items need your attention.</span>
-          <span className="text-sm text-muted-foreground">All caught up! Great work.</span>
+          <span className="text-foreground font-medium">All caught up!</span>
+          <span className="text-sm text-muted-foreground">No items need your attention.</span>
         </div>
       ) : (
         <div className="space-y-4">
-          {projectQueueSummary.map((proj) => {
-            const badge = priorityBadge[proj.highestPriority as keyof typeof priorityBadge] || priorityBadge.medium;
+          {sections.map((section) => {
+            if (section.items.length === 0) return null;
+            const isExpanded = expandedSection === section.key;
+            
             return (
-              <div
-                key={proj.projectName}
-                className="group bg-card hover:bg-accent/50 rounded-xl p-5 border border-border transition-all duration-200 cursor-pointer"
-                onClick={navigateToPaymentApplications}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    navigateToPaymentApplications();
-                  }
-                }}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 font-semibold text-base text-foreground mb-2">
-                      <span>{proj.projectName}</span>
-                      <span
-                        className={`px-2 py-0.5 rounded text-xs font-medium border ${badge.color}`}
-                        title={badge.label + ' Priority'}
-                      >
-                        {badge.icon} {badge.label}
-                      </span>
-                    </div>
-                    <div className="text-sm text-muted-foreground mb-1">
-                      {proj.count} payment{proj.count > 1 ? 's' : ''} need review
-                    </div>
-                    <div className="text-sm text-status-neutral font-medium">
-                      Total: {formatCurrency(proj.total)}
-                    </div>
+              <div key={section.key} className={`rounded-lg border ${section.color}`}>
+                <button
+                  onClick={() => setExpandedSection(isExpanded ? null : section.key)}
+                  className="w-full flex items-center justify-between p-3 text-left"
+                >
+                  <div className="flex items-center gap-2">
+                    <span>{section.icon}</span>
+                    <span className="font-semibold text-sm">{section.label}</span>
+                    <span className="bg-white/80 px-2 py-0.5 rounded-full text-xs font-medium">
+                      {section.items.length}
+                    </span>
                   </div>
-                  <button
-                    className="text-primary hover:text-primary/80 text-sm font-medium"
-                    disabled={role === null}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigateToPaymentApplications();
-                    }}
-                  >
-                    {role === null ? "Loading..." : "View All →"}
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-
-          {/* Individual Payment Applications */}
-          {queue.length > 0 && (
-            <div className="mt-8">
-              <h4 className="text-sm font-medium text-muted-foreground mb-4">
-                Individual Applications
-              </h4>
-              <div className="space-y-3">
-                {queue.slice(0, 3).map((app) => {
-                  const statusConfig = {
-                    submitted: { color: 'bg-red-50 text-status-critical border-red-200', label: 'Submitted', icon: '🚨' },
-                    needs_review: { color: 'bg-amber-50 text-status-warning border-amber-200', label: 'Needs Review', icon: '⚠️' }
-                  };
-                  const status = statusConfig[app.status] || statusConfig.needs_review;
-
-                  return (
-                    <div
-                      key={app.id}
-                      className="group bg-card hover:bg-accent/50 rounded-lg p-4 border border-border transition-all duration-200 cursor-pointer"
-                      onClick={() => navigateToPaymentApp(app.id)}
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          navigateToPaymentApp(app.id);
+                  <span className="text-sm">{isExpanded ? '▼' : '▶'}</span>
+                </button>
+                
+                {isExpanded && (
+                  <div className="border-t border-inherit bg-white/50 p-2 space-y-2">
+                    {section.items.slice(0, 5).map((item) => (
+                      <div
+                        key={`${item.type}-${item.id}`}
+                        className="bg-white rounded-lg p-3 border border-gray-100 hover:border-primary/30 transition-colors cursor-pointer"
+                        onClick={() => item.type === 'payment_application' 
+                          ? navigateToPaymentApp(item.id) 
+                          : navigateToChangeOrder(item.id)
                         }
-                      }}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1 space-y-2">
-                          <div className="flex items-center gap-3">
-                            <span className={`px-2 py-0.5 rounded text-xs font-medium border ${status.color}`}>
-                              {status.icon} {status.label}
-                            </span>
-                            <span className="text-xs text-muted-foreground">
-                              {app.created_at ? new Date(app.created_at).toLocaleDateString() : '-'}
-                            </span>
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${
+                                item.type === 'payment_application' 
+                                  ? 'bg-blue-100 text-blue-700' 
+                                  : 'bg-purple-100 text-purple-700'
+                              }`}>
+                                {item.referenceNumber}
+                              </span>
+                              {item.daysOld > 0 && (
+                                <span className="text-xs text-muted-foreground">
+                                  {item.daysOld}d ago
+                                </span>
+                              )}
+                            </div>
+                            <div className="font-medium text-sm text-foreground truncate">
+                              {item.contractorName}
+                            </div>
+                            <div className="text-xs text-muted-foreground truncate">
+                              {item.projectName}
+                            </div>
                           </div>
-                          <div className="font-medium text-foreground">
-                            {app.project?.name || 'Unknown Project'}
+                          <div className="text-right flex-shrink-0">
+                            <div className="font-semibold text-sm">
+                              {formatCurrency(item.amount)}
+                            </div>
+                            {section.key !== 'readyToPay' && role === 'admin' && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleQuickApprove(item);
+                                }}
+                                className="text-xs text-primary hover:underline mt-1"
+                              >
+                                Quick Approve
+                              </button>
+                            )}
+                            {section.key === 'readyToPay' && (
+                              <span className="text-xs text-green-600">Ready</span>
+                            )}
                           </div>
-                          <div className="text-sm text-muted-foreground">
-                            Contractor: {app.contractor?.name || 'Unknown'}
-                          </div>
-                          <div className="text-sm font-medium text-foreground">
-                            {formatCurrency(app.current_period_value || 0)}
-                          </div>
-                        </div>
-                        <div className="text-primary text-sm font-medium">
-                          Review →
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
-                {queue.length > 3 && (
-                  <div className="text-center py-3">
-                    <span className="text-sm text-muted-foreground">
-                      +{queue.length - 3} more applications
-                    </span>
+                    ))}
+                    {section.items.length > 5 && (
+                      <button
+                        onClick={navigateToPaymentApplications}
+                        className="w-full text-center text-sm text-primary hover:underline py-2"
+                      >
+                        View all {section.items.length} items →
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
-            </div>
-          )}
+            );
+          })}
         </div>
       )}
     </div>
