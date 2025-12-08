@@ -23,7 +23,7 @@ import {
   Trash2,
   GitBranch
 } from 'lucide-react';
-// import ChangeOrderForm from './ChangeOrderForm'; // TODO: Integrate properly
+import ChangeOrderForm from './ChangeOrderForm';
 import { DataTable, Column } from '@/components/ui/DataTable';
 import { EmptyState } from './ui/EmptyState';
 import { SignalBadge } from '@/components/ui/SignalBadge';
@@ -89,6 +89,7 @@ const ChangeOrdersView: React.FC = () => {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showPhotoModal, setShowPhotoModal] = useState(false);
   const [photos, setPhotos] = useState<Photo[]>([]);
+  const [isCreating, setIsCreating] = useState(false);
   
   // User role
   const [userRole, setUserRole] = useState<string>('staff');
@@ -241,6 +242,39 @@ const ChangeOrdersView: React.FC = () => {
     await fetchPhotos(order.id);
     setShowPhotoModal(true);
   }, [fetchPhotos]);
+
+  // Create change order
+  const handleCreateChangeOrder = useCallback(async (formData: any) => {
+    setIsCreating(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        throw new Error('Not authenticated');
+      }
+
+      const response = await fetch('/api/change-orders', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${sessionData.session.access_token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(formData)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create change order');
+      }
+
+      alert('Change order created successfully!');
+      setShowCreateModal(false);
+      fetchChangeOrders();
+    } catch (err: any) {
+      alert(`Error: ${err.message}`);
+    } finally {
+      setIsCreating(false);
+    }
+  }, []);
 
   const changeOrderColumns: Column<ChangeOrder>[] = React.useMemo(() => [
     {
@@ -603,34 +637,14 @@ const ChangeOrdersView: React.FC = () => {
         )}
       </div>
 
-      {/* Create Modal - TODO: Implement inline form or integrate with existing ChangeOrderForm */}
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-2xl font-bold">Create Change Order</h2>
-                <button
-                  onClick={() => setShowCreateModal(false)}
-                  className="text-gray-500 hover:text-gray-700"
-                >
-                  <XCircle className="w-6 h-6" />
-                </button>
-              </div>
-              <div className="text-center py-8 text-gray-500">
-                <p className="mb-4">Change order creation form coming soon!</p>
-                <p className="text-sm">You can create change orders from the project budget view or use the API directly.</p>
-                <button
-                  onClick={() => setShowCreateModal(false)}
-                  className="mt-4 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90"
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Create Modal */}
+      <ChangeOrderForm
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onSubmit={handleCreateChangeOrder}
+        isSubmitting={isCreating}
+        projectId={projectFilter !== 'all' ? parseInt(projectFilter) : undefined}
+      />
 
       {/* Detail Modal */}
       {showDetailModal && selectedOrder && (

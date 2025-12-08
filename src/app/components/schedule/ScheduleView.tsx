@@ -5,8 +5,9 @@ import { supabase } from '@/lib/supabaseClient';
 import { useRouter, useSearchParams } from 'next/navigation';
 import MobileTaskTimeline from './MobileTaskTimeline';
 import TaskFormModal from './TaskFormModal';
-import GanttChart, { GanttTask } from './GanttChart';
+import GanttChartContainer from './GanttChartContainer';
 import GanttToolbar from './GanttToolbar';
+import { ViewMode, Task } from 'gantt-task-react';
 import type { ProjectSchedule, ScheduleTask } from '@/types/schedule';
 import { Plus } from 'lucide-react';
 
@@ -30,10 +31,9 @@ export default function ScheduleView({ projectId: initialProjectId }: ScheduleVi
   
   const [schedule, setSchedule] = useState<ProjectSchedule | null>(null);
   const [tasks, setTasks] = useState<ScheduleTask[]>([]);
-  const [ganttTasks, setGanttTasks] = useState<GanttTask[]>([]);
   const [loading, setLoading] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [viewMode, setViewMode] = useState<'Day' | 'Week' | 'Month'>('Week');
+  const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.Week);
   
   // Modal states
   const [showTaskModal, setShowTaskModal] = useState(false);
@@ -113,30 +113,19 @@ export default function ScheduleView({ projectId: initialProjectId }: ScheduleVi
         const scheduleId = schedulesList[0].id;
         setSchedule(schedulesList[0]);
 
-        // 2. Fetch Gantt-specific data (includes dependencies formatted for frappe)
-        const ganttResponse = await fetch(`/api/projects/${selectedProjectId}/gantt`, {
+        // Fetch tasks details
+        const detailResponse = await fetch(`/api/schedules/${scheduleId}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
-
-        if (ganttResponse.ok) {
-          const ganttData = await ganttResponse.json();
-          setGanttTasks(ganttData.tasks || []);
-          
-          // Let's fetch full details for editing as before
-          const detailResponse = await fetch(`/api/schedules/${scheduleId}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
-          
-          if (detailResponse.ok) {
-            const detailResult = await detailResponse.json();
-            const scheduleData = detailResult.data?.data || detailResult.data || detailResult;
-            if (scheduleData.tasks) setTasks(scheduleData.tasks);
-          }
+        
+        if (detailResponse.ok) {
+          const detailResult = await detailResponse.json();
+          const scheduleData = detailResult.data?.data || detailResult.data || detailResult;
+          if (scheduleData.tasks) setTasks(scheduleData.tasks);
         }
       } else {
         setSchedule(null);
         setTasks([]);
-        setGanttTasks([]);
       }
     } catch (error) {
       console.error('Error fetching schedule:', error);
@@ -184,55 +173,56 @@ export default function ScheduleView({ projectId: initialProjectId }: ScheduleVi
     setShowTaskModal(true);
   };
 
-  const handleGanttTaskClick = (ganttTask: GanttTask) => {
+  const handleGanttTaskClick = (ganttTask: Task) => {
     const task = tasks.find(t => t.id === ganttTask.id);
     if (task) {
       handleTaskClick(task);
     }
   };
 
-  const handleGanttDateChange = async (task: GanttTask, start: Date, end: Date) => {
+  const handleGanttDateChange = async (task: Task) => {
+    // Optimistic update first
+    setTasks(prev => prev.map(t => {
+        if (t.id === task.id) {
+            return {
+                ...t,
+                start_date: task.start.toISOString().split('T')[0],
+                end_date: task.end.toISOString().split('T')[0],
+                progress: task.progress
+            };
+        }
+        return t;
+    }));
+
     try {
       const { data: session } = await supabase.auth.getSession();
       if (!session?.session?.access_token || !schedule) return;
 
-      await fetch(`/api/schedules/${schedule.id}/tasks/${task.id}`, {
+      const response = await fetch(`/api/schedules/${schedule.id}/tasks/${task.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.session.access_token}`
         },
         body: JSON.stringify({
-          start_date: start.toISOString().split('T')[0],
-          end_date: end.toISOString().split('T')[0]
+          start_date: task.start.toISOString().split('T')[0],
+          end_date: task.end.toISOString().split('T')[0],
+          progress: task.progress
         })
       });
-      // Optimistic update or refresh (Cascade happens on server)
-      fetchScheduleData();
+      
+      if (!response.ok) {
+        // Revert on failure (could be improved with specific rollback)
+        fetchScheduleData();
+      }
     } catch (e) {
       console.error('Failed to update task dates', e);
+      fetchScheduleData();
     }
   };
 
-  const handleGanttProgressChange = async (task: GanttTask, progress: number) => {
-    try {
-      const { data: session } = await supabase.auth.getSession();
-      if (!session?.session?.access_token || !schedule) return;
-
-      await fetch(`/api/schedules/${schedule.id}/tasks/${task.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.session.access_token}`
-        },
-        body: JSON.stringify({
-          progress: progress
-        })
-      });
-    } catch (e) {
-      console.error('Failed to update task progress', e);
-    }
-  };
+  // Reused for both date and progress since GanttContainer calls onUpdate for both
+  const handleGanttUpdate = handleGanttDateChange;
 
   // Render Project Selector if no project selected
   if (!selectedProjectId && !initialProjectId) {
@@ -319,12 +309,11 @@ export default function ScheduleView({ projectId: initialProjectId }: ScheduleVi
           onTaskClick={handleTaskClick} 
         />
       ) : (
-        <GanttChart
-          tasks={ganttTasks}
+        <GanttChartContainer
+          tasks={tasks}
           viewMode={viewMode}
-          onTaskClick={handleGanttTaskClick}
-          onDateChange={handleGanttDateChange}
-          onProgressChange={handleGanttProgressChange}
+          onEdit={handleGanttTaskClick}
+          onUpdate={handleGanttUpdate}
         />
       )}
 

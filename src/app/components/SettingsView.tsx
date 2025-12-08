@@ -1,17 +1,18 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Users, Building2, Plug, Settings as SettingsIcon, Shield, Briefcase } from 'lucide-react';
+import { Users, Building2, Plug, Settings as SettingsIcon, Shield, Briefcase, Calendar } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import UserManagementView from './UserManagementView';
 import PermissionsManagement from './PermissionsManagement';
 import EntityManagementView from './EntityManagementView';
+import SettingsScheduleDefaults from './SettingsScheduleDefaults';
 import { useAuth } from '@/providers/AuthProvider';
 import { ToastContainer, Toast } from './ui/Toast';
 
 import { hasRoleAccess, canAccessUserManagement, canAccessPermissionsManagement } from '@/lib/permissions';
 
-type SettingsTab = 'users' | 'permissions' | 'entities' | 'company' | 'integrations' | 'preferences';
+type SettingsTab = 'users' | 'permissions' | 'entities' | 'company' | 'integrations' | 'preferences' | 'schedule';
 
 // Sub-tab Navigation Component
 function SettingsTabNavigation({ activeTab, onTabChange, userRole }: { activeTab: SettingsTab; onTabChange: (tab: SettingsTab) => void; userRole?: string }) {
@@ -51,6 +52,12 @@ function SettingsTabNavigation({ activeTab, onTabChange, userRole }: { activeTab
       label: 'Preferences', 
       icon: SettingsIcon, 
       canAccess: () => true // All roles can access
+    },
+    { 
+      id: 'schedule' as const, 
+      label: 'Schedule Defaults', 
+      icon: Calendar, 
+      canAccess: () => true // All roles (or restrict?) - Plan implies settings page users. Let's allow all or same as company.
     }
   ];
 
@@ -516,7 +523,7 @@ const SettingsView: React.FC = () => {
   // URL-based tab management
   useEffect(() => {
     const subtabFromUrl = searchParams.get('subtab') as SettingsTab;
-    if (subtabFromUrl && ['users', 'permissions', 'entities', 'company', 'integrations', 'preferences'].includes(subtabFromUrl)) {
+    if (subtabFromUrl && ['users', 'permissions', 'entities', 'company', 'integrations', 'preferences', 'schedule'].includes(subtabFromUrl)) {
       // Check if user has access to this tab using centralized permission system
       if (subtabFromUrl === 'users' && !canAccessUserManagement(role)) {
         setActiveTab(getDefaultTab());
@@ -562,6 +569,7 @@ const SettingsView: React.FC = () => {
           {activeTab === 'company' && <CompanySettingsTab showToast={showToast} />}
           {activeTab === 'integrations' && <IntegrationsTab />}
           {activeTab === 'preferences' && <PreferencesTab showToast={showToast} />}
+          {activeTab === 'schedule' && <SettingsScheduleDefaults showToast={showToast} />}
         </div>
       </div>
       

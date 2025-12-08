@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
-import { FileText, Plus, Edit, Trash2, Eye, AlertCircle, CheckCircle, Clock, RefreshCw, Phone, Mail, MessageSquare } from 'lucide-react';
+import { FileText, Plus, Edit2, Trash2, Eye, AlertCircle, CheckCircle, Clock, RefreshCw, Phone, Mail, MessageSquare, Save, X } from 'lucide-react';
 import { useModal } from '../context/ModalContext';
 import { EmptyState } from './ui/EmptyState';
 
@@ -89,6 +89,14 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
   const [pmPhoneNumber, setPmPhoneNumber] = useState('');
   const [requestTime, setRequestTime] = useState('18:00'); // Default to 6 PM EST
   const [phoneError, setPhoneError] = useState('');
+  
+  // Edit request state
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingRequest, setEditingRequest] = useState<any>(null);
+  const [editPhoneNumber, setEditPhoneNumber] = useState('');
+  const [editRequestTime, setEditRequestTime] = useState('');
+  const [editPhoneError, setEditPhoneError] = useState('');
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   // Fetch daily log requests
   const fetchRequests = useCallback(async () => {
@@ -268,6 +276,60 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
     setPmNotes([]);
   };
 
+  const handleEditRequest = (request: any) => {
+    setEditingRequest(request);
+    setEditPhoneNumber(request.pm_phone_number || '');
+    setEditRequestTime(request.request_time || '18:00');
+    setEditPhoneError('');
+    setShowEditModal(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingRequest) return;
+
+    // Validate phone number
+    if (!validatePhoneNumber(editPhoneNumber)) {
+      setEditPhoneError('Please enter a valid phone number (10 or 11 digits)');
+      return;
+    }
+    setEditPhoneError('');
+
+    setIsSavingEdit(true);
+    try {
+      const { error } = await supabase
+        .from('daily_log_requests')
+        .update({
+          pm_phone_number: editPhoneNumber.trim(),
+          request_time: editRequestTime
+        })
+        .eq('id', editingRequest.id);
+
+      if (error) throw error;
+
+      // Update local state
+      setRequests(prev => prev.map(req => 
+        req.id === editingRequest.id 
+          ? { ...req, pm_phone_number: editPhoneNumber.trim(), request_time: editRequestTime }
+          : req
+      ));
+
+      setShowEditModal(false);
+      setEditingRequest(null);
+      showToast({ message: 'Daily log request updated successfully!', type: 'success', duration: 3000 });
+    } catch (err) {
+      console.error('Error updating request:', err);
+      setError('Failed to update request');
+    } finally {
+      setIsSavingEdit(false);
+    }
+  };
+
+  const handleCloseEditModal = () => {
+    setShowEditModal(false);
+    setEditingRequest(null);
+    setEditPhoneError('');
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -399,19 +461,31 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
                   💬 Click to view Daily Logs and replies
                 </div>
               </div>
-                      <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDeleteRequest(request.id);
-                }}
-                className="text-red-600 hover:text-red-800 p-1"
-                        title="Delete request"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleEditRequest(request);
+                  }}
+                  className="text-primary hover:text-primary/80 p-1"
+                  title="Edit request"
+                >
+                  <Edit2 className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteRequest(request.id);
+                  }}
+                  className="text-red-600 hover:text-red-800 p-1"
+                  title="Delete request"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
           </div>
-              ))}
+        ))}
 
         {/* Empty State */}
         {filteredRequests.length === 0 && (
@@ -612,6 +686,93 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
                 Close
               </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Request Modal */}
+      {showEditModal && editingRequest && (
+        <div className="fixed inset-0 bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-md w-full">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h2 className="text-xl font-semibold text-foreground">Edit Daily Log Request</h2>
+              <button
+                onClick={handleCloseEditModal}
+                className="text-gray-400 hover:text-muted-foreground"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              <div className="bg-gray-50 rounded-lg p-3 mb-4">
+                <p className="text-sm text-muted-foreground">Project:</p>
+                <p className="font-medium text-foreground">
+                  {editingRequest.project?.name} - {editingRequest.project?.client_name}
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">PM Phone Number *</label>
+                <input
+                  type="tel"
+                  value={editPhoneNumber}
+                  onChange={(e) => {
+                    setEditPhoneNumber(e.target.value);
+                    if (editPhoneError) setEditPhoneError('');
+                  }}
+                  className={`w-full px-3 py-2 border rounded-md focus:ring-blue-500 focus:border-primary ${
+                    editPhoneError ? 'border-red-300' : 'border-gray-300'
+                  }`}
+                  placeholder="+1234567890"
+                  disabled={isSavingEdit}
+                />
+                {editPhoneError && (
+                  <p className="text-sm text-red-600 mt-1">{editPhoneError}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Request Time (EST) *</label>
+                <input
+                  type="time"
+                  value={editRequestTime}
+                  onChange={(e) => setEditRequestTime(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-primary"
+                  disabled={isSavingEdit}
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Time when the system sends daily SMS requests (EST timezone)
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200">
+              <button
+                onClick={handleCloseEditModal}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                disabled={isSavingEdit}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveEdit}
+                disabled={isSavingEdit || !editPhoneNumber.trim()}
+                className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSavingEdit ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    Save Changes
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </div>

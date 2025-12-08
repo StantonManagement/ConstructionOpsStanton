@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, CheckCircle, AlertCircle, Camera, MessageSquare, MapPin, Calendar, User } from 'lucide-react';
+import { X, CheckCircle, AlertCircle, Camera, MessageSquare, MapPin, Calendar, User, Edit2, Save } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
-import { PunchListItem, PunchListStatus } from '@/types/punch-list';
+import { PunchListItem, PunchListStatus, PunchListSeverity } from '@/types/punch-list';
 import { SignalBadge } from '@/components/ui/SignalBadge';
 
 interface PunchListDetailModalProps {
@@ -16,6 +16,15 @@ export default function PunchListDetailModal({ item: initialItem, onClose, onUpd
   const [item, setItem] = useState<PunchListItem>(initialItem);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState({
+    description: initialItem.description,
+    location: initialItem.location || '',
+    unit_number: initialItem.unit_number || '',
+    severity: initialItem.severity,
+    due_date: initialItem.due_date || '',
+    notes: initialItem.notes || ''
+  });
 
   // Refresh item data on mount to get latest status/details
   useEffect(() => {
@@ -75,6 +84,49 @@ export default function PunchListDetailModal({ item: initialItem, onClose, onUpd
     }
   };
 
+  const handleSaveEdit = async () => {
+    try {
+      setActionLoading(true);
+      const { data: session } = await supabase.auth.getSession();
+      if (!session?.session?.access_token) return;
+
+      const response = await fetch(`/api/punch-list/${item.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.session.access_token}`,
+        },
+        body: JSON.stringify(editForm),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        setItem(result.data);
+        setIsEditing(false);
+        onUpdate();
+      } else {
+        alert('Failed to save changes');
+      }
+    } catch (error) {
+      console.error('Error saving changes:', error);
+      alert('Error saving changes');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditForm({
+      description: item.description,
+      location: item.location || '',
+      unit_number: item.unit_number || '',
+      severity: item.severity,
+      due_date: item.due_date || '',
+      notes: item.notes || ''
+    });
+    setIsEditing(false);
+  };
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto flex flex-col">
@@ -98,49 +150,131 @@ export default function PunchListDetailModal({ item: initialItem, onClose, onUpd
                 {item.severity} priority
               </span>
             </div>
-            <h2 className="text-xl text-gray-900 font-medium">{item.description}</h2>
+            {!isEditing && <h2 className="text-xl text-gray-900 font-medium">{item.description}</h2>}
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-500">
-            <X size={24} />
-          </button>
+          <div className="flex items-center gap-2">
+            {!isEditing && item.status !== 'verified' && (
+              <button 
+                onClick={() => setIsEditing(true)} 
+                className="flex items-center gap-1 px-3 py-1.5 text-sm text-primary hover:bg-primary/10 rounded-md transition-colors"
+              >
+                <Edit2 size={16} />
+                Edit
+              </button>
+            )}
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-500">
+              <X size={24} />
+            </button>
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto p-6">
-          {/* Details Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          {isEditing ? (
+            /* Edit Form */
             <div className="space-y-4">
-              <div className="flex items-center gap-2 text-gray-600">
-                <MapPin size={18} />
-                <span className="font-medium">Location:</span>
-                <span>{item.location || '—'} {item.unit_number ? `(Unit ${item.unit_number})` : ''}</span>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description *</label>
+                <textarea
+                  value={editForm.description}
+                  onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-primary"
+                  rows={3}
+                  required
+                />
               </div>
-              <div className="flex items-center gap-2 text-gray-600">
-                <User size={18} />
-                <span className="font-medium">Assigned To:</span>
-                <span>{item.assigned_contractor_name || 'Unassigned'}</span>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                  <input
+                    type="text"
+                    value={editForm.location}
+                    onChange={(e) => setEditForm({ ...editForm, location: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-primary"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Unit Number</label>
+                  <input
+                    type="text"
+                    value={editForm.unit_number}
+                    onChange={(e) => setEditForm({ ...editForm, unit_number: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-primary"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Severity</label>
+                  <select
+                    value={editForm.severity}
+                    onChange={(e) => setEditForm({ ...editForm, severity: e.target.value as PunchListSeverity })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-primary"
+                  >
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                    <option value="critical">Critical</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
+                  <input
+                    type="date"
+                    value={editForm.due_date}
+                    onChange={(e) => setEditForm({ ...editForm, due_date: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-primary"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                <textarea
+                  value={editForm.notes}
+                  onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-primary"
+                  rows={2}
+                />
               </div>
             </div>
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 text-gray-600">
-                <Calendar size={18} />
-                <span className="font-medium">Due Date:</span>
-                <span className={item.due_date && item.due_date < new Date().toISOString().split('T')[0] && item.status !== 'verified' ? 'text-red-600 font-medium' : ''}>
-                  {item.due_date ? new Date(item.due_date).toLocaleDateString() : '—'}
-                </span>
+          ) : (
+            <>
+              {/* Details Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 text-gray-600">
+                    <MapPin size={18} />
+                    <span className="font-medium">Location:</span>
+                    <span>{item.location || '—'} {item.unit_number ? `(Unit ${item.unit_number})` : ''}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-gray-600">
+                    <User size={18} />
+                    <span className="font-medium">Assigned To:</span>
+                    <span>{item.assigned_contractor_name || 'Unassigned'}</span>
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 text-gray-600">
+                    <Calendar size={18} />
+                    <span className="font-medium">Due Date:</span>
+                    <span className={item.due_date && item.due_date < new Date().toISOString().split('T')[0] && item.status !== 'verified' ? 'text-red-600 font-medium' : ''}>
+                      {item.due_date ? new Date(item.due_date).toLocaleDateString() : '—'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 text-gray-600">
+                    <span className="font-medium">Category:</span>
+                    <span>{item.trade_category || '—'}</span>
+                  </div>
+                </div>
               </div>
-              <div className="flex items-center gap-2 text-gray-600">
-                <span className="font-medium">Category:</span>
-                <span>{item.trade_category || '—'}</span>
-              </div>
-            </div>
-          </div>
 
-          {/* Notes */}
-          {item.notes && (
-            <div className="bg-gray-50 p-4 rounded-lg mb-6">
-              <h3 className="text-sm font-medium text-gray-900 mb-2">Notes</h3>
-              <p className="text-sm text-gray-600 whitespace-pre-wrap">{item.notes}</p>
-            </div>
+              {/* Notes */}
+              {item.notes && (
+                <div className="bg-gray-50 p-4 rounded-lg mb-6">
+                  <h3 className="text-sm font-medium text-gray-900 mb-2">Notes</h3>
+                  <p className="text-sm text-gray-600 whitespace-pre-wrap">{item.notes}</p>
+                </div>
+              )}
+            </>
           )}
 
           {/* Photos Placeholder */}
@@ -184,37 +318,59 @@ export default function PunchListDetailModal({ item: initialItem, onClose, onUpd
 
         {/* Footer Actions */}
         <div className="p-6 border-t bg-gray-50 flex justify-end gap-3">
-          {item.status === 'open' || item.status === 'in_progress' || item.status === 'rejected' ? (
-            <button
-              onClick={() => handleStatusUpdate('complete')}
-              disabled={actionLoading}
-              className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 disabled:opacity-50"
-            >
-              <CheckCircle size={18} />
-              Mark Complete
-            </button>
-          ) : null}
-
-          {item.status === 'completed' ? (
+          {isEditing ? (
             <>
               <button
-                onClick={() => handleStatusUpdate('reject')}
+                onClick={handleCancelEdit}
                 disabled={actionLoading}
-                className="flex items-center gap-2 px-4 py-2 bg-white border border-red-300 text-red-700 rounded-md hover:bg-red-50 disabled:opacity-50"
+                className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 disabled:opacity-50"
               >
-                <AlertCircle size={18} />
-                Reject
+                Cancel
               </button>
               <button
-                onClick={() => handleStatusUpdate('verify')}
+                onClick={handleSaveEdit}
                 disabled={actionLoading}
-                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50"
+                className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 disabled:opacity-50"
               >
-                <CheckCircle size={18} />
-                Verify
+                <Save size={18} />
+                {actionLoading ? 'Saving...' : 'Save Changes'}
               </button>
             </>
-          ) : null}
+          ) : (
+            <>
+              {item.status === 'open' || item.status === 'in_progress' || item.status === 'rejected' ? (
+                <button
+                  onClick={() => handleStatusUpdate('complete')}
+                  disabled={actionLoading}
+                  className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 disabled:opacity-50"
+                >
+                  <CheckCircle size={18} />
+                  Mark Complete
+                </button>
+              ) : null}
+
+              {item.status === 'completed' ? (
+                <>
+                  <button
+                    onClick={() => handleStatusUpdate('reject')}
+                    disabled={actionLoading}
+                    className="flex items-center gap-2 px-4 py-2 bg-white border border-red-300 text-red-700 rounded-md hover:bg-red-50 disabled:opacity-50"
+                  >
+                    <AlertCircle size={18} />
+                    Reject
+                  </button>
+                  <button
+                    onClick={() => handleStatusUpdate('verify')}
+                    disabled={actionLoading}
+                    className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50"
+                  >
+                    <CheckCircle size={18} />
+                    Verify
+                  </button>
+                </>
+              ) : null}
+            </>
+          )}
         </div>
       </div>
     </div>

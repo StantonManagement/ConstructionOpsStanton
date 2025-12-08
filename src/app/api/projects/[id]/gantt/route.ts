@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseClient';
+import { successResponse, errorResponse } from '@/lib/apiHelpers';
 
 export async function GET(
   request: Request,
@@ -17,7 +18,7 @@ export async function GET(
 
     if (scheduleError || !schedule) {
       // If no schedule, return empty structure
-      return NextResponse.json({ tasks: [] });
+      return successResponse({ tasks: [] });
     }
 
     // 2. Get all tasks
@@ -54,6 +55,12 @@ export async function GET(
       const taskDeps = dependencies.filter(d => d.target_task_id === task.id);
       const dependencyIds = taskDeps.map(d => d.source_task_id).join(', ');
 
+      // Build custom_class without trailing spaces
+      const customClasses = [`status-${task.status}`];
+      if (task.is_milestone) {
+        customClasses.push('milestone');
+      }
+
       return {
         id: task.id,
         name: task.task_name,
@@ -61,14 +68,14 @@ export async function GET(
         end: task.end_date,
         progress: task.progress || 0,
         dependencies: dependencyIds,
-        custom_class: `status-${task.status} ${task.is_milestone ? 'milestone' : ''}`
+        custom_class: customClasses.join(' ')
         // Extra data can be attached if needed
       };
     });
 
-    return NextResponse.json({ tasks: formattedTasks });
+    return successResponse({ tasks: formattedTasks });
   } catch (error: any) {
     console.error('Error fetching Gantt data:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return errorResponse(error.message, 500);
   }
 }

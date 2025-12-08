@@ -44,7 +44,7 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ onShowProfile, onLogout, userData, onSearch, searchQuery = '', onProjectSelect }) => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { projects, selectedProject, setSelectedProjectId, isLoading: isLoadingProjects } = useProject();
+  const { projects, selectedProject, setSelectedProjectId, isLoading: isLoadingProjects, error: projectError } = useProject();
   
   const [time, setTime] = useState<string | null>(null);
   const [date, setDate] = useState<string | null>(null);
@@ -379,8 +379,17 @@ const Header: React.FC<HeaderProps> = ({ onShowProfile, onLogout, userData, onSe
                   </div>
                 )}
 
+                {/* Error State */}
+                {projectError && (
+                  <div className="px-3 py-4 text-center text-red-500 text-sm">
+                    <AlertCircle className="w-4 h-4 mx-auto mb-2" />
+                    <p>Failed to load projects</p>
+                    <p className="text-xs mt-1 opacity-75">{projectError}</p>
+                  </div>
+                )}
+
                 {/* Project List */}
-                {!isLoadingProjects && projects.map((project) => (
+                {!isLoadingProjects && !projectError && projects.map((project) => (
                   <button
                     key={project.id}
                     onClick={() => handleProjectSelect(project.id)}
@@ -397,7 +406,7 @@ const Header: React.FC<HeaderProps> = ({ onShowProfile, onLogout, userData, onSe
                 ))}
 
                 {/* Empty State */}
-                {!isLoadingProjects && projects.length === 0 && (
+                {!isLoadingProjects && !projectError && projects.length === 0 && (
                   <div className="px-3 py-4 text-center text-gray-500 text-sm">
                     No active projects found
                   </div>

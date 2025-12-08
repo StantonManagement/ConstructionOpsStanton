@@ -1215,16 +1215,16 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
                   {/* Action Buttons */}
                   <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-100 space-y-2">
                     {/* REMOVED DELETE BUTTON FROM HERE */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleOpenEditForm(project);
-                      }}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenEditForm(project);
+                        }}
                       className="w-full flex items-center justify-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 bg-secondary text-foreground hover:bg-secondary/80 rounded transition-colors text-xs sm:text-sm font-medium"
-                    >
-                      <Edit2 className="w-3 h-3 sm:w-4 sm:h-4" />
-                      <span>Edit</span>
-                    </button>
+                      >
+                        <Edit2 className="w-3 h-3 sm:w-4 sm:h-4" />
+                        <span>Edit</span>
+                      </button>
                     
                     <button
                       onClick={(e) => {

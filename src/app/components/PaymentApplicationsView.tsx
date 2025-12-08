@@ -964,8 +964,45 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
   };
 
   const sendForSignature = async (paymentAppId: number) => {
-    // TODO: Implement signature sending
-    console.log('Sending for signature:', paymentAppId);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        showToast({ message: 'Authentication required', type: 'error' });
+        return;
+      }
+
+      // Using the RESTful endpoint pattern
+      const res = await fetch(`/api/payments/${paymentAppId}/send-docusign`, {
+        method: "POST",
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`
+        }
+      });
+
+      if (!res.ok) {
+        let errorMessage = res.statusText;
+        try {
+          const data = await res.json();
+          errorMessage = data.error || errorMessage;
+        } catch (e) {
+          // Response is not JSON
+        }
+        
+        // Handle 501 Not Implemented gracefully
+        if (res.status === 501) {
+           showToast({ message: "Signature service not fully configured yet.", type: 'warning' });
+           return;
+        }
+
+        showToast({ message: "Failed to send for signature: " + errorMessage, type: 'error' });
+        return;
+      }
+      
+      showToast({ message: "Signature request sent successfully", type: 'success' });
+    } catch (error) {
+      console.error('Error sending for signature:', error);
+      showToast({ message: "Network error sending signature request", type: 'error' });
+    }
   };
 
   const handleDeletePayment = async (paymentAppId: number) => {
@@ -1073,9 +1110,61 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
   };
 
   const handleApproveSelected = async () => {
-    // TODO: Implement bulk approve
-    console.log('Approving selected:', selectedItems);
-    setSelectedItems([]);
+    if (selectedItems.length === 0) return;
+    
+    setActionLoading(true);
+    let successCount = 0;
+    let failCount = 0;
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error('Authentication required');
+
+      // Process approvals in parallel
+      const promises = selectedItems.map(id => 
+        fetch(`/api/payments/${id}/approve`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`
+          },
+          body: JSON.stringify({
+            approvalNotes: 'Bulk approved via dashboard',
+            sendNotification: true 
+          })
+        }).then(res => {
+          if (res.ok) successCount++;
+          else failCount++;
+          return res;
+        }).catch(() => {
+          failCount++;
+        })
+      );
+
+      await Promise.all(promises);
+
+      if (successCount > 0) {
+        showToast({ 
+          message: `Successfully approved ${successCount} application${successCount !== 1 ? 's' : ''}`, 
+          type: 'success' 
+        });
+      }
+      
+      if (failCount > 0) {
+        showToast({ 
+          message: `Failed to approve ${failCount} application${failCount !== 1 ? 's' : ''}`, 
+          type: 'error' 
+        });
+      }
+
+      setSelectedItems([]);
+      fetchApplications();
+    } catch (error) {
+      console.error('Error in bulk approval:', error);
+      showToast({ message: 'Error processing bulk approval', type: 'error' });
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   const handleStatClick = async (type: string) => {
@@ -1614,13 +1703,45 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
                     Cancel
                   </button>
                   <button
-                    onClick={() => {
-                      // TODO: Implement approval logic
-                      setShowConfirmDialog(null);
+                    onClick={async () => {
+                      if (!selectedPaymentForVerification) return;
+                      setActionLoading(true);
+                      try {
+                        const { data: { session } } = await supabase.auth.getSession();
+                        if (!session?.access_token) throw new Error('Authentication required');
+
+                        const response = await fetch(`/api/payments/${selectedPaymentForVerification.id}/approve`, {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${session.access_token}`
+                          },
+                          body: JSON.stringify({
+                            approvalNotes: approvalNotes,
+                            sendNotification: sendContractorNotification
+                          })
+                        });
+
+                        if (!response.ok) {
+                          const data = await response.json();
+                          throw new Error(data.error || 'Failed to approve payment application');
+                        }
+
+                        showToast({ message: 'Payment application approved successfully', type: 'success' });
+                        handleVerificationClose();
+                        fetchApplications(); // Refresh list
+                      } catch (err: any) {
+                        console.error('Error approving payment:', err);
+                        showToast({ message: err.message, type: 'error' });
+                      } finally {
+                        setActionLoading(false);
+                        setShowConfirmDialog(null);
+                      }
                     }}
                     className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white rounded-lg shadow-lg transition-colors"
+                    disabled={actionLoading}
                   >
-                    Approve
+                    {actionLoading ? 'Approving...' : 'Approve'}
                   </button>
                 </div>
               </>
@@ -1653,13 +1774,49 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
                     Cancel
                   </button>
                   <button
-                    onClick={() => {
-                      // TODO: Implement rejection logic
-                      setShowConfirmDialog(null);
+                    onClick={async () => {
+                      if (!selectedPaymentForVerification) return;
+                      if (!rejectionNotes.trim()) {
+                        showToast({ message: 'Rejection notes are required', type: 'error' });
+                        return;
+                      }
+                      
+                      setActionLoading(true);
+                      try {
+                        const { data: { session } } = await supabase.auth.getSession();
+                        if (!session?.access_token) throw new Error('Authentication required');
+
+                        const response = await fetch(`/api/payments/${selectedPaymentForVerification.id}/reject`, {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${session.access_token}`
+                          },
+                          body: JSON.stringify({
+                            rejectionNotes: rejectionNotes
+                          })
+                        });
+
+                        if (!response.ok) {
+                          const data = await response.json();
+                          throw new Error(data.error || 'Failed to reject payment application');
+                        }
+
+                        showToast({ message: 'Payment application rejected successfully', type: 'success' });
+                        handleVerificationClose();
+                        fetchApplications(); // Refresh list
+                      } catch (err: any) {
+                        console.error('Error rejecting payment:', err);
+                        showToast({ message: err.message, type: 'error' });
+                      } finally {
+                        setActionLoading(false);
+                        setShowConfirmDialog(null);
+                      }
                     }}
                     className="px-4 py-2 bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 text-white rounded-lg shadow-lg transition-colors"
+                    disabled={actionLoading}
                   >
-                    Reject
+                    {actionLoading ? 'Rejecting...' : 'Reject'}
                   </button>
                 </div>
               </>

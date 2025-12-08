@@ -18,6 +18,7 @@ interface ProjectContextType {
   setSelectedProjectId: (id: number | null) => void;
   projects: Project[];
   isLoading: boolean;
+  error: string | null;
   refreshProjects: () => Promise<void>;
 }
 
@@ -27,6 +28,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectIdState] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -35,20 +37,27 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   // Fetch projects from Supabase
   const fetchProjects = useCallback(async () => {
     setIsLoading(true);
+    setError(null);
     try {
-      const { data, error } = await supabase
+      const { data, error: fetchError } = await supabase
         .from('projects')
         .select('id, name, status, current_phase, address')
-        .in('status', ['active', 'in_progress', 'planning'])
+        .neq('status', 'deleted')
         .order('name', { ascending: true });
 
-      if (error) {
-        console.error('Error fetching projects:', error);
+      if (fetchError) {
+        console.error('Error fetching projects:', fetchError);
+        setError(fetchError.message || 'Failed to load projects');
+        setProjects([]);
       } else {
         setProjects(data || []);
+        if (data && data.length === 0) {
+            console.warn('[ProjectProvider] Fetched 0 projects (non-deleted). Check database.');
+        }
       }
-    } catch (error) {
-      console.error('Error in fetchProjects:', error);
+    } catch (err: any) {
+      console.error('Error in fetchProjects:', err);
+      setError(err.message || 'Unexpected error loading projects');
     } finally {
       setIsLoading(false);
     }
@@ -103,6 +112,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
       setSelectedProjectId,
       projects,
       isLoading,
+      error,
       refreshProjects: fetchProjects
     }}>
       {children}
@@ -117,7 +127,3 @@ export const useProject = (): ProjectContextType => {
   }
   return context;
 };
-
-
-
-
