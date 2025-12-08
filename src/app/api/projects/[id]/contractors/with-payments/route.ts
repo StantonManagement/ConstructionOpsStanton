@@ -88,12 +88,15 @@ export const GET = withAuth(async (request: NextRequest, context: { params: Prom
     throw new APIError(contractorsError.message, 500, 'DB_ERROR');
   }
 
+  // Store reference to avoid null checks in map
+  const db = supabaseAdmin;
+
   // Enhance each contractor with payment status
   const enhancedContractors = await Promise.all((contractors || []).map(async (contract: any) => {
     const contractorId = contract.contractor_id;
 
     // Get approved change orders
-    const { data: approvedCOs } = await supabaseAdmin
+    const { data: approvedCOs } = await db
       .from('change_orders')
       .select('cost_impact')
       .eq('project_id', projectId)
@@ -104,7 +107,7 @@ export const GET = withAuth(async (request: NextRequest, context: { params: Prom
     const co_total = approvedCOs?.reduce((sum: number, co: any) => sum + (Number(co.cost_impact) || 0), 0) || 0;
 
     // Get approved but unpaid payment applications
-    const { data: approvedUnpaidPAs } = await supabaseAdmin
+    const { data: approvedUnpaidPAs } = await db
       .from('payment_applications')
       .select('current_payment')
       .eq('project_id', projectId)
@@ -114,7 +117,7 @@ export const GET = withAuth(async (request: NextRequest, context: { params: Prom
     const approved_unpaid = approvedUnpaidPAs?.reduce((sum: number, pa: any) => sum + (Number(pa.current_payment) || 0), 0) || 0;
 
     // Get pending review payment applications
-    const { data: pendingPAs } = await supabaseAdmin
+    const { data: pendingPAs } = await db
       .from('payment_applications')
       .select('current_payment')
       .eq('project_id', projectId)
@@ -124,7 +127,7 @@ export const GET = withAuth(async (request: NextRequest, context: { params: Prom
     const pending_review = pendingPAs?.reduce((sum: number, pa: any) => sum + (Number(pa.current_payment) || 0), 0) || 0;
 
     // Get recent pending payments for quick status
-    const { data: recentPAs } = await supabaseAdmin
+    const { data: recentPAs } = await db
       .from('payment_applications')
       .select('id, current_payment, status, created_at')
       .eq('project_id', projectId)

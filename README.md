@@ -1,104 +1,87 @@
-# ConstructionOpsStanton
-Construction Ops Stanton
+# Construction Operations Center
 
-A construction operations management platform with payment processing, project tracking, and contractor management.
+A comprehensive construction operations management platform for Stanton Management, featuring payment processing, project tracking, contractor management, and real-time dashboards.
+
+## Features
+
+- **Dashboard** - Action queue with urgent items, pending reviews, and ready-to-pay tracking
+- **Projects** - Full project lifecycle management with budget tracking
+- **Contractors** - Contractor cards with drag-drop ordering and payment status
+- **Payments** - Payment application workflow with verification and approval
+- **Change Orders** - Change order tracking and approval workflow
+- **Field Ops** - Daily logs, punch lists, and site documentation
+- **Budget** - Excel import, line item tracking, and variance analysis
 
 ## Quick Start
 
-### Prerequisites
-- Node.js 18+ 
-- npm or yarn
-- Supabase account and project
-- Twilio account (for SMS features)
-
-### Installation
-
-1. Clone the repository
 ```bash
-git clone <repository-url>
-cd ConstructionOpsStanton
-```
-
-2. Install dependencies
-```bash
+# Install dependencies
 npm install
-```
 
-3. Set up environment variables
-```bash
-# Copy the .env.example to .env (if it exists)
-# Or see ENV_SETUP.md for required variables
-```
+# Set up environment (copy .env.example to .env and configure)
+cp .env.example .env
 
-See [ENV_SETUP.md](./ENV_SETUP.md) for detailed environment variable setup instructions.
-
-4. Run database migrations
-```bash
-# Run scripts/verify-foreign-keys.sql in Supabase SQL Editor first
-# Then run scripts/fix-payment-app-foreign-keys.sql if needed
-```
-
-5. Start development server
-```bash
+# Start development server
 npm run dev
 ```
 
 ## Environment Variables
 
-**CRITICAL**: Ensure all required environment variables are set, especially `SUPABASE_SERVICE_ROLE_KEY` which is required for database relationship queries.
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Yes | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Supabase anon/public key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Yes | Service role key for admin operations |
+| `TWILIO_ACCOUNT_SID` | Optional | For SMS notifications |
+| `TWILIO_AUTH_TOKEN` | Optional | For SMS notifications |
+| `TWILIO_PHONE_NUMBER` | Optional | For SMS notifications |
 
-See [ENV_SETUP.md](./ENV_SETUP.md) for complete documentation on environment variables.
-
-### Required Variables
-- `NEXT_PUBLIC_SUPABASE_URL` - Your Supabase project URL
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Supabase anon/public key
-- `SUPABASE_SERVICE_ROLE_KEY` - **CRITICAL** - Required for relationship queries and admin operations
-- `TWILIO_ACCOUNT_SID` - Twilio account SID (for SMS)
-- `TWILIO_AUTH_TOKEN` - Twilio auth token (for SMS)
-- `TWILIO_PHONE_NUMBER` - Twilio phone number (for SMS)
-
-## Troubleshooting
-
-### "Could not find a relationship between 'payment_applications' and 'projects'"
-
-This error typically indicates:
-1. Missing `SUPABASE_SERVICE_ROLE_KEY` in `.env` file
-2. Foreign key constraints missing in database
-
-**Fix Steps**:
-1. Check your `.env` file has `SUPABASE_SERVICE_ROLE_KEY` set
-2. Run `scripts/verify-foreign-keys.sql` in Supabase SQL Editor
-3. If foreign keys are missing, run `scripts/fix-payment-app-foreign-keys.sql`
-4. Restart your development server
-
-See [ENV_SETUP.md](./ENV_SETUP.md) for detailed troubleshooting.
+See [docs/ENV_SETUP.md](./docs/ENV_SETUP.md) for detailed setup.
 
 ## Development
 
 ```bash
-npm run dev          # Start development server with Turbopack
+npm run dev          # Start dev server (Turbopack)
 npm run build        # Production build
 npm run start        # Start production server
 npm run lint         # Run ESLint
 npm test             # Run tests
 ```
 
+## Tech Stack
+
+- **Next.js 16** - React framework with App Router
+- **TypeScript** - Type-safe development
+- **Supabase** - PostgreSQL database + Auth
+- **Tailwind CSS** - Utility-first styling
+- **Radix UI** - Accessible component primitives
+- **@dnd-kit** - Drag and drop functionality
+
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [SYSTEM_ARCHITECTURE.md](./SYSTEM_ARCHITECTURE.md) | System design and data flow |
+| [DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md) | Database tables and relationships |
+| [STYLE_AND_DESIGN_SYSTEM.md](./STYLE_AND_DESIGN_SYSTEM.md) | UI/UX guidelines |
+| [docs/](./docs/) | Feature documentation and setup guides |
+
+## Project Structure
+
+```
+src/
+├── app/
+│   ├── api/           # API routes
+│   ├── components/    # React components
+│   ├── context/       # React contexts
+│   └── lib/           # Utilities
+├── lib/               # Shared libraries
+docs/
+├── archive/           # Historical documentation
+├── PRD_*.md           # Product requirements
+└── *.md               # Setup guides
+```
+
 ## Deployment
 
-For deployment instructions, see the deployment guide in your hosting provider's documentation. Key points:
-
-1. Ensure all environment variables are set in your hosting platform
-2. Verify `SUPABASE_SERVICE_ROLE_KEY` is set (especially for relationship queries)
-3. Run database migrations before deploying
-4. Verify foreign key constraints exist using `scripts/verify-foreign-keys.sql`
-
-## Architecture
-
-Built with:
-- **Next.js 15** - React framework with Server-Side Rendering
-- **TypeScript** - Type-safe development
-- **Supabase** - Database and authentication
-- **Tailwind CSS** - Styling
-- **Radix UI** - Accessible component primitives
-
-See [CLAUDE.md](./CLAUDE.md) for detailed architecture documentation.
+Deployed on Railway with automatic builds from main branch. See [DEPLOYMENT.md](./DEPLOYMENT.md) for details.

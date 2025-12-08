@@ -1,5 +1,7 @@
 # ConstructionOps System Architecture
 
+> Last Updated: December 2024
+
 ## Table of Contents
 1. [Overview](#overview)
 2. [Technology Stack](#technology-stack)
@@ -8,12 +10,13 @@
 5. [Data Flow](#data-flow)
 6. [Security Architecture](#security-architecture)
 7. [Infrastructure](#infrastructure)
+8. [API Reference](#api-reference)
 
 ---
 
 ## Overview
 
-**ConstructionOps** is a full-stack construction project management platform built on Next.js 15 with React 19, using Supabase as the backend database and authentication provider. The system follows a modern serverless architecture with edge-optimized rendering and real-time data synchronization.
+**Construction Operations Center** is a full-stack construction project management platform built on Next.js 16 with React 19, using Supabase as the backend database and authentication provider. The system follows a modern serverless architecture with edge-optimized rendering and real-time data synchronization.
 
 ### High-Level Architecture Diagram
 
@@ -93,7 +96,7 @@
 ┌─────────────────────────────────────────┐
 │         FRONTEND ARCHITECTURE           │
 ├─────────────────────────────────────────┤
-│  Framework: Next.js 15                  │
+│  Framework: Next.js 16                  │
 │  React: 19 (with Server Components)     │
 │  TypeScript: ^5.0                       │
 │  Build Tool: Turbopack (dev)            │
@@ -839,6 +842,44 @@ AWS_S3_BUCKET=xxx
 OPENAI_API_KEY=sk-xxx...
 SECRET_KEY=xxx...
 ```
+
+---
+
+## API Reference
+
+### Dashboard APIs
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/dashboard/summary` | GET | Dashboard stats (needs approval, pending, overdue) |
+| `/api/dashboard/queue` | GET | Action queue items (urgent, needs review, ready to pay) |
+| `/api/dashboard/activity` | GET | Recent activity feed |
+
+### Project APIs
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/projects` | GET/POST | List/create projects |
+| `/api/projects/[id]` | GET/PUT/DELETE | Project CRUD |
+| `/api/projects/[id]/summary` | GET | Project summary with budget stats |
+| `/api/projects/[id]/contractors/with-payments` | GET | Contractors with payment status |
+
+### Payment APIs
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/payment-applications/list` | POST | List payment applications with filters |
+| `/api/payment-applications/[id]` | GET/PATCH | Payment application CRUD |
+| `/api/payments/[id]/update-percentage` | POST | Update line item percentages |
+
+### Contractor APIs
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/contractors` | GET/POST | List/create contractors |
+| `/api/contractors/[id]` | GET/PUT/DELETE | Contractor CRUD |
+
+### Change Order APIs
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/change-orders` | GET/POST | List/create change orders |
+| `/api/change-orders/[id]` | GET/PATCH/DELETE | Change order CRUD |
 
 ---
 
