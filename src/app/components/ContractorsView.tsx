@@ -501,7 +501,10 @@ const ContractorsView: React.FC<ContractorsViewProps> = ({ searchQuery = '' }) =
       setShowAddModal(false);
     } catch (error) {
       console.error('Error adding contractor:', error);
-      alert(error instanceof Error ? error.message : 'Failed to add contractor');
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : (error as any)?.message || (error as any)?.error_description || 'Failed to add contractor';
+      alert(errorMessage);
     } finally {
       setFormLoading(false);
     }
