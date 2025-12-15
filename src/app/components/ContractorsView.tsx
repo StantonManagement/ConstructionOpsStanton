@@ -476,7 +476,7 @@ const ContractorsView: React.FC<ContractorsViewProps> = ({ searchQuery = '' }) =
       const contractorData = {
         name: formData.name.trim(),
         trade: formData.trade.trim(),
-        phone: formData.phone?.trim() || null,
+        phone: formData.phone?.trim() === '+1' || !formData.phone?.trim() ? null : formData.phone.trim(),
         email: formData.email?.trim() || null,
         status: 'active'
       };
