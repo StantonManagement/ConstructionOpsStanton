@@ -6,10 +6,10 @@ import { ViewMode } from 'gantt-task-react';
 
 interface GanttToolbarProps {
   isMobile: boolean;
-  viewMode: ViewMode;
+  viewMode: 'Day' | 'Week' | 'Month';
   projectId?: number;
   onToggleView: (mobile: boolean) => void;
-  onViewModeChange: (mode: ViewMode) => void;
+  onViewModeChange: (mode: 'Day' | 'Week' | 'Month') => void;
   onAddTask: () => void;
   onAutoSchedule?: () => void;
   onClearProject: () => void;
@@ -60,12 +60,12 @@ export default function GanttToolbar({
         {!isMobile && (
           <select
             value={viewMode}
-            onChange={(e) => onViewModeChange(e.target.value as ViewMode)}
+            onChange={(e) => onViewModeChange(e.target.value as any)}
             className="px-3 py-2 border rounded-lg text-sm bg-white"
           >
-            <option value={ViewMode.Day}>Day View</option>
-            <option value={ViewMode.Week}>Week View</option>
-            <option value={ViewMode.Month}>Month View</option>
+            <option value="Day">Day View</option>
+            <option value="Week">Week View</option>
+            <option value="Month">Month View</option>
           </select>
         )}
         

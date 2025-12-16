@@ -26,43 +26,25 @@ export default function GanttChartContainer({
 }: GanttChartContainerProps) {
   
   // Convert ScheduleTask to Gantt Task
-  const ganttTasks: Task[] = tasks
-    .filter(t => t.start_date && t.end_date) // Only show tasks with dates
-    .map(t => {
-      const isBudgetLinked = !!t.budget_category_id;
-      
-      // Ensure valid date objects
-      const startDate = new Date(t.start_date);
-      const endDate = new Date(t.end_date);
-      
-      // Fix invalid dates if they happen to pass through
-      if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-          return null;
-      }
-
-      // Ensure end date is after start date (library crashes otherwise)
-      if (endDate < startDate) {
-          endDate.setDate(startDate.getDate() + 1);
-      }
-
-      return {
-        start: startDate,
-        end: endDate,
-        name: t.task_name + (isBudgetLinked ? ' 💲' : ''), // Visual indicator
-        id: t.id,
-        type: 'task', // Simple logic
-        progress: t.progress || 0,
-        isDisabled: false,
-        styles: { 
-          progressColor: isBudgetLinked ? '#059669' : '#3B82F6', // Green for budget linked
-          progressSelectedColor: isBudgetLinked ? '#047857' : '#2563EB',
-          backgroundColor: isBudgetLinked ? '#D1FAE5' : undefined
-        },
-        dependencies: t.dependencies || [],
-        project: t.parent_task_id
-      };
-    })
-    .filter((t): t is Task => t !== null); // Filter out nulls
+  const ganttTasks: Task[] = tasks.map(t => {
+    const isBudgetLinked = !!t.budget_category_id;
+    return {
+      start: new Date(t.start_date),
+      end: new Date(t.end_date),
+      name: t.task_name + (isBudgetLinked ? ' 💲' : ''), // Visual indicator
+      id: t.id,
+      type: 'task', // Simple logic
+      progress: t.progress,
+      isDisabled: false,
+      styles: { 
+        progressColor: isBudgetLinked ? '#059669' : '#3B82F6', // Green for budget linked
+        progressSelectedColor: isBudgetLinked ? '#047857' : '#2563EB',
+        backgroundColor: isBudgetLinked ? '#D1FAE5' : undefined
+      },
+      dependencies: t.dependencies,
+      project: t.parent_task_id
+    };
+  });
 
   const CustomTooltip = ({ task, fontSize, fontFamily }: { task: Task; fontSize: string; fontFamily: string }) => {
     const originalTask = tasks.find(t => t.id === task.id);

@@ -3,11 +3,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { Loader2, AlertCircle, Calendar } from 'lucide-react';
-// replaced SwimLaneGantt with GanttChart and GanttToolbar
-import GanttChart, { GanttTask } from './GanttChart';
+import GanttChartContainer from './GanttChartContainer';
 import GanttToolbar from './GanttToolbar';
 import TaskFormModal from './TaskFormModal';
 import { ProjectSchedule, ScheduleTask } from '@/types/schedule';
+import { ViewMode, Task } from 'gantt-task-react';
 
 interface ProjectScheduleTabProps {
   projectId: number;
@@ -18,8 +18,8 @@ interface BudgetCategory {
   category_name: string;
   original_amount: number;
   revised_amount: number;
-  actual_spend: number; // Added field
-  committed_costs: number; // Added field
+  actual_spend: number;
+  committed_costs: number;
   tasks: ScheduleTask[];
 }
 
@@ -32,10 +32,8 @@ export default function ProjectScheduleTab({ projectId }: ProjectScheduleTabProp
   const [budgetCategories, setBudgetCategories] = useState<BudgetCategory[]>([]);
   const [unassignedTasks, setUnassignedTasks] = useState<ScheduleTask[]>([]);
   
-  // Data for Gantt Chart
-  const [ganttTasks, setGanttTasks] = useState<GanttTask[]>([]);
-  const [viewMode, setViewMode] = useState<'Day' | 'Week' | 'Month'>('Week');
-  const [selectedTaskId, setSelectedTaskId] = useState<string | undefined>(undefined);
+  // View State
+  const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.Week);
   const [isMobile, setIsMobile] = useState(false);
   
   // Modal State
@@ -54,7 +52,7 @@ export default function ProjectScheduleTab({ projectId }: ProjectScheduleTabProp
         return;
       }
 
-      // 1. Fetch Schedule & Budget Data (for Modal context)
+      // 1. Fetch Schedule & Budget Data
       const scheduleResponse = await fetch(`/api/projects/${projectId}/schedule-with-budget`, {
         cache: 'no-store',
         headers: {
@@ -67,74 +65,11 @@ export default function ProjectScheduleTab({ projectId }: ProjectScheduleTabProp
       }
 
       const scheduleResult = await scheduleResponse.json();
-      let currentSchedule = null;
-      let categories: BudgetCategory[] = [];
       
       if (scheduleResult.data) {
-        currentSchedule = scheduleResult.data.schedule;
-        setSchedule(currentSchedule);
-        categories = scheduleResult.data.budgetCategories || [];
-        setBudgetCategories(categories);
+        setSchedule(scheduleResult.data.schedule);
+        setBudgetCategories(scheduleResult.data.budgetCategories || []);
         setUnassignedTasks(scheduleResult.data.unassignedTasks || []);
-      }
-
-      // 2. Fetch Gantt Data (formatted for frappe-gantt with dependencies)
-      const ganttResponse = await fetch(`/api/projects/${projectId}/gantt`, {
-        cache: 'no-store',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`
-        }
-      });
-
-      if (ganttResponse.ok) {
-        const ganttResult = await ganttResponse.json();
-        if (ganttResult.data && ganttResult.data.tasks) {
-          let loadedTasks: GanttTask[] = ganttResult.data.tasks;
-
-          // 3. Inject virtual tasks for empty budget categories WITH REMAINING BUDGET
-          if (currentSchedule && categories.length > 0) {
-            const virtualTasks: GanttTask[] = [];
-            
-            categories.forEach(cat => {
-              // Check if this category has no tasks
-              if (!cat.tasks || cat.tasks.length === 0) {
-                // Check if it has remaining budget (revised - actual > 0)
-                // Use original_amount if revised_amount is 0 (assuming initial state)
-                const original = Number(cat.original_amount) || 0;
-                const revised = Number(cat.revised_amount) || 0;
-                const budget = revised > 0 ? revised : original;
-                
-                const actual = Number(cat.actual_spend) || 0;
-                const remaining = budget - actual;
-
-                if (remaining > 0) {
-                   // Create a virtual task
-                  // Start date: Project start or today
-                  const startDate = (currentSchedule as ProjectSchedule).start_date || new Date().toISOString().split('T')[0];
-                  // End date: 1 day later
-                  const endDate = new Date(new Date(startDate).getTime() + 86400000).toISOString().split('T')[0];
-
-                  virtualTasks.push({
-                    id: `budget-${cat.id}`,
-                    name: `${cat.category_name} (Unscheduled)`,
-                    start: startDate,
-                    end: endDate,
-                    progress: 0,
-                    dependencies: '',
-                    custom_class: 'bar-budget-placeholder'
-                  });
-                }
-              }
-            });
-
-            // Combine real tasks and virtual tasks
-            loadedTasks = [...loadedTasks, ...virtualTasks];
-          }
-          
-          setGanttTasks(loadedTasks);
-      }
-      } else {
-        console.error('Failed to fetch Gantt specific data');
       }
 
     } catch (err: any) {
@@ -149,110 +84,128 @@ export default function ProjectScheduleTab({ projectId }: ProjectScheduleTabProp
     fetchData();
   }, [fetchData]);
 
-  // --- Gantt Chart Handlers ---
+  // Combine tasks from all sources
+  const allRealTasks = [
+    ...unassignedTasks,
+    ...budgetCategories.flatMap(c => c.tasks || [])
+  ];
 
-  const handleGanttTaskClick = (task: GanttTask) => {
-    // Check if it's a virtual budget task (always open modal immediately as it's for creation)
+  // Generate virtual tasks for budget categories with remaining budget but no tasks
+  const virtualTasks: ScheduleTask[] = [];
+  if (schedule && budgetCategories.length > 0) {
+    budgetCategories.forEach(cat => {
+      // Check if this category has no tasks
+      if (!cat.tasks || cat.tasks.length === 0) {
+        // Check if it has remaining budget
+        const original = Number(cat.original_amount) || 0;
+        const revised = Number(cat.revised_amount) || 0;
+        const budget = revised > 0 ? revised : original;
+        
+        const actual = Number(cat.actual_spend) || 0;
+        const remaining = budget - actual;
+
+        if (remaining > 0) {
+          const startDate = schedule.start_date || new Date().toISOString().split('T')[0];
+          // End date: 1 day later
+          const endDate = new Date(new Date(startDate).getTime() + 86400000).toISOString().split('T')[0];
+
+          // Create a pseudo-ScheduleTask
+          virtualTasks.push({
+            id: `budget-${cat.id}`,
+            schedule_id: schedule.id,
+            task_name: `${cat.category_name} (Unscheduled)`,
+            start_date: startDate,
+            end_date: endDate,
+            duration_days: 1,
+            progress: 0,
+            status: 'not_started',
+            sort_order: 0,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            budget_category_id: cat.id,
+            dependencies: []
+          });
+        }
+      }
+    });
+  }
+
+  const displayTasks = [...allRealTasks, ...virtualTasks];
+
+  // --- Handlers ---
+
+  const handleTaskUpdate = async (task: Task) => {
+    // Check if it's a virtual budget task
+    if (task.id.startsWith('budget-')) return;
+
+    // Optimistic update logic could go here if we managed local state separately
+    // But since we use derived state, we'll just call the API and refresh
+
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      if (!session) return;
+
+      // Check what changed?
+      // For simplicity, we can update both dates and progress if we want, 
+      // but let's check the original task to see what changed
+      const originalTask = allRealTasks.find(t => t.id === task.id);
+      if (!originalTask) return;
+
+      const newStart = task.start.toISOString().split('T')[0];
+      const newEnd = task.end.toISOString().split('T')[0];
+      const newProgress = task.progress;
+
+      const datesChanged = newStart !== originalTask.start_date || newEnd !== originalTask.end_date;
+      const progressChanged = newProgress !== originalTask.progress;
+
+      if (datesChanged) {
+        await fetch(`/api/schedules/tasks/${task.id}/update-dates`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.session?.access_token}`
+          },
+          body: JSON.stringify({
+            start_date: newStart,
+            end_date: newEnd
+          })
+        });
+      }
+
+      if (progressChanged) {
+        await supabase
+          .from('schedule_tasks')
+          .update({ progress: newProgress })
+          .eq('id', task.id);
+      }
+      
+      // Refresh to get canonical state (and any server-side cascades)
+      if (datesChanged || progressChanged) {
+        fetchData();
+      }
+
+    } catch (error) {
+      console.error('Error updating task:', error);
+      fetchData(); // Revert
+    }
+  };
+
+  const handleTaskEdit = (task: Task) => {
+    // Check if it's a virtual budget task
     if (task.id.startsWith('budget-')) {
       const budgetId = parseInt(task.id.replace('budget-', ''));
       if (!isNaN(budgetId)) {
-        // Open Add Task modal with this category pre-selected
         handleAddTask(budgetId);
         return;
       }
     }
 
-    // For regular tasks: Select on first click, Open modal on second click
-    if (selectedTaskId === task.id) {
-      // Already selected -> Open Edit Modal
-      const allTasks = [
-        ...unassignedTasks,
-        ...budgetCategories.flatMap(c => c.tasks)
-      ];
-      const fullTask = allTasks.find(t => t.id === task.id);
-      
-      if (fullTask) {
-        setSelectedTaskForEdit(fullTask);
-        setShowTaskModal(true);
-      }
-    } else {
-      // Not selected -> Select it (GanttChart will handle scrolling)
-      setSelectedTaskId(task.id);
+    const fullTask = allRealTasks.find(t => t.id === task.id);
+    if (fullTask) {
+      setSelectedTaskForEdit(fullTask);
+      setShowTaskModal(true);
     }
   };
-
-  const handleGanttDateChange = async (task: GanttTask, start: Date, end: Date) => {
-    // Ignore virtual tasks for date changes
-    if (task.id.startsWith('budget-')) return;
-
-    // Optimistic update for Gantt view
-    const newGanttTasks = ganttTasks.map(t => 
-      t.id === task.id ? { ...t, start: start.toISOString(), end: end.toISOString() } : t
-    );
-    setGanttTasks(newGanttTasks);
-
-    try {
-      const { data: session } = await supabase.auth.getSession();
-      if (!session) return;
-
-      // Call update endpoint (which handles cascade)
-      const res = await fetch(`/api/schedules/tasks/${task.id}/update-dates`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.session?.access_token}`
-        },
-        body: JSON.stringify({
-          start_date: start.toISOString().split('T')[0],
-          end_date: end.toISOString().split('T')[0]
-        })
-      });
-
-      if (!res.ok) {
-        console.error('Failed to update task dates');
-        fetchData(); // Revert
-      } else {
-        // If cascade happened, we need to refresh to see changes in other tasks
-        const ganttResponse = await fetch(`/api/projects/${projectId}/gantt`, {
-            headers: { 'Authorization': `Bearer ${session.session?.access_token}` }
-        });
-        if (ganttResponse.ok) {
-            const res = await ganttResponse.json();
-            // We need to re-inject virtual tasks here too, ideally we extract the injection logic
-            fetchData(); 
-        }
-      }
-    } catch (error) {
-      console.error('Error updating task dates:', error);
-      fetchData();
-    }
-  };
-
-  const handleGanttProgressChange = async (task: GanttTask, progress: number) => {
-    if (task.id.startsWith('budget-')) return;
-
-    // Optimistic update
-    const newGanttTasks = ganttTasks.map(t => 
-        t.id === task.id ? { ...t, progress } : t
-    );
-    setGanttTasks(newGanttTasks);
-
-    try {
-      const { data: session } = await supabase.auth.getSession();
-      if (!session) return;
-
-      await supabase
-        .from('schedule_tasks')
-        .update({ progress })
-        .eq('id', task.id);
-        
-    } catch (e) {
-      console.error('Failed to update task progress', e);
-      fetchData(); // Revert
-    }
-  };
-
-  // --- Modal Handlers ---
 
   const handleAddTask = (budgetCategoryId?: number | null) => {
     setSelectedCategoryForAdd(budgetCategoryId ?? null); 
@@ -288,7 +241,6 @@ export default function ProjectScheduleTab({ projectId }: ProjectScheduleTabProp
         throw new Error(errorData.error || 'Failed to create schedule');
       }
 
-      // Refresh data to show the new schedule
       fetchData();
     } catch (err: any) {
       console.error('Error creating schedule:', err);
@@ -318,10 +270,6 @@ export default function ProjectScheduleTab({ projectId }: ProjectScheduleTabProp
         throw new Error('Failed to auto-schedule tasks');
       }
       
-      const result = await res.json();
-      console.log('Auto-schedule result:', result);
-      
-      // Refresh data
       fetchData();
     } catch (err: any) {
       console.error('Auto-schedule error:', err);
@@ -374,20 +322,14 @@ export default function ProjectScheduleTab({ projectId }: ProjectScheduleTabProp
     );
   }
 
-  // Collect all tasks for the modal context
-  const allTasks = [
-    ...unassignedTasks,
-    ...budgetCategories.flatMap(c => c.tasks)
-  ];
-
   return (
     <div className="space-y-6">
       {/* Toolbar */}
       <GanttToolbar
         isMobile={isMobile}
-        viewMode={viewMode}
+        viewMode={viewMode as unknown as 'Day' | 'Week' | 'Month'} // Pass ViewMode enum directly - GanttToolbar might expect string but they match
         onToggleView={setIsMobile}
-        onViewModeChange={setViewMode}
+        onViewModeChange={(mode) => setViewMode(mode as unknown as ViewMode)}
         onAddTask={() => handleAddTask(null)}
         onAutoSchedule={handleAutoSchedule}
         onClearProject={() => {}} 
@@ -398,16 +340,14 @@ export default function ProjectScheduleTab({ projectId }: ProjectScheduleTabProp
       {isMobile ? (
         <div className="p-4 text-center text-gray-500">
           Mobile List View is available in the main schedule dashboard.
-          {/* Or implement MobileTaskTimeline here if reused */}
         </div>
       ) : (
-        <GanttChart
-          tasks={ganttTasks}
+        <GanttChartContainer
+          tasks={displayTasks}
+          budgetCategories={budgetCategories}
           viewMode={viewMode}
-          selectedTaskId={selectedTaskId}
-          onTaskClick={handleGanttTaskClick}
-          onDateChange={handleGanttDateChange}
-          onProgressChange={handleGanttProgressChange}
+          onEdit={handleTaskEdit}
+          onUpdate={handleTaskUpdate}
         />
       )}
 
@@ -416,16 +356,15 @@ export default function ProjectScheduleTab({ projectId }: ProjectScheduleTabProp
         <TaskFormModal
           scheduleId={schedule.id}
           projectId={projectId}
-          allTasks={allTasks}
+          allTasks={allRealTasks}
           existingTask={selectedTaskForEdit}
           onClose={() => {
             setShowTaskModal(false);
             setSelectedTaskForEdit(undefined);
-            setSelectedTaskId(undefined);
           }}
           onSuccess={fetchData}
           initialBudgetCategoryId={selectedCategoryForAdd}
-          budgetCategories={budgetCategories} // Correctly passing the prop
+          budgetCategories={budgetCategories}
         />
       )}
     </div>

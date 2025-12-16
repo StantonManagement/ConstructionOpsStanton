@@ -16,6 +16,11 @@ export async function GET(request: Request) {
     }
     
     const token = authHeader.replace('Bearer ', '');
+    
+    if (!supabase) {
+      return NextResponse.json({ error: 'Database unavailable' }, { status: 500 });
+    }
+    
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
 
     if (authError || !user) {
@@ -44,6 +49,11 @@ export async function POST(request: Request) {
     }
 
     const token = authHeader.replace('Bearer ', '');
+    
+    if (!supabase) {
+      return NextResponse.json({ error: 'Database unavailable' }, { status: 500 });
+    }
+    
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
 
     if (authError || !user) {
