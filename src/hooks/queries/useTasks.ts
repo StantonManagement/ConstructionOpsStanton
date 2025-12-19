@@ -1,9 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Task, CreateTaskInput, TaskStatus, ApiResponse } from '@/types/schema';
+import { authFetch } from '@/lib/authFetch';
 
 // Helper for fetching
 const fetchTasks = async (locationId: string): Promise<Task[]> => {
-  const res = await fetch(`/api/tasks?location_id=${locationId}`);
+  const res = await authFetch(`/api/tasks?location_id=${locationId}`);
   if (!res.ok) throw new Error('Failed to fetch tasks');
   const json: ApiResponse<Task[]> = await res.json();
   if (json.error) throw new Error(json.error);
@@ -11,7 +12,7 @@ const fetchTasks = async (locationId: string): Promise<Task[]> => {
 };
 
 const fetchTask = async (id: string): Promise<Task> => {
-  const res = await fetch(`/api/tasks/${id}`);
+  const res = await authFetch(`/api/tasks/${id}`);
   if (!res.ok) throw new Error('Failed to fetch task');
   const json: ApiResponse<Task> = await res.json();
   if (json.error) throw new Error(json.error);
@@ -41,7 +42,7 @@ export function useCreateTask() {
 
   return useMutation({
     mutationFn: async (data: CreateTaskInput) => {
-      const res = await fetch('/api/tasks', {
+      const res = await authFetch('/api/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
@@ -64,7 +65,7 @@ export function useUpdateTask() {
 
   return useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<Task> }) => {
-      const res = await fetch(`/api/tasks/${id}`, {
+      const res = await authFetch(`/api/tasks/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
@@ -89,7 +90,7 @@ export function useDeleteTask() {
 
   return useMutation({
     mutationFn: async ({ id, locationId }: { id: string; locationId: string }) => {
-      const res = await fetch(`/api/tasks/${id}`, {
+      const res = await authFetch(`/api/tasks/${id}`, {
         method: 'DELETE',
       });
       if (!res.ok) throw new Error('Failed to delete task');
@@ -112,7 +113,7 @@ export function useUpdateTaskStatus() {
       verification_photo_url?: string;
       verification_notes?: string;
     }) => {
-      const res = await fetch(`/api/tasks/${id}/status`, {
+      const res = await authFetch(`/api/tasks/${id}/status`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status, verification_photo_url, verification_notes }),
@@ -156,7 +157,7 @@ export function useVerifyTask() {
       formData.append('taskId', taskId);
       formData.append('locationId', locationId);
       
-      const uploadRes = await fetch('/api/upload/verification-photo', {
+      const uploadRes = await authFetch('/api/upload/verification-photo', {
         method: 'POST',
         body: formData,
       });

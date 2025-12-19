@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useCreateDraw } from '@/hooks/queries/useDraws';
 import { usePortfolioProperties } from '@/hooks/queries/usePortfolio';
 import { useQuery } from '@tanstack/react-query';
+import { authFetch } from '@/lib/authFetch';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -41,7 +42,7 @@ export default function CreateDrawPage() {
   const { data: projectEligibilityData, isLoading: isLoadingTasks } = useQuery({
     queryKey: ['draw-eligibility', selectedProjectId],
     queryFn: async () => {
-      const res = await fetch(`/api/cash-flow/draw-eligibility?project_id=${selectedProjectId}`);
+      const res = await authFetch(`/api/cash-flow/draw-eligibility?project_id=${selectedProjectId}`);
       if (!res.ok) throw new Error('Failed to fetch eligibility');
       const json = await res.json();
       return json.data;
@@ -129,7 +130,7 @@ export default function CreateDrawPage() {
     for (let i = 0; i < tasks.length; i += 5) {
         const chunk = tasks.slice(i, i + 5);
         await Promise.all(chunk.map(taskId => 
-            fetch(`/api/draws/${drawId}/line-items`, {
+            authFetch(`/api/draws/${drawId}/line-items`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ task_id: taskId })

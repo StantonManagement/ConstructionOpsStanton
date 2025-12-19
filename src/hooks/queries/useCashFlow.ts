@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { ApiResponse } from '@/types/schema';
+import { authFetch } from '@/lib/authFetch';
 
 // Types
 export interface CashFlowForecastWeek {
@@ -50,7 +51,7 @@ const fetchForecast = async (projectId: number, weeks: number = 4): Promise<Cash
     weeks: weeks.toString() 
   });
   
-  const res = await fetch(`/api/cash-flow/forecast?${params.toString()}`);
+  const res = await authFetch(`/api/cash-flow/forecast?${params.toString()}`);
   if (!res.ok) throw new Error('Failed to fetch forecast');
   const json: ApiResponse<CashFlowForecast> = await res.json();
   if (json.error) throw new Error(json.error);
@@ -60,7 +61,7 @@ const fetchForecast = async (projectId: number, weeks: number = 4): Promise<Cash
 const fetchDrawEligibility = async (projectId: number): Promise<DrawEligibility> => {
   const params = new URLSearchParams({ project_id: projectId.toString() });
   
-  const res = await fetch(`/api/cash-flow/draw-eligibility?${params.toString()}`);
+  const res = await authFetch(`/api/cash-flow/draw-eligibility?${params.toString()}`);
   if (!res.ok) throw new Error('Failed to fetch draw eligibility');
   const json: ApiResponse<DrawEligibility> = await res.json();
   if (json.error) throw new Error(json.error);

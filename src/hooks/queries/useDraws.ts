@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ApiResponse } from '@/types/schema';
+import { authFetch } from '@/lib/authFetch';
 
 // Types
 export interface Draw {
@@ -41,7 +42,7 @@ export interface DrawLineItem {
 
 // Fetchers
 const fetchDraws = async (projectId: number): Promise<Draw[]> => {
-  const res = await fetch(`/api/draws?project_id=${projectId}`);
+  const res = await authFetch(`/api/draws?project_id=${projectId}`);
   if (!res.ok) throw new Error('Failed to fetch draws');
   const json: ApiResponse<Draw[]> = await res.json();
   if (json.error) throw new Error(json.error);
@@ -49,7 +50,7 @@ const fetchDraws = async (projectId: number): Promise<Draw[]> => {
 };
 
 const fetchDraw = async (id: string): Promise<Draw> => {
-  const res = await fetch(`/api/draws/${id}`);
+  const res = await authFetch(`/api/draws/${id}`);
   if (!res.ok) throw new Error('Failed to fetch draw');
   const json: ApiResponse<Draw> = await res.json();
   if (json.error) throw new Error(json.error);
@@ -73,7 +74,7 @@ export function useRenovationDraws(options: { property_id?: string; status?: str
       if (options.property_id) params.set('property_id', options.property_id);
       if (options.status) params.set('status', options.status);
       
-      const res = await fetch(`/api/renovations/draws?${params.toString()}`);
+      const res = await authFetch(`/api/renovations/draws?${params.toString()}`);
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || 'Failed to fetch draws');
       return json.data;
@@ -90,7 +91,7 @@ export function useDrawEligibility() {
   }>({
     queryKey: ['draws', 'eligibility'],
     queryFn: async () => {
-      const res = await fetch('/api/renovations/draws/eligibility');
+      const res = await authFetch('/api/renovations/draws/eligibility');
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || 'Failed to fetch eligibility');
       return json.data;
@@ -112,7 +113,7 @@ export function useCreateDraw() {
 
   return useMutation({
     mutationFn: async ({ project_id, notes }: { project_id: number; notes?: string }) => {
-      const res = await fetch('/api/draws', {
+      const res = await authFetch('/api/draws', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ project_id, notes }),
@@ -136,7 +137,7 @@ export function useUpdateDraw() {
 
   return useMutation({
     mutationFn: async ({ id, notes }: { id: string; notes?: string }) => {
-      const res = await fetch(`/api/draws/${id}`, {
+      const res = await authFetch(`/api/draws/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ notes }),
@@ -158,7 +159,7 @@ export function useDeleteDraw() {
 
   return useMutation({
     mutationFn: async ({ id, projectId }: { id: string; projectId: number }) => {
-      const res = await fetch(`/api/draws/${id}`, {
+      const res = await authFetch(`/api/draws/${id}`, {
         method: 'DELETE',
       });
       if (!res.ok) {
@@ -178,7 +179,7 @@ export function useSubmitDraw() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const res = await fetch(`/api/draws/${id}/submit`, {
+      const res = await authFetch(`/api/draws/${id}/submit`, {
         method: 'POST',
       });
       if (!res.ok) {
@@ -202,7 +203,7 @@ export function useApproveDraw() {
 
   return useMutation({
     mutationFn: async ({ id, amount_approved }: { id: string; amount_approved?: number }) => {
-      const res = await fetch(`/api/draws/${id}/approve`, {
+      const res = await authFetch(`/api/draws/${id}/approve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ amount_approved }),
@@ -227,7 +228,7 @@ export function useFundDraw() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const res = await fetch(`/api/draws/${id}/fund`, {
+      const res = await authFetch(`/api/draws/${id}/fund`, {
         method: 'POST',
       });
       if (!res.ok) {
@@ -250,7 +251,7 @@ export function useAddDrawLineItem() {
 
   return useMutation({
     mutationFn: async ({ drawId, taskId }: { drawId: string; taskId: string }) => {
-      const res = await fetch(`/api/draws/${drawId}/line-items`, {
+      const res = await authFetch(`/api/draws/${drawId}/line-items`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ task_id: taskId }),
@@ -274,7 +275,7 @@ export function useRemoveDrawLineItem() {
 
   return useMutation({
     mutationFn: async ({ drawId, lineItemId }: { drawId: string; lineItemId: string }) => {
-      const res = await fetch(`/api/draws/${drawId}/line-items?line_item_id=${lineItemId}`, {
+      const res = await authFetch(`/api/draws/${drawId}/line-items?line_item_id=${lineItemId}`, {
         method: 'DELETE',
       });
       if (!res.ok) {

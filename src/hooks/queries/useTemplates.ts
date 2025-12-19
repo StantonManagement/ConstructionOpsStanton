@@ -7,13 +7,14 @@ import {
   CreateTemplateTaskInput, 
   ApplyTemplateInput 
 } from '@/types/schema';
+import { authFetch } from '@/lib/authFetch';
 
 // Fetch all templates
 async function fetchTemplates(activeOnly = false): Promise<ScopeTemplate[]> {
   const params = new URLSearchParams();
   if (activeOnly) params.append('active', 'true');
   
-  const res = await fetch(`/api/templates?${params.toString()}`);
+  const res = await authFetch(`/api/templates?${params.toString()}`);
   if (!res.ok) {
     const error = await res.json();
     throw new Error(error.error || 'Failed to fetch templates');
@@ -24,7 +25,7 @@ async function fetchTemplates(activeOnly = false): Promise<ScopeTemplate[]> {
 
 // Fetch single template with tasks
 async function fetchTemplate(id: string): Promise<TemplateWithTasks> {
-  const res = await fetch(`/api/templates/${id}`);
+  const res = await authFetch(`/api/templates/${id}`);
   if (!res.ok) {
     const error = await res.json();
     throw new Error(error.error || 'Failed to fetch template');
@@ -55,7 +56,7 @@ export function useCreateTemplate() {
   
   return useMutation({
     mutationFn: async (data: CreateTemplateInput) => {
-      const res = await fetch('/api/templates', {
+      const res = await authFetch('/api/templates', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
@@ -78,7 +79,7 @@ export function useUpdateTemplate() {
   
   return useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<ScopeTemplate> }) => {
-      const res = await fetch(`/api/templates/${id}`, {
+      const res = await authFetch(`/api/templates/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
@@ -102,7 +103,7 @@ export function useDeleteTemplate() {
   
   return useMutation({
     mutationFn: async (id: string) => {
-      const res = await fetch(`/api/templates/${id}`, {
+      const res = await authFetch(`/api/templates/${id}`, {
         method: 'DELETE',
       });
       
@@ -123,7 +124,7 @@ export function useAddTemplateTask() {
   
   return useMutation({
     mutationFn: async (data: CreateTemplateTaskInput) => {
-      const res = await fetch(`/api/templates/${data.template_id}/tasks`, {
+      const res = await authFetch(`/api/templates/${data.template_id}/tasks`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
@@ -146,7 +147,7 @@ export function useApplyTemplate() {
   
   return useMutation({
     mutationFn: async ({ templateId, locationIds }: { templateId: string; locationIds: string[] }) => {
-      const res = await fetch(`/api/templates/${templateId}/apply`, {
+      const res = await authFetch(`/api/templates/${templateId}/apply`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ location_ids: locationIds }),
@@ -171,7 +172,7 @@ export function useUpdateTemplateTask() {
   
   return useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<TemplateTask> }) => {
-      const res = await fetch(`/api/template-tasks/${id}`, {
+      const res = await authFetch(`/api/template-tasks/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
@@ -194,7 +195,7 @@ export function useDeleteTemplateTask() {
   
   return useMutation({
     mutationFn: async ({ id, templateId }: { id: string; templateId: string }) => {
-      const res = await fetch(`/api/template-tasks/${id}`, {
+      const res = await authFetch(`/api/template-tasks/${id}`, {
         method: 'DELETE',
       });
       

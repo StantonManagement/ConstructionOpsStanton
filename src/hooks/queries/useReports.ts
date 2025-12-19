@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { ApiResponse } from '@/types/schema';
+import { authFetch } from '@/lib/authFetch';
 
 export interface BlockingReportItem {
   location_id: string;
@@ -56,7 +57,7 @@ const fetchBlockingReport = async (projectId?: number): Promise<BlockingReportDa
   const params = new URLSearchParams();
   if (projectId) params.append('project_id', projectId.toString());
   
-  const res = await fetch(`/api/reports/blocking?${params.toString()}`);
+  const res = await authFetch(`/api/reports/blocking?${params.toString()}`);
   if (!res.ok) throw new Error('Failed to fetch blocking report');
   const json: ApiResponse<BlockingReportData> = await res.json();
   if (json.error) throw new Error(json.error);
@@ -68,7 +69,7 @@ const fetchTradeReport = async (projectId: number, budgetCategoryId?: number): P
   params.append('project_id', projectId.toString());
   if (budgetCategoryId) params.append('budget_category_id', budgetCategoryId.toString());
 
-  const res = await fetch(`/api/reports/trade?${params.toString()}`);
+  const res = await authFetch(`/api/reports/trade?${params.toString()}`);
   if (!res.ok) throw new Error('Failed to fetch trade report');
   const json: ApiResponse<TradeReportData> = await res.json();
   if (json.error) throw new Error(json.error);
