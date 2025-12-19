@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { useForecast, useDrawEligibility } from '@/hooks/queries/useCashFlow';
-import { useDraws, useCreateDraw } from '@/hooks/queries/useDraws';
+import { useDraws } from '@/hooks/queries/useDraws';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { AlertTriangle, Calendar, CircleDollarSign, FileText, Loader2, Plus, TrendingUp } from 'lucide-react';
 import { formatCurrency } from '@/lib/theme';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 
 interface Props {
   projectId: number;
@@ -14,21 +14,15 @@ interface Props {
 
 export default function CashFlowView({ projectId }: Props) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const returnTo = `${pathname || '/'}${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
   const { data: forecast, isLoading: isForecastLoading } = useForecast(projectId);
   const { data: eligibility, isLoading: isEligibilityLoading } = useDrawEligibility(projectId);
   const { data: draws, isLoading: isDrawsLoading } = useDraws(projectId);
-  const { mutate: createDraw, isPending: isCreatingDraw } = useCreateDraw();
 
   const handleCreateDraw = () => {
-    createDraw({ project_id: projectId }, {
-      onSuccess: (data) => {
-        // Redirect to new draw or show success
-        if (data.data?.id) {
-           // Ideally navigate to draw detail
-           // router.push(\`/draws/\${data.data.id}\`);
-        }
-      }
-    });
+    router.push(`/draws/new?project_id=${projectId}&returnTo=${encodeURIComponent(returnTo)}`);
   };
 
   const isLoading = isForecastLoading || isEligibilityLoading || isDrawsLoading;
@@ -63,7 +57,12 @@ export default function CashFlowView({ projectId }: Props) {
             <div className="text-2xl font-bold text-gray-900 mb-4">
               {formatCurrency(next4WeeksTotal)}
             </div>
-            <Button variant="outline" size="sm" className="w-full">
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full"
+              onClick={() => router.push(`/cash-flow/forecast?project_id=${projectId}&returnTo=${encodeURIComponent(returnTo)}`)}
+            >
               View Forecast Details
             </Button>
           </CardContent>
@@ -83,10 +82,10 @@ export default function CashFlowView({ projectId }: Props) {
             </div>
             <Button 
               onClick={handleCreateDraw} 
-              disabled={isCreatingDraw || eligibleAmount <= 0}
+              disabled={eligibleAmount <= 0}
               className="w-full bg-green-600 hover:bg-green-700 text-white"
             >
-              {isCreatingDraw ? 'Creating...' : 'Create New Draw'}
+              Create New Draw
             </Button>
             {eligibleAmount <= 0 && (
               <p className="text-xs text-gray-500 text-center mt-2">
@@ -166,7 +165,12 @@ export default function CashFlowView({ projectId }: Props) {
                 </div>
                 <div className="text-right">
                   <p className="font-bold text-gray-900">{formatCurrency(draw.amount_requested)}</p>
-                  <Button variant="ghost" size="sm" className="h-6 text-xs text-blue-600 hover:text-blue-800 p-0">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 text-xs text-blue-600 hover:text-blue-800 p-0"
+                    onClick={() => router.push(`/draws/${draw.id}?returnTo=${encodeURIComponent(returnTo)}`)}
+                  >
                     View Details
                   </Button>
                 </div>

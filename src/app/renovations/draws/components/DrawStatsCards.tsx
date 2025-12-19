@@ -3,7 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/theme';
 import { Wallet, ArrowRight, Loader2 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 
 interface Props {
   data?: {
@@ -16,6 +16,9 @@ interface Props {
 
 export const DrawStatsCards: React.FC<Props> = ({ data, isLoading }) => {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const returnTo = `${pathname || '/'}${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
 
   if (isLoading) {
     return (
@@ -47,7 +50,7 @@ export const DrawStatsCards: React.FC<Props> = ({ data, isLoading }) => {
           </div>
           <Button 
             className="w-full justify-between group" 
-            onClick={() => router.push('/renovations/draws/new')}
+            onClick={() => router.push(`/renovations/draws/new?returnTo=${encodeURIComponent(returnTo)}`)}
           >
             Create New Draw
             <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
