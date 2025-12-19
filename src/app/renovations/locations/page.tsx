@@ -70,21 +70,7 @@ function LocationsPageContent() {
   };
 
   const handleLocationClick = (id: string) => {
-    // Navigate to detail page (to be implemented)
-    // Using a placeholder route or maybe the existing punch list route?
-    // Plan says: "Navigate to /renovations/locations/{id}"
-    // But currently that route doesn't exist.
-    // However, existing app might have /projects/{pid}/locations/{lid}?
-    // Let's stick to the plan: /renovations/locations/[id]
-    // Wait, I need to create that route later? 
-    // Or I can redirect to the punch list modal or page.
-    // For now, let's assume /renovations/locations/[id] will be created or used.
-    // Actually, UI_3 says "Navigate to /renovations/locations/{id} ... This is the punch list / task detail page"
-    // I haven't implemented [id]/page.tsx yet.
-    // I'll add a todo for it.
-    console.log('Navigate to location', id);
-    // Temporary alert until detail page is ready
-    // alert(`Navigate to location ${id}`);
+    router.push(`/renovations/locations/${id}`);
   };
 
   const hasMore = data ? data.total > limit : false;

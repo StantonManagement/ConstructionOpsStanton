@@ -30,17 +30,19 @@ export default function DrawDetailPage({ params }: { params: Promise<{ id: strin
   const [showApproveModal, setShowApproveModal] = useState(false);
   const [approveAmount, setApproveAmount] = useState('');
 
+  const lineItems = draw?.line_items;
+
   // Group line items by category
   const itemsByCategory = React.useMemo(() => {
-    if (!draw?.line_items) return {};
+    if (!lineItems) return {};
     const grouped: Record<string, DrawLineItem[]> = {};
-    draw.line_items.forEach((item) => {
+    lineItems.forEach((item) => {
       const cat = item.budget_category?.category || 'Uncategorized';
       if (!grouped[cat]) grouped[cat] = [];
       grouped[cat].push(item);
     });
     return grouped;
-  }, [draw?.line_items]);
+  }, [lineItems]);
 
   if (isLoading || !id) {
     return (
