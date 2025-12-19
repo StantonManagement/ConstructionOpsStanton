@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, Suspense } from 'react';
+import React, { Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useRenovationDraws, useDrawEligibility } from '@/hooks/queries/useDraws';
 import { usePortfolioProperties } from '@/hooks/queries/usePortfolio';
@@ -8,16 +8,16 @@ import { DrawStatsCards } from './components/DrawStatsCards';
 import { DrawCard } from './components/DrawCard';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Plus, Filter } from 'lucide-react';
+import { Loader2, Plus } from 'lucide-react';
 
 function DrawsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
   const returnTo = `/renovations/draws${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
-  
-  const [propertyId, setPropertyId] = useState<string>(searchParams.get('property_id') || 'all');
-  const [status, setStatus] = useState<string>(searchParams.get('status') || 'all');
+
+  const propertyId = searchParams.get('property_id') || 'all';
+  const status = searchParams.get('status') || 'all';
 
   const { data: eligibility, isLoading: isLoadingStats } = useDrawEligibility();
   const { data: drawsData, isLoading: isLoadingDraws } = useRenovationDraws({
@@ -35,14 +35,12 @@ function DrawsPageContent() {
   };
 
   const handleFilterChange = (key: 'property_id' | 'status', value: string) => {
-    if (key === 'property_id') setPropertyId(value);
-    if (key === 'status') setStatus(value);
-    
     // Update URL
     const params = new URLSearchParams(searchParams.toString());
     if (value === 'all') params.delete(key);
     else params.set(key, value);
-    router.replace(`/renovations/draws?${params.toString()}`);
+    const qs = params.toString();
+    router.replace(qs ? `/renovations/draws?${qs}` : '/renovations/draws', { scroll: false });
   };
 
   return (

@@ -79,8 +79,7 @@ export const DrawStatsCards: React.FC<Props> = ({ data, isLoading }) => {
             variant="outline" 
             className="w-full justify-between group border-amber-200 text-amber-800 hover:bg-amber-50 hover:text-amber-900"
             onClick={() => {
-              // Filter list to pending (handled by parent or URL param)
-              const params = new URLSearchParams(window.location.search);
+              const params = new URLSearchParams(searchParams.toString());
               params.set('status', 'submitted');
               router.push(`/renovations/draws?${params.toString()}`);
             }}
