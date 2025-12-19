@@ -255,17 +255,19 @@ export const TaskDetailModal: React.FC<Props> = ({
         </DialogContent>
       </Dialog>
 
-      <PhotoVerificationModal
-        isOpen={showVerifyModal}
-        onClose={() => setShowVerifyModal(false)}
-        taskId={task.id}
-        taskName={task.name}
-        locationId={task.location_id}
-        onSuccess={() => {
-          setShowVerifyModal(false);
-          onClose(); // Close details modal too on success
-        }}
-      />
+      {showVerifyModal && (
+        <PhotoVerificationModal
+          isOpen={true}
+          onClose={() => setShowVerifyModal(false)}
+          taskId={task.id}
+          taskName={task.name}
+          locationId={task.location_id}
+          onSuccess={() => {
+            setShowVerifyModal(false);
+            onClose(); // Close details modal too on success
+          }}
+        />
+      )}
     </>
   );
 };

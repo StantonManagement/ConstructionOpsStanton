@@ -52,19 +52,21 @@ export const PhotoVerificationModal: React.FC<Props> = ({
     setIsCameraActive(prev => prev ? false : prev);
   }, [stopStream]);
 
-  // Cleanup stream on close
-  useEffect(() => {
-    if (!isOpen) {
-      stopStream();
-      setIsCameraActive(false);
-      setPhoto(null);
-      setPhotoPreview(null);
-      setPhotoBase64(null);
-      setNotes('');
-      setCameraError(null);
-      setAiResult(null);
-    }
-  }, [isOpen, stopStream]);
+  const resetState = () => {
+    setIsCameraActive(false);
+    setPhoto(null);
+    setPhotoPreview(null);
+    setPhotoBase64(null);
+    setNotes('');
+    setCameraError(null);
+    setAiResult(null);
+  };
+
+  const handleClose = () => {
+    stopStream();
+    resetState();
+    onClose();
+  };
 
   // Cleanup on unmount
   useEffect(() => {
@@ -157,7 +159,7 @@ export const PhotoVerificationModal: React.FC<Props> = ({
     }, {
       onSuccess: () => {
         onSuccess?.();
-        onClose();
+        handleClose();
       },
       onError: (err) => {
         setCameraError(err.message);
@@ -168,7 +170,7 @@ export const PhotoVerificationModal: React.FC<Props> = ({
   const isPending = isVerifying || isAnalyzing;
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
       <DialogContent className="sm:max-w-[425px] p-0 overflow-hidden bg-black text-white border-gray-800">
         <DialogHeader className="p-4 bg-gray-900 border-b border-gray-800">
           <DialogTitle className="text-white">Verify: {taskName}</DialogTitle>
