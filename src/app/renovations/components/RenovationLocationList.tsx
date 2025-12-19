@@ -10,6 +10,7 @@ interface Props {
   onLocationClick: (id: string) => void;
   onLoadMore?: () => void;
   hasMore?: boolean;
+  view?: 'grid' | 'list';
 }
 
 export const RenovationLocationList: React.FC<Props> = ({ 
@@ -17,7 +18,8 @@ export const RenovationLocationList: React.FC<Props> = ({
   isLoading, 
   onLocationClick,
   onLoadMore,
-  hasMore 
+  hasMore,
+  view = 'grid'
 }) => {
   if (isLoading && locations.length === 0) {
     return (
@@ -40,15 +42,47 @@ export const RenovationLocationList: React.FC<Props> = ({
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {locations.map((location) => (
-          <LocationCard
-            key={location.id}
-            location={location}
-            onClick={() => onLocationClick(location.id)}
-          />
-        ))}
-      </div>
+      {view === 'list' ? (
+        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+          <div className="divide-y divide-gray-100">
+            {locations.map((location) => (
+              <button
+                key={location.id}
+                type="button"
+                onClick={() => onLocationClick(location.id)}
+                className="w-full text-left p-4 hover:bg-gray-50 transition-colors"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <div className="font-semibold text-gray-900 truncate">{location.name}</div>
+                    <div className="text-sm text-gray-500 truncate">{location.property_name}</div>
+                    <div className="text-xs text-gray-400 capitalize mt-1">
+                      {location.type.replace('_', ' ')}
+                      {location.unit_number && ` • #${location.unit_number}`}
+                    </div>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <div className="text-xs text-gray-600">{location.verified_tasks || 0}/{location.total_tasks || 0} verified</div>
+                    {(location.pending_verify_tasks || 0) > 0 && (
+                      <div className="text-xs font-medium text-amber-700 mt-1">Verify</div>
+                    )}
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {locations.map((location) => (
+            <LocationCard
+              key={location.id}
+              location={location}
+              onClick={() => onLocationClick(location.id)}
+            />
+          ))}
+        </div>
+      )}
 
       {hasMore && (
         <div className="flex justify-center pt-4">

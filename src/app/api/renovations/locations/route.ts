@@ -10,6 +10,7 @@ export async function GET(request: Request) {
     const status = searchParams.get('status');
     const type = searchParams.get('type');
     const blocked = searchParams.get('blocked');
+    const pendingVerify = searchParams.get('pending_verify');
     const search = searchParams.get('search');
     const limit = parseInt(searchParams.get('limit') || '50');
     const offset = parseInt(searchParams.get('offset') || '0');
@@ -80,6 +81,7 @@ export async function GET(request: Request) {
       return NextResponse.json({
         locations: [],
         total: count || 0,
+        filtered_total: 0,
         limit,
         offset
       });
@@ -115,6 +117,13 @@ export async function GET(request: Request) {
       };
     });
 
+    let filteredLocations = locations;
+    if (pendingVerify === 'any') {
+      filteredLocations = locations.filter((l: any) => (l.pending_verify_tasks || 0) > 0);
+    } else if (pendingVerify === 'none') {
+      filteredLocations = locations.filter((l: any) => (l.pending_verify_tasks || 0) === 0);
+    }
+
     // If sorting was by progress (stats), we have to do it in memory now which is not ideal for pagination
     // but unavoidable without the view update.
     // However, we already paginated based on name/id. 
@@ -122,8 +131,9 @@ export async function GET(request: Request) {
     // For now, we ignore 'progress' sort in the DB query and only support 'name'.
 
     return NextResponse.json({
-      locations,
+      locations: filteredLocations,
       total: count,
+      filtered_total: filteredLocations.length,
       limit,
       offset
     });

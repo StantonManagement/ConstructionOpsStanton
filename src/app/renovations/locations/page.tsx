@@ -6,7 +6,7 @@ import { LocationFilterBar } from '../components/LocationFilterBar';
 import { RenovationLocationList } from '../components/RenovationLocationList';
 import { useRenovationLocations } from '@/hooks/queries/useRenovationLocations';
 import { usePortfolioProperties } from '@/hooks/queries/usePortfolio';
-import { Loader2, MapPin } from 'lucide-react';
+import { LayoutGrid, List, Loader2, MapPin } from 'lucide-react';
 
 function LocationsPageContent() {
   const router = useRouter();
@@ -20,8 +20,11 @@ function LocationsPageContent() {
     status: searchParams.get('status') ? searchParams.get('status')!.split(',') : [],
     type: searchParams.get('type') || 'all',
     blocked: searchParams.get('blocked') || 'any_state',
+    pending_verify: searchParams.get('pending_verify') || 'any_state',
     search: searchParams.get('search') || '',
   });
+
+  const [view, setView] = useState<'grid' | 'list'>(() => (searchParams.get('view') === 'list' ? 'list' : 'grid'));
 
   // Fetch properties for filter dropdown
   const { data: portfolioData } = usePortfolioProperties();
@@ -56,16 +59,20 @@ function LocationsPageContent() {
     if (filters.status.length > 0) params.set('status', filters.status.join(','));
     if (filters.type && filters.type !== 'all') params.set('type', filters.type);
     if (filters.blocked && filters.blocked !== 'any_state') params.set('blocked', filters.blocked);
+    if (filters.pending_verify && filters.pending_verify !== 'any_state') params.set('pending_verify', filters.pending_verify);
     if (filters.search) params.set('search', filters.search);
+    if (view && view !== 'grid') params.set('view', view);
 
     router.replace(`/renovations/locations?${params.toString()}`, { scroll: false });
-  }, [filters, router]);
+  }, [filters, router, view]);
 
   const handleFilterChange = (newFilters: any) => {
     setFilters(newFilters);
     setLimit(50); // Reset pagination on filter change
     setOffset(0);
   };
+
+  const displayedTotal = data?.filtered_total ?? data?.total ?? 0;
 
   const handleLoadMore = () => {
     setLimit(prev => prev + 50);
@@ -102,9 +109,29 @@ function LocationsPageContent() {
       <div className="min-h-[400px]">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">
-            {data?.total || 0} Locations Found
+            {displayedTotal} Locations Found
           </h2>
-          {isFetching && <Loader2 className="w-4 h-4 animate-spin text-gray-400" />}
+          <div className="flex items-center gap-2">
+            <div className="flex rounded-md border border-gray-200 overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setView('grid')}
+                className={`px-2 py-1 text-sm flex items-center gap-1 ${view === 'grid' ? 'bg-gray-100 text-gray-900' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+              >
+                <LayoutGrid className="w-4 h-4" />
+                Grid
+              </button>
+              <button
+                type="button"
+                onClick={() => setView('list')}
+                className={`px-2 py-1 text-sm flex items-center gap-1 border-l border-gray-200 ${view === 'list' ? 'bg-gray-100 text-gray-900' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+              >
+                <List className="w-4 h-4" />
+                List
+              </button>
+            </div>
+            {isFetching && <Loader2 className="w-4 h-4 animate-spin text-gray-400" />}
+          </div>
         </div>
 
         <RenovationLocationList 
@@ -113,6 +140,7 @@ function LocationsPageContent() {
           onLocationClick={handleLocationClick}
           onLoadMore={handleLoadMore}
           hasMore={hasMore}
+          view={view}
         />
       </div>
     </div>

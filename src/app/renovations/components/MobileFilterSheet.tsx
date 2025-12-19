@@ -8,6 +8,7 @@ interface FilterState {
   status: string[];
   type: string;
   blocked: string;
+  pending_verify?: string;
 }
 
 interface Props {
@@ -22,7 +23,8 @@ export const MobileFilterSheet: React.FC<Props> = ({ filters, onFilterChange, co
   const activeFiltersCount = 
     (filters.status.length > 0 ? 1 : 0) + 
     (filters.type !== 'all' ? 1 : 0) + 
-    (filters.blocked !== 'any_state' ? 1 : 0);
+    (filters.blocked !== 'any_state' ? 1 : 0) +
+    (filters.pending_verify && filters.pending_verify !== 'any_state' ? 1 : 0);
 
   const toggleStatus = (status: string) => {
     const current = filters.status;
@@ -44,13 +46,13 @@ export const MobileFilterSheet: React.FC<Props> = ({ filters, onFilterChange, co
   const applyPreset = (preset: 'needs_attention' | 'blocked' | 'ready') => {
     switch (preset) {
       case 'needs_attention':
-        onFilterChange({ ...filters, status: ['on_hold', 'in_progress'], blocked: 'any_state' });
+        onFilterChange({ ...filters, status: ['on_hold', 'in_progress'], blocked: 'any_state', pending_verify: 'any_state' });
         break;
       case 'blocked':
-        onFilterChange({ ...filters, blocked: 'any', status: ['on_hold'] });
+        onFilterChange({ ...filters, blocked: 'any', status: ['on_hold'], pending_verify: 'any_state' });
         break;
       case 'ready':
-        onFilterChange({ ...filters, status: ['in_progress'], blocked: 'none' });
+        onFilterChange({ ...filters, status: ['in_progress'], blocked: 'none', pending_verify: 'any' });
         break;
     }
     setIsOpen(false);
@@ -61,6 +63,7 @@ export const MobileFilterSheet: React.FC<Props> = ({ filters, onFilterChange, co
       status: [],
       type: 'all',
       blocked: 'any_state',
+      pending_verify: 'any_state',
     });
     setIsOpen(false);
   };
@@ -102,7 +105,7 @@ export const MobileFilterSheet: React.FC<Props> = ({ filters, onFilterChange, co
                 Blocked
               </Button>
               <Button variant="outline" size="sm" onClick={() => applyPreset('ready')} className="text-blue-700 border-blue-200 bg-blue-50">
-                In Progress
+                Ready to Verify
               </Button>
             </div>
           </div>

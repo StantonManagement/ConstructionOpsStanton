@@ -11,6 +11,7 @@ interface FilterState {
   status: string[];
   type: string;
   blocked: string;
+  pending_verify?: string;
   search: string;
 }
 
@@ -42,6 +43,7 @@ export const LocationFilterBar: React.FC<Props> = ({ filters, onFilterChange, pr
       status: [],
       type: 'all',
       blocked: 'any_state', // 'any_state' means don't filter by blocked status (show all)
+      pending_verify: 'any_state',
       search: ''
     });
     setLocalSearch('');
@@ -51,18 +53,16 @@ export const LocationFilterBar: React.FC<Props> = ({ filters, onFilterChange, pr
     const base = { ...filters };
     switch (preset) {
       case 'needs_attention':
-        onFilterChange({ ...base, status: ['on_hold', 'in_progress'], blocked: 'any_state' });
+        onFilterChange({ ...base, status: ['on_hold', 'in_progress'], blocked: 'any_state', pending_verify: 'any_state' });
         break;
       case 'blocked':
-        onFilterChange({ ...base, blocked: 'any', status: ['on_hold'] }); // 'any' means is blocked
+        onFilterChange({ ...base, blocked: 'any', status: ['on_hold'], pending_verify: 'any_state' }); // 'any' means is blocked
         break;
       case 'ready':
-        // Ready to verify is hard to filter by status alone without specific query support for 'has_pending'
-        // For now, let's just filter to in_progress
-        onFilterChange({ ...base, status: ['in_progress'], blocked: 'none' });
+        onFilterChange({ ...base, status: ['in_progress'], blocked: 'none', pending_verify: 'any' });
         break;
       case 'complete':
-        onFilterChange({ ...base, status: ['complete'], blocked: 'any_state' });
+        onFilterChange({ ...base, status: ['complete'], blocked: 'any_state', pending_verify: 'any_state' });
         break;
     }
   };
@@ -199,6 +199,9 @@ export const LocationFilterBar: React.FC<Props> = ({ filters, onFilterChange, pr
           </Button>
           <Button variant="outline" size="sm" onClick={() => applyPreset('blocked')} className="whitespace-nowrap text-amber-700 border-amber-200 bg-amber-50 hover:bg-amber-100">
             Blocked
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => applyPreset('ready')} className="whitespace-nowrap text-blue-700 border-blue-200 bg-blue-50 hover:bg-blue-100">
+            Ready to Verify
           </Button>
           <Button variant="outline" size="sm" onClick={() => applyPreset('complete')} className="whitespace-nowrap text-green-700 border-green-200 bg-green-50 hover:bg-green-100">
             Completed

@@ -17,6 +17,7 @@ interface UseLocationsOptions {
   status?: string[];
   type?: string;
   blocked?: string;
+  pending_verify?: string;
   search?: string;
   limit?: number;
   offset?: number;
@@ -25,7 +26,7 @@ interface UseLocationsOptions {
 }
 
 export function useRenovationLocations(options: UseLocationsOptions) {
-  return useQuery<{ locations: LocationWithStats[]; total: number; limit: number; offset: number }>({
+  return useQuery<{ locations: LocationWithStats[]; total: number; filtered_total?: number; limit: number; offset: number }>({
     queryKey: ['renovation-locations', options],
     queryFn: async () => {
       const params = new URLSearchParams();
@@ -33,6 +34,7 @@ export function useRenovationLocations(options: UseLocationsOptions) {
       if (options.status && options.status.length > 0) params.set('status', options.status.join(','));
       if (options.type) params.set('type', options.type);
       if (options.blocked) params.set('blocked', options.blocked);
+      if (options.pending_verify) params.set('pending_verify', options.pending_verify);
       if (options.search) params.set('search', options.search);
       if (options.limit) params.set('limit', options.limit.toString());
       if (options.offset) params.set('offset', options.offset.toString());
