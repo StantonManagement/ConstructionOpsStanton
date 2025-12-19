@@ -93,6 +93,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab }) => {
   const [isRenovationsExpanded, setIsRenovationsExpanded] = useState(true);
   
   const currentSubTab = searchParams.get('subtab');
+  const returnTo = `${pathname || '/'}${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
 
   useEffect(() => {
     if (selectedProjectId) {
@@ -298,6 +299,36 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab }) => {
                 onMobileClick={closeMobileMenu}
               >
                 Budget
+              </NavButton>
+
+              <NavButton
+                id="project-blocking-report"
+                activeTab={activeTab}
+                setActiveTab={setActiveTab}
+                onClick={() => {
+                  if (!selectedProjectId) return;
+                  router.push(`/reports/blocking?project_id=${selectedProjectId}&returnTo=${encodeURIComponent(returnTo)}`);
+                }}
+                icon={<AlertTriangle className="w-4 h-4"/>}
+                isActive={pathname?.startsWith('/reports/blocking')}
+                onMobileClick={closeMobileMenu}
+              >
+                Blocking Report
+              </NavButton>
+
+              <NavButton
+                id="project-trade-report"
+                activeTab={activeTab}
+                setActiveTab={setActiveTab}
+                onClick={() => {
+                  if (!selectedProjectId) return;
+                  router.push(`/reports/trade?project_id=${selectedProjectId}&returnTo=${encodeURIComponent(returnTo)}`);
+                }}
+                icon={<BarChart2 className="w-4 h-4"/>}
+                isActive={pathname?.startsWith('/reports/trade')}
+                onMobileClick={closeMobileMenu}
+              >
+                Trade Report
               </NavButton>
               <NavButton
                 id="project-schedule"
