@@ -5,6 +5,7 @@ import { Progress } from '@/components/ui/progress';
 import { AlertTriangle, ArrowRight, BarChart2, CheckCircle2, CircleDollarSign, LayoutDashboard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { formatCurrency } from '@/lib/theme';
 
 interface Props {
@@ -13,6 +14,9 @@ interface Props {
 
 export const ProjectStatsCard: React.FC<Props> = ({ projectId }) => {
   const { data: stats, isLoading } = useProjectStats(projectId);
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const returnTo = `${pathname || '/'}${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
 
   if (isLoading) {
     return <div className="h-48 bg-gray-100 animate-pulse rounded-lg border border-gray-200" />;
@@ -100,7 +104,7 @@ export const ProjectStatsCard: React.FC<Props> = ({ projectId }) => {
                 </div>
               </div>
               
-              <Link href={`/reports/blocking?project_id=${projectId}`} passHref>
+              <Link href={`/reports/blocking?project_id=${projectId}&returnTo=${encodeURIComponent(returnTo)}`} passHref>
                 <Button variant="outline" className="w-full bg-white border-amber-200 text-amber-800 hover:bg-amber-100 hover:text-amber-900">
                   View Blocking Report
                   <ArrowRight className="w-4 h-4 ml-2" />
