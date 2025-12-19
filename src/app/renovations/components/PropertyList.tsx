@@ -1,14 +1,24 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search, Loader2, Building2 } from 'lucide-react';
 import { usePortfolioProperties } from '@/hooks/queries/usePortfolio';
 import { PropertyCard } from './PropertyCard';
 import { useDebounce } from '@/hooks/useDebounce'; // Assuming this exists, if not I'll define it or use timeout
+import { useRouter, useSearchParams } from 'next/navigation';
 
 export const PropertyList: React.FC = () => {
-  const [search, setSearch] = useState('');
-  const [sort, setSort] = useState('name');
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const [search, setSearch] = useState(() => searchParams.get('search') || '');
+  const [sort, setSort] = useState(() => searchParams.get('sort') || 'name');
+  const [order, setOrder] = useState<'asc' | 'desc'>(() => {
+    const fromUrl = searchParams.get('order');
+    if (fromUrl === 'asc' || fromUrl === 'desc') return fromUrl;
+    const urlSort = searchParams.get('sort') || 'name';
+    return urlSort === 'progress' || urlSort === 'blocked' ? 'desc' : 'asc';
+  });
   
   // Debounce search input
   // Since I don't know if useDebounce exists, I'll just pass search directly for now or check if file exists. 
@@ -16,10 +26,32 @@ export const PropertyList: React.FC = () => {
   // but let's rely on React Query's caching/deduping for now or let the hook handle it.
   // Actually, let's just stick to raw value for simplicity, user types -> fetch. 
   
-  const { data, isLoading, error } = usePortfolioProperties({ 
-    search, 
+  const debouncedSearch = useDebounce(search, 300);
+
+  const effectiveOrder = useMemo(() => {
+    if (sort === 'progress' || sort === 'blocked') return 'desc' as const;
+    return order;
+  }, [order, sort]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams.toString());
+
+    if (debouncedSearch) params.set('search', debouncedSearch);
+    else params.delete('search');
+
+    if (sort && sort !== 'name') params.set('sort', sort);
+    else params.delete('sort');
+
+    if (effectiveOrder && !(sort === 'name' && effectiveOrder === 'asc')) params.set('order', effectiveOrder);
+    else params.delete('order');
+
+    router.replace(`/renovations?${params.toString()}`, { scroll: false });
+  }, [debouncedSearch, effectiveOrder, router, searchParams, sort]);
+
+  const { data, isLoading, error } = usePortfolioProperties({
+    search: debouncedSearch,
     sort,
-    order: sort === 'progress' || sort === 'blocked' ? 'desc' : 'asc'
+    order: effectiveOrder,
   });
 
   return (
@@ -35,7 +67,17 @@ export const PropertyList: React.FC = () => {
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <Select value={sort} onValueChange={setSort}>
+        <Select
+          value={sort}
+          onValueChange={(value) => {
+            setSort(value);
+            if (value === 'progress' || value === 'blocked') {
+              setOrder('desc');
+            } else {
+              setOrder('asc');
+            }
+          }}
+        >
           <SelectTrigger className="w-[180px] bg-white">
             <SelectValue placeholder="Sort by" />
           </SelectTrigger>

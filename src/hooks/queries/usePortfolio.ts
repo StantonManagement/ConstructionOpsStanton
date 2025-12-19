@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { authFetch } from '@/lib/authFetch';
 
 export interface PortfolioStats {
   total_locations: number;
@@ -34,7 +35,7 @@ export function usePortfolioStats() {
   return useQuery<PortfolioStats>({
     queryKey: ['portfolio', 'stats'],
     queryFn: async () => {
-      const res = await fetch('/api/renovations/portfolio/stats');
+      const res = await authFetch('/api/renovations/portfolio/stats');
       if (!res.ok) throw new Error('Failed to fetch portfolio stats');
       return res.json();
     },
@@ -51,7 +52,7 @@ export function usePortfolioProperties(options?: { search?: string; sort?: strin
       if (options?.sort) params.set('sort', options.sort);
       if (options?.order) params.set('order', options.order);
       
-      const res = await fetch(`/api/renovations/portfolio/properties?${params.toString()}`);
+      const res = await authFetch(`/api/renovations/portfolio/properties?${params.toString()}`);
       if (!res.ok) throw new Error('Failed to fetch portfolio properties');
       return res.json();
     },

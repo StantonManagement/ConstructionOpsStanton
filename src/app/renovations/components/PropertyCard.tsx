@@ -25,7 +25,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({ property }) => {
   return (
     <Card 
       className="hover:shadow-md transition-shadow cursor-pointer border-l-4 border-l-transparent hover:border-l-blue-500"
-      onClick={() => router.push(`/renovations/locations?project_id=${property.project_id}`)}
+      onClick={() => router.push(`/renovations/locations?property_id=${property.project_id}`)}
     >
       <CardContent className="p-5">
         <div className="flex flex-col md:flex-row gap-6">
