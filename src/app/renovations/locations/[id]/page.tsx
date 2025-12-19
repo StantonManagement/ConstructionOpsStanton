@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useLocation, useLocations } from '@/hooks/queries/useLocations';
 import { useUpdateTaskStatus } from '@/hooks/queries/useTasks';
 import { MobileTaskRow } from '../../components/MobileTaskRow';
@@ -35,7 +35,9 @@ const sortTasks = (tasks: Task[]) => {
 
 export default function LocationDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [id, setId] = useState<string | null>(null);
+  const returnTo = searchParams.get('returnTo');
   
   // Unwrap params
   useEffect(() => {
@@ -49,6 +51,21 @@ export default function LocationDetailPage({ params }: { params: Promise<{ id: s
   const [verifyTask, setVerifyTask] = useState<{ id: string; name: string } | null>(null);
   const [showBlockModal, setShowBlockModal] = useState(false);
 
+  const handleBackNavigation = () => {
+    if (returnTo) {
+      router.push(returnTo);
+      return;
+    }
+
+    const projectId = location?.project_id;
+    if (projectId) {
+      router.push(`/renovations/locations?property_id=${projectId}`);
+      return;
+    }
+
+    router.push('/renovations/locations');
+  };
+
   if (isLoadingLocation || !id) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -61,7 +78,7 @@ export default function LocationDetailPage({ params }: { params: Promise<{ id: s
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-4">
         <p className="text-gray-500 mb-4">Location not found</p>
-        <Button onClick={() => router.back()}>Go Back</Button>
+        <Button onClick={handleBackNavigation}>Go Back</Button>
       </div>
     );
   }
@@ -71,6 +88,8 @@ export default function LocationDetailPage({ params }: { params: Promise<{ id: s
   const currentIndex = sortedLocations.findIndex(l => l.id === location.id);
   const prevLocation = currentIndex > 0 ? sortedLocations[currentIndex - 1] : null;
   const nextLocation = currentIndex < sortedLocations.length - 1 ? sortedLocations[currentIndex + 1] : null;
+
+  const returnToQuery = returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : '';
 
   // Task Stats
   const tasks = location.tasks || [];
@@ -108,7 +127,7 @@ export default function LocationDetailPage({ params }: { params: Promise<{ id: s
       {/* Header */}
       <div className="sticky top-0 z-30 bg-white border-b border-gray-200 shadow-sm">
         <div className="flex items-center justify-between p-4 h-16">
-          <Button variant="ghost" size="sm" className="-ml-2" onClick={() => router.back()}>
+          <Button variant="ghost" size="sm" className="-ml-2" onClick={handleBackNavigation}>
             <ArrowLeft className="w-5 h-5 mr-1" />
             Back
           </Button>
@@ -126,7 +145,7 @@ export default function LocationDetailPage({ params }: { params: Promise<{ id: s
             {prevLocation ? (
               <button 
                 className="flex items-center text-blue-600 hover:underline truncate max-w-[45%]"
-                onClick={() => router.replace(`/renovations/locations/${prevLocation.id}`)}
+                onClick={() => router.replace(`/renovations/locations/${prevLocation.id}${returnToQuery}`)}
               >
                 <ChevronLeft className="w-4 h-4 mr-1" />
                 {prevLocation.name}
@@ -136,7 +155,7 @@ export default function LocationDetailPage({ params }: { params: Promise<{ id: s
             {nextLocation ? (
               <button 
                 className="flex items-center text-blue-600 hover:underline truncate max-w-[45%]"
-                onClick={() => router.replace(`/renovations/locations/${nextLocation.id}`)}
+                onClick={() => router.replace(`/renovations/locations/${nextLocation.id}${returnToQuery}`)}
               >
                 {nextLocation.name}
                 <ArrowRight className="w-4 h-4 ml-1" />

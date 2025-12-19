@@ -12,6 +12,8 @@ function LocationsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
+  const returnTo = `/renovations/locations${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
+
   // Initialize filters from URL
   const [filters, setFilters] = useState({
     property_id: searchParams.get('property_id') || undefined,
@@ -70,7 +72,7 @@ function LocationsPageContent() {
   };
 
   const handleLocationClick = (id: string) => {
-    router.push(`/renovations/locations/${id}`);
+    router.push(`/renovations/locations/${id}?returnTo=${encodeURIComponent(returnTo)}`);
   };
 
   const hasMore = data ? data.total > limit : false;

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useDraw, useSubmitDraw, useApproveDraw, useFundDraw, useDeleteDraw, DrawLineItem } from '@/hooks/queries/useDraws';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,7 +14,9 @@ import { Label } from '@/components/ui/label';
 
 export default function DrawDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [id, setId] = useState<string | null>(null);
+  const returnTo = searchParams.get('returnTo');
   
   // Unwrap params
   useEffect(() => {
@@ -29,6 +31,21 @@ export default function DrawDetailPage({ params }: { params: Promise<{ id: strin
 
   const [showApproveModal, setShowApproveModal] = useState(false);
   const [approveAmount, setApproveAmount] = useState('');
+
+  const handleBackNavigation = () => {
+    if (returnTo) {
+      router.push(returnTo);
+      return;
+    }
+
+    const projectId = draw?.project_id;
+    if (projectId) {
+      router.push(`/renovations/draws?property_id=${projectId}`);
+      return;
+    }
+
+    router.push('/renovations/draws');
+  };
 
   const lineItems = draw?.line_items;
 
@@ -56,7 +73,7 @@ export default function DrawDetailPage({ params }: { params: Promise<{ id: strin
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh]">
         <p className="text-gray-500 mb-4">Draw not found</p>
-        <Button onClick={() => router.back()}>Go Back</Button>
+        <Button onClick={handleBackNavigation}>Go Back</Button>
       </div>
     );
   }
@@ -82,7 +99,7 @@ export default function DrawDetailPage({ params }: { params: Promise<{ id: strin
   const handleDelete = () => {
     if (confirm('Are you sure you want to delete this draw? Tasks will become eligible for new draws.')) {
       deleteDraw({ id: draw.id, projectId: parseInt(draw.project_id.toString()) }, {
-        onSuccess: () => router.push('/renovations/draws')
+        onSuccess: () => handleBackNavigation()
       });
     }
   };
@@ -102,7 +119,7 @@ export default function DrawDetailPage({ params }: { params: Promise<{ id: strin
       <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
         <div className="space-y-1">
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" onClick={() => router.back()} className="-ml-2 pl-2">
+            <Button variant="ghost" size="sm" onClick={handleBackNavigation} className="-ml-2 pl-2">
               <ArrowLeft className="w-4 h-4 mr-1" />
               Back
             </Button>

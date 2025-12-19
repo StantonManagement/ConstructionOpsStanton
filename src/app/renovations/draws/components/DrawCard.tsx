@@ -9,9 +9,10 @@ import { useRouter } from 'next/navigation';
 
 interface Props {
   draw: Draw;
+  returnTo?: string;
 }
 
-export const DrawCard: React.FC<Props> = ({ draw }) => {
+export const DrawCard: React.FC<Props> = ({ draw, returnTo }) => {
   const router = useRouter();
 
   const getStatusColor = (status: string) => {
@@ -61,7 +62,7 @@ export const DrawCard: React.FC<Props> = ({ draw }) => {
             variant="ghost" 
             size="sm" 
             className="hover:bg-gray-100"
-            onClick={() => router.push(`/renovations/draws/${draw.id}`)}
+            onClick={() => router.push(returnTo ? `/renovations/draws/${draw.id}?returnTo=${encodeURIComponent(returnTo)}` : `/renovations/draws/${draw.id}`)}
           >
             View
             <ChevronRight className="w-4 h-4 ml-1" />

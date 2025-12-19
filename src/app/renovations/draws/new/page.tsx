@@ -27,6 +27,7 @@ export default function CreateDrawPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const preSelectedProjectId = searchParams.get('property_id');
+  const returnTo = searchParams.get('returnTo');
 
   const [selectedProjectId, setSelectedProjectId] = useState<string>(preSelectedProjectId || '');
   const [notes, setNotes] = useState('');
@@ -136,13 +137,19 @@ export default function CreateDrawPage() {
         ));
     }
     
-    router.push(`/renovations/draws/${drawId}`);
+    router.push(returnTo ? `/renovations/draws/${drawId}?returnTo=${encodeURIComponent(returnTo)}` : `/renovations/draws/${drawId}`);
   };
 
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-6">
       <div className="flex items-center gap-4">
-        <Button variant="ghost" onClick={() => router.back()} className="pl-0">
+        <Button variant="ghost" onClick={() => {
+          if (returnTo) {
+            router.push(returnTo);
+            return;
+          }
+          router.push('/renovations/draws');
+        }} className="pl-0">
           <ArrowLeft className="w-5 h-5 mr-1" />
           Back
         </Button>

@@ -13,6 +13,8 @@ import { Loader2, Plus, Filter } from 'lucide-react';
 function DrawsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  const returnTo = `/renovations/draws${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
   
   const [propertyId, setPropertyId] = useState<string>(searchParams.get('property_id') || 'all');
   const [status, setStatus] = useState<string>(searchParams.get('status') || 'all');
@@ -26,9 +28,9 @@ function DrawsPageContent() {
 
   const handleCreateDraw = () => {
     if (propertyId && propertyId !== 'all') {
-      router.push(`/renovations/draws/new?property_id=${propertyId}`);
+      router.push(`/renovations/draws/new?property_id=${propertyId}&returnTo=${encodeURIComponent(returnTo)}`);
     } else {
-      router.push('/renovations/draws/new');
+      router.push(`/renovations/draws/new?returnTo=${encodeURIComponent(returnTo)}`);
     }
   };
 
@@ -108,7 +110,7 @@ function DrawsPageContent() {
           </div>
         ) : (
           drawsData?.draws?.map(draw => (
-            <DrawCard key={draw.id} draw={draw} />
+            <DrawCard key={draw.id} draw={draw} returnTo={returnTo} />
           ))
         )}
       </div>
