@@ -32,10 +32,25 @@ function BlockingReportContent() {
   const searchParams = useSearchParams();
   const projectIdParam = searchParams.get('project_id');
   const projectId = projectIdParam ? parseInt(projectIdParam) : undefined;
+  const returnTo = searchParams.get('returnTo');
 
   const { data, isLoading, refetch } = useBlockingReport(projectId);
   const { mutate: unblockLocation, isPending: isUnblocking } = useUnblockLocation();
   const [unblockingId, setUnblockingId] = useState<string | null>(null);
+
+  const handleBackNavigation = () => {
+    if (returnTo) {
+      router.push(returnTo);
+      return;
+    }
+
+    if (projectId) {
+      router.push(`/?tab=projects&project=${projectId}&subtab=locations`);
+      return;
+    }
+
+    router.push('/?tab=projects');
+  };
 
   const handleUnblock = (locationId: string) => {
     if (confirm('Are you sure you want to unblock this location?')) {
@@ -65,7 +80,7 @@ function BlockingReportContent() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" onClick={() => router.back()} className="p-0 hover:bg-transparent">
+          <Button variant="ghost" onClick={handleBackNavigation} className="p-0 hover:bg-transparent">
             <ArrowLeft className="w-5 h-5 text-gray-500" />
           </Button>
           <div>
@@ -80,7 +95,7 @@ function BlockingReportContent() {
         </div>
         
         {projectId && (
-          <Button variant="outline" onClick={() => router.push('/reports/blocking')}>
+          <Button variant="outline" onClick={() => router.push(returnTo ? `/reports/blocking?returnTo=${encodeURIComponent(returnTo)}` : '/reports/blocking')}>
             View All Projects
           </Button>
         )}
