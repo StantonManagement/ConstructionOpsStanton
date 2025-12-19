@@ -1,7 +1,7 @@
 'use client';
 
 import React, { Suspense, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useDraw, useDeleteDraw, useSubmitDraw, useApproveDraw, useFundDraw, useRemoveDrawLineItem } from '@/hooks/queries/useDraws';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,8 @@ interface DrawDetailContentProps {
 
 function DrawDetailContent({ id }: DrawDetailContentProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const returnTo = searchParams.get('returnTo');
   const { data: draw, isLoading } = useDraw(id);
   const { mutate: deleteDraw, isPending: isDeleting } = useDeleteDraw();
   const { mutate: submitDraw, isPending: isSubmitting } = useSubmitDraw();
@@ -23,6 +25,21 @@ function DrawDetailContent({ id }: DrawDetailContentProps) {
   const { mutate: removeLineItem, isPending: isRemovingItem } = useRemoveDrawLineItem();
 
   const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const handleBackNavigation = () => {
+    if (returnTo) {
+      router.push(returnTo);
+      return;
+    }
+
+    const projectId = draw?.project_id;
+    if (projectId) {
+      router.push(`/cash-flow?project_id=${projectId}`);
+      return;
+    }
+
+    router.push('/cash-flow');
+  };
 
   if (isLoading) {
     return (
@@ -36,7 +53,7 @@ function DrawDetailContent({ id }: DrawDetailContentProps) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh]">
         <p className="text-gray-500 mb-4">Draw not found</p>
-        <Button onClick={() => router.back()}>Go Back</Button>
+        <Button onClick={handleBackNavigation}>Go Back</Button>
       </div>
     );
   }
@@ -44,7 +61,7 @@ function DrawDetailContent({ id }: DrawDetailContentProps) {
   const handleDelete = () => {
     deleteDraw({ id: draw.id, projectId: draw.project_id }, {
       onSuccess: () => {
-        router.push(`/`); // Or to project cash flow? Ideally to previous page.
+        handleBackNavigation();
       }
     });
   };
@@ -65,7 +82,7 @@ function DrawDetailContent({ id }: DrawDetailContentProps) {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" onClick={() => router.back()} className="p-0 hover:bg-transparent">
+          <Button variant="ghost" onClick={handleBackNavigation} className="p-0 hover:bg-transparent">
             <ArrowLeft className="w-5 h-5 text-gray-500" />
           </Button>
           <div>

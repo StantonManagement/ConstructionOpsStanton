@@ -19,6 +19,7 @@ function NewDrawContent() {
   const searchParams = useSearchParams();
   const projectIdParam = searchParams.get('project_id');
   const projectId = projectIdParam ? parseInt(projectIdParam) : undefined;
+  const returnTo = searchParams.get('returnTo');
 
   const { data: projects } = useProjects();
   const { data: eligibility, isLoading: isEligibilityLoading } = useDrawEligibility(projectId);
@@ -34,6 +35,20 @@ function NewDrawContent() {
     params.set('project_id', value);
     router.replace(`/draws/new?${params.toString()}`);
     setSelectedTaskIds(new Set()); // Clear selection on project change
+  };
+
+  const handleBackNavigation = () => {
+    if (returnTo) {
+      router.push(returnTo);
+      return;
+    }
+
+    if (projectId) {
+      router.push(`/?tab=projects&project=${projectId}&subtab=cashflow`);
+      return;
+    }
+
+    router.push('/?tab=projects');
   };
 
   const toggleTask = (taskId: string) => {
@@ -75,7 +90,7 @@ function NewDrawContent() {
       }
 
       // 3. Redirect
-      router.push(`/draws/${drawId}`);
+      router.push(returnTo ? `/draws/${drawId}?returnTo=${encodeURIComponent(returnTo)}` : `/draws/${drawId}`);
     } catch (error) {
       console.error('Failed to create draw:', error);
       setIsSubmitting(false);
@@ -100,7 +115,7 @@ function NewDrawContent() {
     <div className="max-w-4xl mx-auto p-6 space-y-8">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Button variant="ghost" onClick={() => router.back()} className="p-0 hover:bg-transparent">
+        <Button variant="ghost" onClick={handleBackNavigation} className="p-0 hover:bg-transparent">
           <ArrowLeft className="w-5 h-5 text-gray-500" />
         </Button>
         <h1 className="text-2xl font-bold text-gray-900">Create New Draw Request</h1>

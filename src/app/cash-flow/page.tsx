@@ -14,6 +14,7 @@ function CashFlowDashboardContent() {
   const searchParams = useSearchParams();
   const projectIdParam = searchParams.get('project_id');
   const projectId = projectIdParam ? parseInt(projectIdParam) : undefined;
+  const returnTo = searchParams.get('returnTo');
 
   const { data: projects, isLoading: isProjectsLoading } = useProjects();
 
@@ -21,6 +22,20 @@ function CashFlowDashboardContent() {
     const params = new URLSearchParams(searchParams.toString());
     params.set('project_id', value);
     router.replace(`/cash-flow?${params.toString()}`);
+  };
+
+  const handleBackNavigation = () => {
+    if (returnTo) {
+      router.push(returnTo);
+      return;
+    }
+
+    if (projectId) {
+      router.push(`/?tab=projects&project=${projectId}&subtab=cashflow`);
+      return;
+    }
+
+    router.push('/?tab=projects');
   };
 
   if (isProjectsLoading) {
@@ -36,7 +51,7 @@ function CashFlowDashboardContent() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" onClick={() => router.back()} className="p-0 hover:bg-transparent">
+          <Button variant="ghost" onClick={handleBackNavigation} className="p-0 hover:bg-transparent">
             <ArrowLeft className="w-5 h-5 text-gray-500" />
           </Button>
           <div>
