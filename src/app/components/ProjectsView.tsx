@@ -456,25 +456,39 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
   const handleCreateProject = async (formData: Record<string, string>) => {
     setIsCreatingProject(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('Not authenticated');
+      }
+
       const projectData = {
         name: formData.name,
         address: formData.address,
         client_name: formData.client_name,
-        budget: formData.budget ? parseFloat(formData.budget) : null,
-        start_date: formData.start_date || null,
-        target_completion_date: formData.target_completion_date || null,
+        budget: formData.budget,
+        starting_balance: formData.starting_balance,
+        start_date: formData.start_date,
+        target_completion_date: formData.target_completion_date,
         status: formData.status || 'active',
-        current_phase: formData.current_phase || 'Planning'
-        // created_at and updated_at are handled by database DEFAULT values
+        current_phase: formData.current_phase || 'Planning',
+        owner_entity_id: formData.owner_entity_id,
+        portfolio_name: formData.portfolio_name,
+        total_units: formData.total_units
       };
 
-      const { data, error } = await supabase
-        .from('projects')
-        .insert([projectData])
-        .select()
-        .single();
+      const response = await fetch('/api/projects', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify(projectData)
+      });
 
-      if (error) throw error;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create project');
+      }
 
       // Refresh the projects list
       await fetchProjects();
@@ -484,7 +498,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
       
     } catch (err) {
       console.error('Error creating project:', err);
-      setError('Failed to create project');
+      setError(err instanceof Error ? err.message : 'Failed to create project');
     } finally {
       setIsCreatingProject(false);
     }

@@ -508,8 +508,6 @@ const SettingsView: React.FC = () => {
     return 'company'; // Default for non-admin users
   };
   
-  const [activeTab, setActiveTab] = useState<SettingsTab>(getDefaultTab());
-
   // Toast functions
   const showToast = (message: string, type: 'success' | 'error') => {
     const id = Date.now().toString();
@@ -520,29 +518,21 @@ const SettingsView: React.FC = () => {
     setToasts(prev => prev.filter(toast => toast.id !== id));
   };
 
-  // URL-based tab management
-  useEffect(() => {
+  const activeTab = (() => {
     const subtabFromUrl = searchParams.get('subtab') as SettingsTab;
-    if (subtabFromUrl && ['users', 'permissions', 'entities', 'company', 'integrations', 'preferences', 'schedule'].includes(subtabFromUrl)) {
-      // Check if user has access to this tab using centralized permission system
-      if (subtabFromUrl === 'users' && !canAccessUserManagement(role)) {
-        setActiveTab(getDefaultTab());
-      } else if (subtabFromUrl === 'permissions' && !canAccessPermissionsManagement(role)) {
-        setActiveTab(getDefaultTab());
-      } else if (subtabFromUrl === 'entities' && !hasRoleAccess(role, 'admin')) {
-        setActiveTab(getDefaultTab());
-      } else if (subtabFromUrl === 'integrations' && !hasRoleAccess(role, 'admin')) {
-        setActiveTab(getDefaultTab());
-      } else {
-        setActiveTab(subtabFromUrl);
-      }
-    } else if (!subtabFromUrl) {
-      setActiveTab(getDefaultTab());
-    }
-  }, [searchParams, role]);
+    const allowedTabs: SettingsTab[] = ['users', 'permissions', 'entities', 'company', 'integrations', 'preferences', 'schedule'];
+    const desired = subtabFromUrl && allowedTabs.includes(subtabFromUrl) ? subtabFromUrl : getDefaultTab();
+
+    // Check if user has access to this tab using centralized permission system
+    if (desired === 'users' && !canAccessUserManagement(role)) return getDefaultTab();
+    if (desired === 'permissions' && !canAccessPermissionsManagement(role)) return getDefaultTab();
+    if (desired === 'entities' && !hasRoleAccess(role, 'admin')) return getDefaultTab();
+    if (desired === 'integrations' && !hasRoleAccess(role, 'admin')) return getDefaultTab();
+
+    return desired;
+  })();
 
   const handleTabChange = (tab: SettingsTab) => {
-    setActiveTab(tab);
     // Update URL with subtab parameter
     const params = new URLSearchParams(searchParams.toString());
     params.set('subtab', tab);

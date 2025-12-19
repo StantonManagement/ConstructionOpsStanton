@@ -98,7 +98,9 @@ export function usePermissions(): PermissionData & {
   }, []);
 
   useEffect(() => {
-    fetchPermissions();
+    queueMicrotask(() => {
+      void fetchPermissions();
+    });
   }, [fetchPermissions]);
 
   const hasPermission = useCallback((permissionKey: string): boolean => {

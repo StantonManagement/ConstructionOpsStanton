@@ -101,6 +101,8 @@ export default function ScheduleView({ projectId: initialProjectId }: ScheduleVi
       const token = session?.session?.access_token;
       if (!token) return;
 
+      console.log('[ScheduleView] Fetching schedule for project:', selectedProjectId);
+
       // 1. Fetch Schedule ID for Project
       const scheduleResponse = await fetch(`/api/schedules?project_id=${selectedProjectId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -108,6 +110,8 @@ export default function ScheduleView({ projectId: initialProjectId }: ScheduleVi
       
       const result = await scheduleResponse.json();
       const schedulesList = result.data?.data || result.data || [];
+      
+      console.log('[ScheduleView] Schedules found:', schedulesList.length);
       
       if (schedulesList && schedulesList.length > 0) {
         const scheduleId = schedulesList[0].id;
@@ -121,14 +125,16 @@ export default function ScheduleView({ projectId: initialProjectId }: ScheduleVi
         if (detailResponse.ok) {
           const detailResult = await detailResponse.json();
           const scheduleData = detailResult.data?.data || detailResult.data || detailResult;
+          console.log('[ScheduleView] Tasks loaded:', scheduleData.tasks?.length || 0);
           if (scheduleData.tasks) setTasks(scheduleData.tasks);
         }
       } else {
+        console.log('[ScheduleView] No schedule found for project');
         setSchedule(null);
         setTasks([]);
       }
     } catch (error) {
-      console.error('Error fetching schedule:', error);
+      console.error('[ScheduleView] Error fetching schedule:', error);
     } finally {
       setLoading(false);
     }
@@ -275,8 +281,11 @@ export default function ScheduleView({ projectId: initialProjectId }: ScheduleVi
   }
 
   if (loading && !schedule) {
+    console.log('[ScheduleView] Loading state - waiting for schedule data');
     return <div className="p-8 text-center"><div className="animate-spin h-8 w-8 border-b-2 border-primary rounded-full mx-auto"></div></div>;
   }
+  
+  console.log('[ScheduleView] Render state:', { loading, hasSchedule: !!schedule, taskCount: tasks.length });
 
   if (!schedule) {
     return (
@@ -308,10 +317,24 @@ export default function ScheduleView({ projectId: initialProjectId }: ScheduleVi
     <div className="space-y-4">
       <GanttToolbar
         isMobile={isMobile}
-        viewMode={viewMode as unknown as 'Day' | 'Week' | 'Month'}
+        viewMode={
+          viewMode === ViewMode.Day ? 'Day' :
+          viewMode === ViewMode.Week ? 'Week' :
+          viewMode === ViewMode.Month ? 'Month' :
+          viewMode === ViewMode.Year ? 'Year' : 'Week'
+        }
         projectId={initialProjectId ? undefined : selectedProjectId} // Only show back button if not initial
         onToggleView={setIsMobile}
-        onViewModeChange={(mode) => setViewMode(mode as unknown as ViewMode)}
+        onViewModeChange={(mode) => {
+          // Map string mode to ViewMode enum
+          const modeMap: Record<string, ViewMode> = {
+            'Day': ViewMode.Day,
+            'Week': ViewMode.Week,
+            'Month': ViewMode.Month,
+            'Year': ViewMode.Year
+          };
+          setViewMode(modeMap[mode] || ViewMode.Week);
+        }}
         onAddTask={() => {
           setSelectedTask(undefined);
           setShowTaskModal(true);

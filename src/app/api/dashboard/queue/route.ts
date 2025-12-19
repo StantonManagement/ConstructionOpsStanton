@@ -35,7 +35,7 @@ export const GET = withAuth(async (request: NextRequest, context: any, user: any
       id,
       status,
       current_payment,
-      description,
+      pm_notes,
       created_at,
       project_id,
       projects!inner(id, name),
@@ -93,7 +93,7 @@ export const GET = withAuth(async (request: NextRequest, context: any, user: any
       projectId: pa.project_id,
       amount: Number(pa.current_payment) || 0,
       status: pa.status,
-      description: pa.description || '',
+      description: pa.pm_notes || '',
       submittedAt: pa.created_at,
       daysOld
     };

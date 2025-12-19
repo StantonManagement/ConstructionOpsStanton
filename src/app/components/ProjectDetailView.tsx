@@ -15,6 +15,11 @@ import LoanBudgetView from './loan/LoanBudgetView';
 import CashFlowView from './CashFlowView';
 import PaymentApplicationsView from './PaymentsView';
 import DocumentsView from './DocumentsView';
+import { LocationList } from '@/components/LocationList';
+import { CreateLocationModal } from './CreateLocationModal';
+import { BulkLocationModal } from './BulkLocationModal';
+import { LocationDetailView } from './LocationDetailView';
+import { ProjectStatsCard } from './ProjectStatsCard';
 
 interface ProjectDetailViewProps {
   project: Project;
@@ -23,12 +28,13 @@ interface ProjectDetailViewProps {
   onDelete?: (project: Project) => void;
 }
 
-  type SubTab = 'summary' | 'contractors' | 'budget' | 'schedule' | 'loan' | 'cashflow' | 'payments' | 'documents' | 'punchlists';
+  type SubTab = 'summary' | 'contractors' | 'budget' | 'schedule' | 'loan' | 'cashflow' | 'payments' | 'documents' | 'punchlists' | 'locations';
 
   // Sub-tab Navigation Component
   function SubTabNavigation({ activeSubTab, onSubTabChange }: { activeSubTab: SubTab; onSubTabChange: (tab: SubTab) => void }) {
     const subTabs = [
       { id: 'summary' as const, label: 'Summary', icon: Building },
+      { id: 'locations' as const, label: 'Locations', icon: Building },
       { id: 'contractors' as const, label: 'Contractors', icon: Users },
       { id: 'budget' as const, label: 'Budget', icon: TrendingUp },
       { id: 'schedule' as const, label: 'Schedule', icon: Calendar },
@@ -144,8 +150,8 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ project, onBack, 
   // Initialize from URL or default to 'contractors'
   const getInitialSubTab = (): SubTab => {
     const subtab = searchParams.get('subtab');
-    const validTabs: SubTab[] = ['summary', 'contractors', 'budget', 'schedule', 'loan', 'cashflow', 'payments', 'documents', 'punchlists'];
-    return (subtab && validTabs.includes(subtab as SubTab)) ? (subtab as SubTab) : 'contractors';
+    const validTabs: SubTab[] = ['summary', 'contractors', 'budget', 'schedule', 'loan', 'cashflow', 'payments', 'documents', 'punchlists', 'locations'];
+    return (subtab && validTabs.includes(subtab as SubTab)) ? (subtab as SubTab) : 'locations'; // Default to locations for field PMs
   };
 
   const [activeSubTab, setActiveSubTab] = useState<SubTab>(getInitialSubTab);
@@ -154,12 +160,12 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ project, onBack, 
   useEffect(() => {
     const subtab = searchParams.get('subtab');
     if (subtab && subtab !== activeSubTab) {
-      const validTabs: SubTab[] = ['summary', 'contractors', 'budget', 'schedule', 'loan', 'cashflow', 'payments', 'documents', 'punchlists'];
+      const validTabs: SubTab[] = ['summary', 'contractors', 'budget', 'schedule', 'loan', 'cashflow', 'payments', 'documents', 'punchlists', 'locations'];
       if (validTabs.includes(subtab as SubTab)) {
         setActiveSubTab(subtab as SubTab);
       }
     }
-  }, [searchParams]);
+  }, [searchParams, activeSubTab]);
 
   // Update URL when tab changes
   const handleSubTabChange = (tab: SubTab) => {
@@ -175,6 +181,9 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ project, onBack, 
   const [selectedContractor, setSelectedContractor] = useState<any>(null);
   const [showContractorDetail, setShowContractorDetail] = useState(false);
   const [showPunchListModal, setShowPunchListModal] = useState(false);
+  const [showCreateLocationModal, setShowCreateLocationModal] = useState(false);
+  const [showBulkLocationModal, setShowBulkLocationModal] = useState(false);
+  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
   const [punchListRefreshKey, setPunchListRefreshKey] = useState(0);
 
   // Debug logging
@@ -201,11 +210,15 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ project, onBack, 
     setLoadingStats(true);
     try {
       // Fetch budget line items for totals
-      const { data: budgetData } = await supabase
+      const { data: budgetData, error: budgetError } = await supabase
         .from('property_budgets')
         .select('original_amount, revised_amount, actual_spend, committed_costs')
         .eq('project_id', project.id)
         .eq('is_active', true);
+
+      if (budgetError) {
+        console.error('Error fetching budget data:', budgetError);
+      }
 
       // Calculate totals from budget line items
       const budgetTotals = (budgetData || []).reduce((acc, item) => {
@@ -216,34 +229,49 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ project, onBack, 
 
       // Fallback to contracts if no budget data
       if (!budgetData || budgetData.length === 0) {
-        const { data: contractsData } = await supabase
+        const { data: contractsData, error: contractsError } = await supabase
           .from('project_contractors')
           .select('contract_amount')
           .eq('project_id', project.id)
           .eq('contract_status', 'active');
 
-        budgetTotals.budget = (contractsData || []).reduce((sum, c) => sum + (c.contract_amount || 0), 0);
+        if (contractsError) {
+          console.error('Error fetching contracts data:', contractsError);
+        }
+
+        budgetTotals.budget = (contractsData || []).reduce((sum, c) => sum + (Number(c.contract_amount) || 0), 0);
       }
 
       // Fetch committed amounts (submitted/needs_review payment applications)
-      const { data: committedData } = await supabase
+      const { data: committedData, error: committedError } = await supabase
         .from('payment_applications')
         .select('current_payment')
         .eq('project_id', project.id)
         .in('status', ['submitted', 'needs_review']);
 
-      const totalCommitted = (committedData || []).reduce((sum, p) => sum + (p.current_payment || 0), 0);
+      if (committedError) {
+        console.error('Error fetching committed data:', committedError);
+      }
+
+      const totalCommitted = (committedData || []).reduce((sum, p) => sum + (Number(p.current_payment) || 0), 0);
 
       const totalRemaining = budgetTotals.budget - budgetTotals.spent - totalCommitted;
 
       setBudgetStats({
-        budget: budgetTotals.budget,
-        spent: budgetTotals.spent,
-        committed: totalCommitted,
-        remaining: totalRemaining,
+        budget: budgetTotals.budget || 0,
+        spent: budgetTotals.spent || 0,
+        committed: totalCommitted || 0,
+        remaining: totalRemaining || 0,
       });
     } catch (error) {
       console.error('Error fetching budget stats:', error);
+      // Set to zeros on error
+      setBudgetStats({
+        budget: 0,
+        spent: 0,
+        committed: 0,
+        remaining: 0,
+      });
     } finally {
       setLoadingStats(false);
     }
@@ -391,6 +419,9 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ project, onBack, 
         </div>
       </div>
 
+      {/* Project Stats (Phase 4) */}
+      <ProjectStatsCard projectId={project.id} />
+
       {/* Budget Summary Cards */}
       <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 ${activeSubTab === 'summary' ? 'gap-4' : 'gap-2'}`}>
         <div className={`bg-card rounded-md border border-border ${activeSubTab === 'summary' ? 'p-4' : 'p-3'}`}>
@@ -482,6 +513,20 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ project, onBack, 
       {/* Sub-tab Content */}
       <div>
         {activeSubTab === 'summary' && <SummaryTab project={project} />}
+        {activeSubTab === 'locations' && (
+          selectedLocationId ? (
+            <LocationDetailView 
+              locationId={selectedLocationId} 
+              onBack={() => setSelectedLocationId(null)} 
+            />
+          ) : (
+            <LocationList
+              projectId={project.id}
+              onAddLocation={() => setShowCreateLocationModal(true)}
+              onLocationClick={(id) => setSelectedLocationId(id)} 
+            />
+          )
+        )}
         {activeSubTab === 'contractors' && (
           <ProjectContractorsTab
             project={project}
@@ -540,6 +585,18 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ project, onBack, 
           }}
         />
       )}
+      
+      {/* Create Location Modal */}
+      <CreateLocationModal
+        isOpen={showCreateLocationModal}
+        onClose={() => setShowCreateLocationModal(false)}
+        projectId={project.id}
+        onSuccess={() => {
+          // React Query will handle cache invalidation automatically
+          setPaymentSuccess('Location created successfully');
+          setTimeout(() => setPaymentSuccess(null), 3000);
+        }}
+      />
     </div>
   );
 };

@@ -5,7 +5,8 @@ import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { 
   DollarSign, Settings, Building, BarChart2, Home, Menu, X, 
   FileText, GitBranch, Clipboard, HardHat, ChevronRight,
-  ListChecks, Image, FolderOpen, Calendar, CreditCard, Wallet, Users
+  ListChecks, Image, FolderOpen, Calendar, CreditCard, Wallet, Users,
+  LayoutDashboard, MapPin, Copy, AlertTriangle, Hammer
 } from 'lucide-react';
 import { Project } from '../context/DataContext';
 import { supabase } from '@/lib/supabaseClient';
@@ -89,12 +90,13 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab }) => {
   const [userRole, setUserRole] = useState<string | null>(null);
   const [notificationCounts, setNotificationCounts] = useState<Record<string, number>>({});
   const [isProjectExpanded, setIsProjectExpanded] = useState(false);
+  const [isRenovationsExpanded, setIsRenovationsExpanded] = useState(true);
   
   const currentSubTab = searchParams.get('subtab');
 
   useEffect(() => {
     if (selectedProjectId) {
-      setIsProjectExpanded(true);
+      queueMicrotask(() => setIsProjectExpanded(true));
     }
   }, [selectedProjectId]);
 
@@ -149,8 +151,12 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab }) => {
   };
 
   useEffect(() => {
-    fetchNotificationCounts();
-    const interval = setInterval(fetchNotificationCounts, 60000);
+    const run = () => {
+      void fetchNotificationCounts();
+    };
+
+    queueMicrotask(run);
+    const interval = setInterval(run, 60000);
     return () => clearInterval(interval);
   }, []);
 
@@ -415,6 +421,16 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab }) => {
                   onMobileClick={closeMobileMenu}
                 >
                   Change Orders
+                </NavButton>
+                <NavButton
+                  id="templates"
+                  activeTab={activeTab}
+                  setActiveTab={setActiveTab}
+                  icon={<Clipboard className="w-5 h-5"/>}
+                  href="/?tab=templates"
+                  onMobileClick={closeMobileMenu}
+                >
+                  Templates
                 </NavButton>
                 <NavButton
                   id="budget"

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState } from 'react';
 import { X } from 'lucide-react';
 import { LineItem } from './LineItemEditor';
 
@@ -19,20 +19,10 @@ const defaultValues: LineItem = {
   percentGC: '',
 };
 
-const SingleLineItemModal: React.FC<SingleLineItemModalProps> = ({ open, onClose, onSave, initialValues }) => {
-  const [form, setForm] = useState<LineItem>(initialValues || defaultValues);
+const SingleLineItemModalInner: React.FC<Omit<SingleLineItemModalProps, 'open'>> = ({ onClose, onSave, initialValues }) => {
+  const initialForm = useMemo(() => initialValues || defaultValues, [initialValues]);
+  const [form, setForm] = useState<LineItem>(initialForm);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [isMounted, setIsMounted] = useState(false);
-
-  useEffect(() => {
-    if (open) {
-      setForm(initialValues || defaultValues);
-      setErrors({});
-      setIsMounted(true);
-    } else {
-      setIsMounted(false);
-    }
-  }, [open, initialValues]);
 
   const validate = () => {
     const newErrors: Record<string, string> = {};
@@ -60,8 +50,6 @@ const SingleLineItemModal: React.FC<SingleLineItemModalProps> = ({ open, onClose
     onSave(form);
     onClose();
   };
-
-  if (!open || !isMounted) return null;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in">
@@ -173,4 +161,17 @@ const SingleLineItemModal: React.FC<SingleLineItemModalProps> = ({ open, onClose
   );
 };
 
-export default SingleLineItemModal; 
+const SingleLineItemModal: React.FC<SingleLineItemModalProps> = ({ open, onClose, onSave, initialValues }) => {
+  if (!open) return null;
+
+  return (
+    <SingleLineItemModalInner
+      key={initialValues ? `edit-${initialValues.itemNo}` : 'new'}
+      onClose={onClose}
+      onSave={onSave}
+      initialValues={initialValues}
+    />
+  );
+};
+
+export default SingleLineItemModal;

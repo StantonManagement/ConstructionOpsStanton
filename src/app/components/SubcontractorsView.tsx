@@ -170,7 +170,7 @@ const SubcontractorsView: React.FC<SubcontractorsViewProps> = ({ searchQuery = '
     const filteredSubcontractors = useMemo(() => {
         return subcontractors
             .filter(sub => 
-                sub.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
+                (sub.name || '').toLowerCase().includes(searchTerm.toLowerCase()) &&
                 (filterTrade === '' || sub.trade === filterTrade) &&
                 (filterStatus === '' || sub.status === filterStatus)
             )
@@ -236,16 +236,35 @@ const SubcontractorsView: React.FC<SubcontractorsViewProps> = ({ searchQuery = '
     const handleAddSubcontractor = async (formData: Record<string, string>) => {
       setLoading(true);
       try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) {
+          throw new Error('Not authenticated');
+        }
+
         const { name, trade, phone, email } = formData;
         const contractorData = {
           name: name.trim(),
           trade: trade.trim(),
-          phone: phone.trim() || null,
-          email: email.trim() || null
+          phone: phone.trim() || '',
+          email: email.trim() || ''
         };
-        const { data, error } = await supabase.from('contractors').insert([contractorData]).select().single();
-        if (error) throw error;
-        dispatch({ type: 'ADD_SUBCONTRACTOR', payload: data });
+
+        const response = await fetch('/api/contractors', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`
+          },
+          body: JSON.stringify(contractorData)
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to add subcontractor');
+        }
+
+        const result = await response.json();
+        dispatch({ type: 'ADD_SUBCONTRACTOR', payload: result.contractor });
         setModal(null);
       } catch (error) {
         alert(error instanceof Error ? error.message : String(error) || 'Failed to add subcontractor');
@@ -258,16 +277,35 @@ const SubcontractorsView: React.FC<SubcontractorsViewProps> = ({ searchQuery = '
       if (!selectedSub) return;
       setLoading(true);
       try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) {
+          throw new Error('Not authenticated');
+        }
+
         const { name, trade, phone, email } = formData;
         const contractorData = {
           name: name.trim(),
           trade: trade.trim(),
-          phone: phone.trim() || null,
-          email: email.trim() || null
+          phone: phone.trim() || '',
+          email: email.trim() || ''
         };
-        const { data, error } = await supabase.from('contractors').update(contractorData).eq('id', selectedSub.id).select().single();
-        if (error) throw error;
-        dispatch({ type: 'UPDATE_SUBCONTRACTOR', payload: data });
+
+        const response = await fetch(`/api/contractors/${selectedSub.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`
+          },
+          body: JSON.stringify(contractorData)
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to update subcontractor');
+        }
+
+        const result = await response.json();
+        dispatch({ type: 'UPDATE_SUBCONTRACTOR', payload: result.contractor });
         setModal(null);
       } catch (error) {
         alert(error instanceof Error ? error.message : String(error) || 'Failed to update subcontractor');

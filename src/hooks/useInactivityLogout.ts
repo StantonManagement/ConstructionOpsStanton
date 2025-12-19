@@ -13,9 +13,11 @@ export function useInactivityLogout(
   onTimeout: () => void
 ) {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const lastActivityRef = useRef<number>(Date.now());
+  const lastActivityRef = useRef<number>(0);
 
   useEffect(() => {
+    lastActivityRef.current = Date.now();
+
     // Reset the inactivity timer
     const resetTimer = () => {
       lastActivityRef.current = Date.now();

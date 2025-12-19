@@ -16,31 +16,40 @@ export function useProgressiveLoading(
   const [loadedTabs, setLoadedTabs] = useState<Set<string>>(new Set(['overview']));
   const [loadingTab, setLoadingTab] = useState<string | null>(null);
   const tabLoadTimers = useRef<Map<string, NodeJS.Timeout>>(new Map());
+  const loadedTabsRef = useRef<Set<string>>(loadedTabs);
+
+  useEffect(() => {
+    loadedTabsRef.current = loadedTabs;
+  }, [loadedTabs]);
 
   // Load active tab immediately
   useEffect(() => {
-    if (!loadedTabs.has(activeTab)) {
-      setLoadingTab(activeTab);
+    const timers = tabLoadTimers.current;
+
+    if (!loadedTabsRef.current.has(activeTab)) {
+      queueMicrotask(() => setLoadingTab(activeTab));
 
       const timer = setTimeout(() => {
         setLoadedTabs(prev => new Set([...prev, activeTab]));
         setLoadingTab(null);
       }, delay);
 
-      tabLoadTimers.current.set(activeTab, timer);
+      timers.set(activeTab, timer);
     }
 
     return () => {
-      const timer = tabLoadTimers.current.get(activeTab);
+      const timer = timers.get(activeTab);
       if (timer) {
         clearTimeout(timer);
-        tabLoadTimers.current.delete(activeTab);
+        timers.delete(activeTab);
       }
     };
-  }, [activeTab, delay, loadedTabs]);
+  }, [activeTab, delay]);
 
   // Preload adjacent tabs after initial load
   useEffect(() => {
+    const timers = tabLoadTimers.current;
+
     if (enabledTabs.length === 0) return;
 
     const currentIndex = enabledTabs.indexOf(activeTab);
@@ -53,23 +62,25 @@ export function useProgressiveLoading(
     ].filter(Boolean);
 
     tabsToPreload.forEach((tab, index) => {
-      if (!loadedTabs.has(tab) && !tabLoadTimers.current.has(tab)) {
+      if (!loadedTabsRef.current.has(tab) && !timers.has(tab)) {
         const preloadDelay = delay + (index + 1) * staggerDelay;
         const timer = setTimeout(() => {
           setLoadedTabs(prev => new Set([...prev, tab]));
-          tabLoadTimers.current.delete(tab);
+          timers.delete(tab);
         }, preloadDelay);
 
-        tabLoadTimers.current.set(tab, timer);
+        timers.set(tab, timer);
       }
     });
-  }, [activeTab, enabledTabs, delay, staggerDelay, loadedTabs]);
+  }, [activeTab, enabledTabs, delay, staggerDelay]);
 
   // Cleanup on unmount
   useEffect(() => {
+    const timers = tabLoadTimers.current;
+
     return () => {
-      tabLoadTimers.current.forEach(timer => clearTimeout(timer));
-      tabLoadTimers.current.clear();
+      timers.forEach(timer => clearTimeout(timer));
+      timers.clear();
     };
   }, []);
 
@@ -78,12 +89,14 @@ export function useProgressiveLoading(
     isTabLoading: (tab: string) => loadingTab === tab,
     loadedTabs: Array.from(loadedTabs),
     preloadTab: (tab: string) => {
-      if (!loadedTabs.has(tab) && !tabLoadTimers.current.has(tab)) {
+      const timers = tabLoadTimers.current;
+
+      if (!loadedTabsRef.current.has(tab) && !timers.has(tab)) {
         const timer = setTimeout(() => {
           setLoadedTabs(prev => new Set([...prev, tab]));
-          tabLoadTimers.current.delete(tab);
+          timers.delete(tab);
         }, delay);
-        tabLoadTimers.current.set(tab, timer);
+        timers.set(tab, timer);
       }
     }
   };

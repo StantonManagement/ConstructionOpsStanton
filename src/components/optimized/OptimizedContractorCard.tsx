@@ -40,7 +40,7 @@ const OptimizedContractorCard = memo<OptimizedContractorCardProps>(({
   }, [onEdit, contractor]);
 
   const getStatusIcon = (status: string) => {
-    switch (status.toLowerCase()) {
+    switch ((status || '').toLowerCase()) {
       case 'active':
         return <CheckCircle className="h-5 w-5 text-green-500" />;
       case 'inactive':
@@ -52,8 +52,8 @@ const OptimizedContractorCard = memo<OptimizedContractorCardProps>(({
     }
   };
 
-  const getComplianceColor = (status: string) => {
-    switch (status.toLowerCase()) {
+  const getComplianceColor = (status: string | null | undefined) => {
+    switch ((status || '').toLowerCase()) {
       case 'valid':
         return 'text-green-600 bg-green-100';
       case 'expiring':

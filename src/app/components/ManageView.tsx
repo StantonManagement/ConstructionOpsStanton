@@ -941,121 +941,77 @@ const AddContractForm: React.FC<{
     setLoading(true);
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('Not authenticated');
+      }
+
       let contractId: number;
+      const itemsToSave = lineItemsHook.itemsWithData;
+
+      // Prepare line items data
+      const lineItems = itemsToSave.map((item, index) => ({
+        itemNo: item.itemNo,
+        description: item.description,
+        scheduledValue: Number(item.scheduledValue) || 0,
+        fromPrevious: Number(item.fromPrevious) || 0,
+        thisPeriod: Number(item.thisPeriod) || 0,
+        materialStored: Number(item.materialStored) || 0,
+        percentGC: Number(item.percentGC) || 0
+      }));
 
       if (isEdit && initialData?.id) {
         // Update existing contract
-        const { data, error: contractError } = await supabase
-          .from('contracts')
-          .update({
+        const response = await fetch(`/api/contracts/${initialData.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`
+          },
+          body: JSON.stringify({
             project_id: Number(formData.projectId),
             subcontractor_id: Number(formData.subcontractorId),
             contract_amount: Number(formData.contractAmount),
             contract_nickname: formData.contractNickname || null,
             start_date: formData.startDate,
             end_date: formData.endDate || null,
+            line_items: lineItems
           })
-          .eq('id', initialData.id)
-          .select()
-          .single();
+        });
 
-        if (contractError) {
-          throw new Error(`Failed to update contract: ${contractError.message}`);
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to update contract');
         }
 
-        contractId = data.id;
+        const result = await response.json();
+        contractId = result.contract.id;
       } else {
         // Create new contract
-        const { data, error: contractError } = await supabase
-          .from('contracts')
-          .insert([{
+        const response = await fetch('/api/contracts', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`
+          },
+          body: JSON.stringify({
             project_id: Number(formData.projectId),
             subcontractor_id: Number(formData.subcontractorId),
             contract_amount: Number(formData.contractAmount),
             contract_nickname: formData.contractNickname || null,
             start_date: formData.startDate,
             end_date: formData.endDate || null,
-          }])
-          .select()
-          .single();
+            line_items: lineItems
+          })
+        });
 
-        if (contractError) {
-          throw new Error(`Failed to create contract: ${contractError.message}`);
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to create contract');
         }
 
-        contractId = data.id;
-      }
-
-      // Create corresponding entry in project_contractors table
-      if (!isEdit) {
-        // Check if project_contractors entry already exists
-        const { data: existingProjectContractor } = await supabase
-          .from('project_contractors')
-          .select('id')
-          .eq('project_id', Number(formData.projectId))
-          .eq('contractor_id', Number(formData.subcontractorId))
-          .single();
-
-        if (!existingProjectContractor) {
-          // Create new project_contractors entry
-          const { error: projectContractorError } = await supabase
-            .from('project_contractors')
-            .insert({
-              project_id: Number(formData.projectId),
-              contractor_id: Number(formData.subcontractorId),
-              contract_amount: Number(formData.contractAmount),
-              paid_to_date: 0,
-              contract_status: 'active'
-            });
-
-          if (projectContractorError) {
-            // If project_contractors creation fails, delete the contract
-            if (!isEdit) {
-              await supabase.from('contracts').delete().eq('id', contractId);
-            }
-            throw new Error(`Failed to create project contractor relationship: ${projectContractorError.message}`);
-          }
-        }
-      }
-
-      // Save line items using items from the hook
-      const itemsToSave = lineItemsHook.itemsWithData;
-      
-      if (itemsToSave.length > 0) {
-        // Delete existing line items if editing
-        if (isEdit && initialData?.id) {
-          await supabase
-            .from('project_line_items')
-            .delete()
-            .eq('contract_id', initialData.id);
-        }
-
-        // Insert all line items
-        const itemsToInsert = itemsToSave.map((item, index) => ({
-          contract_id: contractId,
-          project_id: Number(formData.projectId),
-          contractor_id: Number(formData.subcontractorId),
-          item_no: item.itemNo,
-          description_of_work: item.description,
-          scheduled_value: Number(item.scheduledValue) || 0,
-          from_previous_application: Number(item.fromPrevious) || 0,
-          this_period: Number(item.thisPeriod) || 0,
-          material_presently_stored: Number(item.materialStored) || 0,
-          percent_gc: Number(item.percentGC) || 0,
-          display_order: index + 1,
-          status: 'active',
-        }));
-
-        const { error: lineItemsError } = await supabase
-          .from('project_line_items')
-          .insert(itemsToInsert);
-
-        if (lineItemsError) {
-          if (!isEdit) {
-            await supabase.from('contracts').delete().eq('id', contractId);
-          }
-          throw new Error(`Failed to save line items: ${lineItemsError.message}`);
-        }
+        const result = await response.json();
+        contractId = result.contract.id;
       }
 
       if (!isEdit) {
@@ -1619,19 +1575,36 @@ const ManageView: React.FC<ManageViewProps> = ({ searchQuery = '' }) => {
     setDeleteLoading(true);
 
     try {
-      const { error } = await supabase
-        .from('contracts')
-        .delete()
-        .in('id', Array.from(selectedItems));
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('Not authenticated');
+      }
 
-      if (error) throw error;
+      // Delete contracts one by one using API
+      const deletePromises = Array.from(selectedItems).map(async (contractId) => {
+        const response = await fetch(`/api/contracts/${contractId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`
+          }
+        });
 
-      // React Query will automatically refetch contracts after mutation
-      // No need for manual dispatch - the query will update automatically
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || `Failed to delete contract ${contractId}`);
+        }
+
+        return response.json();
+      });
+
+      await Promise.all(deletePromises);
 
       showToast({ message: `Successfully deleted ${selectedItems.size} item(s)`, type: 'success' });
       setSelectedItems(new Set());
       setShowDeleteConfirmation(false);
+      
+      // Refresh contracts list
+      await refetchContracts();
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to delete items';
       showToast({ message, type: 'error' });

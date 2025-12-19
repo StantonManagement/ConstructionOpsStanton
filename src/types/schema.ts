@@ -126,6 +126,155 @@ export interface ApiResponse<T> {
   message?: string;
 }
 
+// --- Task Management Types ---
+
+export type LocationType = 'unit' | 'common_area' | 'exterior' | 'building_wide';
+export type UnitType = 'studio' | '1BR' | '2BR' | '3BR';
+export type LocationStatus = 'not_started' | 'in_progress' | 'complete' | 'on_hold';
+export type BlockedReason = 'materials' | 'labor' | 'cash' | 'dependency' | 'other';
+
+export interface Location {
+  id: string; // UUID
+  project_id: number; // Links to projects.id (BIGINT)
+  name: string;
+  type: LocationType;
+  unit_type?: UnitType;
+  unit_number?: string;
+  floor?: number;
+  status: LocationStatus;
+  blocked_reason?: BlockedReason;
+  blocked_note?: string;
+  template_applied_id?: string;
+  tenant_id?: string;
+  created_at: string;
+  updated_at: string;
+  // Derived/Joined fields
+  tasks?: Task[];
+  task_count?: number;
+  completed_task_count?: number;
+}
+
+export interface CreateLocationInput {
+  project_id: number;
+  name: string;
+  type: LocationType;
+  unit_type?: UnitType;
+  unit_number?: string;
+  floor?: number;
+  status?: LocationStatus;
+}
+
+export type TaskStatus = 'not_started' | 'in_progress' | 'worker_complete' | 'verified';
+export type PriorityLevel = 'low' | 'medium' | 'high' | 'urgent';
+
+export interface Task {
+  id: string; // UUID
+  location_id: string; // UUID
+  name: string;
+  description?: string;
+  status: TaskStatus;
+  priority: PriorityLevel;
+  assigned_contractor_id?: number; // BIGINT
+  budget_category_id?: number; // BIGINT
+  estimated_cost?: number;
+  actual_cost?: number;
+  duration_days?: number;
+  scheduled_start?: string; // Date string YYYY-MM-DD
+  scheduled_end?: string; // Date string YYYY-MM-DD
+  worker_completed_at?: string; // ISO timestamp
+  verified_at?: string; // ISO timestamp
+  verified_by?: string; // UUID
+  verification_photo_url?: string;
+  verification_notes?: string;
+  sort_order: number;
+  tenant_id?: string;
+  created_at: string;
+  updated_at: string;
+  // Joined fields
+  location?: Location;
+  contractor?: { name: string };
+}
+
+export interface CreateTaskInput {
+  location_id: string;
+  name: string;
+  description?: string;
+  status?: TaskStatus;
+  priority?: PriorityLevel;
+  assigned_contractor_id?: number;
+  budget_category_id?: number;
+  estimated_cost?: number;
+  duration_days?: number;
+  scheduled_start?: string;
+  scheduled_end?: string;
+}
+
+// --- Phase 2: Templates ---
+
+export interface ScopeTemplate {
+  id: string; // UUID
+  name: string;
+  description?: string;
+  unit_type?: UnitType | null; // Null means applies to any
+  is_active: boolean;
+  tenant_id?: string;
+  created_at: string;
+  updated_at: string;
+  // Derived
+  task_count?: number;
+}
+
+export interface TemplateTask {
+  id: string; // UUID
+  template_id: string; // UUID
+  name: string;
+  description?: string;
+  default_duration_days?: number;
+  default_budget_category_id?: number; // BIGINT
+  estimated_cost?: number;
+  sort_order: number;
+  depends_on_sort_order?: number; // Added for Phase 6
+  tenant_id?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TemplateWithTasks extends ScopeTemplate {
+  tasks: TemplateTask[];
+}
+
+export interface CreateTemplateInput {
+  name: string;
+  description?: string;
+  unit_type?: UnitType | null;
+}
+
+export interface CreateTemplateTaskInput {
+  template_id: string;
+  name: string;
+  description?: string;
+  default_duration_days?: number;
+  default_budget_category_id?: number;
+  estimated_cost?: number;
+  sort_order?: number;
+  depends_on_sort_order?: number; // Added for Phase 6
+}
+
+export interface BulkLocationInput {
+  project_id: number;
+  start_number: number;
+  end_number: number;
+  prefix?: string;
+  type: LocationType;
+  unit_type?: UnitType;
+  floor?: number;
+  template_id?: string; // Optional: apply template immediately
+}
+
+export interface ApplyTemplateInput {
+  location_ids: string[];
+}
+
 
 
 

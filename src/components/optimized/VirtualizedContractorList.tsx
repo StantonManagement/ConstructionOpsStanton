@@ -57,11 +57,11 @@ const VirtualizedContractorList = memo<VirtualizedContractorListProps>(({
 
     const query = searchQuery.toLowerCase();
     return contractors.filter(contractor =>
-      contractor.name.toLowerCase().includes(query) ||
-      contractor.trade.toLowerCase().includes(query) ||
-      contractor.status.toLowerCase().includes(query) ||
-      contractor.phone.toLowerCase().includes(query) ||
-      contractor.email?.toLowerCase().includes(query)
+      (contractor.name || '').toLowerCase().includes(query) ||
+      (contractor.trade || '').toLowerCase().includes(query) ||
+      (contractor.status || '').toLowerCase().includes(query) ||
+      (contractor.phone || '').toLowerCase().includes(query) ||
+      (contractor.email || '').toLowerCase().includes(query)
     );
   }, [contractors, searchQuery]);
 

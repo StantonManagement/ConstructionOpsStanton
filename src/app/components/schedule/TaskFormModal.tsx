@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import type { ScheduleTask, CreateTaskRequest, TaskStatus } from '@/types/schedule';
-import { DollarSign, Move, X, Calendar, CheckSquare, Square, AlertCircle } from 'lucide-react';
+import type { ScheduleTask, CreateTaskRequest, TaskStatus, DependencyType } from '@/types/schedule';
+import { DollarSign, Move, X, AlertCircle } from 'lucide-react';
+import DependencyEditor from './DependencyEditor';
 
 interface BudgetCategory {
   id: number;
@@ -68,6 +69,141 @@ export default function TaskFormModal({
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
+
+  // Dependencies state for existing tasks
+  interface Dependency {
+    id: string;
+    source_task_id: string;
+    dependency_type: DependencyType;
+    lag_days: number;
+    predecessor?: {
+      id: string;
+      task_name: string;
+      start_date: string;
+      end_date: string;
+      status: string;
+    };
+  }
+  const [currentDependencies, setCurrentDependencies] = useState<Dependency[]>([]);
+
+  // Fetch dependencies for existing task
+  const fetchDependencies = useCallback(async () => {
+    if (!existingTask) return;
+    
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      if (!session?.session?.access_token) return;
+
+      const res = await fetch(
+        `/api/schedules/${scheduleId}/tasks/${existingTask.id}/dependencies`,
+        { headers: { 'Authorization': `Bearer ${session.session.access_token}` } }
+      );
+      
+      if (res.ok) {
+        const result = await res.json();
+        setCurrentDependencies(result.predecessors || []);
+      }
+    } catch (e) {
+      console.error('Error fetching dependencies:', e);
+    }
+  }, [existingTask, scheduleId]);
+
+  useEffect(() => {
+    fetchDependencies();
+  }, [fetchDependencies]);
+
+  // Dependency handlers
+  const handleAddDependency = useCallback(async (
+    predecessorId: string, 
+    type: DependencyType, 
+    lagDays: number
+  ) => {
+    const { data: session } = await supabase.auth.getSession();
+    if (!session?.session?.access_token || !existingTask) {
+      throw new Error('Not authenticated');
+    }
+
+    const res = await fetch(
+      `/api/schedules/${scheduleId}/tasks/${existingTask.id}/dependencies`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.session.access_token}`,
+        },
+        body: JSON.stringify({
+          predecessor_id: predecessorId,
+          dependency_type: type,
+          lag_days: lagDays,
+        }),
+      }
+    );
+
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.error || 'Failed to add dependency');
+    }
+
+    await fetchDependencies();
+    onSuccess(); // Refresh parent data
+  }, [existingTask, scheduleId, fetchDependencies, onSuccess]);
+
+  const handleRemoveDependency = useCallback(async (dependencyId: string) => {
+    const { data: session } = await supabase.auth.getSession();
+    if (!session?.session?.access_token || !existingTask) {
+      throw new Error('Not authenticated');
+    }
+
+    const res = await fetch(
+      `/api/schedules/${scheduleId}/tasks/${existingTask.id}/dependencies/${dependencyId}`,
+      {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${session.session.access_token}` },
+      }
+    );
+
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.error || 'Failed to remove dependency');
+    }
+
+    await fetchDependencies();
+    onSuccess();
+  }, [existingTask, scheduleId, fetchDependencies, onSuccess]);
+
+  const handleUpdateDependency = useCallback(async (
+    dependencyId: string,
+    type: DependencyType,
+    lagDays: number
+  ) => {
+    const { data: session } = await supabase.auth.getSession();
+    if (!session?.session?.access_token || !existingTask) {
+      throw new Error('Not authenticated');
+    }
+
+    const res = await fetch(
+      `/api/schedules/${scheduleId}/tasks/${existingTask.id}/dependencies/${dependencyId}`,
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.session.access_token}`,
+        },
+        body: JSON.stringify({
+          dependency_type: type,
+          lag_days: lagDays,
+        }),
+      }
+    );
+
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.error || 'Failed to update dependency');
+    }
+
+    await fetchDependencies();
+    onSuccess();
+  }, [existingTask, scheduleId, fetchDependencies, onSuccess]);
 
   // Center modal on mount
   useEffect(() => {
@@ -585,46 +721,56 @@ export default function TaskFormModal({
             </div>
           </div>
 
-        {/* Bottom Section: Predecessors */}
-        <div className="mt-8 pt-4 border-t">
-          <h4 className="text-sm font-bold text-gray-900 mb-2">Predecessors (Dependencies)</h4>
-          <div className="border rounded max-h-48 overflow-y-auto bg-gray-50">
-            {availablePredecessors.length === 0 ? (
-              <div className="p-4 text-sm text-gray-500 text-center">No other tasks available</div>
-            ) : (
-              <div className="divide-y divide-gray-200">
-                {availablePredecessors.map(t => {
-                  const isSelected = formData.predecessors?.includes(t.id);
-                  return (
-                    <div 
-                      key={t.id} 
-                      onClick={() => togglePredecessor(t.id)}
-                      className={`p-3 flex items-center gap-3 hover:bg-white cursor-pointer transition-colors ${isSelected ? 'bg-secondary hover:bg-secondary' : ''}`}
-                    >
-                      <div className={`flex-shrink-0 ${isSelected ? 'text-primary' : 'text-gray-400'}`}>
-                        {isSelected ? <CheckSquare className="w-5 h-5" /> : <Square className="w-5 h-5" />}
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex justify-between">
-                          <span className={`text-sm font-medium ${isSelected ? 'text-foreground' : 'text-gray-900'}`}>
-                            {t.task_name}
-                          </span>
-                          <span className="text-xs text-gray-500">
-                            {t.start_date} — {t.end_date}
-                          </span>
-                        </div>
-                        <div className="text-xs text-gray-500 mt-0.5">
-                          Status: {t.status.replace('_', ' ')}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+        {/* Bottom Section: Dependencies */}
+        {existingTask && (
+          <div className="mt-8 pt-4 border-t">
+            <DependencyEditor
+              taskId={existingTask.id}
+              scheduleId={scheduleId}
+              currentDependencies={currentDependencies}
+              availableTasks={availablePredecessors}
+              onAddDependency={handleAddDependency}
+              onRemoveDependency={handleRemoveDependency}
+              onUpdateDependency={handleUpdateDependency}
+              disabled={loading}
+            />
           </div>
-          <p className="text-xs text-gray-500 mt-1">Select tasks that must be completed before this one starts.</p>
+        )}
+
+        {/* Simple Predecessors for NEW tasks (before save) */}
+        {!existingTask && (
+          <div className="mt-8 pt-4 border-t">
+            <h4 className="text-sm font-bold text-gray-900 mb-2">Initial Predecessors</h4>
+            <p className="text-xs text-gray-500 mb-3">Select tasks that must complete before this one. You can add more detailed dependencies after saving.</p>
+            <div className="border rounded max-h-40 overflow-y-auto bg-gray-50">
+              {availablePredecessors.length === 0 ? (
+                <div className="p-4 text-sm text-gray-500 text-center">No other tasks available</div>
+              ) : (
+                <div className="divide-y divide-gray-200">
+                  {availablePredecessors.map(t => {
+                    const isSelected = formData.predecessors?.includes(t.id);
+                    return (
+                      <div 
+                        key={t.id} 
+                        onClick={() => togglePredecessor(t.id)}
+                        className={`p-2 flex items-center gap-2 hover:bg-white cursor-pointer transition-colors text-sm ${isSelected ? 'bg-blue-50' : ''}`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => {}}
+                          className="h-4 w-4 text-primary rounded border-gray-300"
+                        />
+                        <span className={isSelected ? 'font-medium' : ''}>{t.task_name}</span>
+                        <span className="text-xs text-gray-400 ml-auto">{t.start_date}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
+        )}
       </form>
 
       {/* Footer Actions */}

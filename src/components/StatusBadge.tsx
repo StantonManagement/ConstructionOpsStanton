@@ -5,16 +5,20 @@ import {
   ProjectStatus, 
   ContractStatus, 
   PriorityLevel,
+  LocationStatus,
+  TaskStatus,
   getPaymentStatusBadge,
   getProjectStatusBadge,
   getContractStatusBadge,
+  getLocationStatusBadge,
+  getTaskStatusBadge,
   getPriorityBadge,
   getStatusLabel,
   getPriorityLabel
 } from '@/lib/statusColors';
 
 interface StatusBadgeProps {
-  status: PaymentStatus | ProjectStatus | ContractStatus;
+  status: PaymentStatus | ProjectStatus | ContractStatus | LocationStatus | TaskStatus;
   className?: string;
 }
 
@@ -33,8 +37,16 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, className }) =
     variant = getPaymentStatusBadge(status as PaymentStatus);
   } else if (['planning', 'in_progress', 'on_hold', 'completed', 'cancelled'].includes(status)) {
     variant = getProjectStatusBadge(status as ProjectStatus);
-  } else if (['pending', 'active', 'completed', 'terminated'].includes(status)) {
+  } else if (['pending', 'active', 'terminated'].includes(status)) {
     variant = getContractStatusBadge(status as ContractStatus);
+  } else if (['not_started', 'complete'].includes(status) || (status === 'in_progress' && !['planning'].includes(status))) {
+     // NOTE: Overlap on in_progress, on_hold. This generic component is tricky with overlaps.
+     // Best to use specific badges or type guards.
+     // For now, let's try to infer or fallback.
+     // Since in_progress is in Project, Location, Task... we default to project/location style (usually 'in-progress' variant)
+     variant = 'in-progress';
+  } else if (['worker_complete', 'verified'].includes(status)) {
+    variant = getTaskStatusBadge(status as TaskStatus);
   } else {
     variant = 'outline';
   }
@@ -85,6 +97,28 @@ export const ProjectStatusBadge: React.FC<{ status: ProjectStatus; className?: s
 export const ContractStatusBadge: React.FC<{ status: ContractStatus; className?: string }> = ({ status, className }) => {
   return (
     <Badge variant={getContractStatusBadge(status) as any} className={className}>
+      {getStatusLabel(status)}
+    </Badge>
+  );
+};
+
+/**
+ * Location-specific status badge
+ */
+export const LocationStatusBadge: React.FC<{ status: LocationStatus; className?: string }> = ({ status, className }) => {
+  return (
+    <Badge variant={getLocationStatusBadge(status) as any} className={className}>
+      {getStatusLabel(status)}
+    </Badge>
+  );
+};
+
+/**
+ * Task-specific status badge
+ */
+export const TaskStatusBadge: React.FC<{ status: TaskStatus; className?: string }> = ({ status, className }) => {
+  return (
+    <Badge variant={getTaskStatusBadge(status) as any} className={className}>
       {getStatusLabel(status)}
     </Badge>
   );

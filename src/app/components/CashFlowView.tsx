@@ -1,138 +1,183 @@
-'use client';
-
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useForecast, useDrawEligibility } from '@/hooks/queries/useCashFlow';
+import { useDraws, useCreateDraw } from '@/hooks/queries/useDraws';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
+import { AlertTriangle, Calendar, CircleDollarSign, FileText, Loader2, Plus, TrendingUp } from 'lucide-react';
 import { formatCurrency } from '@/lib/theme';
-import { ProjectCashFlow } from '@/lib/cashflow';
-import { supabase } from '@/lib/supabaseClient';
-import { TrendingUp, AlertTriangle, Clock, DollarSign } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
-interface CashFlowViewProps {
+interface Props {
   projectId: number;
 }
 
-export default function CashFlowView({ projectId }: CashFlowViewProps) {
-  const [data, setData] = useState<ProjectCashFlow | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+export default function CashFlowView({ projectId }: Props) {
+  const router = useRouter();
+  const { data: forecast, isLoading: isForecastLoading } = useForecast(projectId);
+  const { data: eligibility, isLoading: isEligibilityLoading } = useDrawEligibility(projectId);
+  const { data: draws, isLoading: isDrawsLoading } = useDraws(projectId);
+  const { mutate: createDraw, isPending: isCreatingDraw } = useCreateDraw();
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const { data: session } = await supabase.auth.getSession();
-        const token = session?.session?.access_token;
-        if (!token) return;
-
-        const res = await fetch(`/api/projects/${projectId}/cash-flow`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
-        if (!res.ok) throw new Error('Failed to fetch cash flow data');
-        
-        const result = await res.json();
-        if (result.success) {
-          setData(result.data);
-        } else {
-          throw new Error(result.error || 'Unknown error');
+  const handleCreateDraw = () => {
+    createDraw({ project_id: projectId }, {
+      onSuccess: (data) => {
+        // Redirect to new draw or show success
+        if (data.data?.id) {
+           // Ideally navigate to draw detail
+           // router.push(\`/draws/\${data.data.id}\`);
         }
-      } catch (e: any) {
-        console.error(e);
-        setError(e.message);
-      } finally {
-        setLoading(false);
       }
-    };
+    });
+  };
 
-    fetchData();
-  }, [projectId]);
+  const isLoading = isForecastLoading || isEligibilityLoading || isDrawsLoading;
 
-  if (loading) return <div className="p-12 text-center">Loading cash flow projection...</div>;
-  if (error) return <div className="p-12 text-center text-red-500">Error: {error}</div>;
-  if (!data) return <div className="p-12 text-center">No data available</div>;
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+      </div>
+    );
+  }
+
+  // Calculate next 4 weeks total
+  const next4WeeksTotal = forecast?.total_forecast || 0;
+  
+  // Calculate eligible amount
+  const eligibleAmount = eligibility?.total_eligible || 0;
 
   return (
     <div className="space-y-6">
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded-lg border shadow-sm">
-          <div className="text-sm text-gray-500 mb-1">Current Balance</div>
-          <div className="text-2xl font-bold text-gray-900">{formatCurrency(data.summary.currentBalance)}</div>
-        </div>
-        <div className="bg-white p-4 rounded-lg border shadow-sm">
-          <div className="text-sm text-gray-500 mb-1">4-Week Net Flow</div>
-          <div className={`text-2xl font-bold ${data.summary.netCashFlow4Weeks >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-            {formatCurrency(data.summary.netCashFlow4Weeks)}
-          </div>
-        </div>
-        <div className="bg-white p-4 rounded-lg border shadow-sm">
-          <div className="text-sm text-gray-500 mb-1">Pending Draws</div>
-          <div className="text-2xl font-bold text-primary flex items-center gap-2">
-            {formatCurrency(data.summary.pendingDraws)}
-            <Clock className="w-4 h-4 text-muted-foreground" />
-          </div>
-        </div>
-        <div className={`p-4 rounded-lg border shadow-sm ${data.summary.projectedLowBalance < 0 ? 'bg-red-50 border-red-200' : 'bg-white'}`}>
-          <div className="text-sm text-gray-500 mb-1">Projected Low (8wks)</div>
-          <div className={`text-2xl font-bold ${data.summary.projectedLowBalance < 0 ? 'text-red-600' : 'text-gray-900'} flex items-center gap-2`}>
-            {formatCurrency(data.summary.projectedLowBalance)}
-            {data.summary.projectedLowBalance < 0 && <AlertTriangle className="w-5 h-5 text-red-500" />}
-          </div>
-        </div>
+      {/* Top Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Forecast Card */}
+        <Card className="border-l-4 border-l-blue-500">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-500 flex items-center gap-2">
+              <Calendar className="w-4 h-4" />
+              FORECAST (Next 4 Weeks)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-gray-900 mb-4">
+              {formatCurrency(next4WeeksTotal)}
+            </div>
+            <Button variant="outline" size="sm" className="w-full">
+              View Forecast Details
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Eligibility Card */}
+        <Card className="border-l-4 border-l-green-500">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-500 flex items-center gap-2">
+              <CircleDollarSign className="w-4 h-4" />
+              DRAW ELIGIBILITY
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-gray-900 mb-4">
+              {formatCurrency(eligibleAmount)}
+            </div>
+            <Button 
+              onClick={handleCreateDraw} 
+              disabled={isCreatingDraw || eligibleAmount <= 0}
+              className="w-full bg-green-600 hover:bg-green-700 text-white"
+            >
+              {isCreatingDraw ? 'Creating...' : 'Create New Draw'}
+            </Button>
+            {eligibleAmount <= 0 && (
+              <p className="text-xs text-gray-500 text-center mt-2">
+                No verified tasks eligible for draw
+              </p>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
-      {data.summary.projectedLowBalance < 0 && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3 text-red-800">
-          <AlertTriangle className="w-5 h-5" />
-          <span className="font-medium">Warning: Negative balance projected. Consider requesting a draw or delaying payments.</span>
-        </div>
-      )}
+      {/* Forecast Chart (Simplified as List) */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold flex items-center gap-2">
+            <TrendingUp className="w-5 h-5 text-gray-500" />
+            Upcoming Cash Needs
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {forecast?.weeks.map((week) => {
+              const weekStart = new Date(week.week_start).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+              // Simple progress bar relative to max week (assume 100k for now as max scale or logic)
+              const maxScale = Math.max(...forecast.weeks.map(w => w.forecasted_cost), 1);
+              const percentage = (week.forecasted_cost / maxScale) * 100;
 
-      {/* Projection Table */}
-      <div className="bg-white rounded-lg border shadow-sm overflow-hidden">
-        <div className="p-4 border-b bg-gray-50 font-semibold">Weekly Projection</div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
-            <thead className="bg-gray-50 text-gray-600">
-              <tr>
-                <th className="p-3">Week Of</th>
-                <th className="p-3 text-right">Pay Apps</th>
-                <th className="p-3 text-right">Sched. Work</th>
-                <th className="p-3 text-right font-semibold text-gray-900">Total Out</th>
-                <th className="p-3 text-right text-primary">Draws In</th>
-                <th className="p-3 text-right font-bold">Net Change</th>
-                <th className="p-3 text-right font-bold">End Balance</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {data.weeks.map((week, i) => (
-                <tr key={i} className="hover:bg-gray-50">
-                  <td className="p-3 font-medium text-gray-900">
-                    {new Date(week.weekStart).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                  </td>
-                  <td className="p-3 text-right text-red-500">
-                    {week.outflows.paymentApps > 0 ? `-${formatCurrency(week.outflows.paymentApps)}` : '-'}
-                  </td>
-                  <td className="p-3 text-right text-orange-500 italic">
-                    {week.outflows.scheduledWork > 0 ? `-${formatCurrency(week.outflows.scheduledWork)}` : '-'}
-                  </td>
-                  <td className="p-3 text-right font-semibold text-red-600 bg-red-50/50">
-                    {week.outflows.total > 0 ? `-${formatCurrency(week.outflows.total)}` : '-'}
-                  </td>
-                  <td className="p-3 text-right text-primary font-medium">
-                    {week.inflows.draws > 0 ? `+${formatCurrency(week.inflows.draws)}` : '-'}
-                  </td>
-                  <td className={`p-3 text-right font-bold ${week.netCashFlow > 0 ? 'text-green-600' : week.netCashFlow < 0 ? 'text-red-600' : 'text-gray-400'}`}>
-                    {week.netCashFlow > 0 ? '+' : ''}{formatCurrency(week.netCashFlow)}
-                  </td>
-                  <td className={`p-3 text-right font-bold ${week.runningBalance < 0 ? 'text-red-600 bg-red-50' : 'text-gray-900'}`}>
-                    {formatCurrency(week.runningBalance)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+              return (
+                <div key={week.week_start} className="space-y-1">
+                  <div className="flex justify-between text-sm">
+                    <span className="font-medium text-gray-700">Week of {weekStart}</span>
+                    <span className="text-gray-900 font-semibold">{formatCurrency(week.forecasted_cost)}</span>
+                  </div>
+                  <Progress value={percentage} className="h-2 bg-gray-100" />
+                  <div className="text-xs text-gray-500 truncate">
+                    {week.by_category.map(c => `${c.category} ($${Math.round(c.cost/1000)}k)`).join(', ')}
+                  </div>
+                </div>
+              );
+            })}
+            {(!forecast?.weeks || forecast.weeks.length === 0) && (
+              <p className="text-gray-500 text-center py-4">No scheduled tasks for next 4 weeks.</p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Recent Draws */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-lg font-semibold flex items-center gap-2">
+            <FileText className="w-5 h-5 text-gray-500" />
+            Recent Draws
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-0 divide-y divide-gray-100">
+            {draws?.map((draw) => (
+              <div key={draw.id} className="py-3 flex items-center justify-between hover:bg-gray-50 -mx-4 px-4 transition-colors">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-gray-900">Draw #{draw.draw_number}</span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full capitalize ${
+                      draw.status === 'funded' ? 'bg-green-100 text-green-700' :
+                      draw.status === 'approved' ? 'bg-blue-100 text-blue-700' :
+                      draw.status === 'submitted' ? 'bg-yellow-100 text-yellow-700' :
+                      'bg-gray-100 text-gray-700'
+                    }`}>
+                      {draw.status}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    {draw.status === 'draft' ? `Created ${new Date(draw.created_at).toLocaleDateString()}` :
+                     draw.status === 'submitted' ? `Submitted ${new Date(draw.submitted_at!).toLocaleDateString()}` :
+                     draw.status === 'funded' ? `Funded ${new Date(draw.funded_at!).toLocaleDateString()}` : 
+                     `Updated ${new Date(draw.created_at).toLocaleDateString()}`}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="font-bold text-gray-900">{formatCurrency(draw.amount_requested)}</p>
+                  <Button variant="ghost" size="sm" className="h-6 text-xs text-blue-600 hover:text-blue-800 p-0">
+                    View Details
+                  </Button>
+                </div>
+              </div>
+            ))}
+            {(!draws || draws.length === 0) && (
+              <p className="text-gray-500 text-center py-4">No draws found.</p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

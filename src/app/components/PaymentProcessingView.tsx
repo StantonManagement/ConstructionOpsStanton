@@ -432,8 +432,8 @@ const PaymentProcessingView: React.FC<PaymentProcessingViewProps> = ({
     if (!search.trim()) return apps;
     const searchLower = search.toLowerCase();
     return apps.filter(app =>
-      app.contractor.name.toLowerCase().includes(searchLower) ||
-      app.project.name.toLowerCase().includes(searchLower)
+      (app.contractor?.name || '').toLowerCase().includes(searchLower) ||
+      (app.project?.name || '').toLowerCase().includes(searchLower)
     );
   }, [apps, search]);
 
@@ -477,7 +477,7 @@ const PaymentProcessingView: React.FC<PaymentProcessingViewProps> = ({
     switch (action) {
       case 'remind':
         setSelectedApp(app);
-        setReminderMessage(`Hi ${app.contractor.name}, this is a reminder about payment application #${app.id} for ${app.project.name}. Please review at your earliest convenience.`);
+        setReminderMessage(`Hi ${app.contractor?.name || 'Contractor'}, this is a reminder about payment application #${app.id} for ${app.project?.name || 'your project'}. Please review at your earliest convenience.`);
         setShowReminderModal(true);
         break;
       case 'prepare':

@@ -1,90 +1,155 @@
-import { NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseClient';
+import { withAuth, successResponse, errorResponse, APIError } from '@/lib/apiHelpers';
 
-// POST: Add a dependency
-export async function POST(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+/**
+ * GET /api/tasks/[id]/dependencies
+ * List dependencies for a task
+ */
+export const GET = withAuth(async (request: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
   try {
-    const { id: targetTaskId } = await params;
+    if (!supabaseAdmin) {
+      throw new APIError('Service role client not available', 500, 'SERVER_ERROR');
+    }
+
+    const { id } = await params;
+
+    const { data, error } = await supabaseAdmin
+      .from('task_dependencies')
+      .select(`
+        id,
+        depends_on_task:tasks!depends_on_task_id (
+          id,
+          name,
+          status,
+          scheduled_end
+        )
+      `)
+      .eq('task_id', id);
+
+    if (error) {
+      throw new APIError(error.message, 500, 'DATABASE_ERROR');
+    }
+
+    return successResponse(data);
+  } catch (error) {
+    if (error instanceof APIError) {
+      return errorResponse(error.message, error.statusCode, error.code);
+    }
+    return errorResponse('Failed to fetch dependencies', 500, 'INTERNAL_ERROR');
+  }
+});
+
+/**
+ * POST /api/tasks/[id]/dependencies
+ * Add a dependency
+ */
+export const POST = withAuth(async (request: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
+  try {
+    if (!supabaseAdmin) {
+      throw new APIError('Service role client not available', 500, 'SERVER_ERROR');
+    }
+
+    const { id: taskId } = await params;
     const body = await request.json();
-    const { source_task_id, dependency_type = 'finish_to_start', lag_days = 0 } = body;
+    const { depends_on_task_id } = body;
 
-    if (!source_task_id) {
-      return NextResponse.json({ error: 'source_task_id is required' }, { status: 400 });
+    if (!depends_on_task_id) {
+      throw new APIError('depends_on_task_id is required', 400, 'VALIDATION_ERROR');
     }
 
-    // Prevent self-dependency
-    if (source_task_id === targetTaskId) {
-      return NextResponse.json({ error: 'Task cannot depend on itself' }, { status: 400 });
+    if (taskId === depends_on_task_id) {
+      throw new APIError('Task cannot depend on itself', 400, 'VALIDATION_ERROR');
     }
 
-    // Check for circular dependency (basic check: A->B->A)
-    // In a real production app, we'd traverse the graph. For now, we'll rely on simple immediate checks or let the client handle it.
-    // Actually, let's do a quick check if the reverse exists.
-    const { data: existingReverse } = await supabaseAdmin!
-      .from('schedule_dependencies')
+    // Validate no circular dependency (Simple check)
+    // Check if depends_on_task_id already depends on taskId
+    const { data: reverseDep, error: checkError } = await supabaseAdmin
+      .from('task_dependencies')
       .select('id')
-      .eq('source_task_id', targetTaskId)
-      .eq('target_task_id', source_task_id)
+      .eq('task_id', depends_on_task_id)
+      .eq('depends_on_task_id', taskId)
       .single();
 
-    if (existingReverse) {
-      return NextResponse.json({ error: 'Circular dependency detected' }, { status: 400 });
+    if (reverseDep) {
+      throw new APIError('Circular dependency detected', 400, 'VALIDATION_ERROR');
     }
 
-    const { data, error } = await supabaseAdmin!
-      .from('schedule_dependencies')
-      .insert({
-        target_task_id: targetTaskId,
-        source_task_id,
-        dependency_type,
-        lag_days
-      })
+    // Validate tasks exist and are in same location (business rule)
+    const { data: tasks, error: fetchError } = await supabaseAdmin
+      .from('tasks')
+      .select('id, location_id')
+      .in('id', [taskId, depends_on_task_id]);
+
+    if (fetchError || !tasks || tasks.length !== 2) {
+      throw new APIError('One or both tasks not found', 404, 'NOT_FOUND');
+    }
+
+    const task1 = tasks.find(t => t.id === taskId);
+    const task2 = tasks.find(t => t.id === depends_on_task_id);
+
+    if (task1?.location_id !== task2?.location_id) {
+      throw new APIError('Dependencies must be within the same location', 400, 'VALIDATION_ERROR');
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('task_dependencies')
+      .insert([{
+        task_id: taskId,
+        depends_on_task_id: depends_on_task_id
+      }])
       .select()
       .single();
 
-    if (error) throw error;
-
-    return NextResponse.json(data);
-  } catch (error: any) {
-    console.error('Error creating dependency:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-}
-
-// DELETE: Remove a dependency
-// We need to know the dependency ID or the source task ID. 
-// The route is /api/tasks/[id]/dependencies, so we expect a query param or body for the specific dependency to remove, 
-// OR we can accept /api/tasks/[id]/dependencies/[depId] in a separate route file.
-// But `next.js` app router can handle it here if we parse the URL, but it's cleaner to have a separate route file for deletion by ID.
-// However, typically we delete by relation here: "Remove dependency on Task X".
-// Let's support deleting by source_task_id passed in body or query.
-export async function DELETE(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id: targetTaskId } = await params;
-    const { searchParams } = new URL(request.url);
-    const sourceTaskId = searchParams.get('source_task_id');
-
-    if (!sourceTaskId) {
-      return NextResponse.json({ error: 'source_task_id query param required' }, { status: 400 });
+    if (error) {
+      if (error.code === '23505') {
+        throw new APIError('Dependency already exists', 400, 'VALIDATION_ERROR');
+      }
+      throw new APIError(error.message, 500, 'DATABASE_ERROR');
     }
 
-    const { error } = await supabaseAdmin!
-      .from('schedule_dependencies')
-      .delete()
-      .eq('target_task_id', targetTaskId)
-      .eq('source_task_id', sourceTaskId);
-
-    if (error) throw error;
-
-    return NextResponse.json({ success: true });
-  } catch (error: any) {
-    console.error('Error deleting dependency:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return successResponse(data, 201);
+  } catch (error) {
+    if (error instanceof APIError) {
+      return errorResponse(error.message, error.statusCode, error.code);
+    }
+    return errorResponse('Failed to add dependency', 500, 'INTERNAL_ERROR');
   }
-}
+});
+
+/**
+ * DELETE /api/tasks/[id]/dependencies
+ * Remove a dependency
+ */
+export const DELETE = withAuth(async (request: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
+  try {
+    if (!supabaseAdmin) {
+      throw new APIError('Service role client not available', 500, 'SERVER_ERROR');
+    }
+
+    const { id: taskId } = await params;
+    const searchParams = request.nextUrl.searchParams;
+    const dependsOnTaskId = searchParams.get('depends_on_task_id');
+
+    if (!dependsOnTaskId) {
+      throw new APIError('depends_on_task_id is required', 400, 'VALIDATION_ERROR');
+    }
+
+    const { error } = await supabaseAdmin
+      .from('task_dependencies')
+      .delete()
+      .eq('task_id', taskId)
+      .eq('depends_on_task_id', dependsOnTaskId);
+
+    if (error) {
+      throw new APIError(error.message, 500, 'DATABASE_ERROR');
+    }
+
+    return successResponse({ deleted: true });
+  } catch (error) {
+    if (error instanceof APIError) {
+      return errorResponse(error.message, error.statusCode, error.code);
+    }
+    return errorResponse('Failed to remove dependency', 500, 'INTERNAL_ERROR');
+  }
+});

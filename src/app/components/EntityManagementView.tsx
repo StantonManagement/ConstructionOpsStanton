@@ -128,6 +128,27 @@ const Alert: React.FC<{ alert: AlertState; onClose: () => void }> = ({ alert, on
   );
 };
 
+const EditEntityModal: React.FC<{
+  entity: OwnerEntity | null;
+  isOpen: boolean;
+  onClose: () => void;
+  onSubmit: (entity: OwnerEntity) => Promise<void>;
+  isSubmitting: boolean;
+}> = ({ entity, isOpen, onClose, onSubmit, isSubmitting }) => {
+  if (!entity) return null;
+
+  return (
+    <EditEntityModalInner
+      key={entity.id}
+      entity={entity}
+      isOpen={isOpen}
+      onClose={onClose}
+      onSubmit={onSubmit}
+      isSubmitting={isSubmitting}
+    />
+  );
+};
+
 // Add Entity Modal
 const AddEntityModal: React.FC<{
   isOpen: boolean;
@@ -326,28 +347,20 @@ const AddEntityModal: React.FC<{
 };
 
 // Edit Entity Modal (similar to Add but with initial data)
-const EditEntityModal: React.FC<{
-  entity: OwnerEntity | null;
+const EditEntityModalInner: React.FC<{
+  entity: OwnerEntity;
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (entity: OwnerEntity) => Promise<void>;
   isSubmitting: boolean;
 }> = ({ entity, isOpen, onClose, onSubmit, isSubmitting }) => {
-  const [formData, setFormData] = useState<Partial<OwnerEntity>>(entity || {});
-
-  useEffect(() => {
-    if (entity) {
-      setFormData(entity);
-    }
-  }, [entity]);
+  const [formData, setFormData] = useState<Partial<OwnerEntity>>(entity);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!entity) return;
     await onSubmit({ ...entity, ...formData } as OwnerEntity);
   };
-
-  if (!entity) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>

@@ -34,6 +34,18 @@ export type ContractStatus =
   | 'completed'
   | 'terminated';
 
+export type LocationStatus = 
+  | 'not_started'
+  | 'in_progress'
+  | 'complete'
+  | 'on_hold';
+
+export type TaskStatus = 
+  | 'not_started'
+  | 'in_progress'
+  | 'worker_complete'
+  | 'verified';
+
 /**
  * Maps payment statuses to badge variants
  */
@@ -98,9 +110,37 @@ export const getContractStatusBadge = (status: ContractStatus): string => {
 };
 
 /**
+ * Maps location statuses to badge variants
+ */
+export const getLocationStatusBadge = (status: LocationStatus): string => {
+  const statusMap: Record<LocationStatus, string> = {
+    not_started: 'outline',
+    in_progress: 'in-progress',
+    complete: 'completed',
+    on_hold: 'waiting',
+  };
+  
+  return statusMap[status] || 'outline';
+};
+
+/**
+ * Maps task statuses to badge variants
+ */
+export const getTaskStatusBadge = (status: TaskStatus): string => {
+  const statusMap: Record<TaskStatus, string> = {
+    not_started: 'outline',
+    in_progress: 'in-progress',
+    worker_complete: 'review-queue', // Needs verification
+    verified: 'completed',
+  };
+  
+  return statusMap[status] || 'outline';
+};
+
+/**
  * Gets the appropriate icon color for a status
  */
-export const getStatusIconColor = (status: PaymentStatus | ProjectStatus | ContractStatus): string => {
+export const getStatusIconColor = (status: PaymentStatus | ProjectStatus | ContractStatus | LocationStatus | TaskStatus): string => {
   const iconColorMap: Record<string, string> = {
     // Payment statuses
     draft: 'text-muted-foreground',
@@ -124,6 +164,18 @@ export const getStatusIconColor = (status: PaymentStatus | ProjectStatus | Contr
     pending: 'text-[var(--status-warning-text)]',
     active: 'text-primary',
     terminated: 'text-[var(--status-critical-text)]',
+
+    // Location statuses
+    not_started: 'text-muted-foreground',
+    // in_progress already handled
+    // on_hold already handled
+    complete: 'text-[var(--status-success-text)]',
+
+    // Task statuses
+    // not_started already handled
+    // in_progress already handled
+    worker_complete: 'text-[var(--status-warning-text)]',
+    verified: 'text-[var(--status-success-text)]',
   };
   
   return iconColorMap[status] || 'text-muted-foreground';
@@ -157,7 +209,7 @@ export const getStatusCardColor = (status: PaymentStatus | ProjectStatus): strin
 /**
  * Gets human-readable status labels
  */
-export const getStatusLabel = (status: PaymentStatus | ProjectStatus | ContractStatus): string => {
+export const getStatusLabel = (status: PaymentStatus | ProjectStatus | ContractStatus | LocationStatus | TaskStatus): string => {
   const labelMap: Record<string, string> = {
     // Payment statuses
     draft: 'Draft',
@@ -181,9 +233,18 @@ export const getStatusLabel = (status: PaymentStatus | ProjectStatus | ContractS
     pending: 'Pending',
     active: 'Active',
     terminated: 'Terminated',
+
+    // Location statuses
+    not_started: 'Not Started',
+    complete: 'Complete',
+    // in_progress, on_hold already handled
+
+    // Task statuses
+    worker_complete: 'Worker Done',
+    verified: 'Verified',
   };
   
-  return labelMap[status] || status;
+  return labelMap[status] || status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 };
 
 /**

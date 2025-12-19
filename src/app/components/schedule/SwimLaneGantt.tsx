@@ -183,13 +183,9 @@ export default function SwimLaneGantt({
   };
 
   // Build ordered list of tasks and lanes for dependencies
-  const allTasks = useMemo(() => {
-    return [...unassignedTasks, ...budgetCategories.flatMap(cat => cat.tasks)];
-  }, [unassignedTasks, budgetCategories]);
+  const allTasks = [...unassignedTasks, ...budgetCategories.flatMap(cat => cat.tasks)];
 
-  const laneOrder = useMemo(() => {
-    return ['unassigned', ...budgetCategories.map(c => `cat-${c.id}`)];
-  }, [budgetCategories]);
+  const laneOrder = ['unassigned', ...budgetCategories.map(c => `cat-${c.id}`)];
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg overflow-hidden flex flex-col h-[600px]">

@@ -13,6 +13,8 @@ export async function POST(
   try {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    console.log('[Auto-Schedule] Starting for project:', projectId);
+
     // 1. Fetch Project Schedule and Start Date
     const { data: schedule, error: scheduleError } = await supabase
       .from('project_schedules')
@@ -20,7 +22,12 @@ export async function POST(
       .eq('project_id', projectId)
       .single();
 
-    if (scheduleError) throw new Error('Project schedule not found');
+    if (scheduleError || !schedule) {
+      console.error('[Auto-Schedule] Schedule not found:', scheduleError);
+      throw new Error('Project schedule not found. Please create a schedule first.');
+    }
+
+    console.log('[Auto-Schedule] Found schedule:', schedule.id);
 
     const { data: project, error: projectError } = await supabase
       .from('projects')
@@ -28,7 +35,12 @@ export async function POST(
       .eq('id', projectId)
       .single();
       
-    if (projectError) throw projectError;
+    if (projectError || !project) {
+      console.error('[Auto-Schedule] Project not found:', projectError);
+      throw new Error('Project not found');
+    }
+    
+    console.log('[Auto-Schedule] Project start date:', project.start_date);
 
     // 2. Fetch Schedule Defaults (for duration and order)
     const { data: defaults, error: defaultsError } = await supabase
@@ -224,7 +236,11 @@ export async function POST(
     });
 
   } catch (error: any) {
-    console.error('Auto-schedule error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('[Auto-Schedule API] Error:', error);
+    console.error('[Auto-Schedule API] Stack:', error.stack);
+    return NextResponse.json({ 
+      error: error.message || 'Failed to auto-schedule tasks',
+      details: error.toString()
+    }, { status: 500 });
   }
 }

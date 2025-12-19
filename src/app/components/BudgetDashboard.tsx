@@ -615,7 +615,7 @@ const BudgetDashboard: React.FC = () => {
                         tick={{ fontSize: 12 }} 
                       />
                       <Tooltip 
-                          formatter={(value: number) => formatCurrency(value)}
+                          formatter={(value) => formatCurrency(typeof value === 'number' ? value : 0)}
                           contentStyle={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)', color: 'var(--foreground)' }}
                       />
                       <Legend />

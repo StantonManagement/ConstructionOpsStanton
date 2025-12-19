@@ -3,6 +3,22 @@
 import React, { useState, useRef, useEffect, ReactNode, memo, useCallback } from 'react';
 import IntersectionObserverManager, { LazyLoadingConfigs } from '@/lib/intersectionObserver';
 
+const DefaultPlaceholder = ({ className, height }: { className: string; height: number }) => (
+  <div
+    className={`bg-secondary rounded-lg animate-pulse ${className}`}
+    style={{ height: `${height}px` }}
+  >
+    <div className="p-4 space-y-3">
+      <div className="h-4 bg-secondary/80 rounded w-3/4"></div>
+      <div className="h-3 bg-secondary/80 rounded w-1/2"></div>
+      <div className="space-y-2">
+        <div className="h-2 bg-secondary/80 rounded"></div>
+        <div className="h-2 bg-secondary/80 rounded w-5/6"></div>
+      </div>
+    </div>
+  </div>
+);
+
 interface LazyCardProps {
   children: ReactNode;
   height?: number;
@@ -56,22 +72,6 @@ const LazyCard = memo<LazyCardProps>(({
     };
   }, [handleIntersection, threshold, rootMargin, config]);
 
-  const DefaultPlaceholder = () => (
-    <div
-      className={`bg-secondary rounded-lg animate-pulse ${className}`}
-      style={{ height: `${height}px` }}
-    >
-      <div className="p-4 space-y-3">
-        <div className="h-4 bg-secondary/80 rounded w-3/4"></div>
-        <div className="h-3 bg-secondary/80 rounded w-1/2"></div>
-        <div className="space-y-2">
-          <div className="h-2 bg-secondary/80 rounded"></div>
-          <div className="h-2 bg-secondary/80 rounded w-5/6"></div>
-        </div>
-      </div>
-    </div>
-  );
-
   return (
     <div
       ref={ref}
@@ -88,7 +88,7 @@ const LazyCard = memo<LazyCardProps>(({
           {children}
         </div>
       ) : (
-        placeholder || <DefaultPlaceholder />
+        placeholder || <DefaultPlaceholder className={className} height={height} />
       )}
     </div>
   );

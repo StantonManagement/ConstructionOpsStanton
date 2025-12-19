@@ -444,8 +444,8 @@ const ContractorsView: React.FC<ContractorsViewProps> = ({ searchQuery = '' }) =
   const filteredContractors = useMemo(() => {
     return contractors
       .filter(c => 
-        (c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-         c.trade?.toLowerCase().includes(searchTerm.toLowerCase())) &&
+        ((c.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+         (c.trade || '').toLowerCase().includes(searchTerm.toLowerCase())) &&
         (filterTrade === '' || c.trade === filterTrade) &&
         (filterStatus === '' || c.status === filterStatus)
       )
@@ -476,18 +476,33 @@ const ContractorsView: React.FC<ContractorsViewProps> = ({ searchQuery = '' }) =
       const contractorData = {
         name: formData.name.trim(),
         trade: formData.trade.trim(),
-        phone: formData.phone?.trim() || null,
-        email: formData.email?.trim() || null,
+        phone: formData.phone?.trim() || '',
+        email: formData.email?.trim() || '',
         status: 'active'
       };
       
-      const { data, error } = await supabase
-        .from('contractors')
-        .insert([contractorData])
-        .select()
-        .single();
-      
-      if (error) throw error;
+      // Use API endpoint to bypass RLS
+      const { data: session } = await supabase.auth.getSession();
+      if (!session?.session?.access_token) {
+        throw new Error('Not authenticated');
+      }
+
+      const response = await fetch('/api/contractors', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.session.access_token}`,
+        },
+        body: JSON.stringify(contractorData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create contractor');
+      }
+
+      const result = await response.json();
+      const data = result.contractor;
       
       // Add to local state with default aggregated values
       setContractors(prev => [...prev, {
@@ -514,8 +529,8 @@ const ContractorsView: React.FC<ContractorsViewProps> = ({ searchQuery = '' }) =
       const contractorData = {
         name: formData.name.trim(),
         trade: formData.trade.trim(),
-        phone: formData.phone?.trim() || null,
-        email: formData.email?.trim() || null,
+        phone: formData.phone?.trim() || '',
+        email: formData.email?.trim() || '',
       };
       
       const { data, error } = await supabase

@@ -82,7 +82,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     fetchProjects();
   }, [fetchProjects]);
 
-  // Sync state with URL
+  // Sync state with URL - URL is the source of truth
   useEffect(() => {
     // Check if we have a project ID in the URL path (e.g. /projects/123/...)
     const pathMatch = pathname?.match(/\/projects\/(\d+)/);
@@ -91,16 +91,31 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
       const id = parseInt(pathMatch[1], 10);
       if (!isNaN(id) && id !== selectedProjectId) {
         setSelectedProjectIdState(id);
+        // Update localStorage to match URL
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('selectedProjectId', id.toString());
+        }
         return;
       }
     }
     
-    // Check query param if not in path
+    // Check query param if not in path - URL takes precedence over localStorage
     const projectParam = searchParams.get('project');
     if (projectParam) {
       const id = parseInt(projectParam, 10);
       if (!isNaN(id) && id !== selectedProjectId) {
         setSelectedProjectIdState(id);
+        // Update localStorage to match URL
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('selectedProjectId', id.toString());
+        }
+      }
+    } else if (selectedProjectId !== null) {
+      // If no project in URL but we have one selected, clear it
+      // This ensures the dropdown shows "All Projects" when viewing all projects
+      setSelectedProjectIdState(null);
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('selectedProjectId');
       }
     }
   }, [pathname, searchParams, selectedProjectId]);

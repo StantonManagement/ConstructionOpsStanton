@@ -68,10 +68,10 @@ const VirtualizedProjectList = memo<VirtualizedProjectListProps>(({
 
     const query = searchQuery.toLowerCase();
     return projects.filter(project =>
-      project.name.toLowerCase().includes(query) ||
-      project.client_name.toLowerCase().includes(query) ||
-      project.current_phase?.toLowerCase().includes(query) ||
-      project.status?.toLowerCase().includes(query)
+      (project.name || '').toLowerCase().includes(query) ||
+      (project.client_name || '').toLowerCase().includes(query) ||
+      (project.current_phase || '').toLowerCase().includes(query) ||
+      (project.status || '').toLowerCase().includes(query)
     );
   }, [projects, searchQuery]);
 

@@ -198,14 +198,12 @@ const LoadingSpinner: React.FC<{ message?: string }> = ({ message = 'Loading...'
 );
 
 // Add user modal component
-const AddUserModal: React.FC<{
+const AddUserModalInner: React.FC<{
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (userData: NewUser) => Promise<void>;
   isSubmitting: boolean;
 }> = ({ isOpen, onClose, onSubmit, isSubmitting }) => {
-  // Use key prop to force re-mount when modal opens
-  const [key, setKey] = useState(0);
   const [formData, setFormData] = useState<NewUser>({
     email: '',
     name: '',
@@ -214,21 +212,6 @@ const AddUserModal: React.FC<{
   });
   const [validationErrors, setValidationErrors] = useState<Partial<NewUser>>({});
   const [showPassword, setShowPassword] = useState(false);
-
-  // Reset form when modal opens by changing the key
-  useEffect(() => {
-    if (isOpen) {
-      setKey(prev => prev + 1);
-      setFormData({
-        email: '',
-        name: '',
-        role: 'staff',
-        password: ''
-      });
-      setValidationErrors({});
-      setShowPassword(false);
-    }
-  }, [isOpen]);
 
   const validateForm = useCallback(() => {
     const errors: Partial<NewUser> = {};
@@ -255,7 +238,7 @@ const AddUserModal: React.FC<{
   };
 
   return (
-    <Dialog key={key} open={isOpen} onOpenChange={handleClose}>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Add New User</DialogTitle>
@@ -372,6 +355,25 @@ const AddUserModal: React.FC<{
   );
 };
 
+const AddUserModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  onSubmit: (userData: NewUser) => Promise<void>;
+  isSubmitting: boolean;
+}> = ({ isOpen, onClose, onSubmit, isSubmitting }) => {
+  if (!isOpen) return null;
+
+  return (
+    <AddUserModalInner
+      key="add-user"
+      isOpen={isOpen}
+      onClose={onClose}
+      onSubmit={onSubmit}
+      isSubmitting={isSubmitting}
+    />
+  );
+};
+
 // Password reset confirmation modal component
 const PasswordResetModal: React.FC<{
   user: EditingUser | null;
@@ -479,29 +481,14 @@ const DeleteUserModal: React.FC<{
 };
 
 // Edit user modal component
-const EditUserModal: React.FC<{
-  user: EditingUser | null;
+const EditUserModalInner: React.FC<{
+  user: EditingUser;
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (user: EditingUser) => Promise<void>;
   isSubmitting: boolean;
 }> = ({ user, isOpen, onClose, onSubmit, isSubmitting }) => {
-  const [formData, setFormData] = useState<EditingUser>({
-    id: 0,
-    email: '',
-    name: '',
-    role: 'staff',
-    created_at: '',
-    is_active: true,
-    isEditing: false
-  });
-
-  // Update form data when user changes
-  useEffect(() => {
-    if (user) {
-      setFormData({ ...user });
-    }
-  }, [user]);
+  const [formData, setFormData] = useState<EditingUser>({ ...user });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -625,9 +612,9 @@ const UserManagementView: React.FC = () => {
   const filteredUsers = useMemo(() => {
     if (!searchTerm) return users;
     return users.filter(user => 
-      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.role.toLowerCase().includes(searchTerm.toLowerCase())
+      (user.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (user.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (user.role || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [users, searchTerm]);
 

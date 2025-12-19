@@ -22,6 +22,7 @@ const ChangeOrdersView = lazy(() => import('./ChangeOrdersView'));
 const SettingsView = lazy(() => import('./SettingsView'));
 const ContractorsView = lazy(() => import('./ContractorsView'));
 const UserProfile = lazy(() => import('./UserProfile'));
+const TemplatesView = lazy(() => import('./TemplatesView').then(module => ({ default: module.TemplatesView })));
 
 interface UserData {
   name: string;

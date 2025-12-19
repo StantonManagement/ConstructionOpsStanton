@@ -6,10 +6,10 @@ import { ViewMode } from 'gantt-task-react';
 
 interface GanttToolbarProps {
   isMobile: boolean;
-  viewMode: 'Day' | 'Week' | 'Month';
+  viewMode: 'Quarter Day' | 'Half Day' | 'Day' | 'Week' | 'Month' | 'Year';
   projectId?: number;
   onToggleView: (mobile: boolean) => void;
-  onViewModeChange: (mode: 'Day' | 'Week' | 'Month') => void;
+  onViewModeChange: (mode: 'Quarter Day' | 'Half Day' | 'Day' | 'Week' | 'Month' | 'Year') => void;
   onAddTask: () => void;
   onAutoSchedule?: () => void;
   onClearProject: () => void;
@@ -63,9 +63,12 @@ export default function GanttToolbar({
             onChange={(e) => onViewModeChange(e.target.value as any)}
             className="px-3 py-2 border rounded-lg text-sm bg-white"
           >
+            <option value="Quarter Day">Quarter Day View</option>
+            <option value="Half Day">Half Day View</option>
             <option value="Day">Day View</option>
             <option value="Week">Week View</option>
             <option value="Month">Month View</option>
+            <option value="Year">Year View</option>
           </select>
         )}
         

@@ -306,7 +306,7 @@ const SubcontractorSelectionView: React.FC<Props> = ({ selectedProject, setSelec
 
   useEffect(() => {
     if (!selectedProject) return;
-    setLoading(true);
+    queueMicrotask(() => setLoading(true));
     supabase
       .from('contracts')
       .select('id, contract_amount, start_date, end_date, subcontractor_id, contractors(id, name, trade, phone)')

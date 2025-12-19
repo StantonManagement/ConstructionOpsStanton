@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { LineItem } from './LineItemEditor';
 
 interface Props {
@@ -18,14 +18,8 @@ const defaultValues: LineItem = {
   percentGC: '',
 };
 
-const LineItemFormModal: React.FC<Props> = ({ open, onClose, onSave, initialValues }) => {
+const LineItemFormModalInner: React.FC<Omit<Props, 'open'>> = ({ onClose, onSave, initialValues }) => {
   const [form, setForm] = useState<LineItem>(initialValues || defaultValues);
-
-  useEffect(() => {
-    if (open) {
-      setForm(initialValues || defaultValues);
-    }
-  }, [open, initialValues]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -36,8 +30,6 @@ const LineItemFormModal: React.FC<Props> = ({ open, onClose, onSave, initialValu
     onSave(form);
     onClose();
   };
-
-  if (!open) return null;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in">
@@ -145,4 +137,17 @@ const LineItemFormModal: React.FC<Props> = ({ open, onClose, onSave, initialValu
   );
 };
 
-export default LineItemFormModal; 
+const LineItemFormModal: React.FC<Props> = ({ open, onClose, onSave, initialValues }) => {
+  if (!open) return null;
+
+  return (
+    <LineItemFormModalInner
+      key={initialValues ? `edit-${initialValues.itemNo}` : 'new'}
+      onClose={onClose}
+      onSave={onSave}
+      initialValues={initialValues}
+    />
+  );
+};
+
+export default LineItemFormModal;
