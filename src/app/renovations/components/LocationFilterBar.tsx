@@ -24,6 +24,7 @@ interface Props {
 
 export const LocationFilterBar: React.FC<Props> = ({ filters, onFilterChange, properties = [], totalCount = 0 }) => {
   const [localSearch, setLocalSearch] = useState(filters.search);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const debouncedSearch = useDebounce(localSearch, 300);
 
   // Sync debounced search to filters
@@ -71,7 +72,7 @@ export const LocationFilterBar: React.FC<Props> = ({ filters, onFilterChange, pr
     <div className="space-y-4 bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
       {/* Mobile View */}
       <div className="md:hidden space-y-3">
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
           <Select 
             value={filters.property_id?.toString() || "all"} 
             onValueChange={(val) => updateFilter('property_id', val === "all" ? undefined : val)}
@@ -92,17 +93,28 @@ export const LocationFilterBar: React.FC<Props> = ({ filters, onFilterChange, pr
             onFilterChange={onFilterChange} 
             count={totalCount} 
           />
+
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setIsSearchOpen((v) => !v)}
+            aria-label={isSearchOpen ? 'Close search' : 'Open search'}
+          >
+            {isSearchOpen ? <X className="w-4 h-4" /> : <Search className="w-4 h-4" />}
+          </Button>
         </div>
-        
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <Input 
-            placeholder="Search locations..." 
-            className="pl-9"
-            value={localSearch}
-            onChange={(e) => setLocalSearch(e.target.value)}
-          />
-        </div>
+
+        {isSearchOpen && (
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Input 
+              placeholder="Search locations..." 
+              className="pl-9"
+              value={localSearch}
+              onChange={(e) => setLocalSearch(e.target.value)}
+            />
+          </div>
+        )}
       </div>
 
       {/* Desktop View - Top Row */}

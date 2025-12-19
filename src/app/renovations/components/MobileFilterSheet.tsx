@@ -19,15 +19,29 @@ interface Props {
 
 export const MobileFilterSheet: React.FC<Props> = ({ filters, onFilterChange, count }) => {
   const [isOpen, setIsOpen] = React.useState(false);
+  const [draftFilters, setDraftFilters] = React.useState<FilterState>(filters);
+ 
+  React.useEffect(() => {
+    if (isOpen) {
+      setDraftFilters(filters);
+    }
+  }, [filters, isOpen]);
+ 
+  const defaultFilters: FilterState = {
+    status: [],
+    type: 'all',
+    blocked: 'any_state',
+    pending_verify: 'any_state',
+  };
   
   const activeFiltersCount = 
-    (filters.status.length > 0 ? 1 : 0) + 
-    (filters.type !== 'all' ? 1 : 0) + 
-    (filters.blocked !== 'any_state' ? 1 : 0) +
-    (filters.pending_verify && filters.pending_verify !== 'any_state' ? 1 : 0);
+    (draftFilters.status.length > 0 ? 1 : 0) + 
+    (draftFilters.type !== 'all' ? 1 : 0) + 
+    (draftFilters.blocked !== 'any_state' ? 1 : 0) +
+    (draftFilters.pending_verify && draftFilters.pending_verify !== 'any_state' ? 1 : 0);
 
   const toggleStatus = (status: string) => {
-    const current = filters.status;
+    const current = draftFilters.status;
     const isSelected = current.includes(status);
     let next: string[];
     
@@ -40,31 +54,29 @@ export const MobileFilterSheet: React.FC<Props> = ({ filters, onFilterChange, co
         next = [...current, status];
       }
     }
-    onFilterChange({ ...filters, status: next });
+    setDraftFilters({ ...draftFilters, status: next });
   };
 
   const applyPreset = (preset: 'needs_attention' | 'blocked' | 'ready') => {
     switch (preset) {
       case 'needs_attention':
-        onFilterChange({ ...filters, status: ['on_hold', 'in_progress'], blocked: 'any_state', pending_verify: 'any_state' });
+        setDraftFilters({ ...draftFilters, status: ['on_hold', 'in_progress'], blocked: 'any_state', pending_verify: 'any_state' });
         break;
       case 'blocked':
-        onFilterChange({ ...filters, blocked: 'any', status: ['on_hold'], pending_verify: 'any_state' });
+        setDraftFilters({ ...draftFilters, blocked: 'any', status: ['on_hold'], pending_verify: 'any_state' });
         break;
       case 'ready':
-        onFilterChange({ ...filters, status: ['in_progress'], blocked: 'none', pending_verify: 'any' });
+        setDraftFilters({ ...draftFilters, status: ['in_progress'], blocked: 'none', pending_verify: 'any' });
         break;
     }
-    setIsOpen(false);
   };
 
   const clearAll = () => {
-    onFilterChange({
-      status: [],
-      type: 'all',
-      blocked: 'any_state',
-      pending_verify: 'any_state',
-    });
+    setDraftFilters(defaultFilters);
+  };
+
+  const handleApply = () => {
+    onFilterChange(draftFilters);
     setIsOpen(false);
   };
 
@@ -85,15 +97,13 @@ export const MobileFilterSheet: React.FC<Props> = ({ filters, onFilterChange, co
         <SheetHeader>
           <div className="flex items-center justify-between">
             <SheetTitle>Filters ({count} results)</SheetTitle>
-            {activeFiltersCount > 0 && (
-              <Button variant="ghost" size="sm" onClick={clearAll} className="text-red-600 h-auto p-0 hover:bg-transparent">
-                Clear All
-              </Button>
-            )}
+            <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)}>
+              <X className="w-5 h-5" />
+            </Button>
           </div>
         </SheetHeader>
 
-        <div className="py-6 space-y-6 overflow-y-auto max-h-[calc(80vh-100px)]">
+        <div className="py-6 space-y-6 overflow-y-auto max-h-[calc(80vh-140px)]">
           {/* Presets */}
           <div className="space-y-3">
             <h4 className="text-sm font-medium text-gray-500 uppercase tracking-wider">Quick Filters</h4>
@@ -119,7 +129,7 @@ export const MobileFilterSheet: React.FC<Props> = ({ filters, onFilterChange, co
               {['not_started', 'in_progress', 'on_hold', 'complete'].map(status => (
                 <Button
                   key={status}
-                  variant={filters.status.includes(status) ? 'default' : 'outline'}
+                  variant={draftFilters.status.includes(status) ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => toggleStatus(status)}
                   className="capitalize"
@@ -139,9 +149,9 @@ export const MobileFilterSheet: React.FC<Props> = ({ filters, onFilterChange, co
               {['all', 'unit', 'common_area', 'exterior', 'building_wide'].map(type => (
                 <Button
                   key={type}
-                  variant={filters.type === type ? 'default' : 'outline'}
+                  variant={draftFilters.type === type ? 'default' : 'outline'}
                   size="sm"
-                  onClick={() => onFilterChange({ ...filters, type })}
+                  onClick={() => setDraftFilters({ ...draftFilters, type })}
                   className="capitalize"
                 >
                   {type.replace('_', ' ')}
@@ -156,35 +166,64 @@ export const MobileFilterSheet: React.FC<Props> = ({ filters, onFilterChange, co
           <div className="space-y-3">
             <h4 className="text-sm font-medium text-gray-500 uppercase tracking-wider">Blocking Status</h4>
             <div className="flex flex-wrap gap-2">
-              <Button
-                variant={filters.blocked === 'any_state' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => onFilterChange({ ...filters, blocked: 'any_state' })}
-              >
-                Any
-              </Button>
-              <Button
-                variant={filters.blocked === 'none' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => onFilterChange({ ...filters, blocked: 'none' })}
-              >
-                Not Blocked
-              </Button>
-              <Button
-                variant={filters.blocked === 'any' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => onFilterChange({ ...filters, blocked: 'any' })}
-              >
-                Blocked (Any)
-              </Button>
+              {[
+                { key: 'any_state', label: 'Any' },
+                { key: 'none', label: 'Not Blocked' },
+                { key: 'any', label: 'Blocked (Any)' },
+                { key: 'materials', label: 'Materials' },
+                { key: 'labor', label: 'Labor' },
+                { key: 'cash', label: 'Cash' },
+                { key: 'dependency', label: 'Dependency' },
+              ].map(({ key, label }) => (
+                <Button
+                  key={key}
+                  variant={draftFilters.blocked === key ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setDraftFilters({ ...draftFilters, blocked: key })}
+                >
+                  {label}
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          <div className="h-px bg-gray-100" />
+
+          <div className="space-y-3">
+            <h4 className="text-sm font-medium text-gray-500 uppercase tracking-wider">Verification</h4>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { key: 'any_state', label: 'Any' },
+                { key: 'any', label: 'Ready' },
+                { key: 'none', label: 'Not Ready' },
+              ].map(({ key, label }) => (
+                <Button
+                  key={key}
+                  variant={(draftFilters.pending_verify || 'any_state') === key ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setDraftFilters({ ...draftFilters, pending_verify: key })}
+                >
+                  {label}
+                </Button>
+              ))}
             </div>
           </div>
         </div>
 
         <div className="absolute bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-200">
-          <Button className="w-full" onClick={() => setIsOpen(false)}>
-            View Results
-          </Button>
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={clearAll}
+              disabled={activeFiltersCount === 0}
+            >
+              Clear All
+            </Button>
+            <Button className="flex-1" onClick={handleApply}>
+              Apply ({count})
+            </Button>
+          </div>
         </div>
       </SheetContent>
     </Sheet>

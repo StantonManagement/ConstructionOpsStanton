@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { ApiResponse } from '@/types/schema';
+import { authFetch } from '@/lib/authFetch';
 
 interface ProjectStats {
   project_id: number;
@@ -15,7 +16,7 @@ interface ProjectStats {
 }
 
 const fetchProjectStats = async (projectId: number): Promise<ProjectStats> => {
-  const res = await fetch(`/api/projects/${projectId}/stats`);
+  const res = await authFetch(`/api/projects/${projectId}/stats`);
   if (!res.ok) throw new Error('Failed to fetch project stats');
   const json: ApiResponse<ProjectStats> = await res.json();
   if (json.error) throw new Error(json.error);

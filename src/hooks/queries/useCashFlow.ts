@@ -15,6 +15,7 @@ export interface CashFlowForecastWeek {
 
 export interface CashFlowForecast {
   project_id: string;
+  property_name?: string | null;
   total_forecast: number;
   weeks: CashFlowForecastWeek[];
 }
@@ -37,6 +38,7 @@ export interface EligibleTask {
 
 export interface DrawEligibility {
   project_id: string;
+  property_name?: string | null;
   total_verified_cost: number;
   total_already_drawn: number;
   total_eligible: number;

@@ -16,7 +16,9 @@ export default function CashFlowView({ projectId }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const returnTo = `${pathname || '/'}${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
+  const returnToParams = new URLSearchParams(searchParams.toString());
+  returnToParams.delete('returnTo');
+  const returnTo = `${pathname || '/'}${returnToParams.toString() ? `?${returnToParams.toString()}` : ''}`;
   const { data: forecast, isLoading: isForecastLoading } = useForecast(projectId);
   const { data: eligibility, isLoading: isEligibilityLoading } = useDrawEligibility(projectId);
   const { data: draws, isLoading: isDrawsLoading } = useDraws(projectId);
@@ -80,6 +82,14 @@ export default function CashFlowView({ projectId }: Props) {
             <div className="text-2xl font-bold text-gray-900 mb-4">
               {formatCurrency(eligibleAmount)}
             </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full mb-2"
+              onClick={() => router.push(`/cash-flow/draw-eligibility?project_id=${projectId}&returnTo=${encodeURIComponent(returnTo)}`)}
+            >
+              View Eligibility Details
+            </Button>
             <Button 
               onClick={handleCreateDraw} 
               disabled={eligibleAmount <= 0}

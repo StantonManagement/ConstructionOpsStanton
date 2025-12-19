@@ -83,6 +83,17 @@ export const PUT = withAuth(async (request: NextRequest, { params }: { params: P
       sort_order
     } = body;
 
+    let previousAssignedContractorId: number | null | undefined;
+    if (assigned_contractor_id !== undefined) {
+      const { data: existingTask } = await supabaseAdmin
+        .from('tasks')
+        .select('assigned_contractor_id')
+        .eq('id', id)
+        .maybeSingle();
+
+      previousAssignedContractorId = (existingTask as any)?.assigned_contractor_id ?? null;
+    }
+
     const updates: any = {};
     if (name !== undefined) updates.name = name;
     if (description !== undefined) updates.description = description;
@@ -123,6 +134,21 @@ export const PUT = withAuth(async (request: NextRequest, { params }: { params: P
     if (error) {
       console.error('[Task API] Update error:', error);
       throw new APIError(error.message, 500, 'DATABASE_ERROR');
+    }
+
+    if (assigned_contractor_id !== undefined && assigned_contractor_id !== null) {
+      const nextAssigned = Number(assigned_contractor_id);
+      const prevAssigned = previousAssignedContractorId === null || previousAssignedContractorId === undefined
+        ? null
+        : Number(previousAssignedContractorId);
+
+      if (!Number.isNaN(nextAssigned) && nextAssigned !== prevAssigned) {
+        try {
+          await notifyTaskAssigned(id, nextAssigned);
+        } catch (err) {
+          console.error('Failed to send task assigned SMS:', err);
+        }
+      }
     }
 
     return successResponse(data);

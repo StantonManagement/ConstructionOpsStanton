@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { Location } from '@/types/schema';
+import { authFetch } from '@/lib/authFetch';
 
 export interface LocationWithStats extends Location {
   property_name?: string;
@@ -41,9 +42,10 @@ export function useRenovationLocations(options: UseLocationsOptions) {
       if (options.sort) params.set('sort', options.sort);
       if (options.order) params.set('order', options.order);
 
-      const res = await fetch(`/api/renovations/locations?${params.toString()}`);
-      if (!res.ok) throw new Error('Failed to fetch locations');
-      return res.json();
+      const res = await authFetch(`/api/renovations/locations?${params.toString()}`);
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Failed to fetch locations');
+      return json;
     },
     placeholderData: (previousData) => previousData, // Keep data while fetching new filter results
   });

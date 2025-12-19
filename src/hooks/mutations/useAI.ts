@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
+import { authFetch } from '@/lib/authFetch';
 
 export interface AIAnalysisResult {
   confidence: number;
@@ -13,7 +14,7 @@ export interface AIAnalysisResult {
 export function useAnalyzePhoto() {
   return useMutation({
     mutationFn: async ({ image_base64, task_id }: { image_base64: string; task_id: string }) => {
-      const res = await fetch('/api/ai/analyze-photo', {
+      const res = await authFetch('/api/ai/analyze-photo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ image_base64, task_id }),

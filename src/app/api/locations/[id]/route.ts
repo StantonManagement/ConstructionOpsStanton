@@ -22,6 +22,7 @@ export const GET = withAuth(async (request: NextRequest, { params }: { params: P
       .from('locations')
       .select(`
         *,
+        projects(name),
         tasks (*)
       `)
       .eq('id', id)
@@ -41,7 +42,12 @@ export const GET = withAuth(async (request: NextRequest, { params }: { params: P
       data.tasks.sort((a: any, b: any) => (a.sort_order || 0) - (b.sort_order || 0));
     }
 
-    return successResponse(data);
+    const payload = {
+      ...data,
+      property_name: (data as any).projects?.name || null,
+    };
+
+    return successResponse(payload);
   } catch (error) {
     console.error('[Location API] GET error:', error);
     if (error instanceof APIError) {

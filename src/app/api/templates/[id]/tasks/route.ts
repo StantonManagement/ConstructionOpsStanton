@@ -102,3 +102,44 @@ export const POST = withAuth(async (request: NextRequest, { params }: { params: 
     return errorResponse('Failed to create template task', 500, 'INTERNAL_ERROR');
   }
 });
+
+/**
+ * PUT /api/templates/[id]/tasks
+ * Bulk reorder tasks
+ */
+export const PUT = withAuth(async (request: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
+  try {
+    if (!supabaseAdmin) {
+      throw new APIError('Service role client not available', 500, 'SERVER_ERROR');
+    }
+
+    const admin = supabaseAdmin;
+
+    const { id: templateId } = await params;
+    const body = await request.json();
+    const { tasks } = body; // Expects { tasks: [{ id: string, sort_order: number }] }
+
+    if (!Array.isArray(tasks)) {
+      throw new APIError('Tasks array is required', 400, 'VALIDATION_ERROR');
+    }
+
+    // Process updates in parallel
+    // Note: In a real production app with many tasks, we might want to use a stored procedure or specific SQL for bulk update
+    // But for template tasks (usually < 50), parallel updates are acceptable
+    await Promise.all(tasks.map(task => 
+      admin
+        .from('template_tasks')
+        .update({ sort_order: task.sort_order })
+        .eq('id', task.id)
+        .eq('template_id', templateId)
+    ));
+
+    return successResponse({ success: true });
+  } catch (error) {
+    console.error('[Template Tasks API] Reorder error:', error);
+    if (error instanceof APIError) {
+      return errorResponse(error.message, error.statusCode, error.code);
+    }
+    return errorResponse('Failed to reorder tasks', 500, 'INTERNAL_ERROR');
+  }
+});

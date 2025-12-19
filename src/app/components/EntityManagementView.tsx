@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { authFetch } from '@/lib/authFetch';
 import { 
   Building2, 
   Plus, 
@@ -559,16 +560,7 @@ const EntityManagementView: React.FC = () => {
       setLoading(true);
       setError(null);
 
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData.session) {
-        throw new Error('Not authenticated');
-      }
-
-      const response = await fetch('/api/entities?include_stats=true', {
-        headers: {
-          'Authorization': `Bearer ${sessionData.session.access_token}`
-        }
-      });
+      const response = await authFetch('/api/entities?include_stats=true');
 
       if (!response.ok) {
         throw new Error('Failed to fetch entities');
@@ -608,16 +600,10 @@ const EntityManagementView: React.FC = () => {
     try {
       setIsSubmitting(true);
 
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData.session) {
-        throw new Error('Not authenticated');
-      }
-
-      const response = await fetch('/api/entities', {
+      const response = await authFetch('/api/entities', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${sessionData.session.access_token}`
         },
         body: JSON.stringify(entityData)
       });
@@ -642,16 +628,10 @@ const EntityManagementView: React.FC = () => {
     try {
       setIsSubmitting(true);
 
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData.session) {
-        throw new Error('Not authenticated');
-      }
-
-      const response = await fetch(`/api/entities/${entity.id}`, {
+      const response = await authFetch(`/api/entities/${entity.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${sessionData.session.access_token}`
         },
         body: JSON.stringify(entity)
       });

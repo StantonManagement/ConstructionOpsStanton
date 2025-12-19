@@ -23,7 +23,7 @@ export const RenovationLocationList: React.FC<Props> = ({
 }) => {
   if (isLoading && locations.length === 0) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
           <div key={i} className="h-48 bg-gray-100 rounded-lg animate-pulse" />
         ))}
@@ -73,7 +73,7 @@ export const RenovationLocationList: React.FC<Props> = ({
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {locations.map((location) => (
             <LocationCard
               key={location.id}

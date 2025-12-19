@@ -2,7 +2,7 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/theme';
-import { Wallet, ArrowRight, Loader2 } from 'lucide-react';
+import { Wallet, ArrowRight } from 'lucide-react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 
 interface Props {
@@ -18,7 +18,9 @@ export const DrawStatsCards: React.FC<Props> = ({ data, isLoading }) => {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const returnTo = `${pathname || '/'}${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
+  const returnToParams = new URLSearchParams(searchParams.toString());
+  returnToParams.delete('returnTo');
+  const returnTo = `${pathname || '/'}${returnToParams.toString() ? `?${returnToParams.toString()}` : ''}`;
 
   if (isLoading) {
     return (
@@ -80,6 +82,7 @@ export const DrawStatsCards: React.FC<Props> = ({ data, isLoading }) => {
             className="w-full justify-between group border-amber-200 text-amber-800 hover:bg-amber-50 hover:text-amber-900"
             onClick={() => {
               const params = new URLSearchParams(searchParams.toString());
+              params.delete('returnTo');
               params.set('status', 'submitted');
               router.push(`/renovations/draws?${params.toString()}`);
             }}

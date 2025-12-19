@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseClient';
 import { withAuth, successResponse, errorResponse, APIError } from '@/lib/apiHelpers';
+import { notifyTaskUnblocked } from '@/lib/sms/taskNotifications';
 
 /**
  * PUT /api/locations/[id]/block
@@ -78,6 +79,27 @@ export const DELETE = withAuth(async (request: NextRequest, { params }: { params
     if (error) {
       console.error('[Block Location API] Unblock error:', error);
       throw new APIError(error.message, 500, 'DATABASE_ERROR');
+    }
+
+    try {
+      const { data: tasks } = await supabaseAdmin
+        .from('tasks')
+        .select('id')
+        .eq('location_id', id)
+        .not('assigned_contractor_id', 'is', null)
+        .in('status', ['not_started', 'in_progress', 'worker_complete']);
+
+      if (tasks && tasks.length > 0) {
+        for (const t of tasks as any[]) {
+          try {
+            await notifyTaskUnblocked(t.id);
+          } catch (err) {
+            console.error('Failed to send task unblocked SMS:', err);
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Failed to query tasks for unblock SMS:', err);
     }
 
     return successResponse(data);

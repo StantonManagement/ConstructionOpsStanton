@@ -6,6 +6,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { MessageSquare, RefreshCw, AlertCircle, CheckCircle, Clock } from 'lucide-react';
 import { ApiResponse } from '@/types/schema';
+import { authFetch } from '@/lib/authFetch';
 
 interface SMSLog {
   id: string;
@@ -25,7 +26,7 @@ const fetchSMSLogs = async (): Promise<SMSLog[]> => {
   // Or we can query supabase directly if we expose it via generic table endpoint, but better to have dedicated.
   // For this optional task, I'll mock the fetch or assume endpoint /api/sms-logs exists.
   // Let's creating the API route first.
-  const res = await fetch('/api/sms-logs');
+  const res = await authFetch('/api/sms-logs');
   if (!res.ok) throw new Error('Failed to fetch logs');
   const json: ApiResponse<SMSLog[]> = await res.json();
   return json.data || [];

@@ -14,7 +14,9 @@ function DrawsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const returnTo = `/renovations/draws${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
+  const returnToParams = new URLSearchParams(searchParams.toString());
+  returnToParams.delete('returnTo');
+  const returnTo = `/renovations/draws${returnToParams.toString() ? `?${returnToParams.toString()}` : ''}`;
 
   const propertyId = searchParams.get('property_id') || 'all';
   const status = searchParams.get('status') || 'all';
@@ -37,6 +39,7 @@ function DrawsPageContent() {
   const handleFilterChange = (key: 'property_id' | 'status', value: string) => {
     // Update URL
     const params = new URLSearchParams(searchParams.toString());
+    params.delete('returnTo');
     if (value === 'all') params.delete(key);
     else params.set(key, value);
     const qs = params.toString();

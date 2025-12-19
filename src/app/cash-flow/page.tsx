@@ -16,11 +16,16 @@ function CashFlowDashboardContent() {
   const projectId = projectIdParam ? parseInt(projectIdParam) : undefined;
   const returnTo = searchParams.get('returnTo');
 
+  const returnToParams = new URLSearchParams(searchParams.toString());
+  returnToParams.delete('returnTo');
+  const pageReturnTo = `/cash-flow${returnToParams.toString() ? `?${returnToParams.toString()}` : ''}`;
+
   const { data: projects, isLoading: isProjectsLoading } = useProjects();
 
   const handleProjectChange = (value: string) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set('project_id', value);
+    params.set('returnTo', returnTo || pageReturnTo);
     router.replace(`/cash-flow?${params.toString()}`);
   };
 

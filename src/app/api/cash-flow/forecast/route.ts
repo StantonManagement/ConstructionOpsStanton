@@ -13,12 +13,20 @@ export const GET = withAuth(async (request: NextRequest) => {
     }
 
     const searchParams = request.nextUrl.searchParams;
-    const projectId = searchParams.get('project_id');
+    const projectId = searchParams.get('project_id') ?? searchParams.get('property_id');
     const weeks = parseInt(searchParams.get('weeks') || '4');
 
     if (!projectId) {
       throw new APIError('project_id is required', 400, 'VALIDATION_ERROR');
     }
+
+    const projectIdInt = parseInt(projectId);
+
+    const { data: project } = await supabaseAdmin
+      .from('projects')
+      .select('name')
+      .eq('id', projectIdInt)
+      .maybeSingle();
 
     // Calculate end date
     const startDate = new Date();
@@ -67,6 +75,7 @@ export const GET = withAuth(async (request: NextRequest) => {
 
     return successResponse({
       project_id: projectId,
+      property_name: project?.name || null,
       weeks: weeksArray,
       total_forecast: totalForecast
     });

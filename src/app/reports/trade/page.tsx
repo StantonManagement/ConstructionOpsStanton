@@ -1,7 +1,7 @@
 'use client';
 
 import React, { Suspense } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { useTradeReport } from '@/hooks/queries/useReports';
 import { useProjects } from '@/hooks/queries/useProjects';
 import { Card, CardContent } from '@/components/ui/card';
@@ -13,13 +13,21 @@ import { formatCurrency } from '@/lib/theme';
 
 function TradeReportContent() {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const projectIdParam = searchParams.get('project_id');
   const projectId = projectIdParam ? parseInt(projectIdParam) : undefined;
+  const budgetCategoryIdParam = searchParams.get('budget_category_id') || 'all';
   const returnTo = searchParams.get('returnTo');
 
+  const returnToParams = new URLSearchParams(searchParams.toString());
+  returnToParams.delete('returnTo');
+  const pageReturnTo = `${pathname || '/'}${returnToParams.toString() ? `?${returnToParams.toString()}` : ''}`;
+
   const { data: projects } = useProjects();
-  const { data: report, isLoading } = useTradeReport(projectId);
+  const budgetCategoryId =
+    budgetCategoryIdParam !== 'all' ? parseInt(budgetCategoryIdParam) : undefined;
+  const { data: report, isLoading } = useTradeReport(projectId, budgetCategoryId);
 
   const handleBackNavigation = () => {
     if (returnTo) {
@@ -42,9 +50,19 @@ function TradeReportContent() {
     } else {
       params.set('project_id', value);
     }
-    if (returnTo) {
-      params.set('returnTo', returnTo);
+    params.delete('budget_category_id');
+    params.set('returnTo', pageReturnTo);
+    router.replace(`/reports/trade?${params.toString()}`);
+  };
+
+  const handleTradeChange = (value: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (value === 'all') {
+      params.delete('budget_category_id');
+    } else {
+      params.set('budget_category_id', value);
     }
+    params.set('returnTo', pageReturnTo);
     router.replace(`/reports/trade?${params.toString()}`);
   };
 
@@ -109,6 +127,21 @@ function TradeReportContent() {
               {projects?.map((p) => (
                 <SelectItem key={p.id} value={p.id.toString()}>
                   {p.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <span className="text-sm text-gray-500 whitespace-nowrap">Trade:</span>
+          <Select value={budgetCategoryIdParam} onValueChange={handleTradeChange}>
+            <SelectTrigger className="w-[220px]">
+              <SelectValue placeholder="All Trades" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Trades</SelectItem>
+              {report?.categories?.map((c) => (
+                <SelectItem key={c.category_id} value={c.category_id.toString()}>
+                  {c.category_name}
                 </SelectItem>
               ))}
             </SelectContent>

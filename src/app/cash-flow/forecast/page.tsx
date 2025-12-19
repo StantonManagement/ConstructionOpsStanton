@@ -24,6 +24,7 @@ function ForecastDetailContent() {
   const handleProjectChange = (value: string) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set('project_id', value);
+    params.set('returnTo', `/cash-flow?project_id=${value}`);
     router.replace(`/cash-flow/forecast?${params.toString()}`);
   };
 

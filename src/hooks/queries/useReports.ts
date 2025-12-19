@@ -47,7 +47,13 @@ export interface TradeReportGroup {
   tasks: TradeReportItem[];
 }
 
+export interface TradeCategoryOption {
+  category_id: number;
+  category_name: string;
+}
+
 export interface TradeReportData {
+  categories: TradeCategoryOption[];
   trades: TradeReportGroup[];
   unassigned_count: number;
 }

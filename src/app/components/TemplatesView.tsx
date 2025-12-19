@@ -8,7 +8,7 @@ import { Plus, FileText, Search, Loader2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { UnitType } from '@/types/schema';
-import { TemplateDetailView } from './TemplateDetailView';
+import { TemplateDetailView } from '@/app/components/TemplateDetailView';
 
 export const TemplatesView: React.FC = () => {
   const { data: templates, isLoading, error } = useTemplates();
@@ -88,7 +88,7 @@ export const TemplatesView: React.FC = () => {
       </div>
 
       {/* Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredTemplates?.map(template => (
           <Card 
             key={template.id}

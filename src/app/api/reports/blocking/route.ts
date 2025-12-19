@@ -13,7 +13,7 @@ export const GET = withAuth(async (request: NextRequest) => {
     }
 
     const searchParams = request.nextUrl.searchParams;
-    const projectId = searchParams.get('project_id');
+    const projectId = searchParams.get('project_id') ?? searchParams.get('property_id');
 
     // Start query on blocking_report view
     let query = supabaseAdmin

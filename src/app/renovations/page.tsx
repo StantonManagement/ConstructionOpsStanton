@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useSearchParams } from 'next/navigation';
 import { PortfolioStats } from './components/PortfolioStats';
 import { PortfolioBlockingAlert } from './components/PortfolioBlockingAlert';
 import { PropertyList } from './components/PropertyList';
@@ -8,7 +9,12 @@ import { usePortfolioStats } from '@/hooks/queries/usePortfolio';
 import { Loader2 } from 'lucide-react';
 
 export default function PortfolioPage() {
+  const searchParams = useSearchParams();
   const { data: stats, isLoading } = usePortfolioStats();
+
+  const returnToParams = new URLSearchParams(searchParams.toString());
+  returnToParams.delete('returnTo');
+  const returnTo = `/renovations${returnToParams.toString() ? `?${returnToParams.toString()}` : ''}`;
 
   if (isLoading) {
     return (
@@ -31,12 +37,13 @@ export default function PortfolioPage() {
       </div>
 
       {/* Stats Cards */}
-      <PortfolioStats stats={stats} />
+      <PortfolioStats stats={stats} returnTo={returnTo} />
 
       {/* Blocking Alert */}
       <PortfolioBlockingAlert 
         blockedCount={stats.blocked_locations} 
         blockedByReason={stats.blocked_by_reason} 
+        returnTo={returnTo}
       />
 
       {/* Property List */}

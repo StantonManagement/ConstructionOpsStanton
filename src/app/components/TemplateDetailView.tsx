@@ -1,17 +1,102 @@
-import React, { useState } from 'react';
-import { useTemplate, useUpdateTemplate, useDeleteTemplate, useAddTemplateTask, useUpdateTemplateTask, useDeleteTemplateTask } from '@/hooks/queries/useTemplates';
+import React, { useState, useEffect } from 'react';
+import { useTemplate, useUpdateTemplate, useDeleteTemplate, useAddTemplateTask, useUpdateTemplateTask, useDeleteTemplateTask, useReorderTemplateTasks } from '@/hooks/queries/useTemplates';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, Save, Trash2, Plus, GripVertical, Loader2 } from 'lucide-react';
-import { UnitType, CreateTemplateTaskInput } from '@/types/schema';
+import { UnitType, CreateTemplateTaskInput, TemplateTask } from '@/types/schema';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import {
+  DndContext, 
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface Props {
   templateId: string;
   onBack: () => void;
 }
+
+interface SortableTaskRowProps {
+  task: TemplateTask;
+  index: number;
+  templateId: string;
+  onDelete: (params: { id: string; templateId: string }) => void;
+}
+
+const SortableTaskRow = ({ task, index, templateId, onDelete }: SortableTaskRowProps) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging
+  } = useSortable({ id: task.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 1 : 0,
+    position: 'relative' as const,
+  };
+
+  return (
+    <div 
+      ref={setNodeRef} 
+      style={style}
+      className={`p-4 border-b bg-white hover:bg-gray-50 transition-colors flex items-center justify-between group ${isDragging ? 'shadow-lg ring-1 ring-blue-500 rounded-md z-10' : ''}`}
+    >
+      <div className="flex items-center gap-3">
+        <div 
+          className="text-gray-400 cursor-move hover:text-gray-600 focus:outline-none"
+          {...attributes} 
+          {...listeners}
+        >
+          <GripVertical className="w-4 h-4" />
+        </div>
+        <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-sm font-medium">
+          {index + 1}
+        </div>
+        <div>
+          <p className="font-medium text-gray-900">{task.name}</p>
+          <div className="flex items-center gap-3 text-sm text-gray-500">
+            {task.default_duration_days && (
+              <span>{task.default_duration_days} days</span>
+            )}
+            {task.estimated_cost && (
+              <span>${task.estimated_cost}</span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-2">
+        <Button 
+          size="icon" 
+          variant="ghost" 
+          className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
+          onClick={() => onDelete({ id: task.id, templateId })}
+        >
+          <Trash2 className="w-4 h-4" />
+        </Button>
+      </div>
+    </div>
+  );
+};
 
 export const TemplateDetailView: React.FC<Props> = ({ templateId, onBack }) => {
   const { data: template, isLoading, error } = useTemplate(templateId);
@@ -24,6 +109,7 @@ export const TemplateDetailView: React.FC<Props> = ({ templateId, onBack }) => {
   const { mutate: addTask, isPending: isAddingTask } = useAddTemplateTask();
   const { mutate: updateTask } = useUpdateTemplateTask();
   const { mutate: deleteTask } = useDeleteTemplateTask();
+  const { mutate: reorderTasks } = useReorderTemplateTasks();
 
   // Local state for template edit
   const [isEditingHeader, setIsEditingHeader] = useState(false);
@@ -42,7 +128,18 @@ export const TemplateDetailView: React.FC<Props> = ({ templateId, onBack }) => {
   // State for delete confirm
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  // Initialize header form when data loads
+  // Local state for tasks to handle dnd
+  const [tasks, setTasks] = useState<TemplateTask[]>([]);
+
+  // Sensors for dnd-kit
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // Initialize header form and tasks when data loads
   React.useEffect(() => {
     if (template) {
       setHeaderForm({
@@ -50,6 +147,9 @@ export const TemplateDetailView: React.FC<Props> = ({ templateId, onBack }) => {
         description: template.description || '',
         unit_type: template.unit_type || 'any'
       });
+      if (template.tasks) {
+        setTasks(template.tasks);
+      }
     }
   }, [template]);
 
@@ -85,14 +185,39 @@ export const TemplateDetailView: React.FC<Props> = ({ templateId, onBack }) => {
       description: newTask.description,
       default_duration_days: newTask.default_duration_days,
       estimated_cost: newTask.estimated_cost,
-      sort_order: template.tasks?.length || 0,
+      sort_order: tasks.length, // Use current length for sort order
       depends_on_sort_order: newTask.depends_on_sort_order
-    } as any, { // Cast to any to bypass strict type check for now if schema types aren't updated yet
+    } as any, { 
       onSuccess: () => {
         setShowTaskModal(false);
         setNewTask({ name: '', description: '', default_duration_days: 1, estimated_cost: undefined, depends_on_sort_order: undefined });
       }
     });
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      setTasks((items) => {
+        const oldIndex = items.findIndex((item) => item.id === active.id);
+        const newIndex = items.findIndex((item) => item.id === over.id);
+
+        const newItems = arrayMove(items, oldIndex, newIndex);
+        
+        // Prepare updates for server
+        // Recalculate sort_order based on new index
+        const updates = newItems.map((task, index) => ({
+          id: task.id,
+          sort_order: index
+        }));
+
+        // Send to server
+        reorderTasks({ templateId, tasks: updates });
+
+        return newItems;
+      });
+    }
   };
 
   return (
@@ -139,7 +264,7 @@ export const TemplateDetailView: React.FC<Props> = ({ templateId, onBack }) => {
                 </span>
               )}
               <span>•</span>
-              <span>{template.tasks?.length || 0} Tasks</span>
+              <span>{tasks.length} Tasks</span>
             </div>
           </div>
         </div>
@@ -181,41 +306,27 @@ export const TemplateDetailView: React.FC<Props> = ({ templateId, onBack }) => {
         </div>
 
         <div className="divide-y">
-          {template.tasks && template.tasks.length > 0 ? (
-            template.tasks.map((task, index) => (
-              <div key={task.id} className="p-4 hover:bg-gray-50 transition-colors flex items-center justify-between group">
-                <div className="flex items-center gap-3">
-                  <div className="text-gray-400 cursor-move">
-                    <GripVertical className="w-4 h-4" />
-                  </div>
-                  <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-sm font-medium">
-                    {index + 1}
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-900">{task.name}</p>
-                    <div className="flex items-center gap-3 text-sm text-gray-500">
-                      {task.default_duration_days && (
-                        <span>{task.default_duration_days} days</span>
-                      )}
-                      {task.estimated_cost && (
-                        <span>${task.estimated_cost}</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-2">
-                  <Button 
-                    size="icon" 
-                    variant="ghost" 
-                    className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
-                    onClick={() => deleteTask({ id: task.id, templateId })}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            ))
+          {tasks.length > 0 ? (
+            <DndContext 
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext 
+                items={tasks.map(t => t.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                {tasks.map((task, index) => (
+                  <SortableTaskRow
+                    key={task.id}
+                    task={task}
+                    index={index}
+                    templateId={templateId}
+                    onDelete={deleteTask}
+                  />
+                ))}
+              </SortableContext>
+            </DndContext>
           ) : (
             <div className="p-8 text-center text-gray-500">
               No tasks yet. Add a task to get started.
@@ -286,7 +397,7 @@ export const TemplateDetailView: React.FC<Props> = ({ templateId, onBack }) => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">No dependency</SelectItem>
-                  {template.tasks?.map((t, i) => (
+                  {tasks.map((t, i) => (
                     <SelectItem key={t.id} value={t.sort_order.toString()}>
                       {i + 1}. {t.name}
                     </SelectItem>

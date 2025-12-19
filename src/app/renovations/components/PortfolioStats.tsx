@@ -8,9 +8,10 @@ import { PortfolioStats as IPortfolioStats } from '@/hooks/queries/usePortfolio'
 
 interface PortfolioStatsProps {
   stats: IPortfolioStats;
+  returnTo?: string;
 }
 
-export const PortfolioStats: React.FC<PortfolioStatsProps> = ({ stats }) => {
+export const PortfolioStats: React.FC<PortfolioStatsProps> = ({ stats, returnTo }) => {
   const router = useRouter();
 
   const locationProgress = stats.total_locations > 0 
@@ -26,7 +27,7 @@ export const PortfolioStats: React.FC<PortfolioStatsProps> = ({ stats }) => {
     : 0;
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       {/* Locations Card */}
       <Card>
         <CardContent className="p-4 space-y-3">
@@ -116,7 +117,7 @@ export const PortfolioStats: React.FC<PortfolioStatsProps> = ({ stats }) => {
             ? 'border-amber-200 bg-amber-50 hover:bg-amber-100' 
             : 'hover:bg-gray-50'
         }`}
-        onClick={() => router.push('/renovations/blocking')}
+        onClick={() => router.push(returnTo ? `/renovations/blocking?returnTo=${encodeURIComponent(returnTo)}` : '/renovations/blocking')}
       >
         <CardContent className="p-4 h-full flex flex-col justify-between">
           <div className="flex justify-between items-start">

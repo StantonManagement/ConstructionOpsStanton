@@ -93,7 +93,9 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab }) => {
   const [isRenovationsExpanded, setIsRenovationsExpanded] = useState(true);
   
   const currentSubTab = searchParams.get('subtab');
-  const returnTo = `${pathname || '/'}${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
+  const returnToParams = new URLSearchParams(searchParams.toString());
+  returnToParams.delete('returnTo');
+  const returnTo = `${pathname || '/'}${returnToParams.toString() ? `?${returnToParams.toString()}` : ''}`;
 
   useEffect(() => {
     if (selectedProjectId) {

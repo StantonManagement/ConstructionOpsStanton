@@ -3,6 +3,7 @@
 import React, { useState, useEffect, ChangeEvent } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { Building, X, AlertCircle } from 'lucide-react';
+import { authFetch } from '@/lib/authFetch';
 import {
   Select,
   SelectContent,
@@ -57,17 +58,7 @@ const ProjectFormWithEntity: React.FC<ProjectFormProps> = ({
   useEffect(() => {
     const fetchEntities = async () => {
       try {
-        const { data: sessionData } = await supabase.auth.getSession();
-        if (!sessionData.session) {
-          console.error('No session');
-          return;
-        }
-
-        const response = await fetch('/api/entities?active_only=true', {
-          headers: {
-            'Authorization': `Bearer ${sessionData.session.access_token}`
-          }
-        });
+        const response = await authFetch('/api/entities?active_only=true');
 
         if (response.ok) {
           const data = await response.json();

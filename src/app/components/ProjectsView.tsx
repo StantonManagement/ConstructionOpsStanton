@@ -13,6 +13,7 @@ import { Project, Contract, PaymentApplication } from '@/types/schema';
 import { DataTable } from '@/components/ui/DataTable';
 import { SignalBadge } from '@/components/ui/SignalBadge';
 import { getBudgetStatus, formatCurrency, formatPercent, SystemStatus, getPaymentStatus } from '@/lib/theme';
+import { authFetch } from '@/lib/authFetch';
 
 // Form validation utilities
 const validators = {
@@ -349,32 +350,23 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
     setError(null);
     
     try {
-      // Get auth token
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) {
-        throw new Error('Authentication required');
-      }
-
       const startTime = Date.now();
-
-      // Call API
-      const response = await fetch('/api/projects/list', {
+      const response = await authFetch('/api/projects/list', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
         },
         body: JSON.stringify({
+          enrich: true,
           excludeDeleted: true,
-          enrich: true
-        })
+        }),
       });
 
       if (!response.ok) {
-        let errorMessage = 'Failed to load projects';
+        let errorMessage = 'Failed to fetch projects';
         try {
           const errorData = await response.json();
-          errorMessage = errorData.error || errorMessage;
+          errorMessage = errorData.error || errorData.data?.error || errorData.message || errorMessage;
         } catch (e) {
           errorMessage = `${errorMessage} (${response.status}: ${response.statusText})`;
         }
@@ -383,119 +375,55 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
 
       const result = await response.json();
       const fetchTime = Date.now() - startTime;
+      console.log(`[ProjectsView] Fetched projects in ${fetchTime}ms`);
 
-      if (!result.success || !result.data) {
-        throw new Error('Invalid API response');
-      }
-
-      const { projects: enrichedProjects } = result.data;
-
-      setProjects(enrichedProjects || []);
-
+      const projectsData = result?.data?.projects || result?.projects || [];
+      setProjects(projectsData);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load projects';
-      console.error('[ProjectsView] Error fetching projects:', err);
-      setError(errorMessage);
-      setProjects([]);
+      console.error('Error fetching projects:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch projects');
     } finally {
       setLoading(false);
+      setIsRefreshing(false);
     }
   }, []);
 
-  useEffect(() => {
-    fetchProjects();
-  }, [fetchProjects]);
+  const filteredProjects = useMemo(() => {
+    const query = (searchQuery || '').trim().toLowerCase();
+    if (!query) return projects;
 
-  // Keep selected project & detail view in sync with URL ?project= param
-  useEffect(() => {
-    const projectIdFromUrl = searchParams.get('project');
-
-    // If there's no project in the URL, ensure we're in list mode
-    if (!projectIdFromUrl) {
-      if (showDetailView || selectedProject) {
-        setShowDetailView(false);
-        setSelectedProject(null);
-      }
-      return;
-    }
-
-    // Only try to resolve once projects have loaded
-    if (projects.length === 0) return;
-
-    const projectFromUrl = projects.find(p => p.id.toString() === projectIdFromUrl);
-
-    // If we can't find the project (stale ID), leave current state alone
-    if (!projectFromUrl) return;
-
-    // If the URL already matches the current selection, do nothing
-    if (selectedProject && selectedProject.id === projectFromUrl.id) return;
-
-    // Otherwise, switch the detail view to the project from the URL
-    setSelectedProject(projectFromUrl);
-    setShowDetailView(true);
-  }, [searchParams, projects, selectedProject, showDetailView]);
-
-  // Filter projects based on search query
-  const filteredProjects = projects.filter(project => {
-    if (!searchQuery.trim()) return true;
-    const query = searchQuery.toLowerCase();
-    return (
-      project.name?.toLowerCase().includes(query) ||
-      project.client_name?.toLowerCase().includes(query) ||
-      project.current_phase?.toLowerCase().includes(query)
-    );
-  });
+    return projects.filter((p) => {
+      const name = (p.name || '').toLowerCase();
+      const client = ((p as any).client_name || '').toLowerCase();
+      const address = ((p as any).address || '').toLowerCase();
+      return name.includes(query) || client.includes(query) || address.includes(query);
+    });
+  }, [projects, searchQuery]);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
     await fetchProjects();
-    setIsRefreshing(false);
   };
 
-  // Handle creating a new project
-  const handleCreateProject = async (formData: Record<string, string>) => {
+  const handleCreateProject = async (formData: Record<string, any>) => {
     setIsCreatingProject(true);
+    setError(null);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) {
-        throw new Error('Not authenticated');
-      }
-
-      const projectData = {
-        name: formData.name,
-        address: formData.address,
-        client_name: formData.client_name,
-        budget: formData.budget,
-        starting_balance: formData.starting_balance,
-        start_date: formData.start_date,
-        target_completion_date: formData.target_completion_date,
-        status: formData.status || 'active',
-        current_phase: formData.current_phase || 'Planning',
-        owner_entity_id: formData.owner_entity_id,
-        portfolio_name: formData.portfolio_name,
-        total_units: formData.total_units
-      };
-
-      const response = await fetch('/api/projects', {
+      const response = await authFetch('/api/projects', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
         },
-        body: JSON.stringify(projectData)
+        body: JSON.stringify(formData),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create project');
+      const json = await response.json();
+      if (!response.ok || json.error) {
+        throw new Error(json.error || 'Failed to create project');
       }
 
-      // Refresh the projects list
-      await fetchProjects();
-      
-      // Close the form
       setShowNewProjectForm(false);
-      
+      await fetchProjects();
     } catch (err) {
       console.error('Error creating project:', err);
       setError(err instanceof Error ? err.message : 'Failed to create project');
@@ -504,71 +432,28 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
     }
   };
 
-  // Handle editing a project
-  const handleEditProject = async (formData: Record<string, string>) => {
+  const handleEditProject = async (formData: Record<string, any>) => {
     if (!editingProject) return;
-    
+
     setIsEditingProject(true);
+    setError(null);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) {
-        throw new Error('Authentication required');
-      }
-
-      const updateData = {
-        name: formData.name,
-        client_name: formData.client_name,
-        address: formData.address,
-        budget: formData.budget ? parseFloat(formData.budget) : null,
-        start_date: formData.start_date || null,
-        target_completion_date: formData.target_completion_date || null,
-        current_phase: formData.current_phase,
-        status: formData.status,
-        owner_entity_id: formData.owner_entity_id ? parseInt(formData.owner_entity_id) : null,
-        portfolio_name: formData.portfolio_name || null,
-        total_units: formData.total_units ? parseInt(formData.total_units) : 1,
-      };
-
-      const response = await fetch(`/api/projects/${editingProject.id}`, {
+      const response = await authFetch(`/api/projects/${editingProject.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
         },
-        body: JSON.stringify(updateData)
+        body: JSON.stringify(formData),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to update project');
+      const json = await response.json();
+      if (!response.ok || json.error) {
+        throw new Error(json.error || 'Failed to update project');
       }
 
-      // Refresh the projects list
-      await fetchProjects();
-      
-      // If we are in detail view, update the selected project with new data
-      if (showDetailView && selectedProject && selectedProject.id === editingProject.id) {
-        // Optimistic update or rely on fetchProjects
-        // Since we refreshed the list, we should try to find the updated project in the new list
-        // But fetchProjects is async and we don't have the new list yet here in this scope easily without refetching logic coupling.
-        // Simplest is to just close the form. The UI will update when fetchProjects completes.
-        // However, selectedProject state needs to be updated if it's not derived from projects list directly in render.
-        // It IS state. So we should update it.
-        
-        // Construct updated project object
-        const updatedProject = { ...editingProject, ...updateData } as Project;
-        // Note: This is a partial update, some fields might be missing or different types (dates)
-        // Ideally we'd use the response from API.
-        
-        // For now, just closing. The fetchProjects will eventually update the list, but selectedProject is separate state.
-        // We need to update selectedProject to see changes immediately in Detail View.
-        setSelectedProject(prev => prev ? ({ ...prev, ...updateData } as Project) : null);
-      }
-      
-      // Close the form
       setShowEditProjectForm(false);
       setEditingProject(null);
-      
+      await fetchProjects();
     } catch (err) {
       console.error('Error updating project:', err);
       setError(err instanceof Error ? err.message : 'Failed to update project');
@@ -589,16 +474,8 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
     
     setIsDeletingProject(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) {
-        throw new Error('Authentication required');
-      }
-
-      const response = await fetch(`/api/projects/${deletingProject.id}`, {
+      const response = await authFetch(`/api/projects/${deletingProject.id}`, {
         method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`
-        }
       });
 
       if (!response.ok) {

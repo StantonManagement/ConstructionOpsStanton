@@ -25,7 +25,7 @@ export const MobileTaskRow: React.FC<Props> = ({ task, onUpdateStatus }) => {
     if (task.status === 'worker_complete') {
       return (
         <Button 
-          className="w-full h-12 bg-amber-500 hover:bg-amber-600 text-white font-bold text-lg shadow-sm"
+          className="w-full h-14 bg-amber-500 hover:bg-amber-600 text-white font-bold text-lg shadow-sm"
           onClick={(e) => {
             e.stopPropagation();
             onUpdateStatus(task.id, 'verified');
@@ -40,7 +40,7 @@ export const MobileTaskRow: React.FC<Props> = ({ task, onUpdateStatus }) => {
   };
 
   return (
-    <div className="bg-white border-b border-gray-100 last:border-0">
+    <div className="bg-white rounded-lg border border-gray-200 shadow-sm mb-2 last:mb-0 overflow-hidden">
       <div 
         className="p-4 flex items-center gap-3 active:bg-gray-50 transition-colors cursor-pointer min-h-[64px]"
         onClick={() => setIsExpanded(!isExpanded)}
@@ -103,7 +103,10 @@ export const MobileTaskRow: React.FC<Props> = ({ task, onUpdateStatus }) => {
               <Button 
                 variant="outline" 
                 className="w-full border-blue-200 text-blue-700 bg-blue-50 hover:bg-blue-100"
-                onClick={() => onUpdateStatus(task.id, 'in_progress')}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onUpdateStatus(task.id, 'in_progress');
+                }}
               >
                 Start Task
               </Button>
@@ -112,14 +115,23 @@ export const MobileTaskRow: React.FC<Props> = ({ task, onUpdateStatus }) => {
             {task.status === 'in_progress' && (
               <Button 
                 className="w-full bg-green-600 hover:bg-green-700 text-white"
-                onClick={() => onUpdateStatus(task.id, 'worker_complete')}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onUpdateStatus(task.id, 'worker_complete');
+                }}
               >
                 Mark Complete
               </Button>
             )}
 
             {task.status !== 'verified' && (
-               <Button variant="ghost" className="text-gray-500">
+               <Button
+                 variant="ghost"
+                 className="text-gray-500"
+                 onClick={(e) => {
+                   e.stopPropagation();
+                 }}
+               >
                  Edit Details
                </Button>
             )}

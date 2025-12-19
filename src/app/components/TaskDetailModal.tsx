@@ -1,12 +1,22 @@
-import { useTaskDependencies, useAddDependency, useRemoveDependency } from '@/hooks/queries/useTaskDependencies';
+import React, { useMemo, useState } from 'react';
+import { useTaskDependencies, useTaskDependents, useAddDependency, useRemoveDependency } from '@/hooks/queries/useTaskDependencies';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useTasks } from '@/hooks/queries/useTasks';
-import { Link, Trash2, PlusCircle, AlertCircle } from 'lucide-react';
+import { useTasks, useUpdateTaskStatus } from '@/hooks/queries/useTasks';
+import { Task, TaskStatus } from '@/types/schema';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { TaskStatusBadge } from '@/components/StatusBadge';
+import { formatCurrency } from '@/lib/theme';
+import { PhotoVerificationModal } from '@/app/components/PhotoVerificationModal';
+import { Link, Trash2, AlertTriangle, User, DollarSign, Calendar, Clock, ExternalLink, Play, CheckSquare, Camera, Loader2 } from 'lucide-react';
 
 const DependenciesSection = ({ task }: { task: Task }) => {
   const { data: dependencies, isLoading } = useTaskDependencies(task.id);
+  const { data: dependents } = useTaskDependents(task.id);
   const { mutate: addDependency, isPending: isAdding } = useAddDependency();
   const { mutate: removeDependency, isPending: isRemoving } = useRemoveDependency();
+  const { data: locationTasks } = useTasks(task.location_id);
+  const [selectedDependsOnId, setSelectedDependsOnId] = useState<string>('');
   
   // Fetch other tasks in same location for adding dependency
   // We should ideally have a specific hook or pass them down, but useTasks with location filter works
@@ -16,6 +26,11 @@ const DependenciesSection = ({ task }: { task: Task }) => {
   // without fetching all tasks. 
   // Let's show existing dependencies first.
   
+  const dependencyIds = useMemo(() => new Set((dependencies || []).map((d) => d.depends_on_task.id)), [dependencies]);
+  const availableDependsOnTasks = useMemo(() => {
+    return (locationTasks || []).filter((t) => t.id !== task.id && !dependencyIds.has(t.id));
+  }, [locationTasks, task.id, dependencyIds]);
+
   if (isLoading) return <div className="text-sm text-gray-500">Loading dependencies...</div>;
 
   return (
@@ -26,6 +41,40 @@ const DependenciesSection = ({ task }: { task: Task }) => {
       </h4>
       
       <div className="space-y-2">
+        {task.status === 'not_started' && (
+          <div className="flex items-center gap-2">
+            <Select value={selectedDependsOnId || 'none'} onValueChange={(val) => setSelectedDependsOnId(val === 'none' ? '' : val)}>
+              <SelectTrigger className="h-9">
+                <SelectValue placeholder="Add dependency" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Select prerequisite…</SelectItem>
+                {availableDependsOnTasks.map((t) => (
+                  <SelectItem key={t.id} value={t.id}>
+                    {t.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={!selectedDependsOnId || isAdding}
+              onClick={() => {
+                if (!selectedDependsOnId) return;
+                addDependency(
+                  { taskId: task.id, dependsOnTaskId: selectedDependsOnId },
+                  {
+                    onSuccess: () => setSelectedDependsOnId(''),
+                  }
+                );
+              }}
+            >
+              {isAdding ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Add'}
+            </Button>
+          </div>
+        )}
+
         {dependencies?.map((dep) => (
           <div key={dep.id} className="flex items-center justify-between bg-gray-50 p-2 rounded text-sm">
             <div className="flex items-center gap-2">
@@ -53,6 +102,31 @@ const DependenciesSection = ({ task }: { task: Task }) => {
         {(!dependencies || dependencies.length === 0) && (
           <p className="text-xs text-gray-400 italic">No dependencies</p>
         )}
+      </div>
+
+      <div className="mt-3">
+        <h4 className="font-medium text-sm mb-2 flex items-center gap-2">
+          <Link className="w-4 h-4 text-gray-500" />
+          Blocks
+        </h4>
+        <div className="space-y-2">
+          {dependents?.map((dep) => (
+            <div key={dep.id} className="flex items-center justify-between bg-gray-50 p-2 rounded text-sm">
+              <div className="flex items-center gap-2">
+                <span className={`w-2 h-2 rounded-full ${
+                  dep.task.status === 'verified' ? 'bg-green-500' :
+                  dep.task.status === 'worker_complete' ? 'bg-purple-500' :
+                  dep.task.status === 'in_progress' ? 'bg-blue-500' : 'bg-gray-300'
+                }`} />
+                <span className="text-gray-700">{dep.task.name}</span>
+              </div>
+            </div>
+          ))}
+
+          {(!dependents || dependents.length === 0) && (
+            <p className="text-xs text-gray-400 italic">No dependent tasks</p>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -216,6 +290,8 @@ export const TaskDetailModal: React.FC<Props> = ({
                 {task.description}
               </div>
             )}
+
+            <DependenciesSection task={task} />
 
             {/* Verification Details */}
             {task.status === 'verified' && task.verification_photo_url && (

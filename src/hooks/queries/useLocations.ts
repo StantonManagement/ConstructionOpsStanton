@@ -1,9 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Location, CreateLocationInput, LocationStatus, ApiResponse } from '@/types/schema';
+import { authFetch } from '@/lib/authFetch';
 
 // Helper for fetching
 const fetchLocations = async (projectId: number): Promise<Location[]> => {
-  const res = await fetch(`/api/locations?project_id=${projectId}`);
+  const res = await authFetch(`/api/locations?project_id=${projectId}`);
   if (!res.ok) throw new Error('Failed to fetch locations');
   const json: ApiResponse<Location[]> = await res.json();
   if (json.error) throw new Error(json.error);
@@ -11,7 +12,7 @@ const fetchLocations = async (projectId: number): Promise<Location[]> => {
 };
 
 const fetchLocation = async (id: string): Promise<Location> => {
-  const res = await fetch(`/api/locations/${id}`);
+  const res = await authFetch(`/api/locations/${id}`);
   if (!res.ok) throw new Error('Failed to fetch location');
   const json: ApiResponse<Location> = await res.json();
   if (json.error) throw new Error(json.error);
@@ -42,7 +43,7 @@ export function useCreateLocation() {
 
   return useMutation({
     mutationFn: async (data: CreateLocationInput) => {
-      const res = await fetch('/api/locations', {
+      const res = await authFetch('/api/locations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
@@ -63,7 +64,7 @@ export function useUpdateLocation() {
 
   return useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<Location> }) => {
-      const res = await fetch(`/api/locations/${id}`, {
+      const res = await authFetch(`/api/locations/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
@@ -87,7 +88,7 @@ export function useDeleteLocation() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const res = await fetch(`/api/locations/${id}`, {
+      const res = await authFetch(`/api/locations/${id}`, {
         method: 'DELETE',
       });
       if (!res.ok) throw new Error('Failed to delete location');
@@ -104,7 +105,7 @@ export function useBulkCreateLocations() {
 
   return useMutation({
     mutationFn: async (data: any) => {
-      const res = await fetch('/api/locations/bulk', {
+      const res = await authFetch('/api/locations/bulk', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
@@ -130,7 +131,7 @@ export function useBlockLocation() {
 
   return useMutation({
     mutationFn: async ({ id, reason, note }: { id: string; reason: string; note?: string }) => {
-      const res = await fetch(`/api/locations/${id}/block`, {
+      const res = await authFetch(`/api/locations/${id}/block`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ blocked_reason: reason, blocked_note: note }),
@@ -157,7 +158,7 @@ export function useUnblockLocation() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const res = await fetch(`/api/locations/${id}/block`, {
+      const res = await authFetch(`/api/locations/${id}/block`, {
         method: 'DELETE',
       });
       

@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useLocation, useLocations } from '@/hooks/queries/useLocations';
+import { useLocation, useLocations, useUnblockLocation } from '@/hooks/queries/useLocations';
 import { useUpdateTaskStatus } from '@/hooks/queries/useTasks';
 import { MobileTaskRow } from '../../components/MobileTaskRow';
 import { Button } from '@/components/ui/button';
@@ -33,20 +33,16 @@ const sortTasks = (tasks: Task[]) => {
   });
 };
 
-export default function LocationDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default function LocationDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [id, setId] = useState<string | null>(null);
+  const { id } = params;
   const returnTo = searchParams.get('returnTo');
-  
-  // Unwrap params
-  useEffect(() => {
-    params.then(p => setId(p.id));
-  }, [params]);
 
-  const { data: location, isLoading: isLoadingLocation } = useLocation(id || '');
+  const { data: location, isLoading: isLoadingLocation } = useLocation(id);
   const { data: projectLocations } = useLocations(location?.project_id);
   const { mutate: updateTaskStatus } = useUpdateTaskStatus();
+  const { mutate: unblockLocation, isPending: isUnblocking } = useUnblockLocation();
 
   const [verifyTask, setVerifyTask] = useState<{ id: string; name: string } | null>(null);
   const [showBlockModal, setShowBlockModal] = useState(false);
@@ -66,7 +62,7 @@ export default function LocationDetailPage({ params }: { params: Promise<{ id: s
     router.push('/renovations/locations');
   };
 
-  if (isLoadingLocation || !id) {
+  if (isLoadingLocation) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
@@ -98,6 +94,11 @@ export default function LocationDetailPage({ params }: { params: Promise<{ id: s
   const verifiedTasks = tasks.filter(t => t.status === 'verified').length;
   const progress = totalTasks > 0 ? (verifiedTasks / totalTasks) * 100 : 0;
 
+  const propertyName =
+    (location as any).property_name ||
+    (location as any).projects?.name ||
+    (location.project_id ? `Project #${location.project_id}` : '');
+
   // Handlers
   const handleTaskStatusUpdate = (taskId: string, newStatus: string) => {
     if (newStatus === 'verified') {
@@ -122,11 +123,16 @@ export default function LocationDetailPage({ params }: { params: Promise<{ id: s
     }
   };
 
+  const handleUnblockLocation = () => {
+    if (!confirm('Unblock this location and set it back to In Progress?')) return;
+    unblockLocation(location.id);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 pb-24">
       {/* Header */}
       <div className="sticky top-0 z-30 bg-white border-b border-gray-200 shadow-sm">
-        <div className="flex items-center justify-between p-4 h-16">
+        <div className="flex items-center justify-between p-4">
           <Button variant="ghost" size="sm" className="-ml-2" onClick={handleBackNavigation}>
             <ArrowLeft className="w-5 h-5 mr-1" />
             Back
@@ -138,6 +144,12 @@ export default function LocationDetailPage({ params }: { params: Promise<{ id: s
             <AlertTriangle className={`w-5 h-5 ${location.status === 'on_hold' ? 'text-red-500 fill-red-100' : 'text-gray-400'}`} />
           </Button>
         </div>
+
+        {propertyName && (
+          <div className="px-4 pb-3 -mt-3 text-sm text-gray-500 truncate">
+            {propertyName}
+          </div>
+        )}
 
         {/* Quick Jump Bar */}
         {(prevLocation || nextLocation) && (
@@ -188,12 +200,29 @@ export default function LocationDetailPage({ params }: { params: Promise<{ id: s
                 </span>
               </div>
             </div>
+            <div className="ml-auto">
+              <Button
+                variant="outline"
+                className="border-red-200 text-red-700 hover:bg-red-100"
+                onClick={handleUnblockLocation}
+                disabled={isUnblocking}
+              >
+                {isUnblocking ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Unblocking...
+                  </>
+                ) : (
+                  'Unblock'
+                )}
+              </Button>
+            </div>
           </div>
         </div>
       )}
 
       {/* Task List */}
-      <div className="bg-white mt-2 border-t border-gray-200">
+      <div className="bg-gray-50 mt-2 px-2 pb-2">
         {sortedTasks.length === 0 ? (
           <div className="p-8 text-center text-gray-500">
             No tasks assigned to this location.
@@ -212,19 +241,30 @@ export default function LocationDetailPage({ params }: { params: Promise<{ id: s
       {/* Sticky Footer Actions */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 pb-safe-area flex gap-3 z-30 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
         <Button 
-          variant="outline" 
-          className="flex-1 border-red-200 text-red-700 hover:bg-red-50"
-          onClick={() => setShowBlockModal(true)}
-        >
-          Block Location
-        </Button>
-        <Button 
           className="flex-1 bg-blue-600 hover:bg-blue-700"
           onClick={handleMarkAllComplete}
           disabled={!tasks.some(t => t.status === 'in_progress')}
         >
           Mark All Done
         </Button>
+        {location.status === 'on_hold' ? (
+          <Button
+            variant="outline"
+            className="flex-1 border-red-200 text-red-700 hover:bg-red-50"
+            onClick={handleUnblockLocation}
+            disabled={isUnblocking}
+          >
+            Unblock
+          </Button>
+        ) : (
+          <Button 
+            variant="outline" 
+            className="flex-1 border-red-200 text-red-700 hover:bg-red-50"
+            onClick={() => setShowBlockModal(true)}
+          >
+            Block Location
+          </Button>
+        )}
       </div>
 
       {/* Modals */}

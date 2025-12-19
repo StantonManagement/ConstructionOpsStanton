@@ -20,6 +20,7 @@ import { CreateLocationModal } from './CreateLocationModal';
 import { BulkLocationModal } from './BulkLocationModal';
 import { LocationDetailView } from './LocationDetailView';
 import { ProjectStatsCard } from './ProjectStatsCard';
+import { authFetch } from '@/lib/authFetch';
 
 interface ProjectDetailViewProps {
   project: Project;
@@ -295,7 +296,7 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ project, onBack, 
     
     try {
       console.log('Sending payment request:', { projectId: project.id, contractorIds: [contractorId] });
-      const res = await fetch('/api/payments/initiate', {
+      const res = await authFetch('/api/payments/initiate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

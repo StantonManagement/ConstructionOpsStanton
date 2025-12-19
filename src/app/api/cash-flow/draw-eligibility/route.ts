@@ -13,11 +13,19 @@ export const GET = withAuth(async (request: NextRequest) => {
     }
 
     const searchParams = request.nextUrl.searchParams;
-    const projectId = searchParams.get('project_id');
+    const projectId = searchParams.get('project_id') ?? searchParams.get('property_id');
 
     if (!projectId) {
       throw new APIError('project_id is required', 400, 'VALIDATION_ERROR');
     }
+
+    const projectIdInt = parseInt(projectId);
+
+    const { data: project } = await supabaseAdmin
+      .from('projects')
+      .select('name')
+      .eq('id', projectIdInt)
+      .maybeSingle();
 
     // 1. Fetch Summary from View
     const { data: summaryRows, error: summaryError } = await supabaseAdmin
@@ -112,6 +120,7 @@ export const GET = withAuth(async (request: NextRequest) => {
 
     return successResponse({
       project_id: projectId,
+      property_name: project?.name || null,
       total_verified_cost: totalVerifiedCost,
       total_already_drawn: totalAlreadyDrawn,
       total_eligible: totalEligible,

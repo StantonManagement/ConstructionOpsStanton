@@ -13,22 +13,35 @@ export const GET = withAuth(async (request: NextRequest) => {
     }
 
     const searchParams = request.nextUrl.searchParams;
-    const projectId = searchParams.get('project_id');
+    const projectId = searchParams.get('project_id') ?? searchParams.get('property_id');
     const budgetCategoryId = searchParams.get('budget_category_id');
 
     if (!projectId) {
         throw new APIError('Project ID is required', 400, 'VALIDATION_ERROR');
     }
 
+    const projectIdInt = parseInt(projectId);
+
     // 1. Fetch Budget Categories first to have the "Trades"
     const { data: categories, error: catError } = await supabaseAdmin
-        .from('property_budgets')
-        .select('id, category, original_amount, revised_amount')
-        .eq('project_id', projectId)
-        .order('category');
+      .from('property_budgets')
+      .select('id, category')
+      .eq('project_id', projectIdInt)
+      .order('category');
 
     if (catError) {
         throw new APIError('Failed to fetch budget categories', 500, 'DATABASE_ERROR');
+    }
+
+    // 1b. Count tasks with no budget category assigned (always for the whole project)
+    const { data: unassignedTasks, error: unassignedError } = await supabaseAdmin
+      .from('tasks')
+      .select('id, location:locations!inner(project_id)')
+      .eq('location.project_id', projectIdInt)
+      .is('budget_category_id', null);
+
+    if (unassignedError) {
+      console.error('[Trade Report API] Unassigned count error:', unassignedError);
     }
 
     // 2. Fetch Tasks for the project (via locations)
@@ -45,10 +58,11 @@ export const GET = withAuth(async (request: NextRequest) => {
             contractor:contractors(name),
             location:locations!inner(id, name, project_id)
         `)
-        .eq('location.project_id', projectId);
+        .eq('location.project_id', projectIdInt);
 
-    if (budgetCategoryId) {
-        tasksQuery = tasksQuery.eq('budget_category_id', budgetCategoryId);
+    const budgetCategoryIdInt = budgetCategoryId ? parseInt(budgetCategoryId) : undefined;
+    if (budgetCategoryIdInt && !isNaN(budgetCategoryIdInt)) {
+      tasksQuery = tasksQuery.eq('budget_category_id', budgetCategoryIdInt);
     }
 
     const { data: tasks, error: taskError } = await tasksQuery;
@@ -63,20 +77,18 @@ export const GET = withAuth(async (request: NextRequest) => {
 
     // Initialize with categories
     categories?.forEach((cat: any) => {
-        statsByCategory.set(cat.id, {
-            category_id: cat.id,
-            category_name: cat.category,
-            total_tasks: 0,
-            verified_tasks: 0,
-            in_progress_tasks: 0,
-            not_started_tasks: 0,
-            total_estimated_cost: 0,
-            verified_cost: 0,
-            tasks: [] // Only populate if specific category requested? Or simplified list?
-        });
+      statsByCategory.set(cat.id, {
+        category_id: cat.id,
+        category_name: cat.category,
+        total_tasks: 0,
+        verified_tasks: 0,
+        in_progress_tasks: 0,
+        not_started_tasks: 0,
+        total_estimated_cost: 0,
+        verified_cost: 0,
+        tasks: []
+      });
     });
-
-    const unassignedTasks: any[] = [];
 
     tasks?.forEach((task: any) => {
         const catId = task.budget_category_id;
@@ -84,7 +96,6 @@ export const GET = withAuth(async (request: NextRequest) => {
 
         if (!stats) {
              // Handle unassigned or category not found
-             if (!catId) unassignedTasks.push(task);
              return; 
         }
 
@@ -112,9 +123,17 @@ export const GET = withAuth(async (request: NextRequest) => {
 
     const result = Array.from(statsByCategory.values());
 
+    const tradeGroups = budgetCategoryIdInt && !isNaN(budgetCategoryIdInt)
+      ? (statsByCategory.has(budgetCategoryIdInt) ? [statsByCategory.get(budgetCategoryIdInt)] : [])
+      : result;
+
     return successResponse({
-        trades: result,
-        unassigned_count: unassignedTasks.length
+        categories: (categories || []).map((c: any) => ({
+          category_id: c.id,
+          category_name: c.category
+        })),
+        trades: tradeGroups,
+        unassigned_count: unassignedTasks?.length || 0
     });
 
   } catch (error) {

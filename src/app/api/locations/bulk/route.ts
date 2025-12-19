@@ -117,6 +117,62 @@ export const POST = withAuth(async (request: NextRequest) => {
               .from('locations')
               .update({ template_applied_id: template_id })
               .in('id', createdIds);
+
+            // Create Dependencies
+            // We need to map sort_order to task_id for each location to establish relationships
+            // First, fetch the created tasks to get their IDs
+            const { data: createdTasks } = await supabaseAdmin
+              .from('tasks')
+              .select('id, location_id, sort_order')
+              .in('location_id', createdIds);
+
+            if (createdTasks && createdTasks.length > 0) {
+              const dependenciesToInsert: any[] = [];
+              
+              // Build a map: location_id -> { sort_order -> task_id }
+              const tasksByLocation = new Map<string, Map<number, string>>();
+              
+              for (const task of createdTasks) {
+                if (!tasksByLocation.has(task.location_id)) {
+                  tasksByLocation.set(task.location_id, new Map());
+                }
+                tasksByLocation.get(task.location_id)?.set(task.sort_order, task.id);
+              }
+
+              // Identify dependency rules from template
+              const dependencyRules = templateTasks
+                .filter((tt: any) => tt.depends_on_sort_order !== null && tt.depends_on_sort_order !== undefined)
+                .map((tt: any) => ({
+                  dependentSortOrder: tt.sort_order,
+                  prerequisiteSortOrder: tt.depends_on_sort_order
+                }));
+
+              // Generate dependency records for each location
+              for (const [locationId, sortOrderMap] of tasksByLocation.entries()) {
+                for (const rule of dependencyRules) {
+                  const dependentTaskId = sortOrderMap.get(rule.dependentSortOrder);
+                  const prerequisiteTaskId = sortOrderMap.get(rule.prerequisiteSortOrder);
+
+                  if (dependentTaskId && prerequisiteTaskId) {
+                    dependenciesToInsert.push({
+                      task_id: dependentTaskId,
+                      depends_on_task_id: prerequisiteTaskId
+                    });
+                  }
+                }
+              }
+
+              // Bulk insert dependencies
+              if (dependenciesToInsert.length > 0) {
+                const { error: depInsertError } = await supabaseAdmin
+                  .from('task_dependencies')
+                  .insert(dependenciesToInsert);
+                  
+                if (depInsertError) {
+                  console.error('[Bulk Locations API] Dependency insert error:', depInsertError);
+                }
+              }
+            }
           } else {
              console.error('[Bulk Locations API] Task generation failed:', taskInsertError);
           }

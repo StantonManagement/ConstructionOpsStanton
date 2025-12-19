@@ -21,7 +21,7 @@ export const PUT = withAuth(async (request: NextRequest, { params }: { params: P
     // Fetch current task status
     const { data: currentTask, error: fetchError } = await supabaseAdmin
       .from('tasks')
-      .select('status, location_id')
+      .select('status, location_id, verification_photo_url')
       .eq('id', id)
       .single();
 
@@ -31,24 +31,50 @@ export const PUT = withAuth(async (request: NextRequest, { params }: { params: P
 
     const currentStatus = currentTask.status;
 
-    // Validation Rules
-    if (currentStatus === 'verified' && status !== 'in_progress') {
-      // Allow un-verifying only if explicitly going back to in_progress (rejection)
-      // Otherwise block
-      // throw new APIError('Cannot change status of a verified task', 400, 'VALIDATION_ERROR');
-      // For now, let's allow it if admin, but generally strictly controlled.
-      // If going to 'in_progress', it's a rejection.
+    const allowedStatuses = new Set(['not_started', 'in_progress', 'worker_complete', 'verified']);
+    if (!allowedStatuses.has(status)) {
+      throw new APIError('Invalid status', 400, 'VALIDATION_ERROR');
     }
 
-    if (status === 'verified') {
-      if (currentStatus !== 'worker_complete') {
-        // Optional: Enforce flow
+    // Validation Rules
+    const notesProvided = typeof verification_notes === 'string' && verification_notes.trim().length > 0;
+
+    if (currentStatus === 'verified' && status !== 'verified') {
+      if (status === 'in_progress' && notesProvided) {
+        // Allow rejection/rework from verified back to in_progress
+      } else {
+        throw new APIError('Cannot change status of a verified task', 400, 'VALIDATION_ERROR');
       }
-      
-      if (!verification_photo_url && !currentTask.verification_photo_url) {
-        // Only require if not already present (though usually passed again)
-         // throw new APIError('Verification photo required', 400, 'VALIDATION_ERROR');
-         // Relaxing this check for now as legacy data might miss it, or handled by UI
+    }
+
+    // No-op transition is allowed (keeps endpoint idempotent)
+    if (status !== currentStatus) {
+      if (status !== 'not_started') {
+        if (currentStatus === 'not_started' && status !== 'in_progress') {
+          throw new APIError('Invalid status transition', 400, 'VALIDATION_ERROR');
+        }
+
+        if (currentStatus === 'in_progress' && status !== 'worker_complete') {
+          throw new APIError('Invalid status transition', 400, 'VALIDATION_ERROR');
+        }
+
+        if (currentStatus === 'worker_complete' && status !== 'verified' && status !== 'in_progress') {
+          throw new APIError('Invalid status transition', 400, 'VALIDATION_ERROR');
+        }
+
+        if (currentStatus === 'worker_complete' && status === 'in_progress' && !notesProvided) {
+          throw new APIError('Rework notes required', 400, 'VALIDATION_ERROR');
+        }
+      }
+
+      if (status === 'verified') {
+        if (currentStatus !== 'worker_complete') {
+          throw new APIError('Task must be worker complete before it can be verified', 400, 'VALIDATION_ERROR');
+        }
+
+        if (!verification_photo_url && !currentTask.verification_photo_url) {
+          throw new APIError('Verification photo required', 400, 'VALIDATION_ERROR');
+        }
       }
     }
 

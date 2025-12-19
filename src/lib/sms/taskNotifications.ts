@@ -9,6 +9,22 @@ interface SMSParams {
 }
 
 export async function sendSMS({ to, body, type, taskId, contractorId }: SMSParams) {
+  if (supabaseAdmin && taskId) {
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+
+    const { data: recent } = await supabaseAdmin
+      .from('sms_log')
+      .select('id')
+      .eq('task_id', taskId)
+      .eq('message_type', type)
+      .gte('sent_at', oneHourAgo)
+      .limit(1);
+
+    if (recent && recent.length > 0) {
+      return { success: true, sid: 'RATE_LIMITED' };
+    }
+  }
+
   // In a real implementation, we would use Twilio SDK here
   // const client = require('twilio')(accountSid, authToken);
   
@@ -18,7 +34,7 @@ export async function sendSMS({ to, body, type, taskId, contractorId }: SMSParam
   const success = true; 
   const mockSid = `SM${Math.random().toString(36).substring(7)}`;
 
-  if (!supabaseAdmin) return;
+  if (!supabaseAdmin) return { success, sid: mockSid };
 
   // Log to database
   await supabaseAdmin
@@ -75,24 +91,25 @@ export async function notifyTaskUnblocked(taskId: string) {
     .from('tasks')
     .select(`
       name, 
-      location:locations(name),
-      contractor_id,
-      contractor:contractors(phone, name)
+      locations(name),
+      assigned_contractor_id,
+      contractors(phone, name)
     `)
     .eq('id', taskId)
     .single();
 
   // Need to handle type safety for joined contractor
-  const contractor = Array.isArray(task?.contractor) ? task?.contractor[0] : task?.contractor;
+  const contractor = Array.isArray((task as any)?.contractors) ? (task as any)?.contractors[0] : (task as any)?.contractors;
+  const location = Array.isArray((task as any)?.locations) ? (task as any)?.locations[0] : (task as any)?.locations;
 
   if (task && contractor?.phone) {
-    const body = `Task ready: ${task.name} at ${task.location?.name} is now unblocked and ready to start.`;
+    const body = `Task ready: ${task.name} at ${location?.name} is now unblocked and ready to start.`;
     await sendSMS({
       to: contractor.phone,
       body,
       type: 'task_unblocked',
       taskId,
-      contractorId: task.contractor_id
+      contractorId: (task as any).assigned_contractor_id
     });
   }
 }
@@ -104,23 +121,24 @@ export async function notifyReworkNeeded(taskId: string, notes: string) {
     .from('tasks')
     .select(`
       name, 
-      location:locations(name),
-      contractor_id,
-      contractor:contractors(phone, name)
+      locations(name),
+      assigned_contractor_id,
+      contractors(phone, name)
     `)
     .eq('id', taskId)
     .single();
 
-  const contractor = Array.isArray(task?.contractor) ? task?.contractor[0] : task?.contractor;
+  const contractor = Array.isArray((task as any)?.contractors) ? (task as any)?.contractors[0] : (task as any)?.contractors;
+  const location = Array.isArray((task as any)?.locations) ? (task as any)?.locations[0] : (task as any)?.locations;
 
   if (task && contractor?.phone) {
-    const body = `Rework needed: ${task.name} at ${task.location?.name}. PM notes: ${notes}`;
+    const body = `Rework needed: ${task.name} at ${location?.name}. PM notes: ${notes}`;
     await sendSMS({
       to: contractor.phone,
       body,
       type: 'rework_needed',
       taskId,
-      contractorId: task.contractor_id
+      contractorId: (task as any).assigned_contractor_id
     });
   }
 }

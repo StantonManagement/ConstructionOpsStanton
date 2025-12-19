@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { LocationFilterBar } from '../components/LocationFilterBar';
-import { RenovationLocationList } from '../components/RenovationLocationList';
+import { LocationFilterBar } from '@/app/renovations/components/LocationFilterBar';
+import { RenovationLocationList } from '@/app/renovations/components/RenovationLocationList';
 import { useRenovationLocations } from '@/hooks/queries/useRenovationLocations';
 import { usePortfolioProperties } from '@/hooks/queries/usePortfolio';
 import { LayoutGrid, List, Loader2, MapPin } from 'lucide-react';
@@ -12,7 +12,9 @@ function LocationsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const returnTo = `/renovations/locations${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
+  const returnToParams = new URLSearchParams(searchParams.toString());
+  returnToParams.delete('returnTo');
+  const returnTo = `/renovations/locations${returnToParams.toString() ? `?${returnToParams.toString()}` : ''}`;
 
   // Initialize filters from URL
   const [filters, setFilters] = useState({

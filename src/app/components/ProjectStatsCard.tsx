@@ -16,7 +16,9 @@ export const ProjectStatsCard: React.FC<Props> = ({ projectId }) => {
   const { data: stats, isLoading } = useProjectStats(projectId);
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const returnTo = `${pathname || '/'}${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
+  const returnToParams = new URLSearchParams(searchParams.toString());
+  returnToParams.delete('returnTo');
+  const returnTo = `${pathname || '/'}${returnToParams.toString() ? `?${returnToParams.toString()}` : ''}`;
 
   if (isLoading) {
     return <div className="h-48 bg-gray-100 animate-pulse rounded-lg border border-gray-200" />;

@@ -6,11 +6,13 @@ import { Button } from '@/components/ui/button';
 interface PortfolioBlockingAlertProps {
   blockedCount: number;
   blockedByReason: Record<string, number>;
+  returnTo?: string;
 }
 
 export const PortfolioBlockingAlert: React.FC<PortfolioBlockingAlertProps> = ({ 
   blockedCount, 
-  blockedByReason 
+  blockedByReason,
+  returnTo,
 }) => {
   const router = useRouter();
 
@@ -39,7 +41,7 @@ export const PortfolioBlockingAlert: React.FC<PortfolioBlockingAlertProps> = ({
       <Button 
         variant="outline" 
         className="bg-white border-amber-300 text-amber-800 hover:bg-amber-50 hover:text-amber-900 whitespace-nowrap"
-        onClick={() => router.push('/renovations/blocking')}
+        onClick={() => router.push(returnTo ? `/renovations/blocking?returnTo=${encodeURIComponent(returnTo)}` : '/renovations/blocking')}
       >
         View Blocking Report
         <ArrowRight className="w-4 h-4 ml-2" />

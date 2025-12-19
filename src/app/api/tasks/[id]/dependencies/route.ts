@@ -50,6 +50,8 @@ export const POST = withAuth(async (request: NextRequest, { params }: { params: 
       throw new APIError('Service role client not available', 500, 'SERVER_ERROR');
     }
 
+    const admin = supabaseAdmin;
+
     const { id: taskId } = await params;
     const body = await request.json();
     const { depends_on_task_id } = body;
@@ -62,21 +64,38 @@ export const POST = withAuth(async (request: NextRequest, { params }: { params: 
       throw new APIError('Task cannot depend on itself', 400, 'VALIDATION_ERROR');
     }
 
-    // Validate no circular dependency (Simple check)
-    // Check if depends_on_task_id already depends on taskId
-    const { data: reverseDep, error: checkError } = await supabaseAdmin
-      .from('task_dependencies')
-      .select('id')
-      .eq('task_id', depends_on_task_id)
-      .eq('depends_on_task_id', taskId)
-      .single();
+    const hasPath = async (startId: string, targetId: string) => {
+      const visited = new Set<string>();
+      const stack: string[] = [startId];
 
-    if (reverseDep) {
+      while (stack.length > 0) {
+        const current = stack.pop()!;
+        if (current === targetId) return true;
+        if (visited.has(current)) continue;
+        visited.add(current);
+
+        const { data: edges, error: edgesError } = await admin
+          .from('task_dependencies')
+          .select('depends_on_task_id')
+          .eq('task_id', current);
+
+        if (edgesError) continue;
+        edges?.forEach((e: any) => {
+          if (e.depends_on_task_id) stack.push(e.depends_on_task_id);
+        });
+
+        if (visited.size > 2000) return false;
+      }
+
+      return false;
+    };
+
+    if (await hasPath(depends_on_task_id, taskId)) {
       throw new APIError('Circular dependency detected', 400, 'VALIDATION_ERROR');
     }
 
     // Validate tasks exist and are in same location (business rule)
-    const { data: tasks, error: fetchError } = await supabaseAdmin
+    const { data: tasks, error: fetchError } = await admin
       .from('tasks')
       .select('id, location_id')
       .in('id', [taskId, depends_on_task_id]);
@@ -92,7 +111,7 @@ export const POST = withAuth(async (request: NextRequest, { params }: { params: 
       throw new APIError('Dependencies must be within the same location', 400, 'VALIDATION_ERROR');
     }
 
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await admin
       .from('task_dependencies')
       .insert([{
         task_id: taskId,

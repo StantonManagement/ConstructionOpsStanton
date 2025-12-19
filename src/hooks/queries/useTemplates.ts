@@ -210,3 +210,26 @@ export function useDeleteTemplateTask() {
     },
   });
 }
+
+export function useReorderTemplateTasks() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ templateId, tasks }: { templateId: string; tasks: { id: string; sort_order: number }[] }) => {
+      const res = await authFetch(`/api/templates/${templateId}/tasks`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tasks }),
+      });
+      
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Failed to reorder template tasks');
+      }
+      return res.json();
+    },
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['template', variables.templateId] });
+    },
+  });
+}

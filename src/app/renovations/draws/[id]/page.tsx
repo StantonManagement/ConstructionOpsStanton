@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useDraw, useSubmitDraw, useApproveDraw, useFundDraw, useDeleteDraw, DrawLineItem } from '@/hooks/queries/useDraws';
 import { Button } from '@/components/ui/button';
@@ -12,18 +12,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
-export default function DrawDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default function DrawDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [id, setId] = useState<string | null>(null);
+  const { id } = params;
   const returnTo = searchParams.get('returnTo');
-  
-  // Unwrap params
-  useEffect(() => {
-    params.then(p => setId(p.id));
-  }, [params]);
 
-  const { data: draw, isLoading } = useDraw(id || '');
+  const { data: draw, isLoading } = useDraw(id);
   const { mutate: submitDraw, isPending: isSubmitting } = useSubmitDraw();
   const { mutate: approveDraw, isPending: isApproving } = useApproveDraw();
   const { mutate: fundDraw, isPending: isFunding } = useFundDraw();
@@ -61,7 +56,7 @@ export default function DrawDetailPage({ params }: { params: Promise<{ id: strin
     return grouped;
   }, [lineItems]);
 
-  if (isLoading || !id) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
         <Loader2 className="w-8 h-8 animate-spin text-gray-400" />

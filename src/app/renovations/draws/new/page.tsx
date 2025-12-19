@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCreateDraw } from '@/hooks/queries/useDraws';
 import { usePortfolioProperties } from '@/hooks/queries/usePortfolio';
