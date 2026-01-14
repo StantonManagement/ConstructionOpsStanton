@@ -858,7 +858,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
             <div>
               <h1 className="text-xl sm:text-2xl font-bold text-foreground">Projects</h1>
               <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                {filteredProjects.length} projects • Updated {new Date().toLocaleTimeString()}
+                {filteredProjects.length} projects
               </p>
             </div>
             <div className="flex items-center gap-2">
