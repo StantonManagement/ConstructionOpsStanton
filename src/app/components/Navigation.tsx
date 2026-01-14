@@ -224,7 +224,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab }) => {
             setActiveTab={setActiveTab}
             icon={<LayoutDashboard className="w-5 h-5"/>}
             href="/"
-            isActive={activeTab === 'overview' || pathname === '/'}
+            isActive={pathname === '/' || pathname === '/dashboard'}
             onMobileClick={closeMobileMenu}
           >
             Dashboard
