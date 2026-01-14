@@ -50,8 +50,8 @@ export function usePortfolios(options: UsePortfoliosOptions = {}) {
       const params = new URLSearchParams();
       if (!activeOnly) params.set('active', 'false');
 
-      const data = await fetchWithAuth(`/api/portfolios?${params}`);
-      return data.portfolios;
+      const response = await fetchWithAuth(`/api/portfolios?${params}`);
+      return response.data.portfolios;
     },
   });
 }
@@ -61,8 +61,8 @@ export function usePortfolio(id: string | undefined) {
   return useQuery({
     queryKey: ['portfolios', id],
     queryFn: async (): Promise<PortfolioWithTotals> => {
-      const data = await fetchWithAuth(`/api/portfolios/${id}`);
-      return data.portfolio;
+      const response = await fetchWithAuth(`/api/portfolios/${id}`);
+      return response.data.portfolio;
     },
     enabled: !!id,
   });
@@ -81,11 +81,11 @@ export function useCreatePortfolio() {
 
   return useMutation({
     mutationFn: async (input: CreatePortfolioInput): Promise<Portfolio> => {
-      const data = await fetchWithAuth('/api/portfolios', {
+      const response = await fetchWithAuth('/api/portfolios', {
         method: 'POST',
         body: JSON.stringify(input),
       });
-      return data.portfolio;
+      return response.data.portfolio;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['portfolios'] });
@@ -108,11 +108,11 @@ export function useUpdatePortfolio() {
 
   return useMutation({
     mutationFn: async ({ id, ...updates }: UpdatePortfolioInput): Promise<Portfolio> => {
-      const data = await fetchWithAuth(`/api/portfolios/${id}`, {
+      const response = await fetchWithAuth(`/api/portfolios/${id}`, {
         method: 'PUT',
         body: JSON.stringify(updates),
       });
-      return data.portfolio;
+      return response.data.portfolio;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['portfolios'] });

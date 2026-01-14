@@ -51,8 +51,8 @@ export function useFundingSources(options: UseFundingSourcesOptions = {}) {
       if (type) params.set('type', type);
       if (!activeOnly) params.set('active', 'false');
 
-      const data = await fetchWithAuth(`/api/funding-sources?${params}`);
-      return data.funding_sources;
+      const response = await fetchWithAuth(`/api/funding-sources?${params}`);
+      return response.data.funding_sources;
     },
   });
 }
@@ -62,8 +62,8 @@ export function useFundingSource(id: string | undefined) {
   return useQuery({
     queryKey: ['funding-sources', id],
     queryFn: async (): Promise<FundingSourceWithPortfolio> => {
-      const data = await fetchWithAuth(`/api/funding-sources/${id}`);
-      return data.funding_source;
+      const response = await fetchWithAuth(`/api/funding-sources/${id}`);
+      return response.data.funding_source;
     },
     enabled: !!id,
   });
@@ -88,11 +88,11 @@ export function useCreateFundingSource() {
 
   return useMutation({
     mutationFn: async (input: CreateFundingSourceInput): Promise<FundingSourceWithPortfolio> => {
-      const data = await fetchWithAuth('/api/funding-sources', {
+      const response = await fetchWithAuth('/api/funding-sources', {
         method: 'POST',
         body: JSON.stringify(input),
       });
-      return data.funding_source;
+      return response.data.funding_source;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['funding-sources'] });
@@ -123,11 +123,11 @@ export function useUpdateFundingSource() {
 
   return useMutation({
     mutationFn: async ({ id, ...updates }: UpdateFundingSourceInput): Promise<FundingSourceWithPortfolio> => {
-      const data = await fetchWithAuth(`/api/funding-sources/${id}`, {
+      const response = await fetchWithAuth(`/api/funding-sources/${id}`, {
         method: 'PUT',
         body: JSON.stringify(updates),
       });
-      return data.funding_source;
+      return response.data.funding_source;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['funding-sources'] });
@@ -144,10 +144,10 @@ export function useDeleteFundingSource() {
 
   return useMutation({
     mutationFn: async (id: string): Promise<{ deleted: boolean; soft_delete: boolean }> => {
-      const data = await fetchWithAuth(`/api/funding-sources/${id}`, {
+      const response = await fetchWithAuth(`/api/funding-sources/${id}`, {
         method: 'DELETE',
       });
-      return data;
+      return response.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['funding-sources'] });
