@@ -7,13 +7,12 @@ import { notifyTaskUnblocked } from '@/lib/sms/taskNotifications';
  * PUT /api/locations/[id]/block
  * Set location as blocked (on_hold)
  */
-export const PUT = withAuth(async (request: NextRequest, { params }: { params: { id: string } }) => {
+export const PUT = withAuth(async (request: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
+  const { id } = await params;
   try {
     if (!supabaseAdmin) {
       throw new APIError('Service role client not available', 500, 'SERVER_ERROR');
     }
-
-    const { id } = params;
     const body = await request.json();
     const { blocked_reason, blocked_note } = body;
 
@@ -22,7 +21,7 @@ export const PUT = withAuth(async (request: NextRequest, { params }: { params: {
     }
 
     const { data, error } = await supabaseAdmin
-      .from('locations')
+      .from('components')
       .update({
         status: 'on_hold',
         blocked_reason,
@@ -55,17 +54,16 @@ export const PUT = withAuth(async (request: NextRequest, { params }: { params: {
  * If we assume unblocking means "ready to work", 'in_progress' is safe, or we could revert to 'not_started' if no tasks started.
  * For simplicity and field workflow, 'in_progress' is usually what happens after unblocking.
  */
-export const DELETE = withAuth(async (request: NextRequest, { params }: { params: { id: string } }) => {
+export const DELETE = withAuth(async (request: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
+  const { id } = await params;
   try {
     if (!supabaseAdmin) {
       throw new APIError('Service role client not available', 500, 'SERVER_ERROR');
     }
 
-    const { id } = params;
-
     // We'll set it to 'in_progress' by default when unblocking
     const { data, error } = await supabaseAdmin
-      .from('locations')
+      .from('components')
       .update({
         status: 'in_progress',
         blocked_reason: null,

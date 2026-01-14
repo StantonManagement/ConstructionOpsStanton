@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import type { Photo, PhotoFilters, PhotoType } from '@/types/photos';
 import { Camera } from 'lucide-react';
-import { EmptyState } from './ui/EmptyState';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 interface Project {
   id: number;

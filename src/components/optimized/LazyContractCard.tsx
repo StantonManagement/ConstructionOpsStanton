@@ -3,7 +3,7 @@
 import React, { memo } from 'react';
 import LazyCard from './LazyCard';
 import { FileText, Calendar, DollarSign, Building, User, CheckCircle, AlertCircle, XCircle } from 'lucide-react';
-import type { Contract } from '@/app/context/DataContext';
+import type { Contract } from '@/context/DataContext';
 
 interface LazyContractCardProps {
   contract: Contract;

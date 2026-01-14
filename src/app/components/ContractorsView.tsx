@@ -6,7 +6,7 @@ import {
   ChevronRight, Building, Edit2, Trash2, MessageSquare, RefreshCw,
   Star, Shield, MoreVertical, X, HardHat
 } from 'lucide-react';
-import { EmptyState } from './ui/EmptyState';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { supabase } from '@/lib/supabaseClient';
 import { sendSMS } from '@/lib/sms';
 import { DataTable } from '@/components/ui/DataTable';

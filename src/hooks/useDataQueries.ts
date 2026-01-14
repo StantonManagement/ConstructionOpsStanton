@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabaseClient';
-import type { Project, Subcontractor, Contract } from '@/app/context/DataContext';
+import type { Project, Subcontractor, Contract, BudgetCategory } from '@/context/DataContext';
 
 // Query keys for consistent caching
 export const queryKeys = {

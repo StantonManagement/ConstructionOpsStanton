@@ -4,7 +4,7 @@ import React, { memo, useMemo } from 'react';
 import * as ReactWindow from 'react-window';
 const List = (ReactWindow as any).FixedSizeList;
 import OptimizedContractorCard from './OptimizedContractorCard';
-import type { Subcontractor } from '@/app/context/DataContext';
+import type { Subcontractor } from '@/context/DataContext';
 
 interface VirtualizedContractorListProps {
   contractors: Subcontractor[];

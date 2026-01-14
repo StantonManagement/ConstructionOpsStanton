@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Collapsible Nav Feature</title>
+    <style>
+        body { font-family: system-ui; padding: 20px; max-width: 800px; margin: 0 auto; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        pre { background: #f5f5f5; padding: 15px; border-radius: 5px; overflow-x: auto; }
+        .success { color: green; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h1>Collapsible Nav Feature Test</h1>
+    
+    <h2>Step 1: Add Test Data</h2>
+    <button onclick="addTestProjects()">Add Test Projects to localStorage</button>
+    <button onclick="addTestContractors()">Add Test Contractors</button>
+    <button onclick="addTestComponents()">Add Test Components</button>
+    
+    <h2>Step 2: View Current Data</h2>
+    <button onclick="showAllData()">Show All Recent Items</button>
+    <button onclick="clearAllData()">Clear All Data</button>
+    
+    <h2>Results:</h2>
+    <pre id="output">Click "Show All Recent Items" to see current localStorage state</pre>
+
+    <script>
+        function addTestProjects() {
+            const projects = [
+                { id: '1', name: 'Oak Street Apartments', href: '/projects?project=1', timestamp: Date.now() },
+                { id: '2', name: 'Downtown Office Building', href: '/projects?project=2', timestamp: Date.now() - 1000 },
+                { id: '3', name: 'Park Plaza Renovation', href: '/projects?project=3', timestamp: Date.now() - 2000 }
+            ];
+            localStorage.setItem('recent_projects', JSON.stringify(projects));
+            showAllData();
+            alert('✅ Test projects added! Now refresh your app at http://localhost:3000 and check the navigation.');
+        }
+
+        function addTestContractors() {
+            const contractors = [
+                { id: '10', name: 'Elite Electrical Services', href: '/contractors?contractor=10', timestamp: Date.now() },
+                { id: '11', name: 'Drywall Pro', href: '/contractors?contractor=11', timestamp: Date.now() - 1000 },
+                { id: '12', name: 'Premium Plumbing', href: '/contractors?contractor=12', timestamp: Date.now() - 2000 }
+            ];
+            localStorage.setItem('recent_contractors', JSON.stringify(contractors));
+            showAllData();
+            alert('✅ Test contractors added! Now refresh your app at http://localhost:3000 and check the navigation.');
+        }
+
+        function addTestComponents() {
+            const components = [
+                { id: 'loc-1', name: 'Unit 101', href: '/renovations/locations/loc-1', timestamp: Date.now() },
+                { id: 'loc-2', name: 'Unit 102', href: '/renovations/locations/loc-2', timestamp: Date.now() - 1000 },
+                { id: 'loc-3', name: 'Unit 103', href: '/renovations/locations/loc-3', timestamp: Date.now() - 2000 }
+            ];
+            localStorage.setItem('recent_components', JSON.stringify(components));
+            showAllData();
+            alert('✅ Test components added! Now refresh your app at http://localhost:3000 and check the navigation.');
+        }
+
+        function clearAllData() {
+            localStorage.removeItem('recent_projects');
+            localStorage.removeItem('recent_contractors');
+            localStorage.removeItem('recent_components');
+            showAllData();
+            alert('🗑️ All data cleared!');
+        }
+
+        function showAllData() {
+            const output = document.getElementById('output');
+            const data = {
+                projects: JSON.parse(localStorage.getItem('recent_projects') || '[]'),
+                contractors: JSON.parse(localStorage.getItem('recent_contractors') || '[]'),
+                components: JSON.parse(localStorage.getItem('recent_components') || '[]')
+            };
+            
+            let result = '=== CURRENT LOCALSTORAGE STATE ===\n\n';
+            
+            result += `Projects (${data.projects.length}):\n`;
+            if (data.projects.length === 0) {
+                result += '  (empty - no chevron will appear)\n';
+            } else {
+                data.projects.forEach((p, i) => {
+                    result += `  ${i+1}. ${p.name} (id: ${p.id})\n`;
+                });
+            }
+            
+            result += `\nContractors (${data.contractors.length}):\n`;
+            if (data.contractors.length === 0) {
+                result += '  (empty - no chevron will appear)\n';
+            } else {
+                data.contractors.forEach((c, i) => {
+                    result += `  ${i+1}. ${c.name} (id: ${c.id})\n`;
+                });
+            }
+            
+            result += `\nComponents (${data.components.length}):\n`;
+            if (data.components.length === 0) {
+                result += '  (empty - no chevron will appear)\n';
+            } else {
+                data.components.forEach((c, i) => {
+                    result += `  ${i+1}. ${c.name} (id: ${c.id})\n`;
+                });
+            }
+            
+            result += '\n=== WHAT TO DO NEXT ===\n';
+            result += '1. Click one of the "Add Test..." buttons above\n';
+            result += '2. Go to http://localhost:3000 in your browser\n';
+            result += '3. Look at the navigation sidebar\n';
+            result += '4. You should see chevrons (→) next to items with data\n';
+            result += '5. Click the chevron to expand and see recent items\n';
+            
+            output.textContent = result;
+        }
+
+        // Show data on load
+        showAllData();
+    </script>
+</body>
+</html>

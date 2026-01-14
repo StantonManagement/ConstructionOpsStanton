@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Clock, User, LogOut, Menu, X, Bell, Settings, Search, ChevronDown, DollarSign, FileText, AlertCircle, Building, Check } from 'lucide-react';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { supabase } from '@/lib/supabaseClient';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useProject } from '../context/ProjectContext';
+import { useProject } from '@/context/ProjectContext';
 
 interface UserData {
   name: string;
@@ -217,10 +218,10 @@ const Header: React.FC<HeaderProps> = ({ onShowProfile, onLogout, userData, onSe
           }
           break;
         case 'contract':
-          window.location.href = '/?tab=manage&subtab=contracts';
+          window.location.href = '/projects?subtab=contracts';
           break;
         case 'project':
-          window.location.href = '/?tab=manage&subtab=projects';
+          window.location.href = '/projects?subtab=projects';
           break;
         case 'alert':
         case 'system':

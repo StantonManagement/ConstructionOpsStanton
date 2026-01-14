@@ -2,7 +2,7 @@
 
 import React, { memo, useCallback } from 'react';
 import { Phone, Mail, MapPin, DollarSign, CheckCircle, XCircle, AlertCircle, MessageSquare } from 'lucide-react';
-import type { Subcontractor } from '@/app/context/DataContext';
+import type { Subcontractor } from '@/context/DataContext';
 
 interface OptimizedContractorCardProps {
   contractor: Subcontractor;

@@ -9,7 +9,8 @@ import { useCreateContractor, useUpdateContractor, useDeleteContractor } from '@
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useLineItemsState, LineItem } from '@/hooks/useLineItemsState';
 import { EditableLineItemsTable } from '@/app/components/EditableLineItemsTable';
-import { useModal } from '@/app/context/ModalContext';
+import { useModal } from '@/context/ModalContext';
+import { useProject } from '@/context/ProjectContext';
 import { Project, Subcontractor, Contract } from '@/types/schema';
 import { formatCurrency } from '@/lib/theme';
 

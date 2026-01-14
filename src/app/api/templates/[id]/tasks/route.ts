@@ -6,7 +6,8 @@ import { withAuth, successResponse, errorResponse, APIError } from '@/lib/apiHel
  * GET /api/templates/[id]/tasks
  * List tasks for a template
  */
-export const GET = withAuth(async (request: NextRequest, { params }: { params: { id: string } }) => {
+export const GET = withAuth(async (request: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
+  const { id } = await params;
   try {
     if (!supabaseAdmin) {
       throw new APIError('Service role client not available', 500, 'SERVER_ERROR');
@@ -15,7 +16,7 @@ export const GET = withAuth(async (request: NextRequest, { params }: { params: {
     const { data, error } = await supabaseAdmin
       .from('template_tasks')
       .select('*')
-      .eq('template_id', params.id)
+      .eq('template_id', id)
       .order('sort_order');
 
     if (error) {
@@ -37,7 +38,8 @@ export const GET = withAuth(async (request: NextRequest, { params }: { params: {
  * POST /api/templates/[id]/tasks
  * Add a task to a template
  */
-export const POST = withAuth(async (request: NextRequest, { params }: { params: { id: string } }) => {
+export const POST = withAuth(async (request: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
+  const { id } = await params;
   try {
     if (!supabaseAdmin) {
       throw new APIError('Service role client not available', 500, 'SERVER_ERROR');
@@ -64,7 +66,7 @@ export const POST = withAuth(async (request: NextRequest, { params }: { params: 
       const { data: maxOrderData } = await supabaseAdmin
         .from('template_tasks')
         .select('sort_order')
-        .eq('template_id', params.id)
+        .eq('template_id', id)
         .order('sort_order', { ascending: false })
         .limit(1)
         .single();
@@ -75,7 +77,7 @@ export const POST = withAuth(async (request: NextRequest, { params }: { params: 
     const { data, error } = await supabaseAdmin
       .from('template_tasks')
       .insert([{
-        template_id: params.id,
+        template_id: id,
         name: name.trim(),
         description,
         default_duration_days,

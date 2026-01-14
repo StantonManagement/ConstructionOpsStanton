@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Project } from '../context/DataContext';
+import { Project } from '@/context/DataContext';
 import { supabase } from '@/lib/supabaseClient';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { formatCurrency } from '@/lib/theme';

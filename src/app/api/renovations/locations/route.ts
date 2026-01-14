@@ -17,7 +17,7 @@ export async function GET(request: Request) {
 
     // Query locations table directly to allow filtering by all fields
     let query = supabase
-      .from('locations')
+      .from('components')
       .select('*, projects(name)', { count: 'exact' });
 
     // Property Filter
@@ -39,7 +39,7 @@ export async function GET(request: Request) {
     }
 
     // Blocked Filter
-    if (blocked) {
+    if (blocked && blocked !== 'any_state') {
       if (blocked === 'none') {
         query = query.neq('status', 'on_hold');
       } else if (blocked === 'any') {
@@ -118,10 +118,12 @@ export async function GET(request: Request) {
     });
 
     let filteredLocations = locations;
-    if (pendingVerify === 'any') {
-      filteredLocations = locations.filter((l: any) => (l.pending_verify_tasks || 0) > 0);
-    } else if (pendingVerify === 'none') {
-      filteredLocations = locations.filter((l: any) => (l.pending_verify_tasks || 0) === 0);
+    if (pendingVerify && pendingVerify !== 'any_state') {
+      if (pendingVerify === 'any') {
+        filteredLocations = locations.filter((l: any) => (l.pending_verify_tasks || 0) > 0);
+      } else if (pendingVerify === 'none') {
+        filteredLocations = locations.filter((l: any) => (l.pending_verify_tasks || 0) === 0);
+      }
     }
 
     // If sorting was by progress (stats), we have to do it in memory now which is not ideal for pagination

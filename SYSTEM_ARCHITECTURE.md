@@ -126,8 +126,16 @@
 │          BACKEND ARCHITECTURE           │
 ├─────────────────────────────────────────┤
 │  Runtime: Next.js API Routes            │
-│  Database: Supabase (PostgreSQL 15)     │
+│  Database: Supabase PostgreSQL 15.8.1   │
+│  Project: iyiqdgmpcuczzigotjhf          │
+│  Region: us-east-2                      │
 │  Auth: Supabase Auth (JWT)              │
+├─────────────────────────────────────────┤
+│  Database Features:                     │
+│  • Row Level Security (RLS) enabled     │
+│  • 40+ tables with foreign keys         │
+│  • Custom enum types                    │
+│  • Real-time subscriptions              │
 ├─────────────────────────────────────────┤
 │  External Services:                     │
 │  • AWS S3 (file storage)                │
@@ -531,6 +539,12 @@ else return <ConstructionDashboard />;
 
 ### Row Level Security (RLS)
 
+**RLS Status by Table:**
+- ✅ **Enabled:** users, projects, contractors, contracts, project_contractors, project_line_items, payment_applications, payment_documents, payment_sms_conversations, property_budgets, project_schedules, schedule_tasks, change_orders, photos, notifications, user_role, permissions, role_permissions, owner_entities
+- ❌ **Disabled:** locations, tasks, task_templates, task_dependencies, portfolios, funding_sources, backlog_items, schedule_defaults
+
+**Sample RLS Policies:**
+
 **Projects Table:**
 ```sql
 -- Users can only see projects they have access to
@@ -557,6 +571,8 @@ USING (
   )
 );
 ```
+
+**Note:** Task management tables (locations, tasks) have RLS disabled for performance during the renovation module development phase.
 
 ### API Route Security
 

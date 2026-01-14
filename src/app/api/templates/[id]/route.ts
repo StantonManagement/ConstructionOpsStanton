@@ -6,7 +6,8 @@ import { withAuth, successResponse, errorResponse, APIError } from '@/lib/apiHel
  * GET /api/templates/[id]
  * Get single template with tasks
  */
-export const GET = withAuth(async (request: NextRequest, { params }: { params: { id: string } }) => {
+export const GET = withAuth(async (request: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
+  const { id } = await params;
   try {
     if (!supabaseAdmin) {
       throw new APIError('Service role client not available', 500, 'SERVER_ERROR');
@@ -18,7 +19,7 @@ export const GET = withAuth(async (request: NextRequest, { params }: { params: {
         *,
         tasks:template_tasks(*)
       `)
-      .eq('id', params.id)
+      .eq('id', id)
       .single();
 
     if (error) {
@@ -45,7 +46,8 @@ export const GET = withAuth(async (request: NextRequest, { params }: { params: {
  * PUT /api/templates/[id]
  * Update template details
  */
-export const PUT = withAuth(async (request: NextRequest, { params }: { params: { id: string } }) => {
+export const PUT = withAuth(async (request: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
+  const { id } = await params;
   try {
     if (!supabaseAdmin) {
       throw new APIError('Service role client not available', 500, 'SERVER_ERROR');
@@ -63,7 +65,7 @@ export const PUT = withAuth(async (request: NextRequest, { params }: { params: {
     const { data, error } = await supabaseAdmin
       .from('scope_templates')
       .update(updates)
-      .eq('id', params.id)
+      .eq('id', id)
       .select()
       .single();
 
@@ -86,7 +88,8 @@ export const PUT = withAuth(async (request: NextRequest, { params }: { params: {
  * DELETE /api/templates/[id]
  * Delete template
  */
-export const DELETE = withAuth(async (request: NextRequest, { params }: { params: { id: string } }) => {
+export const DELETE = withAuth(async (request: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
+  const { id } = await params;
   try {
     if (!supabaseAdmin) {
       throw new APIError('Service role client not available', 500, 'SERVER_ERROR');
@@ -95,7 +98,7 @@ export const DELETE = withAuth(async (request: NextRequest, { params }: { params
     const { error } = await supabaseAdmin
       .from('scope_templates')
       .delete()
-      .eq('id', params.id);
+      .eq('id', id);
 
     if (error) {
       console.error('[Template API] Delete error:', error);

@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { Plus, Phone, Mail, DollarSign, FileText, Send, Eye, Edit, Loader2, Users, GripVertical, Tag, Trash2, AlertCircle, LayoutGrid, Table as TableIcon, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
-import { Project } from '../context/DataContext';
+import { Project } from '@/context/DataContext';
 import { DataTable } from '@/components/ui/DataTable';
 import { SignalBadge } from '@/components/ui/SignalBadge';
 import { formatCurrency } from '@/lib/theme';

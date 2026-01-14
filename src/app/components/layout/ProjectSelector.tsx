@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown, MapPin, X, Building2 } from 'lucide-react';
-import { useProject } from '@/app/context/ProjectContext';
+import { useProject } from '@/context/ProjectContext';
 
 export default function ProjectSelector() {
   const { selectedProject, projects, setSelectedProjectId, clearProject, isLoading } = useProject();

@@ -1,13 +1,14 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { supabase } from '@/lib/supabaseClient';
 import { 
   FileText, Upload, Trash2, Download, ExternalLink, 
   Image as ImageIcon, File, FileSpreadsheet, MoreVertical, 
   Calendar, User, HardDrive, Search, X
 } from 'lucide-react';
-import { useModal } from '../context/ModalContext';
+import { useModal } from '@/context/ModalContext';
 
 interface DocumentsViewProps {
   projectId: number;

@@ -104,7 +104,7 @@ function PaymentVerificationContent() {
       router.push(returnTo);
     } else if (projectId) {
       // If we have a project ID, go back to the project's payment applications
-      router.push(`/pm-dashboard?tab=projects&projectId=${projectId}`);
+      router.push(`/pm-dashboard?projectId=${projectId}`);
     } else {
       // Default fallback to dashboard
       router.push('/pm-dashboard');
@@ -678,7 +678,7 @@ const lineItemsForTable = lineItems.map((li, idx) => {
       }
       
       // Redirect to payment applications list with approved filter
-      const returnTo = searchParams.get('returnTo') || '/?tab=payment-applications';
+      const returnTo = searchParams.get('returnTo') || '/payments';
       router.push(`${returnTo.includes('?') ? returnTo + '&' : returnTo + '?'}statusFilter=approved`);
     } catch (err) {
       setError((err instanceof Error ? err.message : "Failed to approve"));
@@ -727,7 +727,7 @@ const lineItemsForTable = lineItems.map((li, idx) => {
       
       // Show success message and redirect to payment applications list with rejected filter
       alert('Payment application rejected successfully!');
-      const returnTo = searchParams.get('returnTo') || '/?tab=payment-applications';
+      const returnTo = searchParams.get('returnTo') || '/payments';
       router.push(`${returnTo.includes('?') ? returnTo + '&' : returnTo + '?'}statusFilter=rejected`);
     } catch (err) {
       setError((err instanceof Error ? err.message : "Failed to reject"));
@@ -785,7 +785,7 @@ const lineItemsForTable = lineItems.map((li, idx) => {
         router.push(returnTo);
       } else if (paymentApp?.project?.id) {
         // Redirect to the project's contractors tab
-        router.push(`/?tab=projects&projectId=${paymentApp.project.id}`);
+        router.push(`/projects?project=${paymentApp.project.id}`);
       } else {
         router.push("/");
       }

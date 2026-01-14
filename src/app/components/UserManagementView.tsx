@@ -481,7 +481,7 @@ const DeleteUserModal: React.FC<{
 };
 
 // Edit user modal component
-const EditUserModalInner: React.FC<{
+const EditUserModal: React.FC<{
   user: EditingUser;
   isOpen: boolean;
   onClose: () => void;
@@ -901,16 +901,18 @@ const UserManagementView: React.FC = () => {
         isSubmitting={isSubmitting}
       />
 
-             <EditUserModal
-         user={editingUser}
-         isOpen={isEditModalOpen}
-         onClose={() => {
-           setIsEditModalOpen(false);
-           setEditingUser(null);
-         }}
-         onSubmit={handleUpdateUser}
-         isSubmitting={isSubmitting}
-       />
+             {editingUser && (
+        <EditUserModal
+          user={editingUser}
+          isOpen={isEditModalOpen}
+          onClose={() => {
+            setIsEditModalOpen(false);
+            setEditingUser(null);
+          }}
+          onSubmit={handleUpdateUser}
+          isSubmitting={isSubmitting}
+        />
+      )}
 
        <PasswordResetModal
          user={resettingUser}

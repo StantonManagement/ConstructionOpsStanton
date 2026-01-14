@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Recent Items</title>
+</head>
+<body>
+    <h1>Recent Items Test</h1>
+    <button onclick="addTestData()">Add Test Data to localStorage</button>
+    <button onclick="clearData()">Clear localStorage</button>
+    <button onclick="showData()">Show Current Data</button>
+    <pre id="output"></pre>
+
+    <script>
+        function addTestData() {
+            // Add test projects
+            localStorage.setItem('recent_projects', JSON.stringify([
+                { id: '1', name: 'Oak Street Apartments', href: '/properties/1', timestamp: Date.now() },
+                { id: '2', name: 'Downtown Office Building', href: '/properties/2', timestamp: Date.now() - 1000 },
+                { id: '3', name: 'Park Plaza Renovation', href: '/properties/3', timestamp: Date.now() - 2000 }
+            ]));
+
+            // Add test contractors
+            localStorage.setItem('recent_contractors', JSON.stringify([
+                { id: '10', name: 'Elite Electrical Services', href: '/contractors?contractor=10', timestamp: Date.now() },
+                { id: '11', name: 'Drywall Pro', href: '/contractors?contractor=11', timestamp: Date.now() - 1000 }
+            ]));
+
+            // Add test components
+            localStorage.setItem('recent_components', JSON.stringify([
+                { id: 'loc-1', name: 'Unit 101', href: '/renovations/locations/loc-1', timestamp: Date.now() },
+                { id: 'loc-2', name: 'Unit 102', href: '/renovations/locations/loc-2', timestamp: Date.now() - 1000 },
+                { id: 'loc-3', name: 'Unit 103', href: '/renovations/locations/loc-3', timestamp: Date.now() - 2000 }
+            ]));
+
+            showData();
+            alert('Test data added! Refresh your app to see chevrons.');
+        }
+
+        function clearData() {
+            localStorage.removeItem('recent_projects');
+            localStorage.removeItem('recent_contractors');
+            localStorage.removeItem('recent_components');
+            showData();
+            alert('Data cleared! Refresh your app.');
+        }
+
+        function showData() {
+            const output = document.getElementById('output');
+            output.textContent = JSON.stringify({
+                projects: JSON.parse(localStorage.getItem('recent_projects') || '[]'),
+                contractors: JSON.parse(localStorage.getItem('recent_contractors') || '[]'),
+                components: JSON.parse(localStorage.getItem('recent_components') || '[]')
+            }, null, 2);
+        }
+
+        // Show data on load
+        showData();
+    </script>
+</body>
+</html>

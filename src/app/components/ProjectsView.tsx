@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, ChangeEvent, useMemo } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { Building, Users, DollarSign, Calendar, AlertCircle, CheckCircle, Clock, RefreshCw, Eye, Plus, X, Edit2, Trash2, FolderKanban } from 'lucide-react';
-import { EmptyState } from './ui/EmptyState';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { getProjectStatusBadge, getStatusLabel } from '@/lib/statusColors';
@@ -400,6 +400,11 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
     });
   }, [projects, searchQuery]);
 
+  // Fetch projects on mount
+  useEffect(() => {
+    fetchProjects();
+  }, [fetchProjects]);
+
   const handleRefresh = async () => {
     setIsRefreshing(true);
     await fetchProjects();
@@ -717,7 +722,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
     // Update URL to include project ID
     const params = new URLSearchParams(searchParams.toString());
     params.set('project', project.id.toString());
-    router.replace(`/?tab=projects&${params.toString()}`, { scroll: false });
+    router.replace(`/projects?${params.toString()}`, { scroll: false });
   };
 
   const handleBackToList = () => {
@@ -726,7 +731,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
     // Remove project ID from URL
     const params = new URLSearchParams(searchParams.toString());
     params.delete('project');
-    router.replace(`/?tab=projects&${params.toString()}`, { scroll: false });
+    router.replace(`/projects?${params.toString()}`, { scroll: false });
   };
 
   const handleProjectClickOld = async (project: Project) => {

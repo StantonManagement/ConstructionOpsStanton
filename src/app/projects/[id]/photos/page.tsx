@@ -4,7 +4,7 @@ import React from 'react';
 import Header from '@/app/components/Header';
 import Navigation from '@/app/components/Navigation';
 import PhotoGalleryView from '@/app/components/PhotoGalleryView';
-import { useProject } from '@/app/context/ProjectContext';
+import { useProject } from '@/context/ProjectContext';
 import { useRouter } from 'next/navigation';
 
 export default function PhotosPage({ params }: { params: Promise<{ id: string }> }) {
@@ -34,18 +34,15 @@ export default function PhotosPage({ params }: { params: Promise<{ id: string }>
   // Handlers for Navigation props (mostly to support legacy prop requirement)
   const handleTabChange = (tab: string) => {
     // If navigating away from photos, we might need to route
-    if (tab === 'overview') router.push('/?tab=overview');
-    else if (tab === 'projects') router.push('/?tab=projects');
+    if (tab === 'overview') router.push('/');
+    else if (tab === 'projects') router.push('/projects');
     // ... etc ... 
     // This implies Navigation needs to support routing or we pass a handler that routes.
     // Our Navigation component handles routing if `href` is present on items.
     // But expanding project section items call `setActiveTab` then replace URL.
     
-    // Ideally, Navigation component should handle routing itself or we provide a smarter handler.
-    // For now, simple redirect back to main dashboard with tab param.
-    if (tab !== 'projects') {
-       router.push(`/?tab=${tab}`);
-    }
+    // Navigation component handles routing via href props
+    // No need for manual tab routing here
   };
 
   return (

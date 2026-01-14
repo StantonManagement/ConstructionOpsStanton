@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
-import { useData } from '../context/DataContext';
+import { useData } from '@/context/DataContext';
 import { TrendingUp, TrendingDown, DollarSign, Calendar, Users, Building } from 'lucide-react';
 import { formatCurrency } from '@/lib/theme';
 import { supabase } from '@/lib/supabaseClient';

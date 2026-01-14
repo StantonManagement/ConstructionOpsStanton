@@ -4,9 +4,11 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/providers/AuthProvider";
 import { ReactQueryProvider } from "@/providers/ReactQueryProvider";
-import { ModalProvider } from "./context/ModalContext";
-import { ProjectProvider } from "./context/ProjectContext";
+import { ModalProvider } from "@/context/ModalContext";
+import { ProjectProvider } from "@/context/ProjectContext";
+import { PortfolioProvider } from "@/context/PortfolioContext";
 import ErrorBoundary from "./components/ErrorBoundary";
+import AppLayout from "@/app/components/AppLayout";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -44,11 +46,15 @@ export default function RootLayout({
           <ReactQueryProvider>
             <AuthProvider>
               <Suspense fallback={null}>
-                <ProjectProvider>
-                  <ModalProvider>
-                    {children}
-                  </ModalProvider>
-                </ProjectProvider>
+                <PortfolioProvider>
+                  <ProjectProvider>
+                    <ModalProvider>
+                      <AppLayout>
+                        {children}
+                      </AppLayout>
+                    </ModalProvider>
+                  </ProjectProvider>
+                </PortfolioProvider>
               </Suspense>
             </AuthProvider>
           </ReactQueryProvider>

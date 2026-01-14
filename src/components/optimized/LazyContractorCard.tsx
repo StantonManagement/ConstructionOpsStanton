@@ -3,7 +3,7 @@
 import React, { memo } from 'react';
 import LazyCard from './LazyCard';
 import OptimizedContractorCard from './OptimizedContractorCard';
-import type { Subcontractor } from '@/app/context/DataContext';
+import type { Subcontractor } from '@/context/DataContext';
 
 interface LazyContractorCardProps {
   contractor: Subcontractor;

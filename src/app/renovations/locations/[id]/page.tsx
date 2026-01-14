@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useLocation, useLocations, useUnblockLocation } from '@/hooks/queries/useLocations';
 import { useUpdateTaskStatus } from '@/hooks/queries/useTasks';
@@ -12,6 +12,7 @@ import { PhotoVerificationModal } from '@/app/components/PhotoVerificationModal'
 import { BlockLocationModal } from '@/app/components/BlockLocationModal';
 import { LocationStatusBadge } from '@/components/StatusBadge';
 import { Task } from '@/types/schema';
+import { addRecentItem } from '@/lib/recentItems';
 
 // Helper to sort tasks by status priority then sort_order
 const sortTasks = (tasks: Task[]) => {
@@ -46,6 +47,16 @@ export default function LocationDetailPage({ params }: { params: { id: string } 
 
   const [verifyTask, setVerifyTask] = useState<{ id: string; name: string } | null>(null);
   const [showBlockModal, setShowBlockModal] = useState(false);
+
+  useEffect(() => {
+    if (location?.id && location?.name) {
+      addRecentItem('components', {
+        id: location.id,
+        name: location.name,
+        href: `/renovations/locations/${location.id}`
+      });
+    }
+  }, [location?.id, location?.name]);
 
   const handleBackNavigation = () => {
     if (returnTo) {

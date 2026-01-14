@@ -7,6 +7,81 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
 const nextConfig: NextConfig = {
   serverExternalPackages: ['pdf-lib'],
 
+  // Redirects for route consolidation
+  async redirects() {
+    return [
+      // Locations → Components
+      {
+        source: '/locations',
+        destination: '/components',
+        permanent: true,
+      },
+      {
+        source: '/locations/:id',
+        destination: '/components/:id',
+        permanent: true,
+      },
+      // Renovations routes
+      {
+        source: '/renovations',
+        destination: '/',
+        permanent: true,
+      },
+      {
+        source: '/renovations/locations',
+        destination: '/components',
+        permanent: true,
+      },
+      {
+        source: '/renovations/locations/:id',
+        destination: '/components/:id',
+        permanent: true,
+      },
+      {
+        source: '/renovations/templates',
+        destination: '/?tab=templates',
+        permanent: true,
+      },
+      {
+        source: '/renovations/blocking',
+        destination: '/reports/blocking',
+        permanent: true,
+      },
+      {
+        source: '/renovations/draws',
+        destination: '/?tab=draws',
+        permanent: true,
+      },
+      {
+        source: '/renovations/draws/:id',
+        destination: '/?tab=draws&draw=:id',
+        permanent: true,
+      },
+      // Draws routes
+      {
+        source: '/draws',
+        destination: '/?tab=draws',
+        permanent: true,
+      },
+      {
+        source: '/draws/:id',
+        destination: '/?tab=draws&draw=:id',
+        permanent: true,
+      },
+      // Cash flow
+      {
+        source: '/cash-flow',
+        destination: '/?tab=cash-position',
+        permanent: true,
+      },
+      {
+        source: '/cash-flow/:path*',
+        destination: '/?tab=cash-position',
+        permanent: true,
+      },
+    ];
+  },
+
   // Performance optimizations
   experimental: {
     optimizePackageImports: ['lucide-react', '@radix-ui/react-select', '@radix-ui/react-dialog'],

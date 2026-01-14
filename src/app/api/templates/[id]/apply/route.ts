@@ -6,7 +6,8 @@ import { withAuth, successResponse, errorResponse, APIError } from '@/lib/apiHel
  * POST /api/templates/[id]/apply
  * Apply template to multiple locations
  */
-export const POST = withAuth(async (request: NextRequest, { params }: { params: { id: string } }) => {
+export const POST = withAuth(async (request: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
+  const { id } = await params;
   try {
     if (!supabaseAdmin) {
       throw new APIError('Service role client not available', 500, 'SERVER_ERROR');
@@ -23,7 +24,7 @@ export const POST = withAuth(async (request: NextRequest, { params }: { params: 
     const { data: templateTasks, error: tasksError } = await supabaseAdmin
       .from('template_tasks')
       .select('*')
-      .eq('template_id', params.id)
+      .eq('template_id', id)
       .order('sort_order');
 
     if (tasksError) {
@@ -123,9 +124,9 @@ export const POST = withAuth(async (request: NextRequest, { params }: { params: 
 
     // 4. Update locations with template_applied_id
     const { error: updateError } = await supabaseAdmin
-      .from('locations')
+      .from('components')
       .update({ 
-        template_applied_id: params.id,
+        template_applied_id: id,
         updated_at: timestamp
       })
       .in('id', location_ids);

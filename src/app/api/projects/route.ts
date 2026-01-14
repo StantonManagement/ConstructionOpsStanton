@@ -3,6 +3,36 @@ import { supabaseAdmin } from '@/lib/supabaseClient';
 import { withAuth, successResponse, errorResponse, APIError } from '@/lib/apiHelpers';
 
 /**
+ * GET /api/projects
+ * List all projects
+ */
+export const GET = withAuth(async (request: NextRequest, user: any) => {
+  try {
+    if (!supabaseAdmin) {
+      throw new APIError('Service role client not available', 500, 'SERVER_ERROR');
+    }
+
+    const { data: projects, error } = await supabaseAdmin
+      .from('projects')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('[Projects API] Query error:', error);
+      throw new APIError(error.message || 'Failed to fetch projects', 500, 'DATABASE_ERROR');
+    }
+
+    return successResponse({ projects: projects || [] });
+  } catch (error) {
+    console.error('[Projects API] GET error:', error);
+    if (error instanceof APIError) {
+      return errorResponse(error.message, error.statusCode, error.code);
+    }
+    return errorResponse('Failed to fetch projects', 500, 'INTERNAL_ERROR');
+  }
+});
+
+/**
  * POST /api/projects
  * Create a new project
  */

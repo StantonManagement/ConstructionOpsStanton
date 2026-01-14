@@ -1,9 +1,9 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { useData } from '../context/DataContext';
+import { useData } from '@/context/DataContext';
 import { useAuth } from '@/providers/AuthProvider';
 import ProjectCard from '../../components/ProjectCard';
 import { supabase } from '@/lib/supabaseClient';
-import { Project } from '../context/DataContext';
+import { Project } from '@/context/DataContext';
 import { MetricCard } from '@/components/ui/MetricCard';
 import { getBudgetStatus, formatCurrency } from '@/lib/theme';
 
@@ -86,11 +86,11 @@ const DecisionQueueCards: React.FC<{ role: string | null, setError: (msg: string
   };
 
   const navigateToChangeOrder = (coId: string) => {
-    window.location.href = `/?tab=change-orders&id=${coId}`;
+    window.location.href = `/change-orders?id=${coId}`;
   };
 
   const navigateToPaymentApplications = () => {
-    window.location.href = "/?tab=payments";
+    window.location.href = "/payments";
   };
 
   const fetchQueue = useCallback(async () => {

@@ -146,7 +146,7 @@ export const MobileFilterSheet: React.FC<Props> = ({ filters, onFilterChange, co
           <div className="space-y-3">
             <h4 className="text-sm font-medium text-gray-500 uppercase tracking-wider">Type</h4>
             <div className="flex flex-wrap gap-2">
-              {['all', 'unit', 'common_area', 'exterior', 'building_wide'].map(type => (
+              {['all', 'unit', 'common_area', 'exterior', 'building_system'].map(type => (
                 <Button
                   key={type}
                   variant={draftFilters.type === type ? 'default' : 'outline'}

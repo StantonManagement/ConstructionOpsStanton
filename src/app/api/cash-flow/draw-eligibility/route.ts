@@ -41,7 +41,7 @@ export const GET = withAuth(async (request: NextRequest) => {
     // 2. Fetch Eligible Tasks (Tasks that are verified but NOT in a draw)
     // We can find tasks where verified=true AND id NOT IN (select task_id from draw_line_items)
     const { data: tasks, error: tasksError } = await supabaseAdmin
-      .from('tasks')
+      .from('components')
       .select(`
         id, 
         name, 
@@ -67,7 +67,7 @@ export const GET = withAuth(async (request: NextRequest) => {
     
     // Re-query with correct join syntax
     const { data: rawTasks, error: rawTasksError } = await supabaseAdmin
-      .from('tasks')
+      .from('components')
       .select(`
         id,
         name,

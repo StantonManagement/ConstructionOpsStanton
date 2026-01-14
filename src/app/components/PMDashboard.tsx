@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/providers/AuthProvider";
 import Header from "./Header";
 import UserProfile from "./UserProfile";
-import { useModal } from "../context/ModalContext";
+import { useModal } from "@/context/ModalContext";
 import { DataTable } from '@/components/ui/DataTable';
 import { SignalBadge } from '@/components/ui/SignalBadge';
 import { getBudgetStatus, SystemStatus, formatCurrency, formatDate, getPaymentStatus } from '@/lib/theme';
@@ -191,7 +191,7 @@ function ProjectOverview({ project, onCreatePaymentApps, onStatsPaymentAppClick 
   // Function to handle payment application click
   const handlePaymentAppClick = (appId: number) => {
     // Pass the current context as URL parameters for proper back navigation
-    const returnTo = `/pm-dashboard?tab=projects&projectId=${project.id}`;
+    const returnTo = `/pm-dashboard?projectId=${project.id}`;
     router.push(`/payments/${appId}/verify?returnTo=${returnTo}&projectId=${project.id}`);
   };
 
@@ -1245,7 +1245,7 @@ function DailyLogRequests({ projects }: { projects: any[] }) {
                   <select
                     value={selectedProject?.id || ''}
                     onChange={(e) => {
-                      const project = projects.find(p => p.id === Number(e.target.value));
+                      const project = projects.find(p => p.id === e.target.value);
                       setSelectedProject(project);
                     }}
                     className="w-full border border-border rounded-md px-3 py-2 focus:ring-primary focus:border-primary"

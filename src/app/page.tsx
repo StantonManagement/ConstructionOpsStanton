@@ -2,7 +2,7 @@
 
 import { Suspense } from 'react';
 import { useAuth } from '@/providers/AuthProvider';
-import { DataProvider, useData } from './context/DataContext';
+import { DataProvider, useData } from '@/context/DataContext';
 import ConstructionDashboard from './components/ConstructionDashboard';
 import PMDashboard from './components/PMDashboard';
 import AuthScreen from './components/AuthScreen';

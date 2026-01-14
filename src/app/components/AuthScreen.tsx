@@ -94,7 +94,9 @@ const AuthScreen: React.FC = () => {
       return;
     }
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/reset-password`,
+      });
       if (error) {
         setResetError(error.message);
       } else {

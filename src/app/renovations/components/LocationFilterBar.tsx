@@ -178,7 +178,7 @@ export const LocationFilterBar: React.FC<Props> = ({ filters, onFilterChange, pr
               <SelectItem value="unit">Units</SelectItem>
               <SelectItem value="common_area">Common Areas</SelectItem>
               <SelectItem value="exterior">Exterior</SelectItem>
-              <SelectItem value="building_wide">Building Wide</SelectItem>
+              <SelectItem value="building_system">Building System</SelectItem>
             </SelectContent>
           </Select>
 

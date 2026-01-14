@@ -167,7 +167,7 @@ const BudgetDashboard: React.FC = () => {
     } else {
       params.set('project', projectId);
     }
-    router.replace(`/?tab=budget&${params.toString()}`, { scroll: false });
+    router.replace(`/projects?project=${projectId}&subtab=budget`, { scroll: false });
   };
 
   // Filter projects or budget items based on selection and filters
@@ -219,7 +219,7 @@ const BudgetDashboard: React.FC = () => {
 
   // Handle row click to navigate to project budget detail (Portfolio Mode Only)
   const handleProjectRowClick = (projectId: number) => {
-    router.push(`/?tab=projects&project=${projectId}&subtab=budget`);
+    router.push(`/projects?project=${projectId}&subtab=budget`);
   };
 
   // Toggle status filter
@@ -374,7 +374,7 @@ const BudgetDashboard: React.FC = () => {
         <div className="flex items-center gap-3">
           {!isPortfolioMode && (
             <button
-              onClick={() => router.push(`/?tab=projects&project=${selectedProject}`)}
+              onClick={() => router.push(`/projects?project=${selectedProject}`)}
               className="flex items-center gap-2 px-4 py-2 bg-background border border-border text-foreground rounded-lg hover:bg-accent hover:text-primary transition-colors"
               title="Go to Project Details"
             >

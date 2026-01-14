@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
-import { useData } from '@/app/context/DataContext';
+import { useProject } from '@/context/ProjectContext';
 import { supabase } from '@/lib/supabaseClient';
 import { CreateWarrantyRequest, WarrantyType } from '@/types/warranties';
 

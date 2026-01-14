@@ -58,7 +58,7 @@ export const POST = withAuth(async (request: NextRequest) => {
 
     // Insert locations
     const { data: createdLocations, error: insertError } = await supabaseAdmin
-      .from('locations')
+      .from('components')
       .insert(locationsToInsert)
       .select('id');
 
@@ -114,7 +114,7 @@ export const POST = withAuth(async (request: NextRequest) => {
             
             // Update locations with template_applied_id
             await supabaseAdmin
-              .from('locations')
+              .from('components')
               .update({ template_applied_id: template_id })
               .in('id', createdIds);
 

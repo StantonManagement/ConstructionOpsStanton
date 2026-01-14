@@ -64,7 +64,7 @@ export const POST = withAuth(async (req: NextRequest, { params }: { params: Prom
     }));
 
     const { error: allocError } = await supabaseAdmin
-      .from('loan_draw_allocations')
+      .from('components')
       .insert(allocationInserts);
 
     if (allocError) console.error('Error saving allocations:', allocError);

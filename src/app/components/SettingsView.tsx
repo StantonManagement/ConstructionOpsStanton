@@ -8,7 +8,7 @@ import PermissionsManagement from './PermissionsManagement';
 import EntityManagementView from './EntityManagementView';
 import SettingsScheduleDefaults from './SettingsScheduleDefaults';
 import { useAuth } from '@/providers/AuthProvider';
-import { ToastContainer, Toast } from './ui/Toast';
+import { ToastContainer, Toast } from '@/components/ui/Toast';
 
 import { hasRoleAccess, canAccessUserManagement, canAccessPermissionsManagement } from '@/lib/permissions';
 
@@ -536,7 +536,7 @@ const SettingsView: React.FC = () => {
     // Update URL with subtab parameter
     const params = new URLSearchParams(searchParams.toString());
     params.set('subtab', tab);
-    router.replace(`/?tab=settings&${params.toString()}`, { scroll: false });
+    router.replace(`/settings?${params.toString()}`, { scroll: false });
   };
 
   return (

@@ -36,11 +36,11 @@ function TradeReportContent() {
     }
 
     if (projectId) {
-      router.push(`/?tab=projects&project=${projectId}&subtab=budget`);
+      router.push(`/projects?project=${projectId}&subtab=budget`);
       return;
     }
 
-    router.push('/?tab=projects');
+    router.push('/projects');
   };
 
   const handleProjectChange = (value: string) => {

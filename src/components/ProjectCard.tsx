@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Project } from '../app/context/DataContext';
+import { Project } from '@/context/DataContext';
 
 type Props = {
   project: Project;

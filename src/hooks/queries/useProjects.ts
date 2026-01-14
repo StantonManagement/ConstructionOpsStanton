@@ -11,23 +11,39 @@ export interface Project {
   budget: number;
   owner_entity_id?: number | null;
   portfolio_name?: string | null;
+  portfolio_id?: string | null;
   total_units?: number | null;
   created_at: string;
   updated_at: string;
 }
 
 async function fetchProjects(): Promise<Project[]> {
-  const { data, error } = await supabase
-    .from('projects')
-    .select('*')
-    .order('created_at', { ascending: false });
+  try {
+    const { data: session } = await supabase.auth.getSession();
+    
+    if (!session.session) {
+      console.error('[useProjects] No active session');
+      return [];
+    }
 
-  if (error) {
-    console.error('[useProjects] Error fetching projects:', error);
-    throw new Error(error.message);
+    const response = await fetch('/api/projects', {
+      headers: {
+        'Authorization': `Bearer ${session.session.access_token}`
+      }
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      console.error('[useProjects] API error:', error);
+      throw new Error(error.message || 'Failed to fetch projects');
+    }
+
+    const result = await response.json();
+    return result.projects || [];
+  } catch (err) {
+    console.error('[useProjects] Fetch error:', err);
+    return [];
   }
-
-  return data || [];
 }
 
 export function useProjects() {

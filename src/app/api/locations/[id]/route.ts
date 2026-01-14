@@ -19,7 +19,7 @@ export const GET = withAuth(async (request: NextRequest, { params }: { params: P
     }
 
     const { data, error } = await supabaseAdmin
-      .from('locations')
+      .from('components')
       .select(`
         *,
         projects(name),
@@ -107,7 +107,7 @@ export const PUT = withAuth(async (request: NextRequest, { params }: { params: P
     }
 
     const { data, error } = await supabaseAdmin
-      .from('locations')
+      .from('components')
       .update(updates)
       .eq('id', id)
       .select()
@@ -145,7 +145,7 @@ export const DELETE = withAuth(async (request: NextRequest, { params }: { params
     }
 
     const { error } = await supabaseAdmin
-      .from('locations')
+      .from('components')
       .delete()
       .eq('id', id);
 

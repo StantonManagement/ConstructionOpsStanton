@@ -28,7 +28,7 @@ export const GET = withAuth(async (request: NextRequest) => {
     // or relationships might be inferred.
     
     const { data, error } = await supabaseAdmin
-      .from('locations')
+      .from('components')
       .select(`
         *,
         tasks (
@@ -106,7 +106,7 @@ export const POST = withAuth(async (request: NextRequest) => {
     if (!type) throw new APIError('type is required', 400, 'VALIDATION_ERROR');
 
     const { data, error } = await supabaseAdmin
-      .from('locations')
+      .from('components')
       .insert([{
         project_id,
         name: name.trim(),

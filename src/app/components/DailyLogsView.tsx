@@ -4,8 +4,8 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { FileText, Plus, Edit2, Trash2, Eye, AlertCircle, CheckCircle, Clock, RefreshCw, Phone, Mail, MessageSquare, Save, X } from 'lucide-react';
-import { useModal } from '../context/ModalContext';
-import { EmptyState } from './ui/EmptyState';
+import { useModal } from '@/context/ModalContext';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 // Utility functions
 const formatDate = (dateString: string) => {
@@ -519,7 +519,7 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
                 <select
                   value={selectedProject?.id || ''}
                   onChange={(e) => {
-                    const project = projects.find(p => p.id === Number(e.target.value));
+                    const project = projects.find(p => p.id === e.target.value);
                     setSelectedProject(project);
                   }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-primary"

@@ -7,7 +7,7 @@ import { DollarSign, Filter, Search, RefreshCw, CheckCircle, XCircle, Clock, Ale
 import { generateG703Pdf } from '@/lib/g703Pdf';
 import { Badge } from '@/components/ui/badge';
 import { getPaymentStatusBadge, getStatusLabel, getStatusIconColor, PaymentStatus } from '@/lib/statusColors';
-import { useModal } from '../context/ModalContext';
+import { useModal } from '@/context/ModalContext';
 import { DataTable } from '@/components/ui/DataTable';
 import { SignalBadge } from '@/components/ui/SignalBadge';
 import { SystemStatus } from '@/lib/theme';
@@ -955,7 +955,7 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
 
   const handleVerifyPayment = (paymentAppId: number) => {
     // Pass the current context as URL parameters for proper back navigation
-    const returnTo = `/?tab=payment-applications`;
+    const returnTo = `/payments`;
     window.location.href = `/payments/${paymentAppId}/verify?returnTo=${encodeURIComponent(returnTo)}`;
   };
 
@@ -1194,7 +1194,7 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
 
   const handlePaymentCardClick = async (application: any) => {
     // Directly redirect to verify page with return parameter
-    const returnTo = `/?tab=payment-applications`;
+    const returnTo = `/payments`;
     window.location.href = `/payments/${application.id}/verify?returnTo=${encodeURIComponent(returnTo)}`;
   };
 

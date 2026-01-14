@@ -276,12 +276,20 @@ Render will automatically check if your service is responding. Ensure your app s
 
 **Supabase Keys**:
 1. Go to [Supabase Dashboard](https://app.supabase.com)
-2. Select your project
+2. Select your project: **Ops Dashboard Construction** (iyiqdgmpcuczzigotjhf)
 3. Navigate to **Settings** → **API**
 4. Copy:
    - **Project URL** → `NEXT_PUBLIC_SUPABASE_URL`
    - **anon public** key → `NEXT_PUBLIC_SUPABASE_ANON_KEY`
    - **service_role** key → `SUPABASE_SERVICE_ROLE_KEY` (⚠️ Keep secret!)
+
+**Database Details:**
+- **PostgreSQL Version:** 15.8.1.100
+- **Region:** us-east-2
+- **Host:** db.iyiqdgmpcuczzigotjhf.supabase.co
+- **Status:** ACTIVE_HEALTHY
+- **Tables:** 40+ tables with Row Level Security
+- **Schema Reference:** See `DATABASE_SCHEMA_REFERENCE.md`
 
 **Twilio Keys** (⚠️ **REQUIRED** - SMS is core feature):
 SMS functionality is essential for:
@@ -372,6 +380,20 @@ Run the verification script locally with production URLs, or check logs for:
 - Missing variable errors
 - Connection errors
 - Initialization messages
+
+**Supabase Connection Verification:**
+```bash
+# Check Supabase connection in logs
+# Look for:
+[Supabase] Client initialized: Connected to...
+[Supabase] Service role client available for relationship queries: true
+```
+
+**Database Schema Verification:**
+- Verify all tables exist in Supabase SQL Editor
+- Check foreign key relationships are intact
+- Confirm RLS policies are enabled on appropriate tables
+- See `DATABASE_SCHEMA_REFERENCE.md` for complete schema
 
 ## Common Issues and Solutions
 

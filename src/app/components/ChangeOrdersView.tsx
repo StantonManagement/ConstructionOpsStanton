@@ -25,7 +25,7 @@ import {
 } from 'lucide-react';
 import ChangeOrderForm from './ChangeOrderForm';
 import { DataTable, Column } from '@/components/ui/DataTable';
-import { EmptyState } from './ui/EmptyState';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { SignalBadge } from '@/components/ui/SignalBadge';
 import { SystemStatus, formatCurrency } from '@/lib/theme';
 

@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Search, Filter, Phone, Mail, MapPin, Calendar, CheckCircle, XCircle, AlertCircle, UserPlus } from 'lucide-react';
-import { useData, Subcontractor } from '../context/DataContext';
+import { useData, Subcontractor } from '@/context/DataContext';
 import { supabase } from '@/lib/supabaseClient';
 import { sendSMS } from '@/lib/sms';
 import { DataTable } from '@/components/ui/DataTable';

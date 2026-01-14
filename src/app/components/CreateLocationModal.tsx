@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { useCreateLocation } from '@/hooks/queries/useLocations';
+import { useProperties } from '@/hooks/queries/useProperties';
+import { useProjects } from '@/hooks/queries/useProjects';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { LocationType, UnitType, CreateLocationInput } from '@/types/schema';
 
 interface Props {
-  projectId: number;
+  projectId: string;
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
@@ -16,7 +18,15 @@ interface Props {
 
 export const CreateLocationModal: React.FC<Props> = ({ projectId, isOpen, onClose, onSuccess }) => {
   const { mutate: createLocation, isPending } = useCreateLocation();
+  const { data: properties } = useProperties();
+  const { data: projects } = useProjects();
   const [error, setError] = useState<string | null>(null);
+
+  const currentProject = projects?.find(p => p.id === projectId);
+  const portfolioId = currentProject?.portfolio_id;
+  const filteredProperties = portfolioId 
+    ? properties?.filter(p => p.portfolio_id === portfolioId)
+    : properties;
 
   const [formData, setFormData] = useState<Partial<CreateLocationInput>>({
     name: '',
@@ -24,7 +34,8 @@ export const CreateLocationModal: React.FC<Props> = ({ projectId, isOpen, onClos
     unit_type: '1BR',
     unit_number: '',
     floor: 1,
-    status: 'not_started'
+    status: 'not_started',
+    property_id: ''
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -36,9 +47,15 @@ export const CreateLocationModal: React.FC<Props> = ({ projectId, isOpen, onClos
       return;
     }
 
+    if (!formData.property_id) {
+      setError('Property is required');
+      return;
+    }
+
     createLocation(
       {
         project_id: projectId,
+        property_id: formData.property_id,
         name: formData.name,
         type: formData.type as LocationType,
         unit_type: formData.type === 'unit' ? formData.unit_type as UnitType : undefined,
@@ -57,7 +74,8 @@ export const CreateLocationModal: React.FC<Props> = ({ projectId, isOpen, onClos
             unit_type: '1BR',
             unit_number: '',
             floor: 1,
-            status: 'not_started'
+            status: 'not_started',
+            property_id: ''
           });
         },
         onError: (err) => {
@@ -76,7 +94,29 @@ export const CreateLocationModal: React.FC<Props> = ({ projectId, isOpen, onClos
 
         <form onSubmit={handleSubmit} className="space-y-4 py-4">
           <div className="grid gap-2">
-            <Label htmlFor="type">Location Type</Label>
+            <Label htmlFor="property">Property (Building) *</Label>
+            <Select 
+              value={formData.property_id} 
+              onValueChange={(val) => setFormData(prev => ({ ...prev, property_id: val }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select property" />
+              </SelectTrigger>
+              <SelectContent>
+                {(filteredProperties || []).map(property => (
+                  <SelectItem key={property.id} value={property.id}>
+                    {property.name} {property.address && `- ${property.address}`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {portfolioId && (
+              <p className="text-xs text-gray-500">Only properties in this project's portfolio</p>
+            )}
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="type">Component Type</Label>
             <Select 
               value={formData.type} 
               onValueChange={(val) => setFormData(prev => ({ ...prev, type: val as LocationType }))}
@@ -88,7 +128,7 @@ export const CreateLocationModal: React.FC<Props> = ({ projectId, isOpen, onClos
                 <SelectItem value="unit">Unit</SelectItem>
                 <SelectItem value="common_area">Common Area</SelectItem>
                 <SelectItem value="exterior">Exterior</SelectItem>
-                <SelectItem value="building_wide">Building Wide</SelectItem>
+                <SelectItem value="building_system">Building System</SelectItem>
               </SelectContent>
             </Select>
           </div>

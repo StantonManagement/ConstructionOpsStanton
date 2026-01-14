@@ -54,11 +54,11 @@ function BlockingReportContent() {
     }
 
     if (projectId) {
-      router.push(`/?tab=projects&project=${projectId}&subtab=locations`);
+      router.push(`/projects?project=${projectId}&subtab=locations`);
       return;
     }
 
-    router.push('/?tab=projects');
+    router.push('/projects');
   };
 
   const handleUnblock = (locationId: string) => {

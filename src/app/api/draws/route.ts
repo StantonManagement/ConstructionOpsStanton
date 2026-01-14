@@ -4,7 +4,11 @@ import { withAuth, successResponse, errorResponse, APIError } from '@/lib/apiHel
 
 /**
  * GET /api/draws
- * List draws for a project
+ * List draws with optional filters
+ * Query params:
+ *   - project_id: Filter to specific project
+ *   - funding_source_id: Filter to specific funding source
+ *   - status: Filter by status
  */
 export const GET = withAuth(async (request: NextRequest) => {
   try {
@@ -14,16 +18,38 @@ export const GET = withAuth(async (request: NextRequest) => {
 
     const searchParams = request.nextUrl.searchParams;
     const projectId = searchParams.get('project_id');
+    const fundingSourceId = searchParams.get('funding_source_id');
+    const status = searchParams.get('status');
 
-    if (!projectId) {
-      throw new APIError('project_id is required', 400, 'VALIDATION_ERROR');
+    let query = supabaseAdmin
+      .from('construction_draws')
+      .select(`
+        *,
+        funding_source:funding_sources (
+          id,
+          name,
+          type,
+          portfolio:portfolios (
+            id,
+            name,
+            code
+          )
+        )
+      `);
+
+    if (projectId) {
+      query = query.eq('project_id', projectId);
     }
 
-    const { data, error } = await supabaseAdmin
-      .from('construction_draws')
-      .select('*')
-      .eq('project_id', projectId)
-      .order('draw_number', { ascending: false });
+    if (fundingSourceId) {
+      query = query.eq('funding_source_id', fundingSourceId);
+    }
+
+    if (status) {
+      query = query.eq('status', status);
+    }
+
+    const { data, error } = await query.order('draw_number', { ascending: false });
 
     if (error) {
       throw new APIError(error.message, 500, 'DATABASE_ERROR');
@@ -49,10 +75,33 @@ export const POST = withAuth(async (request: NextRequest) => {
     }
 
     const body = await request.json();
-    const { project_id, notes } = body;
+    const { project_id, funding_source_id, amount, notes } = body;
 
     if (!project_id) {
       throw new APIError('project_id is required', 400, 'VALIDATION_ERROR');
+    }
+
+    if (funding_source_id) {
+      const { data: fundingSource } = await supabaseAdmin
+        .from('funding_sources')
+        .select('id, commitment_amount, drawn_amount')
+        .eq('id', funding_source_id)
+        .single();
+
+      if (!fundingSource) {
+        throw new APIError('Invalid funding source', 400, 'INVALID_FUNDING_SOURCE');
+      }
+
+      if (amount) {
+        const remaining = fundingSource.commitment_amount - fundingSource.drawn_amount;
+        if (amount > remaining) {
+          throw new APIError(
+            `Draw amount exceeds remaining capacity ($${remaining})`,
+            400,
+            'EXCEEDS_REMAINING'
+          );
+        }
+      }
     }
 
     // Get next draw number
@@ -80,7 +129,8 @@ export const POST = withAuth(async (request: NextRequest) => {
         project_id,
         draw_number: nextNumber,
         status: 'draft',
-        amount_requested: 0,
+        funding_source_id: funding_source_id || null,
+        amount_requested: amount || 0,
         notes,
         tenant_id: '00000000-0000-0000-0000-000000000001'
       }])

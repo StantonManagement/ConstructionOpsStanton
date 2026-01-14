@@ -3,15 +3,15 @@
 import React, { ReactNode, useEffect, useState } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { 
-  DollarSign, Settings, Building, BarChart2, Home, Menu, X, 
-  FileText, GitBranch, Clipboard, HardHat, ChevronRight,
-  ListChecks, Image, FolderOpen, Calendar, CreditCard, Wallet, Users,
-  LayoutDashboard, MapPin, Copy, AlertTriangle, Hammer
+  DollarSign, Settings, BarChart2, Menu, X, 
+  HardHat, Building,
+  CreditCard, Wallet,
+  LayoutDashboard, Box, Copy, AlertTriangle, Folder, BarChart3
 } from 'lucide-react';
-import { Project } from '../context/DataContext';
+import { Project } from '@/context/DataContext';
 import { supabase } from '@/lib/supabaseClient';
-import { useProject } from '../context/ProjectContext';
-import NavSection from '@/components/layout/NavSection';
+import { useProject } from '@/context/ProjectContext';
+import { CollapsibleNavItem } from '@/components/CollapsibleNavItem';
 
 type NavigationProps = {
   activeTab: string;
@@ -51,13 +51,8 @@ const NavButton: React.FC<NavButtonProps> = ({ id, activeTab, setActiveTab, icon
           return;
         }
         
-        setActiveTab(id);
         if (href) {
           router.push(href);
-        } else {
-          const params = new URLSearchParams(window.location.search);
-          params.set('tab', id);
-          router.replace(`/?${params.toString()}`, { scroll: false });
         }
       }}
       className={`
@@ -89,19 +84,12 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [notificationCounts, setNotificationCounts] = useState<Record<string, number>>({});
-  const [isProjectExpanded, setIsProjectExpanded] = useState(false);
-  const [isRenovationsExpanded, setIsRenovationsExpanded] = useState(true);
   
   const currentSubTab = searchParams.get('subtab');
   const returnToParams = new URLSearchParams(searchParams.toString());
   returnToParams.delete('returnTo');
   const returnTo = `${pathname || '/'}${returnToParams.toString() ? `?${returnToParams.toString()}` : ''}`;
 
-  useEffect(() => {
-    if (selectedProjectId) {
-      queueMicrotask(() => setIsProjectExpanded(true));
-    }
-  }, [selectedProjectId]);
 
   useEffect(() => {
     const getRole = async () => {
@@ -216,279 +204,179 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab }) => {
             <Building className="w-8 h-8 text-primary" />
             <h1 className="ml-3 text-xl font-bold text-gray-900">Construction Ops</h1>
           </div>
-          {selectedProject ? (
-             <div className="mt-4 p-3 bg-primary/10 rounded-lg border border-primary/20">
-               <p className="text-xs font-medium text-blue-800 mb-1">SELECTED PROJECT</p>
-               <p className="text-sm font-bold text-primary truncate" title={selectedProject.name}>{selectedProject.name}</p>
-             </div>
-          ) : (
-             <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-dashed border-gray-300">
-               <p className="text-xs text-gray-500 text-center">No project selected</p>
-             </div>
-          )}
+          {/* Portfolio Filter - TODO: Implement dropdown */}
+          <div className="mt-4">
+            <select className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary/20">
+              <option value="all">All Portfolios</option>
+              <option value="90-park-portfolio">90 Park Portfolio</option>
+              <option value="north-end-portfolio">North End Portfolio</option>
+              <option value="park-portfolio">Park Portfolio</option>
+              <option value="south-end-portfolio">South End Portfolio</option>
+            </select>
+          </div>
         </div>
 
         {/* Navigation items */}
         <div className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
           <NavButton
-            id="overview"
+            id="dashboard"
             activeTab={activeTab}
             setActiveTab={setActiveTab}
-            icon={<Home className="w-5 h-5"/>}
-            href="/?tab=overview"
+            icon={<LayoutDashboard className="w-5 h-5"/>}
+            href="/"
+            isActive={activeTab === 'overview' || pathname === '/'}
             onMobileClick={closeMobileMenu}
           >
-            Overview
+            Dashboard
+          </NavButton>
+
+          {/* Divider */}
+          <div className="my-2 border-t border-gray-200" />
+
+          <div onClick={closeMobileMenu}>
+            <CollapsibleNavItem
+              icon={<Folder className="w-5 h-5"/>}
+              label="Projects"
+              href="/projects"
+              type="projects"
+            />
+          </div>
+
+          <div onClick={closeMobileMenu}>
+            <CollapsibleNavItem
+              icon={<Box className="w-5 h-5"/>}
+              label="Components"
+              href="/components"
+              type="components"
+            />
+          </div>
+
+          <div onClick={closeMobileMenu}>
+            <CollapsibleNavItem
+              icon={<HardHat className="w-5 h-5"/>}
+              label="Contractors"
+              href="/contractors"
+              type="contractors"
+            />
+          </div>
+
+          {/* Divider */}
+          <div className="my-2 border-t border-gray-200" />
+
+          <NavButton
+            id="payments"
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            icon={<CreditCard className="w-5 h-5"/>}
+            href="/payments"
+            isActive={pathname === '/payments'}
+            badge={notificationCounts['payment']}
+            onMobileClick={closeMobileMenu}
+          >
+            Payments
           </NavButton>
 
           <NavButton
-            id="projects"
+            id="draws"
             activeTab={activeTab}
             setActiveTab={setActiveTab}
-            icon={<Building className="w-5 h-5"/>}
-            href="/?tab=projects"
-            isActive={activeTab === 'projects' && !selectedProjectId}
+            icon={<Wallet className="w-5 h-5"/>}
+            href="/renovations/draws"
+            isActive={pathname?.startsWith('/renovations/draws')}
             onMobileClick={closeMobileMenu}
           >
-            All Projects
+            Draws
           </NavButton>
 
-          {/* Collapsible Project Section */}
-          <div className="mt-4 mb-2">
-            <NavSection
-              title="Current Project"
-              icon={<FolderOpen className="w-5 h-5" />}
-              isExpanded={isProjectExpanded}
-              onToggle={() => setIsProjectExpanded(!isProjectExpanded)}
-              disabled={!selectedProjectId}
-              isActive={isProjectActive}
-            >
-              {!selectedProjectId && isProjectExpanded && (
-                <div className="px-4 py-2 text-xs text-gray-500 italic">
-                  Select a project to view details
-                </div>
-              )}
-              
-              <NavButton
-                id="project-details"
-                activeTab={activeTab}
-                setActiveTab={setActiveTab}
-                onClick={() => handleProjectNav('summary')}
-                icon={<Building className="w-4 h-4"/>}
-                isActive={isProjectActive && currentSubTab === 'summary'}
-                onMobileClick={closeMobileMenu}
-              >
-                Summary
-              </NavButton>
-              <NavButton
-                id="project-contractors"
-                activeTab={activeTab}
-                setActiveTab={setActiveTab}
-                onClick={() => handleProjectNav('contractors')}
-                icon={<Users className="w-4 h-4"/>}
-                isActive={isProjectActive && (currentSubTab === 'contractors' || !currentSubTab)}
-                onMobileClick={closeMobileMenu}
-              >
-                Contractors
-              </NavButton>
-              <NavButton
-                id="project-budget"
-                activeTab={activeTab}
-                setActiveTab={setActiveTab}
-                onClick={() => handleProjectNav('budget')}
-                icon={<BarChart2 className="w-4 h-4"/>}
-                isActive={isProjectActive && currentSubTab === 'budget'}
-                onMobileClick={closeMobileMenu}
-              >
-                Budget
-              </NavButton>
+          <NavButton
+            id="cash-position"
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            icon={<BarChart2 className="w-5 h-5"/>}
+            href="/cash-position"
+            isActive={pathname?.startsWith('/cash-position')}
+            onMobileClick={closeMobileMenu}
+          >
+            Cash Position
+          </NavButton>
 
-              <NavButton
-                id="project-blocking-report"
-                activeTab={activeTab}
-                setActiveTab={setActiveTab}
-                onClick={() => {
-                  if (!selectedProjectId) return;
-                  router.push(`/reports/blocking?project_id=${selectedProjectId}&returnTo=${encodeURIComponent(returnTo)}`);
-                }}
-                icon={<AlertTriangle className="w-4 h-4"/>}
-                isActive={pathname?.startsWith('/reports/blocking')}
-                onMobileClick={closeMobileMenu}
-              >
-                Blocking Report
-              </NavButton>
+          <NavButton
+            id="portfolios"
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            icon={<Folder className="w-5 h-5"/>}
+            href="/portfolios"
+            isActive={pathname?.startsWith('/portfolios')}
+            onMobileClick={closeMobileMenu}
+          >
+            Portfolios
+          </NavButton>
 
-              <NavButton
-                id="project-trade-report"
-                activeTab={activeTab}
-                setActiveTab={setActiveTab}
-                onClick={() => {
-                  if (!selectedProjectId) return;
-                  router.push(`/reports/trade?project_id=${selectedProjectId}&returnTo=${encodeURIComponent(returnTo)}`);
-                }}
-                icon={<BarChart2 className="w-4 h-4"/>}
-                isActive={pathname?.startsWith('/reports/trade')}
-                onMobileClick={closeMobileMenu}
-              >
-                Trade Report
-              </NavButton>
-              <NavButton
-                id="project-schedule"
-                activeTab={activeTab}
-                setActiveTab={setActiveTab}
-                onClick={() => handleProjectNav('schedule')}
-                icon={<Calendar className="w-4 h-4"/>}
-                isActive={isProjectActive && currentSubTab === 'schedule'}
-                onMobileClick={closeMobileMenu}
-              >
-                Schedule
-              </NavButton>
-              <NavButton
-                id="project-loan"
-                activeTab={activeTab}
-                setActiveTab={setActiveTab}
-                onClick={() => handleProjectNav('loan')}
-                icon={<Wallet className="w-4 h-4"/>}
-                isActive={isProjectActive && currentSubTab === 'loan'}
-                onMobileClick={closeMobileMenu}
-              >
-                Loan Draw
-              </NavButton>
-              <NavButton
-                id="project-cashflow"
-                activeTab={activeTab}
-                setActiveTab={setActiveTab}
-                onClick={() => handleProjectNav('cashflow')}
-                icon={<CreditCard className="w-4 h-4"/>}
-                isActive={isProjectActive && currentSubTab === 'cashflow'}
-                onMobileClick={closeMobileMenu}
-              >
-                Cash Flow
-              </NavButton>
-              <NavButton
-                id="project-punchlists"
-                activeTab={activeTab}
-                setActiveTab={setActiveTab}
-                onClick={() => handleProjectNav('punchlists')}
-                icon={<ListChecks className="w-4 h-4"/>}
-                isActive={isProjectActive && currentSubTab === 'punchlists'}
-                onMobileClick={closeMobileMenu}
-              >
-                Punch Lists
-              </NavButton>
-              <NavButton
-                id="project-photos"
-                activeTab={activeTab}
-                setActiveTab={setActiveTab}
-                onClick={() => {
-                  if (selectedProjectId) {
-                    router.push(`/projects/${selectedProjectId}/photos`);
-                  }
-                }}
-                icon={<Image className="w-4 h-4"/>}
-                isActive={pathname?.includes('/photos')}
-                onMobileClick={closeMobileMenu}
-              >
-                Photos
-              </NavButton>
-              <NavButton
-                id="project-documents"
-                activeTab={activeTab}
-                setActiveTab={setActiveTab}
-                onClick={() => handleProjectNav('documents')}
-                icon={<FileText className="w-4 h-4"/>}
-                isActive={isProjectActive && currentSubTab === 'documents'}
-                onMobileClick={closeMobileMenu}
-              >
-                Documents
-              </NavButton>
-            </NavSection>
-          </div>
+          <NavButton
+            id="funding-sources"
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            icon={<DollarSign className="w-5 h-5"/>}
+            href="/funding-sources"
+            isActive={pathname?.startsWith('/funding-sources')}
+            onMobileClick={closeMobileMenu}
+          >
+            Funding Sources
+          </NavButton>
 
-          <div className="pt-2 border-t border-gray-100 mt-2">
-            {userRole && ['admin', 'pm', 'staff'].includes(userRole.toLowerCase()) && (
-              <NavButton
-                id="daily-logs"
-                activeTab={activeTab}
-                setActiveTab={setActiveTab}
-                icon={<Clipboard className="w-5 h-5"/>}
-                href="/?tab=daily-logs"
-                badge={notificationCounts['daily-logs']}
-                onMobileClick={closeMobileMenu}
-              >
-                Daily Logs
-              </NavButton>
-            )}
-            
-            <NavButton
-              id="payments"
-              activeTab={activeTab}
-              setActiveTab={setActiveTab}
-              icon={<DollarSign className="w-5 h-5"/>}
-              href="/?tab=payments"
-              badge={notificationCounts['payment']}
-              onMobileClick={closeMobileMenu}
-            >
-              Payments
-            </NavButton>
+          {/* Divider */}
+          <div className="my-2 border-t border-gray-200" />
 
-            <NavButton
-              id="contractors"
-              activeTab={activeTab}
-              setActiveTab={setActiveTab}
-              icon={<HardHat className="w-5 h-5"/>}
-              href="/?tab=contractors"
-              onMobileClick={closeMobileMenu}
-            >
-              Contractors
-            </NavButton>
+          <NavButton
+            id="blocking"
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            icon={<AlertTriangle className="w-5 h-5"/>}
+            href="/renovations/blocking"
+            isActive={pathname?.startsWith('/renovations/blocking')}
+            onMobileClick={closeMobileMenu}
+          >
+            Blocking
+          </NavButton>
 
-            {userRole && ['admin', 'pm'].includes(userRole.toLowerCase()) && (
-              <>
-                <NavButton
-                  id="change-orders"
-                  activeTab={activeTab}
-                  setActiveTab={setActiveTab}
-                  icon={<GitBranch className="w-5 h-5"/>}
-                  href="/?tab=change-orders"
-                  onMobileClick={closeMobileMenu}
-                >
-                  Change Orders
-                </NavButton>
-                <NavButton
-                  id="templates"
-                  activeTab={activeTab}
-                  setActiveTab={setActiveTab}
-                  icon={<Clipboard className="w-5 h-5"/>}
-                  href="/?tab=templates"
-                  onMobileClick={closeMobileMenu}
-                >
-                  Templates
-                </NavButton>
-                <NavButton
-                  id="budget"
-                  activeTab={activeTab}
-                  setActiveTab={setActiveTab}
-                  icon={<BarChart2 className="w-5 h-5"/>}
-                  href="/?tab=budget"
-                  onMobileClick={closeMobileMenu}
-                >
-                  Budget Dashboard
-                </NavButton>
-              </>
-            )}
+          <NavButton
+            id="templates"
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            icon={<Copy className="w-5 h-5"/>}
+            href="/renovations/templates"
+            isActive={pathname?.startsWith('/renovations/templates')}
+            onMobileClick={closeMobileMenu}
+          >
+            Templates
+          </NavButton>
 
-            <NavButton
-              id="settings"
-              activeTab={activeTab}
-              setActiveTab={setActiveTab}
-              icon={<Settings className="w-5 h-5"/>}
-              href="/?tab=settings"
-              onMobileClick={closeMobileMenu}
-            >
-              Settings
-            </NavButton>
-          </div>
+          <NavButton
+            id="reports"
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            icon={<BarChart3 className="w-5 h-5"/>}
+            href="/reports"
+            isActive={pathname?.startsWith('/reports') && !pathname?.startsWith('/reports/blocking')}
+            onMobileClick={closeMobileMenu}
+          >
+            Reports
+          </NavButton>
+
+          {/* Divider */}
+          <div className="my-2 border-t border-gray-200" />
+
+          <NavButton
+            id="settings"
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            icon={<Settings className="w-5 h-5"/>}
+            href="/settings"
+            isActive={pathname === '/settings'}
+            onMobileClick={closeMobileMenu}
+          >
+            Settings
+          </NavButton>
         </div>
 
         {/* Footer */}

@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import ProjectScheduleTab from './schedule/ProjectScheduleTab';
 import { ArrowLeft, Building, Users, DollarSign, FileText, CheckCircle, XCircle, TrendingUp, AlertCircle, ListChecks, Edit2, Calendar, Trash2 } from 'lucide-react';
-import { Project } from '../context/DataContext';
+import { Project } from '@/context/DataContext';
 import { supabase } from '@/lib/supabaseClient';
 import ProjectContractorsTab from './ProjectContractorsTab';
 import ContractorDetailView from './ContractorDetailView';
@@ -21,6 +21,7 @@ import { BulkLocationModal } from './BulkLocationModal';
 import { LocationDetailView } from './LocationDetailView';
 import { ProjectStatsCard } from './ProjectStatsCard';
 import { authFetch } from '@/lib/authFetch';
+import { addRecentItem } from '@/lib/recentItems';
 
 interface ProjectDetailViewProps {
   project: Project;
@@ -29,7 +30,7 @@ interface ProjectDetailViewProps {
   onDelete?: (project: Project) => void;
 }
 
-  type SubTab = 'summary' | 'contractors' | 'budget' | 'schedule' | 'loan' | 'cashflow' | 'payments' | 'documents' | 'punchlists' | 'locations';
+  type SubTab = 'summary' | 'contractors' | 'budget' | 'schedule' | 'loan' | 'cashflow' | 'payments' | 'documents' | 'punchlists' | 'locations' | 'photos' | 'warranties' | 'daily-logs' | 'change-orders';
 
   // Sub-tab Navigation Component
   function SubTabNavigation({ activeSubTab, onSubTabChange }: { activeSubTab: SubTab; onSubTabChange: (tab: SubTab) => void }) {
@@ -43,7 +44,11 @@ interface ProjectDetailViewProps {
       { id: 'cashflow' as const, label: 'Cash Flow', icon: TrendingUp },
       { id: 'payments' as const, label: 'Payments', icon: DollarSign },
       { id: 'punchlists' as const, label: 'Punch Lists', icon: ListChecks },
-      { id: 'documents' as const, label: 'Documents', icon: FileText }
+      { id: 'documents' as const, label: 'Documents', icon: FileText },
+      { id: 'photos' as const, label: 'Photos', icon: FileText },
+      { id: 'warranties' as const, label: 'Warranties', icon: FileText },
+      { id: 'daily-logs' as const, label: 'Daily Logs', icon: FileText },
+      { id: 'change-orders' as const, label: 'Change Orders', icon: FileText }
     ];
 
   return (
@@ -151,8 +156,8 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ project, onBack, 
   // Initialize from URL or default to 'contractors'
   const getInitialSubTab = (): SubTab => {
     const subtab = searchParams.get('subtab');
-    const validTabs: SubTab[] = ['summary', 'contractors', 'budget', 'schedule', 'loan', 'cashflow', 'payments', 'documents', 'punchlists', 'locations'];
-    return (subtab && validTabs.includes(subtab as SubTab)) ? (subtab as SubTab) : 'locations'; // Default to locations for field PMs
+    const validTabs: SubTab[] = ['summary', 'contractors', 'budget', 'schedule', 'loan', 'cashflow', 'payments', 'documents', 'punchlists', 'locations', 'photos', 'warranties', 'daily-logs', 'change-orders'];
+    return (subtab && validTabs.includes(subtab as SubTab)) ? (subtab as SubTab) : 'contractors';
   };
 
   const [activeSubTab, setActiveSubTab] = useState<SubTab>(getInitialSubTab);
@@ -161,7 +166,7 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ project, onBack, 
   useEffect(() => {
     const subtab = searchParams.get('subtab');
     if (subtab && subtab !== activeSubTab) {
-      const validTabs: SubTab[] = ['summary', 'contractors', 'budget', 'schedule', 'loan', 'cashflow', 'payments', 'documents', 'punchlists', 'locations'];
+      const validTabs: SubTab[] = ['summary', 'contractors', 'budget', 'schedule', 'loan', 'cashflow', 'payments', 'documents', 'punchlists', 'locations', 'photos', 'warranties', 'daily-logs', 'change-orders'];
       if (validTabs.includes(subtab as SubTab)) {
         setActiveSubTab(subtab as SubTab);
       }
@@ -186,6 +191,17 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ project, onBack, 
   const [showBulkLocationModal, setShowBulkLocationModal] = useState(false);
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
   const [punchListRefreshKey, setPunchListRefreshKey] = useState(0);
+
+  // Track recent project views
+  useEffect(() => {
+    if (project?.id && project?.name) {
+      addRecentItem('projects', {
+        id: project.id.toString(),
+        name: project.name,
+        href: `/projects?project=${project.id}`
+      });
+    }
+  }, [project?.id, project?.name]);
 
   // Debug logging
   useEffect(() => {
@@ -570,6 +586,42 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ project, onBack, 
           </>
         )}
         {activeSubTab === 'documents' && <DocumentsView projectId={project.id} />}
+        {activeSubTab === 'photos' && (
+          <div className="p-4">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold">Photos</h2>
+              <button className="px-3 py-1 bg-blue-600 text-white rounded text-sm">+ Upload Photo</button>
+            </div>
+            <p className="text-gray-500">Photo gallery coming soon. Upload and organize project photos here.</p>
+          </div>
+        )}
+        {activeSubTab === 'warranties' && (
+          <div className="p-4">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold">Warranties</h2>
+              <button className="px-3 py-1 bg-blue-600 text-white rounded text-sm">+ Add Warranty</button>
+            </div>
+            <p className="text-gray-500">No warranties recorded for this project.</p>
+          </div>
+        )}
+        {activeSubTab === 'daily-logs' && (
+          <div className="p-4">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold">Daily Logs</h2>
+              <button className="px-3 py-1 bg-blue-600 text-white rounded text-sm">+ New Log</button>
+            </div>
+            <p className="text-gray-500">No daily logs for this project.</p>
+          </div>
+        )}
+        {activeSubTab === 'change-orders' && (
+          <div className="p-4">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold">Change Orders</h2>
+              <button className="px-3 py-1 bg-blue-600 text-white rounded text-sm">+ New Change Order</button>
+            </div>
+            <p className="text-gray-500">No change orders for this project.</p>
+          </div>
+        )}
       </div>
 
       {/* Punch List Modal */}

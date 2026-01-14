@@ -44,11 +44,11 @@ function NewDrawContent() {
     }
 
     if (projectId) {
-      router.push(`/?tab=projects&project=${projectId}&subtab=cashflow`);
+      router.push(`/projects?project=${projectId}&subtab=cashflow`);
       return;
     }
 
-    router.push('/?tab=projects');
+    router.push('/projects');
   };
 
   const toggleTask = (taskId: string) => {

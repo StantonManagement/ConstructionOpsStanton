@@ -17,12 +17,16 @@ export const POST = withAuth(async (request: NextRequest) => {
     }
 
     // 1. Fetch task details for context
+    if (!supabaseAdmin) {
+      throw new APIError('Service role client not available', 500, 'SERVER_ERROR');
+    }
+
     const { data: task, error: taskError } = await supabaseAdmin
       .from('tasks')
       .select(`
         name, 
         description, 
-        location:locations (name)
+        location:components!location_id (name)
       `)
       .eq('id', task_id)
       .single();
@@ -30,6 +34,10 @@ export const POST = withAuth(async (request: NextRequest) => {
     if (taskError || !task) {
       throw new APIError('Task not found', 404, 'NOT_FOUND');
     }
+
+    const locationName = task.location && typeof task.location === 'object' && 'name' in task.location 
+      ? (task.location as { name: string }).name 
+      : 'Unknown location';
 
     // 2. Call AI Service
     const apiKey = process.env.OPENAI_API_KEY;
@@ -50,7 +58,7 @@ export const POST = withAuth(async (request: NextRequest) => {
             {
               role: "user",
               content: [
-                { type: "text", text: `Task: ${task.name}\nLocation: ${task.location?.name}\nDescription: ${task.description || 'No description'}\n\nVerify this work.` },
+                { type: "text", text: `Task: ${task.name}\nLocation: ${locationName}\nDescription: ${task.description || 'No description'}\n\nVerify this work.` },
                 {
                   type: "image_url",
                   image_url: {

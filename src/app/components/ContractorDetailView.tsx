@@ -11,6 +11,7 @@ import { MetricCard } from '@/components/ui/MetricCard';
 import { SignalBadge } from '@/components/ui/SignalBadge';
 import { formatCurrency } from '@/lib/theme';
 import RemoveFromProjectModal from './RemoveFromProjectModal';
+import { addRecentItem } from '@/lib/recentItems';
 import {
   DndContext,
   closestCenter,
@@ -261,6 +262,16 @@ const ContractorDetailView: React.FC<ContractorDetailViewProps> = ({ contract, c
   useEffect(() => {
     fetchLineItems();
   }, [fetchLineItems]);
+
+  useEffect(() => {
+    if (contractor?.id && contractor?.name) {
+      addRecentItem('contractors', {
+        id: contractor.id.toString(),
+        name: contractor.name,
+        href: `/contractors?contractor=${contractor.id}`
+      });
+    }
+  }, [contractor?.id, contractor?.name]);
 
   // Fetch payment applications for this contractor on this project
   const fetchPaymentApplications = useCallback(async () => {

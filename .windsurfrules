@@ -1,0 +1,117 @@
+# Windsurf Rules — ConstructionOpsStanton
+
+## What This Project Is
+
+Construction Operations Center for Stanton Capital - a real estate company with an internal construction team. This is NOT a typical contractor management app. Key difference: we work with small contractors who can't do paperwork, so we handle invoicing, payment tracking, and verification internally.
+
+The app manages ~400 units across multiple properties with 6-week acquisition timelines. Core workflow is contractor payments, not project management.
+
+## Business Context
+
+- **Users are field PMs** working in noisy, chaotic environments. UI must be clear, not decorative.
+- **"Worker's version of complete is not ours"** - two-stage completion: workers mark done, managers verify with photos
+- **Contractor communication is SMS-based** via Twilio - they don't use portals
+- **Multiple LLC entities** own properties (SREP SOUTHEND, SREP NORTHEND, SREP Hartford 1)
+
+## Tech Stack
+
+- Next.js 15 (App Router)
+- Supabase (PostgreSQL + Auth)
+- React Query for data fetching
+- Tailwind CSS
+- Twilio for SMS
+
+## Before Writing Any Code
+
+1. **Read `CODING_CONVENTIONS.md`** for detailed rules
+2. **Check `src/types/schema.ts`** before defining types
+3. **Check `src/components/ui/`** before creating UI elements
+4. **Check `src/hooks/queries/`** for existing data hooks
+
+## File Locations
+
+| Creating... | Put it in... |
+|-------------|--------------|
+| UI primitive | `src/components/ui/` |
+| Domain component | `src/components/` |
+| Feature view | `src/app/components/` |
+| API route | `src/app/api/[resource]/route.ts` |
+| React Query hook | `src/hooks/queries/` |
+| Shared types | `src/types/schema.ts` |
+
+## Data Fetching — React Query
+
+```typescript
+// ✅ Use React Query hooks
+import { useProjects } from '@/hooks/queries/useProjects';
+const { data, isLoading, error } = useProjects();
+
+// ❌ Don't add useEffect + fetch
+// ❌ Don't extend DataContext
+```
+
+## Supabase — Always Import
+
+```typescript
+// ✅ Always import
+import { supabase } from '@/lib/supabaseClient';
+import { supabaseAdmin } from '@/lib/supabaseClient';
+
+// ❌ Never create inline
+const supabase = createClient(url, key);
+```
+
+## Types — Don't Redefine
+
+```typescript
+// ✅ Import from schema
+import type { Project, Subcontractor } from '@/types/schema';
+
+// ❌ Don't redefine
+interface Project { ... }
+```
+
+## API Response Format
+
+```typescript
+// Success
+{ success: true, data: T }
+
+// Error
+{ error: string }
+```
+
+## Anti-Patterns
+
+- ❌ Create new UI primitives (use `src/components/ui/`)
+- ❌ Redefine types from `src/types/schema.ts`
+- ❌ Create inline Supabase clients
+- ❌ Add useEffect + fetch (use React Query)
+- ❌ Use inline styles (use Tailwind)
+- ❌ Add npm packages without checking existing
+
+## Design Philosophy
+
+From `STYLE_AND_DESIGN_SYSTEM.md`:
+- **Color is signal, not decoration** - most elements are neutral gray
+- **Red** = critical/blocking
+- **Orange/Yellow** = needs attention
+- **Blue** = interactive
+- **Green** = completed/verified
+
+## Debugging
+
+See `.cursorrules` for debugging workflow. Key points:
+- Get actual error logs before fixing
+- Query database schema, don't trust migration files
+- Fix one thing at a time
+- Verify with user before declaring success
+
+## Reference Files
+
+| Task | Look at |
+|------|---------|
+| Component | `src/components/optimized/OptimizedContractorCard.tsx` |
+| Feature view | `src/app/components/EntityManagementView.tsx` |
+| API route | `src/app/api/users/route.ts` |
+| Query hook | `src/hooks/queries/useProjects.ts` |

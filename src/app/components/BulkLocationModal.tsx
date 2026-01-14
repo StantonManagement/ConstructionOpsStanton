@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useBulkCreateLocations } from '@/hooks/queries/useLocations';
 import { useTemplates } from '@/hooks/queries/useTemplates';
+import { useProperties } from '@/hooks/queries/useProperties';
+import { useProjects } from '@/hooks/queries/useProjects';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,7 +12,7 @@ import { LocationType, UnitType, BulkLocationInput } from '@/types/schema';
 import { AlertCircle, Loader2 } from 'lucide-react';
 
 interface Props {
-  projectId: number;
+  projectId: string;
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
@@ -18,8 +20,16 @@ interface Props {
 
 export const BulkLocationModal: React.FC<Props> = ({ projectId, isOpen, onClose, onSuccess }) => {
   const { mutate: bulkCreate, isPending } = useBulkCreateLocations();
-  const { data: templates } = useTemplates(true); // Fetch active templates
+  const { data: templates } = useTemplates(true);
+  const { data: properties } = useProperties();
+  const { data: projects } = useProjects();
   const [error, setError] = useState<string | null>(null);
+
+  const currentProject = projects?.find(p => p.id === projectId);
+  const portfolioId = currentProject?.portfolio_id;
+  const filteredProperties = portfolioId 
+    ? properties?.filter(p => p.portfolio_id === portfolioId)
+    : properties;
 
   const [formData, setFormData] = useState<Partial<BulkLocationInput>>({
     start_number: 101,
@@ -28,7 +38,8 @@ export const BulkLocationModal: React.FC<Props> = ({ projectId, isOpen, onClose,
     type: 'unit',
     unit_type: '1BR',
     floor: 1,
-    template_id: undefined
+    template_id: undefined,
+    property_id: ''
   });
 
   const count = (formData.end_number || 0) - (formData.start_number || 0) + 1;
@@ -54,9 +65,15 @@ export const BulkLocationModal: React.FC<Props> = ({ projectId, isOpen, onClose,
       return;
     }
 
+    if (!formData.property_id) {
+      setError('Property is required');
+      return;
+    }
+
     bulkCreate(
       {
         project_id: projectId,
+        property_id: formData.property_id,
         start_number: formData.start_number,
         end_number: formData.end_number,
         prefix: formData.prefix,
@@ -85,6 +102,25 @@ export const BulkLocationModal: React.FC<Props> = ({ projectId, isOpen, onClose,
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="property">Property (Building) *</Label>
+            <Select 
+              value={formData.property_id} 
+              onValueChange={(val) => setFormData(prev => ({ ...prev, property_id: val }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select property" />
+              </SelectTrigger>
+              <SelectContent>
+                {(filteredProperties || []).map(property => (
+                  <SelectItem key={property.id} value={property.id}>
+                    {property.name} {property.address && `- ${property.address}`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="start_number">Start Number</Label>
@@ -141,7 +177,7 @@ export const BulkLocationModal: React.FC<Props> = ({ projectId, isOpen, onClose,
                   <SelectItem value="unit">Unit</SelectItem>
                   <SelectItem value="common_area">Common Area</SelectItem>
                   <SelectItem value="exterior">Exterior</SelectItem>
-                  <SelectItem value="building_wide">Building Wide</SelectItem>
+                  <SelectItem value="building_system">Building System</SelectItem>
                 </SelectContent>
               </Select>
             </div>
