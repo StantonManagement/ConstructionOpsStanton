@@ -5,7 +5,7 @@ import { supabaseAdmin } from '@/lib/supabaseClient';
 // GET /api/portfolios/[id] - Get single portfolio with details
 export const GET = withAuth(async (
   request: NextRequest,
-  { params }: { params: { id: string } },
+  context: any,
   user: any
 ) => {
   try {
@@ -13,7 +13,7 @@ export const GET = withAuth(async (
       throw new APIError('Database not available', 500, 'DB_ERROR');
     }
 
-    const { id } = params;
+    const { id } = await context.params;
 
     const { data, error } = await supabaseAdmin
       .from('portfolios')
@@ -44,7 +44,7 @@ export const GET = withAuth(async (
 // PUT /api/portfolios/[id] - Update portfolio
 export const PUT = withAuth(async (
   request: NextRequest,
-  { params }: { params: { id: string } },
+  context: any,
   user: any
 ) => {
   try {
@@ -52,7 +52,7 @@ export const PUT = withAuth(async (
       throw new APIError('Database not available', 500, 'DB_ERROR');
     }
 
-    const { id } = params;
+    const { id } = await context.params;
     const body = await request.json();
     const { name, code, description, owner_entity_id, is_active } = body;
 
@@ -84,7 +84,7 @@ export const PUT = withAuth(async (
 // DELETE /api/portfolios/[id] - Soft delete (set is_active = false)
 export const DELETE = withAuth(async (
   request: NextRequest,
-  { params }: { params: { id: string } },
+  context: any,
   user: any
 ) => {
   try {
@@ -92,7 +92,7 @@ export const DELETE = withAuth(async (
       throw new APIError('Database not available', 500, 'DB_ERROR');
     }
 
-    const { id } = params;
+    const { id } = await context.params;
 
     // Check for active funding sources or projects
     const { data: portfolio } = await supabaseAdmin

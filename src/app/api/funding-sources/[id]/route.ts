@@ -5,7 +5,7 @@ import { supabaseAdmin } from '@/lib/supabaseClient';
 // GET /api/funding-sources/[id]
 export const GET = withAuth(async (
   request: NextRequest,
-  { params }: { params: { id: string } },
+  context: any,
   user: any
 ) => {
   try {
@@ -13,7 +13,7 @@ export const GET = withAuth(async (
       throw new APIError('Database not available', 500, 'DB_ERROR');
     }
 
-    const { id } = params;
+    const { id } = await context.params;
 
     const { data, error } = await supabaseAdmin
       .from('funding_sources')
@@ -43,7 +43,7 @@ export const GET = withAuth(async (
 // PUT /api/funding-sources/[id]
 export const PUT = withAuth(async (
   request: NextRequest,
-  { params }: { params: { id: string } },
+  context: any,
   user: any
 ) => {
   try {
@@ -51,7 +51,7 @@ export const PUT = withAuth(async (
       throw new APIError('Database not available', 500, 'DB_ERROR');
     }
 
-    const { id } = params;
+    const { id } = await context.params;
     const body = await request.json();
 
     const allowedFields = [
@@ -95,7 +95,7 @@ export const PUT = withAuth(async (
 // DELETE /api/funding-sources/[id]
 export const DELETE = withAuth(async (
   request: NextRequest,
-  { params }: { params: { id: string } },
+  context: any,
   user: any
 ) => {
   try {
@@ -103,7 +103,7 @@ export const DELETE = withAuth(async (
       throw new APIError('Database not available', 500, 'DB_ERROR');
     }
 
-    const { id } = params;
+    const { id } = await context.params;
 
     // Check for existing loan draws against this funding source
     const { data: draws } = await supabaseAdmin
