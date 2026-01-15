@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
-import { DollarSign, Filter, Search, RefreshCw, CheckCircle, CheckCircle2, XCircle, Clock, AlertCircle, ChevronLeft, ChevronRight, Eye, Trash2 } from 'lucide-react';
+import { DollarSign, Filter, Search, RefreshCw, CheckCircle, CheckCircle2, XCircle, Clock, AlertCircle, ChevronLeft, ChevronRight, Eye, Trash2, ArrowLeft, Check, MessageSquare, Users } from 'lucide-react';
 import { generateG703Pdf } from '@/lib/g703Pdf';
 import { Badge } from '@/components/ui/badge';
 import { getPaymentStatusBadge, getStatusLabel, getStatusIconColor, PaymentStatus } from '@/lib/statusColors';
@@ -719,6 +719,11 @@ interface PaymentApplicationsViewProps {
 const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searchQuery = '' }) => {
   const searchParams = useSearchParams();
   const { showToast, showConfirm } = useModal();
+
+  // Get project from URL - if present, show contractor selection view
+  const projectIdFromUrl = searchParams.get('project');
+  const subtab = searchParams.get('subtab') || 'applications';
+
   const [applications, setApplications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -726,7 +731,7 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
   const [statusFilter, setStatusFilter] = useState<string>(
     searchParams.get('statusFilter') || 'submitted'
   );
-  const [projectFilter, setProjectFilter] = useState<string>('all');
+  const [projectFilter, setProjectFilter] = useState<string>(projectIdFromUrl || 'all');
   const [sortBy, setSortBy] = useState<'status' | 'date' | 'amount'>('date');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [currentPage, setCurrentPage] = useState(1);
@@ -741,6 +746,11 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
     weekly_total: 0,
   });
   const [paymentDocuments, setPaymentDocuments] = useState<any[]>([]);
+
+  // Contractor selection state (for project-specific payment processing)
+  const [contractors, setContractors] = useState<any[]>([]);
+  const [selectedContractors, setSelectedContractors] = useState<number[]>([]);
+  const [contractorsLoading, setContractorsLoading] = useState(false);
 
 
   // Verification view state variables
@@ -889,6 +899,66 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
     }
   }, []);
 
+  // Fetch contractors for a specific project (for contractor selection view)
+  const fetchContractorsForProject = useCallback(async (projectId: string) => {
+    setContractorsLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('Authentication required');
+      }
+
+      // Fetch project_contractors with contractor details and contract info
+      const { data, error } = await supabase
+        .from('project_contractors')
+        .select(`
+          *,
+          contractors (
+            id,
+            name,
+            trade,
+            phone,
+            email
+          ),
+          projects (
+            id,
+            name
+          )
+        `)
+        .eq('project_id', projectId)
+        .eq('contract_status', 'active');
+
+      if (error) throw error;
+
+      // Fetch payment totals for each contractor
+      const contractorsWithPayments = await Promise.all((data || []).map(async (pc) => {
+        const { data: payments } = await supabase
+          .from('payment_applications')
+          .select('approved_amount, status')
+          .eq('project_id', projectId)
+          .eq('contractor_id', pc.contractor_id)
+          .in('status', ['approved', 'check_issued']);
+
+        const totalPaid = payments?.reduce((sum, p) => sum + (p.approved_amount || 0), 0) || 0;
+        const percentPaid = pc.contract_amount > 0 ? (totalPaid / pc.contract_amount) * 100 : 0;
+
+        return {
+          ...pc,
+          total_paid: totalPaid,
+          percent_paid: percentPaid,
+          remaining_amount: pc.contract_amount - totalPaid
+        };
+      }));
+
+      setContractors(contractorsWithPayments);
+    } catch (err) {
+      console.error('Error fetching contractors:', err);
+      showToast('Failed to load contractors', 'error');
+    } finally {
+      setContractorsLoading(false);
+    }
+  }, [showToast]);
+
   // Load data on mount and when statusFilter changes from URL
   useEffect(() => {
     const urlStatusFilter = searchParams?.get('statusFilter');
@@ -905,10 +975,17 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
     fetchDocuments();
   }, [fetchApplications, fetchDocuments]);
 
+  // Fetch contractors when project is selected from URL
+  useEffect(() => {
+    if (projectIdFromUrl && subtab === 'processing') {
+      fetchContractorsForProject(projectIdFromUrl);
+    }
+  }, [projectIdFromUrl, subtab, fetchContractorsForProject]);
+
   // Clear invalid selections when applications list changes
   useEffect(() => {
     if (selectedItems.length > 0) {
-      const validIds = selectedItems.filter(id => 
+      const validIds = selectedItems.filter(id =>
         applications.some(app => app.id === id)
       );
       if (validIds.length !== selectedItems.length) {
@@ -1378,6 +1455,195 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
           <AlertCircle className="w-5 h-5 text-red-600 mr-2" />
           <span className="text-red-800">{error}</span>
         </div>
+      </div>
+    );
+  }
+
+  // Contractor Selection View (when coming from "Create Payment App" button)
+  if (projectIdFromUrl && subtab === 'processing') {
+    const selectedProject = projects.find(p => p.id === parseInt(projectIdFromUrl));
+
+    return (
+      <div className="space-y-4">
+        {/* Header with Back Button */}
+        <div className="flex items-center gap-4 mb-4">
+          <button
+            onClick={() => {
+              const params = new URLSearchParams(searchParams.toString());
+              params.delete('project');
+              params.delete('subtab');
+              params.set('tab', 'payments');
+              window.location.href = `/?${params.toString()}`;
+            }}
+            className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back
+          </button>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">
+              {selectedProject?.name || 'Project'} - Payment Processing
+            </h1>
+            <p className="text-sm text-gray-600 mt-1">
+              Select contractors to send payment requests via SMS
+            </p>
+          </div>
+        </div>
+
+        {/* Loading State */}
+        {contractorsLoading && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="bg-white border border-gray-200 rounded-lg p-4 animate-pulse">
+                <div className="flex items-start gap-3">
+                  <div className="w-5 h-5 bg-gray-200 rounded"></div>
+                  <div className="flex-1">
+                    <div className="h-5 bg-gray-200 rounded w-3/4 mb-2"></div>
+                    <div className="h-4 bg-gray-200 rounded w-1/2 mb-3"></div>
+                    <div className="space-y-2">
+                      <div className="h-4 bg-gray-200 rounded w-full"></div>
+                      <div className="h-4 bg-gray-200 rounded w-full"></div>
+                      <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Contractor Cards */}
+        {!contractorsLoading && contractors.length === 0 && (
+          <div className="bg-white border border-gray-200 rounded-lg p-8 text-center">
+            <Users className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+            <h3 className="text-lg font-medium text-gray-900 mb-1">No Contractors Found</h3>
+            <p className="text-sm text-gray-600">
+              No active contractors are assigned to this project.
+            </p>
+          </div>
+        )}
+
+        {!contractorsLoading && contractors.length > 0 && (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {contractors.map((pc) => {
+                const isSelected = selectedContractors.includes(pc.contractor_id);
+                const contractor = pc.contractors;
+
+                return (
+                  <div
+                    key={pc.id}
+                    onClick={() => {
+                      setSelectedContractors(prev =>
+                        prev.includes(pc.contractor_id)
+                          ? prev.filter(id => id !== pc.contractor_id)
+                          : [...prev, pc.contractor_id]
+                      );
+                    }}
+                    className={`bg-white border-2 rounded-lg p-4 cursor-pointer transition-all ${
+                      isSelected
+                        ? 'border-primary bg-primary/5 shadow-md'
+                        : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      {/* Checkbox */}
+                      <div className={`flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                        isSelected
+                          ? 'bg-primary border-primary'
+                          : 'border-gray-300 bg-white'
+                      }`}>
+                        {isSelected && (
+                          <Check className="w-3 h-3 text-white" />
+                        )}
+                      </div>
+
+                      {/* Contractor Info */}
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-gray-900 truncate">
+                          {contractor?.name || 'Unknown Contractor'}
+                        </h3>
+                        <p className="text-sm text-gray-600 mb-3">
+                          {contractor?.trade || 'No trade specified'}
+                        </p>
+
+                        {/* Contract Details */}
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Contract Amount:</span>
+                            <span className="font-medium text-gray-900">
+                              ${(pc.contract_amount || 0).toLocaleString()}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Paid to Date:</span>
+                            <span className="font-medium text-green-600">
+                              ${(pc.total_paid || 0).toLocaleString()}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Remaining:</span>
+                            <span className="font-medium text-gray-900">
+                              ${(pc.remaining_amount || 0).toLocaleString()}
+                            </span>
+                          </div>
+
+                          {/* Progress Bar */}
+                          <div className="pt-2">
+                            <div className="flex justify-between text-xs mb-1">
+                              <span className="text-gray-600">Progress</span>
+                              <span className="font-medium text-primary">
+                                {pc.percent_paid?.toFixed(1) || 0}%
+                              </span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div
+                                className="bg-primary rounded-full h-2 transition-all"
+                                style={{ width: `${Math.min(pc.percent_paid || 0, 100)}%` }}
+                              ></div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Status Badge */}
+                        <div className="mt-3">
+                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                            pc.contract_status === 'active'
+                              ? 'bg-green-100 text-green-800'
+                              : pc.contract_status === 'pending'
+                              ? 'bg-yellow-100 text-yellow-800'
+                              : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {pc.contract_status || 'active'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Action Button */}
+            <div className="flex justify-end pt-4 border-t border-gray-200">
+              <button
+                onClick={() => {
+                  if (selectedContractors.length === 0) {
+                    showToast('Please select at least one contractor', 'error');
+                    return;
+                  }
+                  // TODO: Implement SMS sending logic
+                  showToast(`Sending payment requests to ${selectedContractors.length} contractor(s)...`, 'info');
+                }}
+                disabled={selectedContractors.length === 0}
+                className="flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              >
+                <MessageSquare className="w-5 h-5" />
+                Send Payment Requests ({selectedContractors.length})
+              </button>
+            </div>
+          </>
+        )}
       </div>
     );
   }

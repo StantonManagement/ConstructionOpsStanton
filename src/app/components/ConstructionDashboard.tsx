@@ -200,8 +200,8 @@ const ConstructionDashboard: React.FC = () => {
 
       <Navigation activeTab={activeTab} setActiveTab={handleTabChange} setSelectedProject={setSelectedProject} selectedProject={selectedProject} />
       <main className="lg:ml-64 transition-all duration-300 pt-20 lg:pt-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <Suspense fallback={<LoadingSpinner size="lg" text="Loading..." className="py-20" />}>
+        <div className="max-w-[1600px] mx-auto px-3 sm:px-4 lg:px-6 py-4">
+          <Suspense fallback={<div className="py-20"></div>}>
             {/* Overview Tab */}
             {activeTab === 'overview' && <OverviewView onProjectSelect={handleProjectSelect} onSwitchToPayments={handleSwitchToPayments} searchQuery={searchQuery} />}
 

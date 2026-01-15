@@ -2,12 +2,14 @@
 
 import React, { useState, useEffect, useCallback, ChangeEvent } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { Building, Users, DollarSign, Calendar, AlertCircle, CheckCircle, Clock, RefreshCw, Eye, Plus, X } from 'lucide-react';
+import { Building, Users, DollarSign, Calendar, AlertCircle, CheckCircle, Clock, RefreshCw, Eye, Plus, X, TrendingUp, Target } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { getProjectStatusBadge, getStatusLabel } from '@/lib/statusColors';
 import ProjectDetailView from './ProjectDetailView';
 import ProjectFormWithEntity from './ProjectFormWithEntity';
+import { motion, AnimatePresence } from 'framer-motion';
+import { LoadingSpinner } from './LoadingStates';
 
 // Form validation utilities
 const validators = {
@@ -694,75 +696,186 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
     return <ProjectDetailView project={selectedProject} onBack={handleBackToList} />;
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-        <span className="ml-3 text-muted-foreground">Loading projects...</span>
+  // Skeleton Loading Card Component
+  const SkeletonProjectCard = () => (
+    <div className="bg-card rounded-2xl border-2 border-border p-4 animate-pulse">
+      {/* Header skeleton */}
+      <div className="flex items-start justify-between mb-2 sm:mb-3">
+        <div className="flex-1">
+          <div className="h-5 bg-gray-200 rounded w-3/4 mb-2"></div>
+          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+        </div>
+        <div className="h-6 w-16 bg-gray-200 rounded-full ml-2"></div>
       </div>
-    );
-  }
+
+      {/* Stat cards skeleton */}
+      <div className="grid grid-cols-3 gap-2 mb-2 sm:mb-3">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="bg-gray-100 rounded-lg p-3 min-h-[110px] sm:min-h-[120px]">
+            <div className="h-4 bg-gray-200 rounded w-20 mb-2"></div>
+            <div className="h-8 bg-gray-200 rounded w-12 mb-1"></div>
+            <div className="h-3 bg-gray-200 rounded w-16"></div>
+          </div>
+        ))}
+      </div>
+
+      {/* Budget progress skeleton */}
+      <div className="mb-2 sm:mb-3">
+        <div className="flex justify-between mb-2">
+          <div className="h-3 bg-gray-200 rounded w-24"></div>
+          <div className="h-3 bg-gray-200 rounded w-16"></div>
+        </div>
+        <div className="h-3 bg-gray-200 rounded-full w-full"></div>
+      </div>
+
+      {/* Button skeleton */}
+      <div className="mt-2 sm:mt-3 pt-2 sm:pt-3 border-t border-gray-100">
+        <div className="h-10 bg-gray-200 rounded-lg"></div>
+      </div>
+    </div>
+  );
 
   return (
-    <div className="space-y-6">
+    <motion.div
+      className="space-y-4"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
+    >
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-foreground">Projects</h1>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-            {filteredProjects.length} projects • Updated {new Date().toLocaleTimeString()}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowNewProjectForm(true)}
-            className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-green-600 text-white rounded-lg text-xs sm:text-sm font-medium hover:bg-green-700"
+      <motion.div
+        className="relative overflow-hidden bg-gradient-to-br from-brand-navy via-brand-navy-light to-brand-navy-600 rounded-2xl p-4 sm:p-6 shadow-2xl"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.4 }}
+      >
+        {/* Background decorative elements */}
+        <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl"></div>
+        <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2 blur-3xl"></div>
+
+        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+          <div className="flex items-center gap-4">
+            <motion.div
+              className="p-3 bg-white/10 backdrop-blur-sm rounded-xl"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Building className="w-8 h-8 text-white" />
+            </motion.div>
+            <div>
+              <motion.h1
+                className="text-2xl sm:text-3xl font-bold text-white mb-2"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.1, duration: 0.4 }}
+              >
+                Construction Projects
+              </motion.h1>
+              <motion.div
+                className="flex items-center gap-4 text-white/80 text-sm"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.2, duration: 0.4 }}
+              >
+                <span className="flex items-center gap-2">
+                  <Target className="w-4 h-4" />
+                  {filteredProjects.length} Active Projects
+                </span>
+                <span className="flex items-center gap-2">
+                  <Clock className="w-4 h-4" />
+                  Updated {new Date().toLocaleTimeString()}
+                </span>
+              </motion.div>
+            </div>
+          </div>
+          <motion.div
+            className="flex items-center gap-3"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3, duration: 0.4 }}
           >
-            <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
-            <span className="hidden sm:inline">New Project</span>
-            <span className="sm:hidden">+</span>
-          </button>
-          <button
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-            className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-primary text-white rounded-lg text-xs sm:text-sm font-medium hover:bg-primary/90 disabled:opacity-50"
-          >
-            <RefreshCw className={`w-3 h-3 sm:w-4 sm:h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-            <span className="hidden sm:inline">Refresh</span>
-            <span className="sm:hidden">↻</span>
-          </button>
+            <motion.button
+              onClick={() => setShowNewProjectForm(true)}
+              className="flex items-center gap-2 px-4 sm:px-6 py-3 bg-white text-brand-navy rounded-xl text-sm font-semibold hover:shadow-xl transition-all duration-300"
+              whileHover={{ scale: 1.05, y: -2 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Plus className="w-4 h-4" />
+              <span>New Project</span>
+            </motion.button>
+            <motion.button
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="flex items-center gap-2 px-4 py-3 bg-white/10 backdrop-blur-sm text-white rounded-xl text-sm font-medium hover:bg-white/20 disabled:opacity-50 transition-all duration-300"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            </motion.button>
+          </motion.div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Error Display */}
-      {error && (
-        <div className="bg-[var(--status-critical-bg)] border border-[var(--status-critical-border)] rounded-lg p-4">
-          <div className="flex items-center gap-2">
-            <AlertCircle className="w-5 h-5 text-[var(--status-critical-text)]" />
-            <span className="text-[var(--status-critical-text)]">{error}</span>
-            <button
-              onClick={() => {
-                setError(null);
-                fetchProjects();
-              }}
-              className="ml-auto text-sm bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700"
-            >
-              Retry
-            </button>
-          </div>
-        </div>
-      )}
+      <AnimatePresence>
+        {error && (
+          <motion.div
+            className="bg-destructive/10 border-2 border-destructive rounded-xl p-5 backdrop-blur-sm"
+            initial={{ opacity: 0, y: -20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.95 }}
+            transition={{ duration: 0.3 }}
+          >
+            <div className="flex items-center gap-3">
+              <AlertCircle className="w-6 h-6 text-destructive flex-shrink-0" />
+              <span className="text-destructive font-medium flex-1">{error}</span>
+              <motion.button
+                onClick={() => {
+                  setError(null);
+                  fetchProjects();
+                }}
+                className="text-sm bg-destructive text-white px-4 py-2 rounded-lg font-medium hover:bg-destructive/90 transition-colors"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                Retry
+              </motion.button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Projects Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-        {filteredProjects.map((project) => (
-          <div
-            key={project.id}
-            className="bg-card rounded-lg border border-border p-4 sm:p-6 hover:shadow-lg transition-shadow duration-200 cursor-pointer"
-            onClick={() => handleProjectClick(project)}
-          >
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={loading ? 'loading' : 'loaded'}
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+        >
+          {loading ? (
+            // Show skeleton cards while loading
+            Array.from({ length: 8 }).map((_, index) => (
+              <SkeletonProjectCard key={index} />
+            ))
+          ) : (
+            filteredProjects.map((project, index) => (
+            <motion.div
+              key={project.id}
+              className="group relative bg-card rounded-2xl border-2 border-border p-4 hover:shadow-2xl hover:border-brand-navy/30 transition-all duration-300 cursor-pointer overflow-hidden"
+              onClick={() => handleProjectClick(project)}
+              whileHover={{
+                y: -8,
+                transition: { duration: 0.2 }
+              }}
+              whileTap={{ scale: 0.98 }}
+            >
+            {/* Gradient overlay on hover */}
+            <div className="absolute inset-0 bg-gradient-to-br from-brand-navy/5 via-transparent to-brand-navy-light/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
             {/* Project Header */}
-            <div className="flex items-start justify-between mb-3 sm:mb-4">
+            <div className="flex items-start justify-between mb-2 sm:mb-3">
               <div className="flex-1 min-w-0">
                 <h3 className="text-base sm:text-lg font-semibold text-foreground mb-1 truncate">{project.name}</h3>
                 <p className="text-xs sm:text-sm text-muted-foreground truncate">{project.client_name}</p>
@@ -787,85 +900,155 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
               </div>
             </div>
 
-            {/* Interactive Stat Cards */}
-            <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-3 sm:mb-4">
-              <div 
-                className="bg-blue-50 p-2 sm:p-3 rounded-lg cursor-pointer hover:shadow-md transition-all duration-200"
+            {/* Interactive Stat Cards with Animations */}
+            <motion.div
+              className="grid grid-cols-3 gap-2 mb-2 sm:mb-3 relative"
+              initial="hidden"
+              animate="visible"
+              variants={{
+                hidden: { opacity: 0 },
+                visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
+              }}
+            >
+              <motion.div
+                className="relative bg-blue-50 p-3 rounded-lg cursor-pointer overflow-hidden group h-full min-h-[110px] sm:min-h-[120px]"
                 onClick={(e) => {
                   e.stopPropagation();
                   handleStatCardClick(project, 'contractors');
                 }}
+                variants={{
+                  hidden: { opacity: 0, scale: 0.8 },
+                  visible: { opacity: 1, scale: 1 }
+                }}
+                whileHover={{
+                  scale: 1.05,
+                  y: -4,
+                  boxShadow: "0 10px 20px rgba(0,0,0,0.1)"
+                }}
+                whileTap={{ scale: 0.95 }}
               >
-                <div className="flex items-center gap-1 sm:gap-2 mb-1">
-                  <Users className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
-                  <h4 className="font-medium text-foreground text-xs sm:text-sm">Contractors</h4>
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-primary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                <div className="relative z-10 h-full flex flex-col justify-between">
+                  <div className="flex items-center gap-1 sm:gap-2 mb-2">
+                    <Users className="w-3 h-3 sm:w-4 sm:h-4 text-primary flex-shrink-0" />
+                    <h4 className="font-medium text-foreground text-xs sm:text-sm truncate">Contractors</h4>
+                  </div>
+                  <div className="flex-1 flex flex-col justify-center">
+                    <p className="text-xl sm:text-2xl font-bold text-primary leading-none mb-1">{project.stats.totalContractors}</p>
+                    <p className="text-xs text-muted-foreground">Active</p>
+                  </div>
+                  <div className="mt-2 text-xs text-primary font-medium">
+                    <span className="hidden sm:inline">Click to view</span>
+                    <span className="sm:hidden">View</span>
+                  </div>
                 </div>
-                <p className="text-lg sm:text-xl font-bold text-primary">{project.stats.totalContractors}</p>
-                <p className="text-xs text-muted-foreground">Active</p>
-                <div className="mt-1 text-xs text-primary font-medium">
-                  <span className="hidden sm:inline">Click to view</span>
-                  <span className="sm:hidden">View</span>
-                </div>
-              </div>
+              </motion.div>
 
-              <div 
-                className="bg-[var(--status-warning-bg)] p-2 sm:p-3 rounded-lg cursor-pointer hover:shadow-md transition-all duration-200"
+              <motion.div
+                className="relative bg-[var(--status-warning-bg)] p-3 rounded-lg cursor-pointer overflow-hidden group h-full min-h-[110px] sm:min-h-[120px]"
                 onClick={(e) => {
                   e.stopPropagation();
                   handleStatCardClick(project, 'payment_apps');
                 }}
+                variants={{
+                  hidden: { opacity: 0, scale: 0.8 },
+                  visible: { opacity: 1, scale: 1 }
+                }}
+                whileHover={{
+                  scale: 1.05,
+                  y: -4,
+                  boxShadow: "0 10px 20px rgba(0,0,0,0.1)"
+                }}
+                whileTap={{ scale: 0.95 }}
               >
-                <div className="flex items-center gap-1 sm:gap-2 mb-1">
-                  <DollarSign className="w-3 h-3 sm:w-4 sm:h-4 text-[var(--status-warning-text)]" />
-                  <h4 className="font-medium text-foreground text-xs sm:text-sm">Payment Apps</h4>
+                <div className="absolute inset-0 bg-gradient-to-br from-orange-400/5 to-orange-400/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                <div className="relative z-10 h-full flex flex-col justify-between">
+                  <div className="flex items-center gap-1 sm:gap-2 mb-2">
+                    <DollarSign className="w-3 h-3 sm:w-4 sm:h-4 text-[var(--status-warning-text)] flex-shrink-0" />
+                    <h4 className="font-medium text-foreground text-xs sm:text-sm truncate">Payment Apps</h4>
+                  </div>
+                  <div className="flex-1 flex flex-col justify-center">
+                    <p className="text-xl sm:text-2xl font-bold text-[var(--status-warning-text)] leading-none mb-1">{project.stats.activePaymentApps}</p>
+                    <p className="text-xs text-muted-foreground">Pending</p>
+                  </div>
+                  <div className="mt-2 text-xs text-[var(--status-warning-text)] font-medium">
+                    <span className="hidden sm:inline">Click to view</span>
+                    <span className="sm:hidden">View</span>
+                  </div>
                 </div>
-                <p className="text-lg sm:text-xl font-bold text-[var(--status-warning-text)]">{project.stats.activePaymentApps}</p>
-                <p className="text-xs text-muted-foreground">Pending</p>
-                <div className="mt-1 text-xs text-[var(--status-warning-text)] font-medium">
-                  <span className="hidden sm:inline">Click to view</span>
-                  <span className="sm:hidden">View</span>
-                </div>
-              </div>
+              </motion.div>
 
-              <div 
-                className="bg-[var(--status-success-bg)] p-2 sm:p-3 rounded-lg cursor-pointer hover:shadow-md transition-all duration-200"
+              <motion.div
+                className="relative bg-[var(--status-success-bg)] p-3 rounded-lg cursor-pointer overflow-hidden group h-full min-h-[110px] sm:min-h-[120px]"
                 onClick={(e) => {
                   e.stopPropagation();
                   handleStatCardClick(project, 'completed');
                 }}
+                variants={{
+                  hidden: { opacity: 0, scale: 0.8 },
+                  visible: { opacity: 1, scale: 1 }
+                }}
+                whileHover={{
+                  scale: 1.05,
+                  y: -4,
+                  boxShadow: "0 10px 20px rgba(0,0,0,0.1)"
+                }}
+                whileTap={{ scale: 0.95 }}
               >
-                <div className="flex items-center gap-1 sm:gap-2 mb-1">
-                  <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 text-[var(--status-success-text)]" />
-                  <h4 className="font-medium text-foreground text-xs sm:text-sm">Completed</h4>
+                <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-green-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                <div className="relative z-10 h-full flex flex-col justify-between">
+                  <div className="flex items-center gap-1 sm:gap-2 mb-2">
+                    <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 text-[var(--status-success-text)] flex-shrink-0" />
+                    <h4 className="font-medium text-foreground text-xs sm:text-sm truncate">Completed</h4>
+                  </div>
+                  <div className="flex-1 flex flex-col justify-center">
+                    <p className="text-xl sm:text-2xl font-bold text-[var(--status-success-text)] leading-none mb-1">{project.stats.completedPaymentApps}</p>
+                    <p className="text-xs text-muted-foreground">Approved</p>
+                  </div>
+                  <div className="mt-2 text-xs text-[var(--status-success-text)] font-medium">
+                    <span className="hidden sm:inline">Click to view</span>
+                    <span className="sm:hidden">View</span>
+                  </div>
                 </div>
-                <p className="text-lg sm:text-xl font-bold text-[var(--status-success-text)]">{project.stats.completedPaymentApps}</p>
-                <p className="text-xs text-muted-foreground">Approved</p>
-                <div className="mt-1 text-xs text-[var(--status-success-text)] font-medium">
-                  <span className="hidden sm:inline">Click to view</span>
-                  <span className="sm:hidden">View</span>
-                </div>
-              </div>
-            </div>
+              </motion.div>
+            </motion.div>
 
-            {/* Budget Progress */}
-            <div className="mb-3 sm:mb-4">
+            {/* Budget Progress with Animations */}
+            <motion.div
+              className="mb-2 sm:mb-3"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+            >
               <div className="flex items-center justify-between text-xs sm:text-sm mb-2">
                 <span className="text-muted-foreground font-medium">Budget Progress</span>
-                <span className="text-foreground font-semibold">{formatCurrency(project.stats.totalBudget)}</span>
+                <motion.span
+                  className="text-foreground font-semibold"
+                  initial={{ scale: 0.8 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: 0.3, type: "spring", stiffness: 200 }}
+                >
+                  {formatCurrency(project.stats.totalBudget)}
+                </motion.span>
               </div>
-              
-              {/* Progress Bar */}
-              <div className="w-full bg-secondary/80 rounded-full h-2 sm:h-3 mb-2 relative overflow-hidden">
-                <div
-                  className={`h-2 sm:h-3 rounded-full transition-all duration-500 ease-out ${
+
+              {/* Animated Progress Bar */}
+              <div className="w-full bg-secondary/80 rounded-full h-2 sm:h-3 mb-2 relative overflow-hidden shadow-inner">
+                <motion.div
+                  className={`h-2 sm:h-3 rounded-full relative ${
                     project.stats.completionPercentage > 95 ? 'bg-gradient-to-r from-red-500 to-red-600' :
                     project.stats.completionPercentage > 90 ? 'bg-gradient-to-r from-orange-500 to-orange-600' :
                     project.stats.completionPercentage > 75 ? 'bg-gradient-to-r from-yellow-500 to-yellow-600' :
                     'bg-gradient-to-r from-green-500 to-green-600'
                   }`}
-                  style={{ 
-                    width: `${Math.min(project.stats.completionPercentage > 0 ? Math.max(project.stats.completionPercentage, 1) : 0, 100)}%`,
-                    transition: 'width 0.5s ease-out'
+                  initial={{ width: "0%" }}
+                  animate={{
+                    width: `${Math.min(project.stats.completionPercentage > 0 ? Math.max(project.stats.completionPercentage, 1) : 0, 100)}%`
+                  }}
+                  transition={{
+                    duration: 1,
+                    delay: 0.4,
+                    ease: "easeOut"
                   }}
                   role="progressbar"
                   aria-valuenow={project.stats.completionPercentage}
@@ -875,41 +1058,55 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
                 >
                   {/* Animated shimmer effect for high usage */}
                   {(project.stats.completionPercentage > 75) && (
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse"></div>
+                    <motion.div
+                      className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent"
+                      animate={{
+                        x: ["-100%", "200%"]
+                      }}
+                      transition={{
+                        duration: 2,
+                        repeat: Infinity,
+                        ease: "linear"
+                      }}
+                    />
                   )}
-                </div>
+                </motion.div>
               </div>
 
-              {/* Budget Details */}
+              {/* Budget Details with Hover Effects */}
               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 text-xs">
                 <span className="text-muted-foreground">
-                  Spent: <span 
+                  Spent: <motion.span
                     className="font-medium text-foreground cursor-pointer hover:text-primary hover:underline"
                     onClick={(e) => {
                       e.stopPropagation();
                       handleBudgetClick(project.id, 'spent');
                     }}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                   >
                     {formatCurrency(project.stats.totalSpent)}
-                  </span>
+                  </motion.span>
                 </span>
                 <span className="text-muted-foreground">
-                  Remaining: <span 
+                  Remaining: <motion.span
                     className="font-medium text-foreground cursor-pointer hover:text-[var(--status-success-text)] hover:underline"
                     onClick={(e) => {
                       e.stopPropagation();
                       handleBudgetClick(project.id, 'remaining');
                     }}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                   >
                     {formatCurrency(project.stats.totalBudget - project.stats.totalSpent)}
-                  </span>
+                  </motion.span>
                 </span>
               </div>
-              
-                             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 text-xs mt-1">
-                 <span className="text-muted-foreground font-medium">
-                   {project.stats.completionPercentage < 0.01 ? '<0.01%' : project.stats.completionPercentage.toFixed(2)}% utilized
-                 </span>
+
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 text-xs mt-1">
+                <span className="text-muted-foreground font-medium">
+                  {project.stats.completionPercentage < 0.01 ? '<0.01%' : project.stats.completionPercentage.toFixed(2)}% utilized
+                </span>
                 <span className={`font-semibold ${
                   project.stats.completionPercentage > 95 ? 'text-[var(--status-critical-text)]' :
                   project.stats.completionPercentage > 90 ? 'text-orange-600' :
@@ -922,7 +1119,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
                    '✅ On track'}
                 </span>
               </div>
-            </div>
+            </motion.div>
 
             {/* Project Details */}
             <div className="space-y-1 sm:space-y-2 text-xs sm:text-sm">
@@ -942,9 +1139,14 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
               )}
             </div>
 
-            {/* Action Button */}
-            <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-100">
-              <button
+            {/* Action Button with Animation */}
+            <motion.div
+              className="mt-2 sm:mt-3 pt-2 sm:pt-3 border-t border-gray-100 relative"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.5 }}
+            >
+              <motion.button
                 onClick={(e) => {
                   e.stopPropagation();
                   const params = new URLSearchParams(searchParams.toString());
@@ -953,27 +1155,88 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
                   params.set('project', project.id.toString());
                   router.replace(`/?${params.toString()}`, { scroll: false });
                 }}
-                className="w-full flex items-center justify-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors text-xs sm:text-sm font-medium"
+                className="relative w-full flex items-center justify-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 bg-primary text-white rounded-lg overflow-hidden group text-xs sm:text-sm font-medium"
+                whileHover={{
+                  scale: 1.02,
+                  boxShadow: "0 8px 16px rgba(37, 34, 94, 0.3)"
+                }}
+                whileTap={{ scale: 0.98 }}
               >
-                <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
-                <span className="hidden sm:inline">Create Payment App</span>
-                <span className="sm:hidden">Create App</span>
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
+                <div className="absolute inset-0 bg-gradient-to-r from-brand-navy-600 to-brand-navy opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                <Plus className="w-3 h-3 sm:w-4 sm:h-4 relative z-10" />
+                <span className="hidden sm:inline relative z-10">Create Payment App</span>
+                <span className="sm:hidden relative z-10">Create App</span>
+              </motion.button>
+            </motion.div>
+          </motion.div>
+        ))
+        )}
+        </motion.div>
+      </AnimatePresence>
 
-      {/* Empty State */}
-      {filteredProjects.length === 0 && (
-        <div className="text-center py-12 bg-card border-2 border-dashed border-border rounded-lg">
-          <div className="text-4xl mb-4">🏗️</div>
-          <p className="text-muted-foreground font-medium">No projects found</p>
-          <p className="text-sm text-muted-foreground">
-            {searchQuery ? 'Try adjusting your search terms' : 'Create a new project to get started'}
-          </p>
-        </div>
-      )}
+      {/* Empty State with Animations */}
+      <AnimatePresence>
+        {!loading && filteredProjects.length === 0 && (
+          <motion.div
+            className="text-center py-12 bg-card border-2 border-dashed border-border rounded-2xl overflow-hidden relative"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            transition={{ duration: 0.3 }}
+          >
+            {/* Decorative background */}
+            <div className="absolute inset-0 bg-gradient-to-br from-brand-navy/5 to-transparent opacity-50"></div>
+
+            <div className="relative z-10">
+              <motion.div
+                className="text-6xl mb-4 inline-block"
+                animate={{
+                  scale: [1, 1.05, 1]
+                }}
+                transition={{
+                  duration: 2,
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                }}
+              >
+                🏗️
+              </motion.div>
+              <motion.p
+                className="text-muted-foreground font-medium text-lg mb-2"
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.1 }}
+              >
+                No projects found
+              </motion.p>
+              <motion.p
+                className="text-sm text-muted-foreground"
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.2 }}
+              >
+                {searchQuery ? 'Try adjusting your search terms' : 'Create a new project to get started'}
+              </motion.p>
+              {!searchQuery && (
+                <motion.button
+                  onClick={() => setShowNewProjectForm(true)}
+                  className="mt-6 px-6 py-3 bg-primary text-white rounded-xl font-medium hover:bg-primary/90 transition-colors"
+                  initial={{ y: 20, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.3 }}
+                  whileHover={{ scale: 1.05, y: -2 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <span className="flex items-center gap-2">
+                    <Plus className="w-4 h-4" />
+                    Create Your First Project
+                  </span>
+                </motion.button>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Data Modal */}
       {showDataModal && (
@@ -1610,7 +1873,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
           isLoading={isCreatingProject}
         />
       )}
-    </div>
+    </motion.div>
   );
 };
 
