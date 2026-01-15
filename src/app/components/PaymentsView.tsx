@@ -8,6 +8,7 @@ import { generateG703Pdf } from '@/lib/g703Pdf';
 import { Badge } from '@/components/ui/badge';
 import { getPaymentStatusBadge, getStatusLabel, getStatusIconColor, PaymentStatus } from '@/lib/statusColors';
 import { useModal } from '../context/ModalContext';
+import { sendSMS } from '@/lib/sms';
 
 // Utility functions
 const formatDate = (dateString: string) => {
@@ -751,6 +752,7 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
   const [contractors, setContractors] = useState<any[]>([]);
   const [selectedContractors, setSelectedContractors] = useState<number[]>([]);
   const [contractorsLoading, setContractorsLoading] = useState(false);
+  const [sendingSMS, setSendingSMS] = useState(false);
 
 
   // Verification view state variables
@@ -936,7 +938,7 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
           .from('payment_applications')
           .select('approved_amount, status')
           .eq('project_id', projectId)
-          .eq('contractor_id', pc.contractor_id)
+          .eq('contractor_id', pc.contractor_id)  // pc.contractor_id is contractors.id
           .in('status', ['approved', 'check_issued']);
 
         const totalPaid = payments?.reduce((sum, p) => sum + (p.approved_amount || 0), 0) || 0;
@@ -953,11 +955,235 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
       setContractors(contractorsWithPayments);
     } catch (err) {
       console.error('Error fetching contractors:', err);
-      showToast('Failed to load contractors', 'error');
+      showToast({ message: 'Failed to load contractors', type: 'error' });
     } finally {
       setContractorsLoading(false);
     }
   }, [showToast]);
+
+  // Handle sending payment requests via SMS
+  const handleSendPaymentRequests = useCallback(async () => {
+    if (selectedContractors.length === 0) {
+      showToast({ message: 'Please select at least one contractor', type: 'error' });
+      return;
+    }
+
+    if (!projectIdFromUrl) {
+      showToast({ message: 'Project ID not found', type: 'error' });
+      return;
+    }
+
+    const selectedProject = projects.find(p => p.id === parseInt(projectIdFromUrl));
+    if (!selectedProject) {
+      showToast({ message: 'Project not found', type: 'error' });
+      return;
+    }
+
+    setSendingSMS(true);
+    let successCount = 0;
+    let errorCount = 0;
+
+    try {
+      // Get auth session
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('Authentication required');
+      }
+
+      // Process each selected contractor
+      console.log('[SMS] Processing contractors:', {
+        selectedContractors,
+        availableContractors: contractors.map(c => ({
+          id: c.id,
+          contractor_id: c.contractor_id,
+          name: c.contractors?.name
+        }))
+      });
+
+      for (const contractorId of selectedContractors) {
+        try {
+          // Find the project_contractor data (junction table record)
+          const contractorData = contractors.find(c => c.contractor_id === contractorId);
+          if (!contractorData) {
+            console.error('Project contractor data not found for contractor ID:', contractorId, {
+              selectedContractors,
+              availableContractorIds: contractors.map(c => c.contractor_id)
+            });
+            showToast({
+              message: `Contractor ID ${contractorId} not found in current project. Please refresh and try again.`,
+              type: 'error'
+            });
+            errorCount++;
+            continue;
+          }
+
+          const contractor = contractorData.contractors;
+          if (!contractor?.phone) {
+            console.error('Contractor phone not found for:', contractor?.name);
+            showToast({ message: `${contractor?.name || 'Contractor'} has no phone number`, type: 'error' });
+            errorCount++;
+            continue;
+          }
+
+          // Get line items from project_contractors
+          const lineItems = Array.isArray(contractorData.line_items) ? contractorData.line_items : [];
+
+          // Create payment application
+          // Note: contractor_id in payment_applications references contractors.id
+          console.log('[SMS] Creating payment application:', {
+            project_id: parseInt(projectIdFromUrl),
+            contractor_id: contractorId,
+            contractor_name: contractor?.name,
+            project_contractor_id: contractorData.id,
+            contract_amount: contractorData.contract_amount
+          });
+
+          const { data: paymentApp, error: paymentError } = await supabase
+            .from('payment_applications')
+            .insert({
+              project_id: parseInt(projectIdFromUrl),
+              contractor_id: contractorId,  // This is contractors.id
+              status: 'pending_sms',
+              current_payment: 0,
+              current_period_value: 0,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            })
+            .select()
+            .single();
+
+          if (paymentError || !paymentApp) {
+            console.error('Error creating payment application:', {
+              error: paymentError,
+              message: paymentError?.message,
+              details: paymentError?.details,
+              hint: paymentError?.hint,
+              code: paymentError?.code,
+              contractor_id: contractorId,
+              project_id: projectIdFromUrl,
+              project_contractor_record: {
+                id: contractorData.id,
+                contract_amount: contractorData.contract_amount,
+                contract_status: contractorData.contract_status
+              }
+            });
+
+            // Check for specific error types
+            if (paymentError?.code === '23514') {
+              showToast({
+                message: `Contract validation failed. This contractor may not be properly set up for project ${selectedProject.name}.`,
+                type: 'error'
+              });
+            } else {
+              showToast({
+                message: `Database error: ${paymentError?.message || 'Unknown error'}.`,
+                type: 'error'
+              });
+            }
+            errorCount++;
+            continue;
+          }
+
+          // Create SMS conversation
+          const { data: conversation, error: conversationError } = await supabase
+            .from('payment_sms_conversations')
+            .insert({
+              payment_app_id: paymentApp.id,
+              contractor_phone: contractor.phone,
+              conversation_state: 'awaiting_start',
+              current_question_index: 0,
+              responses: [],
+              line_items: lineItems,
+              created_at: new Date().toISOString()
+            })
+            .select()
+            .single();
+
+          if (conversationError) {
+            console.error('Error creating SMS conversation:', {
+              error: conversationError,
+              message: conversationError?.message,
+              details: conversationError?.details,
+              hint: conversationError?.hint,
+              code: conversationError?.code,
+              payment_app_id: paymentApp.id
+            });
+            showToast({
+              message: `SMS conversation error: ${conversationError?.message || 'Unknown error'}`,
+              type: 'error'
+            });
+            errorCount++;
+            continue;
+          }
+
+          // Create line item progress records
+          if (lineItems.length > 0) {
+            const progressRecords = lineItems.map((item: any) => ({
+              payment_app_id: paymentApp.id,
+              line_item_id: item.id,
+              previous_percent: 0,
+              submitted_percent: 0,
+              this_period_percent: 0,
+              pm_verified_percent: 0,
+              calculated_amount: 0,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            }));
+
+            const { error: progressError } = await supabase
+              .from('payment_line_item_progress')
+              .insert(progressRecords);
+
+            if (progressError) {
+              console.error('Error creating line item progress:', {
+                error: progressError,
+                message: progressError?.message,
+                details: progressError?.details,
+                hint: progressError?.hint,
+                code: progressError?.code,
+                recordCount: progressRecords.length
+              });
+            }
+          }
+
+          // Send initial SMS
+          const message = `${selectedProject.name} - ${contractor.trade || 'Work'}: Reply YES to start your payment application.`;
+
+          try {
+            await sendSMS(contractor.phone, message);
+            successCount++;
+          } catch (smsError) {
+            console.error('Error sending SMS:', smsError);
+            showToast({ message: `Failed to send SMS to ${contractor.name}`, type: 'error' });
+            errorCount++;
+          }
+
+        } catch (err) {
+          console.error('Error processing contractor:', err);
+          errorCount++;
+        }
+      }
+
+      // Show results
+      if (successCount > 0) {
+        showToast({ message: `Successfully sent ${successCount} payment request(s)`, type: 'success' });
+        setSelectedContractors([]);
+
+        // Refresh the contractors list to update payment history
+        fetchContractorsForProject(projectIdFromUrl);
+      }
+
+      if (errorCount > 0) {
+        showToast({ message: `Failed to send ${errorCount} request(s)`, type: 'error' });
+      }
+
+    } catch (err) {
+      console.error('Error sending payment requests:', err);
+      showToast({ message: 'Failed to send payment requests', type: 'error' });
+    } finally {
+      setSendingSMS(false);
+    }
+  }, [selectedContractors, projectIdFromUrl, projects, contractors, showToast, fetchContractorsForProject]);
 
   // Load data on mount and when statusFilter changes from URL
   useEffect(() => {
@@ -978,6 +1204,8 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
   // Fetch contractors when project is selected from URL
   useEffect(() => {
     if (projectIdFromUrl && subtab === 'processing') {
+      // Clear selections when switching projects
+      setSelectedContractors([]);
       fetchContractorsForProject(projectIdFromUrl);
     }
   }, [projectIdFromUrl, subtab, fetchContractorsForProject]);
@@ -1627,19 +1855,21 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
             {/* Action Button */}
             <div className="flex justify-end pt-4 border-t border-gray-200">
               <button
-                onClick={() => {
-                  if (selectedContractors.length === 0) {
-                    showToast('Please select at least one contractor', 'error');
-                    return;
-                  }
-                  // TODO: Implement SMS sending logic
-                  showToast(`Sending payment requests to ${selectedContractors.length} contractor(s)...`, 'info');
-                }}
-                disabled={selectedContractors.length === 0}
+                onClick={handleSendPaymentRequests}
+                disabled={selectedContractors.length === 0 || sendingSMS}
                 className="flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
               >
-                <MessageSquare className="w-5 h-5" />
-                Send Payment Requests ({selectedContractors.length})
+                {sendingSMS ? (
+                  <>
+                    <RefreshCw className="w-5 h-5 animate-spin" />
+                    Sending SMS...
+                  </>
+                ) : (
+                  <>
+                    <MessageSquare className="w-5 h-5" />
+                    Send Payment Requests ({selectedContractors.length})
+                  </>
+                )}
               </button>
             </div>
           </>

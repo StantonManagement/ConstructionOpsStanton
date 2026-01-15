@@ -349,7 +349,7 @@ const BudgetDashboard: React.FC = () => {
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis type="number" />
               <YAxis type="category" dataKey="name" width={100} fontSize={12} />
-              <Tooltip formatter={(value: number) => `$${value.toLocaleString()}`} />
+              <Tooltip formatter={(value: number | undefined) => value ? `$${value.toLocaleString()}` : '$0'} />
               <Bar dataKey="remaining" fill="#3b82f6" />
             </BarChart>
           </ResponsiveContainer>
