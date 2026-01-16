@@ -2,11 +2,11 @@
 
 import React, { ReactNode, useEffect, useState } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
-import { 
-  DollarSign, Settings, BarChart2, Menu, X, 
+import {
+  DollarSign, Settings, BarChart2, Menu, X,
   HardHat, Building,
   CreditCard, Wallet,
-  LayoutDashboard, Box, Copy, AlertTriangle, Folder, BarChart3
+  LayoutDashboard, Box, Copy, AlertTriangle, Folder, BarChart3, LogOut
 } from 'lucide-react';
 import { Project } from '@/context/DataContext';
 import { supabase } from '@/lib/supabaseClient';
@@ -170,6 +170,15 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab }) => {
   const isProjectActive = activeTab === 'projects' && !!selectedProjectId;
 
   const closeMobileMenu = () => setIsMobileMenuOpen(false);
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      router.push('/auth');
+    } catch (error) {
+      console.error('Error logging out:', error);
+    }
+  };
 
   return (
     <>
@@ -393,6 +402,14 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab }) => {
                 <p className="text-xs text-gray-500 capitalize">{userRole || 'Loading...'}</p>
               </div>
             </div>
+            <button
+              onClick={handleLogout}
+              className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
+              aria-label="Logout"
+              title="Logout"
+            >
+              <LogOut className="w-5 h-5" />
+            </button>
           </div>
         </div>
       </nav>
