@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { usePathname } from 'next/navigation';
 import Navigation from '@/app/components/Navigation';
 
 export default function AppLayout({
@@ -9,6 +10,18 @@ export default function AppLayout({
   children: React.ReactNode;
 }) {
   const [activeTab, setActiveTab] = useState('overview');
+  const pathname = usePathname();
+
+  // Don't show navigation on auth pages
+  const isAuthPage = pathname?.startsWith('/auth');
+
+  if (isAuthPage) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        {children}
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-gray-50">
