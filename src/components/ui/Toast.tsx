@@ -34,32 +34,32 @@ const ToastComponent: React.FC<ToastProps> = ({ toast, onClose }) => {
     switch (type) {
       case 'success':
         return {
-          bg: 'bg-[var(--status-success-bg)]',
-          border: 'border-[var(--status-success-border)]',
-          text: 'text-[var(--status-success-text)]',
-          icon: <CheckCircle2 className="w-5 h-5 text-[var(--status-success-icon)]" />,
+          bg: 'bg-green-50',
+          border: 'border-green-500',
+          text: 'text-green-900',
+          icon: <CheckCircle2 className="w-5 h-5 text-green-600" />,
         };
       case 'error':
         return {
-          bg: 'bg-[var(--status-critical-bg)]',
-          border: 'border-[var(--status-critical-border)]',
-          text: 'text-[var(--status-critical-text)]',
-          icon: <AlertCircle className="w-5 h-5 text-[var(--status-critical-icon)]" />,
+          bg: 'bg-red-50',
+          border: 'border-red-500',
+          text: 'text-red-900',
+          icon: <AlertCircle className="w-5 h-5 text-red-600" />,
         };
       case 'warning':
         return {
-          bg: 'bg-[var(--status-warning-bg)]',
-          border: 'border-[var(--status-warning-border)]',
-          text: 'text-[var(--status-warning-text)]',
-          icon: <AlertTriangle className="w-5 h-5 text-[var(--status-warning-icon)]" />,
+          bg: 'bg-yellow-50',
+          border: 'border-yellow-500',
+          text: 'text-yellow-900',
+          icon: <AlertTriangle className="w-5 h-5 text-yellow-600" />,
         };
       case 'info':
       default:
         return {
-          bg: 'bg-[var(--status-neutral-bg)]',
-          border: 'border-[var(--status-neutral-border)]',
-          text: 'text-[var(--status-neutral-text)]',
-          icon: <Info className="w-5 h-5 text-[var(--status-neutral-icon)]" />,
+          bg: 'bg-blue-50',
+          border: 'border-blue-500',
+          text: 'text-blue-900',
+          icon: <Info className="w-5 h-5 text-blue-600" />,
         };
     }
   };
@@ -70,15 +70,17 @@ const ToastComponent: React.FC<ToastProps> = ({ toast, onClose }) => {
     <div
       className={`
         ${styles.bg} ${styles.border} ${styles.text}
-        border-2 rounded-xl shadow-lg p-4 mb-3
+        border-2 rounded-xl shadow-2xl p-4 mb-3
         flex items-center gap-3
         min-w-[320px] max-w-[500px]
+        backdrop-blur-sm
         animate-in slide-in-from-top-5 duration-300
       `}
       role="alert"
+      style={{ opacity: 1 }}
     >
       <div className="flex-shrink-0">{styles.icon}</div>
-      <p className="flex-1 font-medium text-sm leading-tight">{message}</p>
+      <p className="flex-1 font-semibold text-sm leading-tight">{message}</p>
       <button
         onClick={() => onClose(id)}
         className={`flex-shrink-0 ${styles.text} hover:opacity-70 transition-opacity`}
