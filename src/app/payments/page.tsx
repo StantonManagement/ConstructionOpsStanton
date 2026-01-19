@@ -1,13 +1,35 @@
 'use client';
 
-import { Suspense } from 'react';
+import { Suspense, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/providers/AuthProvider';
 import PaymentsView from '../components/PaymentsView';
-import { LoadingSpinner } from '../components/LoadingStates';
+import LoadingAnimation from '../components/LoadingAnimation';
+import AppLayout from '../components/AppLayout';
 
 export default function PaymentsPage() {
+  const { user, isLoading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isLoading && !user) {
+      router.replace('/');
+    }
+  }, [user, isLoading, router]);
+
+  if (isLoading) {
+    return <LoadingAnimation fullScreen />;
+  }
+
+  if (!user) {
+    return <LoadingAnimation fullScreen />;
+  }
+
   return (
-    <Suspense fallback={<LoadingSpinner size="lg" text="Loading payments..." className="py-20" />}>
-      <PaymentsView searchQuery="" />
-    </Suspense>
+    <AppLayout>
+      <Suspense fallback={<LoadingAnimation text="Loading payments..." />}>
+        <PaymentsView searchQuery="" />
+      </Suspense>
+    </AppLayout>
   );
 }

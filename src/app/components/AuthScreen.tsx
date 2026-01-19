@@ -6,9 +6,9 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const roleRedirectMap: Record<string, string> = {
-  admin: '/',
-  pm: '/',
-  contractor: '/',
+  admin: '/dashboard',
+  pm: '/dashboard',
+  contractor: '/dashboard',
   viewer: '/viewer',
 };
 

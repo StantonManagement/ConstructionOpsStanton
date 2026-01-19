@@ -49,9 +49,7 @@ export default function RootLayout({
                 <PortfolioProvider>
                   <ProjectProvider>
                     <ModalProvider>
-                      <AppLayout>
-                        {children}
-                      </AppLayout>
+                      {children}
                     </ModalProvider>
                   </ProjectProvider>
                 </PortfolioProvider>

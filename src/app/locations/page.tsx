@@ -2,12 +2,14 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useAuth } from '@/providers/AuthProvider';
 import { useRenovationLocations } from '@/hooks/queries/useRenovationLocations';
 import { useProjects } from '@/hooks/queries/useProjects';
 import { usePortfolio } from '@/context/PortfolioContext';
 import { LocationFilterBar } from '@/app/renovations/components/LocationFilterBar';
 import { RenovationLocationList } from '@/app/renovations/components/RenovationLocationList';
 import { LayoutGrid, List, Loader2, MapPin } from 'lucide-react';
+import AppLayout from '../components/AppLayout';
 
 function LocationsPageContent() {
   const router = useRouter();
@@ -138,9 +140,28 @@ function LocationsPageContent() {
 }
 
 export default function LocationsPage() {
+  const { user, isLoading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isLoading && !user) {
+      router.replace('/');
+    }
+  }, [user, isLoading, router]);
+
+  if (isLoading) {
+    return <div className="p-8 flex justify-center"><Loader2 className="w-8 h-8 animate-spin" /></div>;
+  }
+
+  if (!user) {
+    return <div className="p-8 flex justify-center"><Loader2 className="w-8 h-8 animate-spin" /></div>;
+  }
+
   return (
-    <Suspense fallback={<div className="p-8 flex justify-center"><Loader2 className="w-8 h-8 animate-spin" /></div>}>
-      <LocationsPageContent />
-    </Suspense>
+    <AppLayout>
+      <Suspense fallback={<div className="p-8 flex justify-center"><Loader2 className="w-8 h-8 animate-spin" /></div>}>
+        <LocationsPageContent />
+      </Suspense>
+    </AppLayout>
   );
 }

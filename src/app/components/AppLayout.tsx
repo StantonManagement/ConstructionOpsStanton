@@ -17,9 +17,7 @@ export default function AppLayout({
     <div className="flex min-h-screen bg-gray-50">
       {!isAuthPage && <Navigation activeTab={activeTab} setActiveTab={setActiveTab} />}
       <main className={`flex-1 ${!isAuthPage ? 'lg:ml-64' : ''}`}>
-        <div className={!isAuthPage ? 'max-w-7xl mx-auto' : ''}>
-          {children}
-        </div>
+        {children}
       </main>
     </div>
   );

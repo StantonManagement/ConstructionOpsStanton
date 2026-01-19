@@ -38,38 +38,36 @@ const ProjectHeader: React.FC<{
   onBack: () => void;
 }> = ({ project, onBack }) => {
   const router = useRouter();
-  
+
   const handleBackToProjects = () => {
-    const params = new URLSearchParams();
-    params.set('tab', 'projects');
-    router.replace(`/?${params.toString()}`, { scroll: false });
+    router.push('/projects');
   };
-  
+
   return (
-  <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-2xl p-8 text-white shadow-lg">
-    <div className="flex items-center justify-between">
-      <div>
-        <h2 className="text-2xl font-bold mb-2">Create Payment Applications</h2>
-        <div className="flex items-center space-x-3 text-primary/80">
-          <span className="text-xl">🏗️</span>
-          <span className="text-lg font-medium">{project.name}</span>
-        </div>
-        {project.client_name && (
-          <div className="flex items-center space-x-2 mt-2 text-primary/60">
-            <span className="text-sm">Client:</span>
-            <span className="text-sm font-medium">{project.client_name}</span>
-          </div>
-        )}
-      </div>
+    <div className="mb-6">
       <button
         onClick={handleBackToProjects}
-        className="bg-card/20 hover:bg-card/30 backdrop-blur-sm px-4 py-2 rounded-lg text-card-foreground font-medium transition-all duration-200 flex items-center space-x-2"
+        className="flex items-center gap-2 text-sm text-gray-600 hover:text-brand-navy mb-4 transition-colors"
       >
-        <span>←</span>
-        <span>Back to Projects</span>
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+        </svg>
+        Back to Projects
       </button>
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Create Payment Applications</h1>
+        <div className="flex items-center gap-2 mt-1">
+          <span className="text-sm text-gray-600">Project:</span>
+          <span className="text-sm font-semibold text-brand-navy">{project.name}</span>
+          {project.client_name && (
+            <>
+              <span className="text-gray-400">•</span>
+              <span className="text-sm text-gray-600">{project.client_name}</span>
+            </>
+          )}
+        </div>
+      </div>
     </div>
-  </div>
   );
 };
 
@@ -104,85 +102,64 @@ const ContractorCard: React.FC<{
 
   return (
     <div
-      className={`relative bg-card border-2 rounded-xl p-6 cursor-pointer transition-all duration-200 transform hover:-translate-y-1 ${
+      className={`relative bg-white border rounded-xl p-4 cursor-pointer transition-all duration-300 hover:shadow-xl ${
         isSelected
-          ? 'border-primary shadow-lg shadow-blue-500/25 bg-gradient-to-br from-blue-50 to-white'
-          : 'border-border shadow-sm hover:border-border hover:shadow-md'
+          ? 'border-brand-navy shadow-lg ring-2 ring-brand-navy-200'
+          : 'border-gray-200 hover:border-brand-navy-300'
       }`}
       onClick={() => onToggle(contract.subcontractor_id)}
     >
-      {/* Selection Indicator */}
-      <div className="absolute top-4 right-4">
+      {/* Selection Checkbox */}
+      <div className="absolute top-3 right-3">
         <div
-          className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
+          className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all duration-200 ${
             isSelected
-              ? 'bg-primary border-primary'
-              : 'border-border bg-card hover:border-primary/50'
+              ? 'bg-brand-navy border-brand-navy'
+              : 'border-gray-300 bg-white'
           }`}
         >
           {isSelected && (
-            <svg className="w-3.5 h-3.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+            <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
             </svg>
           )}
         </div>
       </div>
 
-      {/* Header */}
-      <div className="flex items-start space-x-3 mb-4">
-        <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center text-xl">
-          {getTradeIcon(contract.contractors.trade)}
-        </div>
-        <div className="flex-1">
-          <h4 className="font-semibold text-foreground text-lg mb-1">
-            {contract.contractors.name}
-          </h4>
-          <div className="flex items-center space-x-2">
-            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
-              {contract.contractors.trade}
-            </span>
-            {contract.contractors.phone && (
-              <span className="text-xs text-gray-500">📞 {contract.contractors.phone}</span>
-            )}
-          </div>
+      {/* Contractor Info */}
+      <div className="mb-3 pr-8">
+        <h4 className="font-bold text-gray-900 text-base mb-1">
+          {contract.contractors.name}
+        </h4>
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-gray-100 text-gray-700 uppercase">
+            {contract.contractors.trade}
+          </span>
+          {contract.contractors.phone && (
+            <span className="text-xs text-gray-500">{contract.contractors.phone}</span>
+          )}
         </div>
       </div>
 
-      {/* Contract Details */}
-      <div className="space-y-3">
-        <div className="bg-gray-50 rounded-lg p-4">
-          <div className="text-center">
-            <div className="text-2xl font-bold text-gray-900 mb-1">
-              {formatCurrency(contract.contract_amount)}
-            </div>
-            <div className="text-xs text-gray-500 font-medium">Contract Amount</div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div className="text-center">
-            <div className="text-sm font-semibold text-gray-900">
-              {formatDate(contract.start_date)}
-            </div>
-            <div className="text-xs text-gray-500">Start Date</div>
-          </div>
-          <div className="text-center">
-            <div className="text-sm font-semibold text-gray-900">
-              {formatDate(contract.end_date)}
-            </div>
-            <div className="text-xs text-gray-500">End Date</div>
-          </div>
+      {/* Contract Amount - Featured */}
+      <div className="mb-3 p-3 bg-gradient-to-br from-emerald-50 to-green-50 border border-emerald-200 rounded-lg">
+        <div className="text-xs font-semibold text-emerald-700 uppercase mb-1">Contract Amount</div>
+        <div className="text-xl font-bold text-emerald-900">
+          {formatCurrency(contract.contract_amount)}
         </div>
       </div>
 
-      {/* Selection Badge */}
-      {isSelected && (
-        <div className="absolute -top-2 -right-2">
-          <div className="bg-primary text-white rounded-full w-6 h-6 flex items-center justify-center shadow-lg">
-            <span className="text-xs font-bold">✓</span>
-          </div>
+      {/* Dates */}
+      <div className="grid grid-cols-2 gap-2 text-xs">
+        <div>
+          <div className="text-gray-500 font-medium mb-0.5">Start</div>
+          <div className="font-semibold text-gray-900">{formatDate(contract.start_date)}</div>
         </div>
-      )}
+        <div>
+          <div className="text-gray-500 font-medium mb-0.5">End</div>
+          <div className="font-semibold text-gray-900">{formatDate(contract.end_date)}</div>
+        </div>
+      </div>
     </div>
   );
 };
@@ -196,99 +173,78 @@ const ActionBar: React.FC<{
   success: string | null;
   router: any;
 }> = ({ selectedCount, onCancel, onSend, sending, error, success, router }) => (
-  <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+  <div className="sticky bottom-0 bg-white border-t border-gray-200 shadow-lg p-4">
     {/* Status Messages */}
     {error && (
-      <div className="mb-4 bg-gradient-to-r from-red-50 to-pink-50 border border-red-200 rounded-xl p-4">
-        <div className="flex items-center">
-          <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center mr-3">
-            <span className="text-red-600">⚠️</span>
-          </div>
-          <span className="text-red-900 font-medium">{error}</span>
-        </div>
-      </div>
-    )}
-    
-    {success && (
-      <div className="mb-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-4">
-        <div className="flex items-center">
-          <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3">
-            <span className="text-green-600">✅</span>
-          </div>
-          <span className="text-green-900 font-medium">{success}</span>
-        </div>
+      <div className="mb-3 bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-3">
+        <svg className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+        </svg>
+        <span className="text-sm text-red-800 font-medium">{error}</span>
       </div>
     )}
 
-    {/* Action Summary */}
-    <div className="flex items-center justify-between mb-4">
-      <div>
-        <h3 className="text-lg font-semibold text-gray-900">
-          {selectedCount > 0 ? 'Ready to Send Pay Applications' : 'Select Contractors'}
-        </h3>
-        <p className="text-gray-600 text-sm">
-          {selectedCount > 0 
-            ? `${selectedCount} contractor${selectedCount > 1 ? 's' : ''} selected`
-            : 'Choose contractors to send payment requests to'
-          }
-        </p>
-      </div>
-      {selectedCount > 0 && (
-        <div className="bg-primary/10 text-primary px-4 py-2 rounded-full font-medium">
-          {selectedCount} Selected
-        </div>
-      )}
-    </div>
-
-    {/* Action Buttons */}
-    <div className="flex items-center gap-4">
-      <button
-        onClick={() => {
-          const params = new URLSearchParams();
-          params.set('tab', 'projects');
-          router.replace(`/?${params.toString()}`, { scroll: false });
-        }}
-        disabled={sending}
-        className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-3 px-6 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        Cancel
-      </button>
-      <button
-        onClick={onSend}
-        disabled={selectedCount === 0 || sending}
-        className="flex-2 bg-primary hover:bg-primary/90 text-white font-medium py-3 px-6 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
-      >
-        {sending ? (
-          <>
-            <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-            </svg>
-            <span>Sending Requests...</span>
-          </>
+    {/* Action Summary & Buttons */}
+    <div className="flex items-center justify-between gap-4">
+      <div className="flex-1">
+        {selectedCount > 0 ? (
+          <div className="flex items-center gap-2">
+            <div className="bg-brand-navy text-white px-3 py-1 rounded-full text-sm font-bold">
+              {selectedCount}
+            </div>
+            <span className="text-sm font-semibold text-gray-900">
+              {selectedCount === 1 ? 'contractor' : 'contractors'} selected
+            </span>
+          </div>
         ) : (
-          <>
-            <span>📧</span>
-            <span>Send Payment Requests {selectedCount > 0 && `(${selectedCount})`}</span>
-          </>
+          <span className="text-sm text-gray-600">Select contractors to continue</span>
         )}
-      </button>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => router.push('/projects')}
+          disabled={sending}
+          className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={onSend}
+          disabled={selectedCount === 0 || sending}
+          className="px-6 py-2 bg-gradient-to-r from-brand-navy to-brand-navy-600 text-white rounded-lg text-sm font-semibold hover:shadow-lg transition-all disabled:from-gray-300 disabled:to-gray-300 disabled:cursor-not-allowed flex items-center gap-2"
+        >
+          {sending ? (
+            <>
+              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+              </svg>
+              <span>Sending...</span>
+            </>
+          ) : (
+            <>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+              </svg>
+              <span>Send Requests</span>
+            </>
+          )}
+        </button>
+      </div>
     </div>
   </div>
 );
 
 const EmptyState: React.FC = () => (
-  <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-12">
+  <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-12">
     <div className="text-center">
-      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-        <span className="text-3xl">📋</span>
-      </div>
-      <h3 className="text-lg font-semibold text-gray-900 mb-2">No Contracts Found</h3>
-      <p className="text-gray-600 mb-4">
-        No contracts are available for this project yet.
-      </p>
-      <p className="text-sm text-gray-500">
-        Add contracts to this project to create payment applications.
+      <svg className="w-12 h-12 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
+      <h3 className="text-base font-semibold text-gray-900 mb-1">No Contractors Found</h3>
+      <p className="text-sm text-gray-600">
+        No contractors are assigned to this project yet.
       </p>
     </div>
   </div>
@@ -369,9 +325,7 @@ const SubcontractorSelectionView: React.FC<Props> = ({ selectedProject, setSelec
         
         // Auto-redirect after 3 seconds
         setTimeout(() => {
-          const params = new URLSearchParams();
-          params.set('tab', 'projects');
-          router.replace(`/?${params.toString()}`, { scroll: false });
+          router.push('/projects');
         }, 3000);
       }
     } catch (e) {
@@ -383,48 +337,43 @@ const SubcontractorSelectionView: React.FC<Props> = ({ selectedProject, setSelec
 
   if (sendSuccess) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-6">
-        {/* Success Animation */}
+      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-6 p-6">
+        {/* Success Icon */}
         <div className="relative">
-          <div className="w-24 h-24 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center mb-4 shadow-lg animate-bounce">
-            <span className="text-4xl text-white">✅</span>
+          <div className="w-20 h-20 bg-gradient-to-br from-emerald-500 to-green-600 rounded-full flex items-center justify-center shadow-xl">
+            <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+            </svg>
           </div>
-          <div className="absolute -inset-2 bg-green-200 rounded-full animate-ping opacity-20"></div>
         </div>
-        
+
         {/* Success Message */}
-        <div className="text-center max-w-md">
-          <h2 className="text-3xl font-bold text-green-700 mb-3">Payment Requests Sent!</h2>
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-            <p className="text-green-800 font-medium">{sendSuccess}</p>
-            <p className="text-green-600 text-sm mt-2">
-              Contractors will receive SMS notifications with links to submit their payment applications.
+        <div className="text-center max-w-lg">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Payment Requests Sent!</h2>
+          <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
+            <p className="text-sm text-emerald-900 font-medium mb-1">{sendSuccess}</p>
+            <p className="text-xs text-emerald-700">
+              Contractors will receive SMS notifications to submit their payment applications.
             </p>
           </div>
         </div>
 
         {/* Project Info */}
-        <div className="bg-white rounded-lg border border-gray-200 p-4 max-w-md w-full">
-          <div className="text-center">
-            <div className="text-sm text-gray-500 mb-1">Project:</div>
-            <div className="font-semibold text-gray-900">{selectedProject.name}</div>
+        <div className="bg-white border border-gray-200 rounded-lg p-4 max-w-md w-full">
+          <div className="flex items-center justify-center gap-2 text-sm">
+            <span className="text-gray-600">Project:</span>
+            <span className="font-semibold text-brand-navy">{selectedProject.name}</span>
           </div>
         </div>
 
-        {/* Auto-redirect Notice */}
-        <div className="text-center">
-          <p className="text-sm text-gray-500 mb-4">
-            Redirecting to projects in 3 seconds...
-          </p>
+        {/* Action */}
+        <div className="text-center space-y-3">
+          <p className="text-xs text-gray-500">Redirecting in 3 seconds...</p>
           <button
-            onClick={() => {
-              const params = new URLSearchParams();
-              params.set('tab', 'projects');
-              router.replace(`/?${params.toString()}`, { scroll: false });
-            }}
-            className="bg-primary hover:bg-primary/90 text-white px-8 py-3 rounded-lg font-medium text-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:-translate-y-1"
+            onClick={() => router.push('/projects')}
+            className="px-6 py-2 bg-gradient-to-r from-brand-navy to-brand-navy-600 text-white rounded-lg text-sm font-semibold hover:shadow-lg transition-all"
           >
-            Back to Projects Now
+            Back to Projects
           </button>
         </div>
       </div>
@@ -432,45 +381,43 @@ const SubcontractorSelectionView: React.FC<Props> = ({ selectedProject, setSelec
   }
 
   return (
-    <div className="space-y-8 text-gray-900">
-      {/* Project Header */}
-      <ProjectHeader 
-        project={selectedProject} 
-        onBack={() => setSelectedProject(null)} 
-      />
+    <div className="min-h-screen bg-gray-50 pb-24">
+      <div className="p-6 space-y-6">
+        {/* Project Header */}
+        <ProjectHeader
+          project={selectedProject}
+          onBack={() => setSelectedProject(null)}
+        />
 
-      {/* Contractor Selection */}
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-8">
-        <div className="flex items-center justify-between mb-6">
+        {/* Instructions */}
+        <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-1">
-              Select Contractors for Payment Applications
-            </h3>
-            <p className="text-gray-600">
-              Choose which contractors should receive payment requests
+            <p className="text-sm text-gray-600">
+              Select contractors to send payment application requests via SMS
             </p>
           </div>
           {contracts.length > 0 && (
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center gap-4">
+              <span className="text-xs text-gray-500">
+                {contracts.length} contractor{contracts.length > 1 ? 's' : ''}
+              </span>
               <button
                 onClick={handleSelectAll}
-                className="text-primary hover:text-primary/80 font-medium text-sm transition-colors"
+                className="text-xs font-semibold text-brand-navy hover:text-brand-navy-600 transition-colors"
               >
                 {selectedSubs.length === contracts.length ? 'Deselect All' : 'Select All'}
               </button>
-              <div className="text-sm text-gray-500">
-                {contracts.length} contractor{contracts.length > 1 ? 's' : ''}
-              </div>
             </div>
           )}
         </div>
 
+        {/* Contractors Grid */}
         {loading ? (
           <LoadingSpinner />
         ) : contracts.length === 0 ? (
           <EmptyState />
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {contracts.map((contract) => (
               <ContractorCard
                 key={contract.id}
@@ -483,7 +430,7 @@ const SubcontractorSelectionView: React.FC<Props> = ({ selectedProject, setSelec
         )}
       </div>
 
-      {/* Action Bar */}
+      {/* Action Bar - Sticky Bottom */}
       <ActionBar
         selectedCount={selectedSubs.length}
         onCancel={() => setSelectedProject(null)}

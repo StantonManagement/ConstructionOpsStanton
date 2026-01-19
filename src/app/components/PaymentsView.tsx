@@ -12,6 +12,10 @@ import { useModal } from '@/context/ModalContext';
 import { DataTable } from '@/components/ui/DataTable';
 import { SignalBadge } from '@/components/ui/SignalBadge';
 import { SystemStatus } from '@/lib/theme';
+import PageContainer from './PageContainer';
+import PaymentsSkeleton from './PaymentsSkeleton';
+import SubcontractorSelectionView from './SubcontractorSelectionView';
+import { Project } from '@/context/DataContext';
 
 // Utility functions
 const formatDate = (dateString: string) => {
@@ -804,6 +808,12 @@ interface PaymentApplicationsViewProps {
 const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searchQuery = '', projectId }) => {
   const searchParams = useSearchParams();
   const { showToast, showConfirm } = useModal();
+
+  // Check if we're in contractor selection mode
+  const subtab = searchParams.get('subtab');
+  const projectIdFromUrl = searchParams.get('project');
+  const isContractorSelectionMode = subtab === 'processing' && projectIdFromUrl;
+
   const [applications, setApplications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -814,6 +824,9 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
   const [projectFilter, setProjectFilter] = useState<string>(
     projectId ? projectId.toString() : (searchParams.get('project') || 'all')
   );
+
+  // State for contractor selection view
+  const [selectedProjectForPayment, setSelectedProjectForPayment] = useState<Project | null>(null);
   const [groupBy, setGroupBy] = useState<'status' | 'contractor'>('status');
   const [sortBy, setSortBy] = useState<'status' | 'date' | 'amount'>('date');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
@@ -1026,6 +1039,28 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
     setSelectedItems([]);
     setCurrentPage(1);
   }, [statusFilter, projectFilter]);
+
+  // Fetch project data when in contractor selection mode
+  useEffect(() => {
+    if (isContractorSelectionMode && projectIdFromUrl) {
+      const fetchProject = async () => {
+        try {
+          const { data, error } = await supabase
+            .from('projects')
+            .select('*')
+            .eq('id', parseInt(projectIdFromUrl))
+            .single();
+
+          if (error) throw error;
+          setSelectedProjectForPayment(data as Project);
+        } catch (err) {
+          console.error('Error fetching project:', err);
+          showToast({ message: 'Failed to load project details', type: 'error' });
+        }
+      };
+      fetchProject();
+    }
+  }, [isContractorSelectionMode, projectIdFromUrl]);
 
   // Filter and sort applications
   const filteredApps = useMemo(() => {
@@ -1547,10 +1582,9 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-        <span className="ml-3 text-gray-600">Loading payment applications...</span>
-      </div>
+      <PageContainer>
+        <PaymentsSkeleton />
+      </PageContainer>
     );
   }
 
@@ -1584,8 +1618,23 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
     );
   }
 
+  // If in contractor selection mode, show SubcontractorSelectionView
+  if (isContractorSelectionMode && selectedProjectForPayment) {
+    return (
+      <SubcontractorSelectionView
+        selectedProject={selectedProjectForPayment}
+        setSelectedProject={setSelectedProjectForPayment}
+      />
+    );
+  }
+
+  // If in contractor selection mode but still loading project
+  if (isContractorSelectionMode && !selectedProjectForPayment) {
+    return <PaymentsSkeleton />;
+  }
+
   return (
-    <div className="space-y-6">
+    <PageContainer>
       {/* Header */}
       <div className="flex flex-col gap-4 mb-6 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0 flex-1">
@@ -2137,7 +2186,7 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
           </div>
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 };
 

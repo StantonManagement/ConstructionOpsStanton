@@ -1,13 +1,15 @@
 'use client';
 
-import React, { Suspense } from 'react';
+import React, { Suspense, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useAuth } from '@/providers/AuthProvider';
 import { useProjects } from '@/hooks/queries/useProjects';
 import CashFlowView from '@/app/components/CashFlowView';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, DollarSign, Loader2 } from 'lucide-react';
+import AppLayout from '../components/AppLayout';
 
 function CashFlowDashboardContent() {
   const router = useRouter();
@@ -103,9 +105,28 @@ function CashFlowDashboardContent() {
 }
 
 export default function CashFlowDashboardPage() {
+  const { user, isLoading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isLoading && !user) {
+      router.replace('/');
+    }
+  }, [user, isLoading, router]);
+
+  if (isLoading) {
+    return <div className="p-8 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin" /></div>;
+  }
+
+  if (!user) {
+    return <div className="p-8 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin" /></div>;
+  }
+
   return (
-    <Suspense fallback={<div className="p-8">Loading...</div>}>
-      <CashFlowDashboardContent />
-    </Suspense>
+    <AppLayout>
+      <Suspense fallback={<div className="p-8">Loading...</div>}>
+        <CashFlowDashboardContent />
+      </Suspense>
+    </AppLayout>
   );
 }

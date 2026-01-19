@@ -13,6 +13,8 @@ import { DataTable } from '@/components/ui/DataTable';
 import { SignalBadge } from '@/components/ui/SignalBadge';
 import { formatCurrency } from '@/lib/theme';
 import VendorDetailView from './VendorDetailView';
+import PageContainer from './PageContainer';
+import ContractorsSkeleton from './ContractorsSkeleton';
 
 interface Contractor {
   id: number;
@@ -754,9 +756,9 @@ const ContractorsView: React.FC<ContractorsViewProps> = ({ searchQuery = '' }) =
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-      </div>
+      <PageContainer>
+        <ContractorsSkeleton />
+      </PageContainer>
     );
   }
 
@@ -795,7 +797,7 @@ const ContractorsView: React.FC<ContractorsViewProps> = ({ searchQuery = '' }) =
   }
 
   return (
-    <div className="space-y-6">
+    <PageContainer>
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -955,23 +957,23 @@ const ContractorsView: React.FC<ContractorsViewProps> = ({ searchQuery = '' }) =
                 className="bg-card border border-border rounded-lg p-4 shadow-sm hover:shadow-md transition-all"
               >
                 {/* Header */}
-                <div 
+                <div
                   className="flex items-center justify-between mb-3 cursor-pointer"
                   onClick={() => handleContractorClick(contractor)}
                 >
                   <div className="flex items-center gap-3">
                     <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
                       <span className="text-primary font-medium text-sm">
-                        {contractor.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+                        {contractor.name ? contractor.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : '??'}
                       </span>
                     </div>
                     <div>
-                      <h3 className="font-semibold text-foreground text-base">{contractor.name}</h3>
-                      <p className="text-sm text-muted-foreground">{contractor.trade}</p>
+                      <h3 className="font-semibold text-foreground text-base">{contractor.name || 'Unknown'}</h3>
+                      <p className="text-sm text-muted-foreground">{contractor.trade || 'N/A'}</p>
                     </div>
                   </div>
                   <SignalBadge status={contractor.status === 'active' ? 'success' : 'critical'}>
-                    {contractor.status}
+                    {contractor.status || 'unknown'}
                   </SignalBadge>
                 </div>
 
@@ -1088,7 +1090,7 @@ const ContractorsView: React.FC<ContractorsViewProps> = ({ searchQuery = '' }) =
           isLoading={deleteLoading}
         />
       )}
-    </div>
+    </PageContainer>
   );
 };
 

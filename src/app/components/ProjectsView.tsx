@@ -14,6 +14,8 @@ import { DataTable } from '@/components/ui/DataTable';
 import { SignalBadge } from '@/components/ui/SignalBadge';
 import { getBudgetStatus, formatCurrency, formatPercent, SystemStatus, getPaymentStatus } from '@/lib/theme';
 import { authFetch } from '@/lib/authFetch';
+import PageContainer from './PageContainer';
+import ProjectsSkeleton from './ProjectsSkeleton';
 
 // Form validation utilities
 const validators = {
@@ -842,7 +844,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
   };
 
   return (
-    <div className="space-y-6">
+    <PageContainer>
       {/* MAIN CONTENT AREA - DETAIL VIEW OR LIST VIEW */}
       {showDetailView && selectedProject ? (
         <ProjectDetailView 
@@ -903,10 +905,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
 
           {/* Loading State */}
           {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-              <span className="ml-3 text-muted-foreground">Loading projects...</span>
-            </div>
+            <ProjectsSkeleton />
           ) : projects.length === 0 ? (
             /* Empty State */
             <div className="bg-card border border-border rounded">
@@ -920,223 +919,161 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
             </div>
           ) : (
             /* Projects Grid */
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredProjects.map((project) => (
                 <div
                   key={project.id}
-                  className="bg-card rounded border border-border p-4 sm:p-6 hover:shadow-lg transition-shadow duration-200 cursor-pointer"
+                  className="group relative bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-2xl hover:border-brand-navy-300 transition-all duration-300 cursor-pointer"
                   onClick={() => handleProjectClick(project)}
                 >
+                  {/* Gradient Header Band */}
+                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-brand-navy via-accent to-brand-navy-400"></div>
+
                   {/* Project Header */}
-                  <div className="flex items-start justify-between mb-3 sm:mb-4">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-base sm:text-lg font-semibold text-foreground mb-1 truncate">{project.name}</h3>
-                      <p className="text-xs sm:text-sm text-muted-foreground truncate">{project.client_name}</p>
-                    </div>
-                    <div className="flex flex-col sm:flex-row items-end sm:items-center gap-1 sm:gap-2 ml-2">
-                      {project.atRisk && (
-                        <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-xs font-medium bg-[var(--status-critical-bg)] text-[var(--status-critical-text)]">
-                          <AlertCircle className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-0.5 sm:mr-1" />
-                          <span className="hidden sm:inline">At Risk</span>
-                          <span className="sm:hidden">⚠️</span>
+                  <div className="p-4 pb-3">
+                    <div className="flex items-start justify-between mb-1.5">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-base font-bold text-gray-900 mb-0.5 truncate group-hover:text-brand-navy transition-colors">{project.name}</h3>
+                        <p className="text-xs text-gray-500 truncate">{project.client_name}</p>
+                      </div>
+                      <div className="flex flex-col items-end gap-1 ml-2">
+                        {project.atRisk && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-100 text-red-700">
+                            <AlertCircle className="w-2.5 h-2.5 mr-0.5" />
+                            Risk
+                          </span>
+                        )}
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                          (project.stats?.completionPercentage ?? 0) >= 80
+                            ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white'
+                            : (project.stats?.completionPercentage ?? 0) >= 50
+                            ? 'bg-gradient-to-r from-yellow-400 to-orange-500 text-white'
+                            : 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white'
+                        }`}>
+                          {(project.stats?.completionPercentage ?? 0).toFixed(1)}%
                         </span>
-                      )}
-                      <span className={`inline-flex items-center px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-xs font-medium ${
-                        (project.stats?.completionPercentage ?? 0) >= 80 
-                          ? 'bg-[var(--status-success-bg)] text-[var(--status-success-text)]' 
-                          : (project.stats?.completionPercentage ?? 0) >= 50 
-                          ? 'bg-[var(--status-warning-bg)] text-[var(--status-warning-text)]'
-                          : 'bg-blue-100 text-primary'
-                      }`}>
-                        {(project.stats?.completionPercentage ?? 0).toFixed(2)}%
-                      </span>
+                      </div>
                     </div>
                   </div>
 
                   {/* Interactive Stat Cards */}
-                  <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-3 sm:mb-4">
-                    <div 
-                      className="bg-primary/10 p-2 sm:p-3 rounded cursor-pointer hover:shadow-md transition-all duration-200"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleStatCardClick(project, 'contractors');
-                      }}
-                    >
-                      <div className="flex items-center gap-1 sm:gap-2 mb-1">
-                        <Users className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
-                        <h4 className="font-medium text-foreground text-xs sm:text-sm">Contractors</h4>
+                  <div className="px-4 pb-3">
+                    <div className="grid grid-cols-3 gap-2">
+                      <div
+                        className="bg-gradient-to-br from-blue-50 to-indigo-50 p-2.5 rounded-md cursor-pointer hover:shadow-md hover:scale-105 transition-all duration-200 border border-blue-100"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleStatCardClick(project, 'contractors');
+                        }}
+                      >
+                        <Users className="w-4 h-4 text-blue-600 mb-1" />
+                        <p className="text-xl font-bold text-blue-700">{project.stats?.totalContractors ?? 0}</p>
+                        <p className="text-[10px] font-medium text-blue-600/70 uppercase">Contractors</p>
                       </div>
-                      <p className="text-lg sm:text-xl font-bold text-primary">{project.stats?.totalContractors ?? 0}</p>
-                      <p className="text-xs text-muted-foreground">Active</p>
-                      <div className="mt-1 text-xs text-primary font-medium">
-                        <span className="hidden sm:inline">Click to view</span>
-                        <span className="sm:hidden">View</span>
-                      </div>
-                    </div>
 
-                    <div 
-                      className="bg-[var(--status-warning-bg)] p-2 sm:p-3 rounded cursor-pointer hover:shadow-md transition-all duration-200"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleStatCardClick(project, 'payment_apps');
-                      }}
-                    >
-                      <div className="flex items-center gap-1 sm:gap-2 mb-1">
-                        <DollarSign className="w-3 h-3 sm:w-4 sm:h-4 text-[var(--status-warning-text)]" />
-                        <h4 className="font-medium text-foreground text-xs sm:text-sm">Payment Apps</h4>
+                      <div
+                        className="bg-gradient-to-br from-amber-50 to-orange-50 p-2.5 rounded-md cursor-pointer hover:shadow-md hover:scale-105 transition-all duration-200 border border-amber-100"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleStatCardClick(project, 'payment_apps');
+                        }}
+                      >
+                        <DollarSign className="w-4 h-4 text-amber-600 mb-1" />
+                        <p className="text-xl font-bold text-amber-700">{project.stats?.activePaymentApps ?? 0}</p>
+                        <p className="text-[10px] font-medium text-amber-600/70 uppercase">Pending</p>
                       </div>
-                      <p className="text-lg sm:text-xl font-bold text-[var(--status-warning-text)]">{project.stats?.activePaymentApps ?? 0}</p>
-                      <p className="text-xs text-muted-foreground">Pending</p>
-                      <div className="mt-1 text-xs text-[var(--status-warning-text)] font-medium">
-                        <span className="hidden sm:inline">Click to view</span>
-                        <span className="sm:hidden">View</span>
-                      </div>
-                    </div>
 
-                    <div 
-                      className="bg-[var(--status-success-bg)] p-2 sm:p-3 rounded cursor-pointer hover:shadow-md transition-all duration-200"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleStatCardClick(project, 'completed');
-                      }}
-                    >
-                      <div className="flex items-center gap-1 sm:gap-2 mb-1">
-                        <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 text-[var(--status-success-text)]" />
-                        <h4 className="font-medium text-foreground text-xs sm:text-sm">Completed</h4>
-                      </div>
-                      <p className="text-lg sm:text-xl font-bold text-[var(--status-success-text)]">{project.stats?.completedPaymentApps ?? 0}</p>
-                      <p className="text-xs text-muted-foreground">Approved</p>
-                      <div className="mt-1 text-xs text-[var(--status-success-text)] font-medium">
-                        <span className="hidden sm:inline">Click to view</span>
-                        <span className="sm:hidden">View</span>
+                      <div
+                        className="bg-gradient-to-br from-emerald-50 to-green-50 p-2.5 rounded-md cursor-pointer hover:shadow-md hover:scale-105 transition-all duration-200 border border-emerald-100"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleStatCardClick(project, 'completed');
+                        }}
+                      >
+                        <CheckCircle className="w-4 h-4 text-emerald-600 mb-1" />
+                        <p className="text-xl font-bold text-emerald-700">{project.stats?.completedPaymentApps ?? 0}</p>
+                        <p className="text-[10px] font-medium text-emerald-600/70 uppercase">Completed</p>
                       </div>
                     </div>
                   </div>
 
                   {/* Budget Progress */}
-                  <div className="mb-3 sm:mb-4">
-                    <div className="flex items-center justify-between text-xs sm:text-sm mb-2">
-                      <span className="text-muted-foreground font-medium">Budget Progress</span>
-                      <span className="text-foreground font-semibold">{formatCurrency(project.stats?.totalBudget ?? 0)}</span>
-                    </div>
-                    
-                    {/* Progress Bar */}
-                    <div className="w-full bg-secondary/80 rounded-full h-2 sm:h-3 mb-2 relative overflow-hidden">
-                      <div
-                        className={`h-2 sm:h-3 rounded-full transition-all duration-500 ease-out ${
-                          (project.stats?.completionPercentage ?? 0) > 95 ? 'bg-gradient-to-r from-red-500 to-red-600' :
-                          (project.stats?.completionPercentage ?? 0) > 90 ? 'bg-gradient-to-r from-orange-500 to-orange-600' :
-                          (project.stats?.completionPercentage ?? 0) > 75 ? 'bg-gradient-to-r from-yellow-500 to-yellow-600' :
-                          'bg-gradient-to-r from-green-500 to-green-600'
-                        }`}
-                        style={{ 
-                          width: `${Math.min((project.stats?.completionPercentage ?? 0) > 0 ? Math.max((project.stats?.completionPercentage ?? 0), 1) : 0, 100)}%`,
-                          transition: 'width 0.5s ease-out'
-                        }}
-                        role="progressbar"
-                        aria-valuenow={project.stats?.completionPercentage ?? 0}
-                        aria-valuemin={0}
-                        aria-valuemax={100}
-                        aria-label={`Budget utilization: ${(project.stats?.completionPercentage ?? 0).toFixed(2)}%`}
-                      >
-                        {/* Animated shimmer effect for high usage */}
-                        {((project.stats?.completionPercentage ?? 0) > 75) && (
-                          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse"></div>
-                        )}
+                  <div className="px-4 pb-3">
+                    <div className="bg-gray-50 rounded-md p-3 border border-gray-100">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-semibold text-gray-700">Budget</span>
+                        <span className="text-sm font-bold text-brand-navy">{formatCurrency(project.stats?.totalBudget ?? 0)}</span>
                       </div>
-                    </div>
 
-                    {/* Budget Details */}
-                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 text-xs">
-                      <span className="text-muted-foreground">
-                        Spent: <span 
-                          className="font-medium text-foreground cursor-pointer hover:text-primary hover:underline"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleBudgetClick(project.id, 'spent');
+                      {/* Compact Progress Bar */}
+                      <div className="relative w-full bg-gray-200 rounded-full h-2 mb-2 overflow-hidden">
+                        <div
+                          className={`h-2 rounded-full relative transition-all duration-700 ease-out ${
+                            (project.stats?.completionPercentage ?? 0) > 95 ? 'bg-gradient-to-r from-red-500 to-red-600' :
+                            (project.stats?.completionPercentage ?? 0) > 90 ? 'bg-gradient-to-r from-orange-500 to-orange-600' :
+                            (project.stats?.completionPercentage ?? 0) > 75 ? 'bg-gradient-to-r from-yellow-500 to-yellow-600' :
+                            'bg-gradient-to-r from-emerald-500 to-green-600'
+                          }`}
+                          style={{
+                            width: `${Math.min((project.stats?.completionPercentage ?? 0) > 0 ? Math.max((project.stats?.completionPercentage ?? 0), 2) : 0, 100)}%`
                           }}
-                        >
-                          {formatCurrency(project.stats?.totalSpent ?? 0)}
+                        />
+                      </div>
+
+                      {/* Compact Stats */}
+                      <div className="flex items-center justify-between text-[10px] mb-2">
+                        <span className="text-gray-600">Spent: <span className="font-bold text-gray-900">{formatCurrency(project.stats?.totalSpent ?? 0)}</span></span>
+                        <span className={`font-bold px-2 py-0.5 rounded-full ${
+                          (project.stats?.completionPercentage ?? 0) > 95 ? 'bg-red-100 text-red-700' :
+                          (project.stats?.completionPercentage ?? 0) > 90 ? 'bg-orange-100 text-orange-700' :
+                          (project.stats?.completionPercentage ?? 0) > 75 ? 'bg-yellow-100 text-yellow-700' :
+                          'bg-emerald-100 text-emerald-700'
+                        }`}>
+                          {(project.stats?.completionPercentage ?? 0) > 95 ? '⚠️' :
+                          (project.stats?.completionPercentage ?? 0) > 90 ? '⚠️' :
+                          (project.stats?.completionPercentage ?? 0) > 75 ? '⚡' :
+                          '✅'} {(project.stats?.completionPercentage ?? 0) < 0.01 ? '<0.01' : (project.stats?.completionPercentage ?? 0).toFixed(1)}%
                         </span>
-                      </span>
-                      <span className="text-muted-foreground">
-                        Remaining: <span 
-                          className="font-medium text-foreground cursor-pointer hover:text-[var(--status-success-text)] hover:underline"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleBudgetClick(project.id, 'remaining');
-                          }}
-                        >
-                          {formatCurrency((project.stats?.totalBudget ?? 0) - (project.stats?.totalSpent ?? 0))}
-                        </span>
-                      </span>
-                    </div>
-                    
-                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 text-xs mt-1">
-                      <span className="text-muted-foreground font-medium">
-                        {(project.stats?.completionPercentage ?? 0) < 0.01 ? '<0.01%' : (project.stats?.completionPercentage ?? 0).toFixed(2)}% utilized
-                      </span>
-                      <span className={`font-semibold ${
-                        (project.stats?.completionPercentage ?? 0) > 95 ? 'text-[var(--status-critical-text)]' :
-                        (project.stats?.completionPercentage ?? 0) > 90 ? 'text-orange-600' :
-                        (project.stats?.completionPercentage ?? 0) > 75 ? 'text-[var(--status-warning-text)]' :
-                        'text-[var(--status-success-text)]'
-                      }`}>
-                        {(project.stats?.completionPercentage ?? 0) > 95 ? '⚠️ Over budget' :
-                        (project.stats?.completionPercentage ?? 0) > 90 ? '⚠️ Near limit' :
-                        (project.stats?.completionPercentage ?? 0) > 75 ? '⚡ High usage' :
-                        '✅ On track'}
-                      </span>
+                      </div>
                     </div>
                   </div>
 
                   {/* Project Details */}
-                  <div className="space-y-1 sm:space-y-2 text-xs sm:text-sm">
-                    <div className="flex items-center gap-1 sm:gap-2">
-                      <Building className="w-3 h-3 sm:w-4 sm:h-4 text-muted-foreground" />
-                      <span className="text-muted-foreground">Phase:</span>
-                      <span className="font-medium text-foreground truncate">{project.current_phase}</span>
+                  <div className="px-4 pb-3">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-gray-500 flex items-center gap-1">
+                        <Building className="w-3 h-3" />
+                        Phase
+                      </span>
+                      <span className="font-semibold text-gray-900 bg-gray-100 px-2 py-0.5 rounded-full text-[10px]">{project.current_phase}</span>
                     </div>
-                    {project.daysToInspection > 0 && (
-                      <div className="flex items-center gap-1 sm:gap-2">
-                        <Calendar className="w-3 h-3 sm:w-4 sm:h-4 text-muted-foreground" />
-                        <span className="text-muted-foreground">Inspection:</span>
-                        <span className={`font-medium ${project.daysToInspection <= 3 ? 'text-[var(--status-critical-text)]' : 'text-foreground'}`}>
-                          {project.daysToInspection} days
-                        </span>
-                      </div>
-                    )}
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-100 space-y-2">
-                    {/* REMOVED DELETE BUTTON FROM HERE */}
+                  <div className="px-4 pb-4 pt-2 border-t border-gray-100">
+                    <div className="grid grid-cols-2 gap-2 mt-2">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           handleOpenEditForm(project);
                         }}
-                      className="w-full flex items-center justify-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 bg-secondary text-foreground hover:bg-secondary/80 rounded transition-colors text-xs sm:text-sm font-medium"
+                        className="flex items-center justify-center gap-1.5 px-3 py-2 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-md transition-all duration-200 text-xs font-semibold"
                       >
-                        <Edit2 className="w-3 h-3 sm:w-4 sm:h-4" />
-                        <span>Edit</span>
+                        <Edit2 className="w-3.5 h-3.5" />
+                        Edit
                       </button>
-                    
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        const params = new URLSearchParams(searchParams.toString());
-                        params.set('tab', 'payment');
-                        params.set('subtab', 'processing');
-                        params.set('project', project.id.toString());
-                        router.replace(`/?${params.toString()}`, { scroll: false });
-                      }}
-                      className="w-full flex items-center justify-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 bg-primary text-white rounded hover:bg-primary/90 transition-colors text-xs sm:text-sm font-medium"
-                    >
-                      <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
-                      <span className="hidden sm:inline">Create Payment App</span>
-                      <span className="sm:hidden">Create App</span>
-                    </button>
+
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          router.push(`/payments?project=${project.id}&subtab=processing`);
+                        }}
+                        className="flex items-center justify-center gap-1.5 px-3 py-2 bg-gradient-to-r from-brand-navy to-brand-navy-600 text-white hover:shadow-md hover:scale-105 rounded-md transition-all duration-200 text-xs font-semibold"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        Pay App
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -1568,7 +1505,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
           </div>
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 };
 

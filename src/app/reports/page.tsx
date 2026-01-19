@@ -1,10 +1,30 @@
 'use client';
 
-import React from 'react';
-import { BarChart3, AlertTriangle, TrendingUp } from 'lucide-react';
+import React, { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/providers/AuthProvider';
+import { BarChart3, AlertTriangle, TrendingUp, Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import AppLayout from '../components/AppLayout';
 
 export default function ReportsPage() {
+  const { user, isLoading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isLoading && !user) {
+      router.replace('/');
+    }
+  }, [user, isLoading, router]);
+
+  if (isLoading) {
+    return <div className="p-8 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin" /></div>;
+  }
+
+  if (!user) {
+    return <div className="p-8 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin" /></div>;
+  }
+
   const reports = [
     {
       id: 'blocking',
@@ -27,8 +47,8 @@ export default function ReportsPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 pt-20 lg:pt-16 lg:ml-64">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <AppLayout>
+      <div className="px-4 sm:px-6 lg:px-8 py-6">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
             <BarChart3 className="w-6 h-6" />
@@ -62,6 +82,6 @@ export default function ReportsPage() {
           })}
         </div>
       </div>
-    </div>
+    </AppLayout>
   );
 }
