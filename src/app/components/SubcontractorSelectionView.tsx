@@ -12,9 +12,8 @@ type Props = {
 type ContractWithVendor = {
   id: number;
   contract_amount: number;
-  start_date: string;
-  end_date: string;
-  subcontractor_id: number;
+  contractor_id: number;
+  subcontractor_id: number; // Compatibility alias for contractor_id
   contractors: {
     id: number;
     name: string;
@@ -76,14 +75,6 @@ const ContractorCard: React.FC<{
   isSelected: boolean;
   onToggle: (id: number) => void;
 }> = ({ contract, isSelected, onToggle }) => {
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric', 
-      year: 'numeric' 
-    });
-  };
-
   const getTradeIcon = (trade: string) => {
     const icons: { [key: string]: string } = {
       'electrical': '⚡',
@@ -149,15 +140,11 @@ const ContractorCard: React.FC<{
         </div>
       </div>
 
-      {/* Dates */}
-      <div className="grid grid-cols-2 gap-2 text-xs">
-        <div>
-          <div className="text-gray-500 font-medium mb-0.5">Start</div>
-          <div className="font-semibold text-gray-900">{formatDate(contract.start_date)}</div>
-        </div>
-        <div>
-          <div className="text-gray-500 font-medium mb-0.5">End</div>
-          <div className="font-semibold text-gray-900">{formatDate(contract.end_date)}</div>
+      {/* Contract Status */}
+      <div className="text-xs">
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
+          <span className="text-gray-600">Active Contract</span>
         </div>
       </div>
     </div>
@@ -264,12 +251,14 @@ const SubcontractorSelectionView: React.FC<Props> = ({ selectedProject, setSelec
     if (!selectedProject) return;
     queueMicrotask(() => setLoading(true));
     supabase
-      .from('contracts')
-      .select('id, contract_amount, start_date, end_date, subcontractor_id, contractors(id, name, trade, phone)')
+      .from('project_contractors')
+      .select('id, contract_amount, contractor_id, contractors(id, name, trade, phone)')
       .eq('project_id', selectedProject.id)
+      .eq('contract_status', 'active')
       .then(({ data }) => {
         const fixed = (data || []).map((c) => ({
           ...c,
+          subcontractor_id: c.contractor_id, // Alias for compatibility with existing code
           contractors: Array.isArray(c.contractors) ? c.contractors[0] : c.contractors,
         }) as unknown as ContractWithVendor);
         setContracts(fixed);
