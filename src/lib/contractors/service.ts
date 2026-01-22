@@ -132,6 +132,7 @@ export class ContractorService {
 
   /**
    * Add a contractor to a project
+   * Creates records in BOTH contracts (legal) and project_contractors (tracking) tables
    */
   static async addContractorToProject(params: {
     projectId: number;
@@ -139,8 +140,28 @@ export class ContractorService {
     contractAmount: number;
     budgetItemId?: number | null;
     displayOrder: number;
+    startDate?: string;
+    endDate?: string;
   }): Promise<void> {
-    const { error } = await supabase
+    // STEP 1: Create the legal contract record
+    const { error: contractError } = await supabase
+      .from('contracts')
+      .insert({
+        project_id: params.projectId,
+        subcontractor_id: params.contractorId,
+        contract_amount: params.contractAmount,
+        original_contract_amount: params.contractAmount,
+        start_date: params.startDate || new Date().toISOString().split('T')[0],
+        end_date: params.endDate || null,
+        display_order: params.displayOrder,
+      });
+
+    if (contractError) {
+      throw new Error(`Failed to create contract: ${contractError.message}`);
+    }
+
+    // STEP 2: Create the project tracking record
+    const { error: projectContractorError } = await supabase
       .from('project_contractors')
       .insert({
         project_id: params.projectId,
@@ -155,16 +176,24 @@ export class ContractorService {
       .select()
       .single();
 
-    if (error) {
-      throw new Error(`Failed to add contractor: ${error.message}`);
+    if (projectContractorError) {
+      // Rollback: delete the contract we just created
+      await supabase
+        .from('contracts')
+        .delete()
+        .eq('project_id', params.projectId)
+        .eq('subcontractor_id', params.contractorId);
+
+      throw new Error(`Failed to add contractor: ${projectContractorError.message}`);
     }
   }
 
   /**
    * Remove a contractor from a project (with validation)
+   * Deletes from BOTH contracts (legal) and project_contractors (tracking) tables
    */
   static async removeContractorFromProject(
-    contractId: number,
+    projectContractorId: number,
     projectId: number,
     contractorId: number
   ): Promise<void> {
@@ -195,14 +224,27 @@ export class ContractorService {
       );
     }
 
-    // Delete the contract
-    const { error } = await supabase
+    // Delete from project_contractors (tracking)
+    const { error: pcError } = await supabase
       .from('project_contractors')
       .delete()
-      .eq('id', contractId);
+      .eq('id', projectContractorId);
 
-    if (error) {
-      throw new Error(`Failed to delete contract: ${error.message}`);
+    if (pcError) {
+      throw new Error(`Failed to delete project contractor: ${pcError.message}`);
+    }
+
+    // Delete from contracts (legal) - find by project_id + contractor_id
+    const { error: contractError } = await supabase
+      .from('contracts')
+      .delete()
+      .eq('project_id', projectId)
+      .eq('subcontractor_id', contractorId);
+
+    if (contractError) {
+      // Note: Don't throw error here as project_contractors is already deleted
+      // Just log the error
+      console.error('Failed to delete contract record:', contractError);
     }
   }
 
