@@ -46,32 +46,32 @@ export function MetricCard({
   }
 
   return (
-    <Card 
+    <Card
       className={cn(
-        "border-border shadow-none bg-card transition-colors", 
+        "border-border shadow-none bg-card transition-colors max-w-full overflow-hidden",
         props.onClick && "cursor-pointer hover:bg-accent/50",
         className
       )}
       {...props}
     >
       <div className={cn("flex flex-col h-full", paddingClasses[padding])}>
-        <div className="flex justify-between items-start w-full mb-2">
-          <p className="text-sm font-medium text-muted-foreground">{title}</p>
+        <div className="flex justify-between items-start w-full mb-2 min-w-0">
+          <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">{title}</p>
           {status !== 'neutral' && statusLabel && (
-            <SignalBadge status={status}>{statusLabel}</SignalBadge>
+            <SignalBadge status={status} className="flex-shrink-0">{statusLabel}</SignalBadge>
           )}
         </div>
-        
-        <div className="mt-auto">
+
+        <div className="mt-auto min-w-0">
           <p className={cn(
-            "text-2xl font-semibold tracking-tight",
+            "text-lg sm:text-2xl font-semibold tracking-tight truncate",
             status === 'critical' ? 'text-status-critical' : 'text-foreground'
           )}>
             {value}
           </p>
-          
+
           {subtitle && (
-            <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 truncate">{subtitle}</p>
           )}
         </div>
       </div>

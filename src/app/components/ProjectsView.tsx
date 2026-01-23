@@ -918,163 +918,109 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
               />
             </div>
           ) : (
-            /* Projects Grid */
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            /* Projects Grid - Minimalist Design */
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
               {filteredProjects.map((project) => (
                 <div
                   key={project.id}
-                  className="group relative bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-2xl hover:border-brand-navy-300 transition-all duration-300 cursor-pointer"
+                  className="bg-white rounded-lg border border-gray-200 p-3 hover:shadow-md hover:border-primary/50 transition-all cursor-pointer"
                   onClick={() => handleProjectClick(project)}
                 >
-                  {/* Gradient Header Band */}
-                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-brand-navy via-accent to-brand-navy-400"></div>
+                  {/* Compact Header */}
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-sm font-semibold text-gray-900 truncate">{project.name}</h3>
+                      <p className="text-xs text-gray-500 truncate">{project.client_name}</p>
+                    </div>
+                    <span className={`text-xs px-2 py-0.5 rounded ml-2 whitespace-nowrap ${
+                      (project.stats?.completionPercentage ?? 0) >= 80 ? 'bg-green-100 text-green-700' :
+                      (project.stats?.completionPercentage ?? 0) >= 50 ? 'bg-yellow-100 text-yellow-700' :
+                      'bg-blue-100 text-blue-700'
+                    }`}>
+                      {(project.stats?.completionPercentage ?? 0).toFixed(0)}%
+                    </span>
+                  </div>
 
-                  {/* Project Header */}
-                  <div className="p-4 pb-3">
-                    <div className="flex items-start justify-between mb-1.5">
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-base font-bold text-gray-900 mb-0.5 truncate group-hover:text-brand-navy transition-colors">{project.name}</h3>
-                        <p className="text-xs text-gray-500 truncate">{project.client_name}</p>
-                      </div>
-                      <div className="flex flex-col items-end gap-1 ml-2">
-                        {project.atRisk && (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-100 text-red-700">
-                            <AlertCircle className="w-2.5 h-2.5 mr-0.5" />
-                            Risk
-                          </span>
-                        )}
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                          (project.stats?.completionPercentage ?? 0) >= 80
-                            ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white'
-                            : (project.stats?.completionPercentage ?? 0) >= 50
-                            ? 'bg-gradient-to-r from-yellow-400 to-orange-500 text-white'
-                            : 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white'
-                        }`}>
-                          {(project.stats?.completionPercentage ?? 0).toFixed(1)}%
-                        </span>
-                      </div>
+                  {/* Compact Stats */}
+                  <div className="grid grid-cols-3 gap-2 mb-2">
+                    <div className="text-center p-1.5 bg-blue-50 rounded">
+                      <p className="text-sm font-bold text-blue-700">{project.stats?.totalContractors ?? 0}</p>
+                      <p className="text-[10px] text-blue-600">Contractors</p>
+                    </div>
+                    <div className="text-center p-1.5 bg-amber-50 rounded">
+                      <p className="text-sm font-bold text-amber-700">{project.stats?.activePaymentApps ?? 0}</p>
+                      <p className="text-[10px] text-amber-600">Pending</p>
+                    </div>
+                    <div className="text-center p-1.5 bg-green-50 rounded">
+                      <p className="text-sm font-bold text-green-700">{project.stats?.completedPaymentApps ?? 0}</p>
+                      <p className="text-[10px] text-green-600">Done</p>
                     </div>
                   </div>
 
-                  {/* Interactive Stat Cards */}
-                  <div className="px-4 pb-3">
-                    <div className="grid grid-cols-3 gap-2">
-                      <div
-                        className="bg-gradient-to-br from-blue-50 to-indigo-50 p-2.5 rounded-md cursor-pointer hover:shadow-md hover:scale-105 transition-all duration-200 border border-blue-100"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleStatCardClick(project, 'contractors');
-                        }}
-                      >
-                        <Users className="w-4 h-4 text-blue-600 mb-1" />
-                        <p className="text-xl font-bold text-blue-700">{project.stats?.totalContractors ?? 0}</p>
-                        <p className="text-[10px] font-medium text-blue-600/70 uppercase">Contractors</p>
-                      </div>
-
-                      <div
-                        className="bg-gradient-to-br from-amber-50 to-orange-50 p-2.5 rounded-md cursor-pointer hover:shadow-md hover:scale-105 transition-all duration-200 border border-amber-100"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleStatCardClick(project, 'payment_apps');
-                        }}
-                      >
-                        <DollarSign className="w-4 h-4 text-amber-600 mb-1" />
-                        <p className="text-xl font-bold text-amber-700">{project.stats?.activePaymentApps ?? 0}</p>
-                        <p className="text-[10px] font-medium text-amber-600/70 uppercase">Pending</p>
-                      </div>
-
-                      <div
-                        className="bg-gradient-to-br from-emerald-50 to-green-50 p-2.5 rounded-md cursor-pointer hover:shadow-md hover:scale-105 transition-all duration-200 border border-emerald-100"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleStatCardClick(project, 'completed');
-                        }}
-                      >
-                        <CheckCircle className="w-4 h-4 text-emerald-600 mb-1" />
-                        <p className="text-xl font-bold text-emerald-700">{project.stats?.completedPaymentApps ?? 0}</p>
-                        <p className="text-[10px] font-medium text-emerald-600/70 uppercase">Completed</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Budget Progress */}
-                  <div className="px-4 pb-3">
-                    <div className="bg-gray-50 rounded-md p-3 border border-gray-100">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-semibold text-gray-700">Budget</span>
-                        <span className="text-sm font-bold text-brand-navy">{formatCurrency(project.stats?.totalBudget ?? 0)}</span>
-                      </div>
-
-                      {/* Compact Progress Bar */}
-                      <div className="relative w-full bg-gray-200 rounded-full h-2 mb-2 overflow-hidden">
-                        <div
-                          className={`h-2 rounded-full relative transition-all duration-700 ease-out ${
-                            (project.stats?.completionPercentage ?? 0) > 95 ? 'bg-gradient-to-r from-red-500 to-red-600' :
-                            (project.stats?.completionPercentage ?? 0) > 90 ? 'bg-gradient-to-r from-orange-500 to-orange-600' :
-                            (project.stats?.completionPercentage ?? 0) > 75 ? 'bg-gradient-to-r from-yellow-500 to-yellow-600' :
-                            'bg-gradient-to-r from-emerald-500 to-green-600'
-                          }`}
-                          style={{
-                            width: `${Math.min((project.stats?.completionPercentage ?? 0) > 0 ? Math.max((project.stats?.completionPercentage ?? 0), 2) : 0, 100)}%`
-                          }}
-                        />
-                      </div>
-
-                      {/* Compact Stats */}
-                      <div className="flex items-center justify-between text-[10px] mb-2">
-                        <span className="text-gray-600">Spent: <span className="font-bold text-gray-900">{formatCurrency(project.stats?.totalSpent ?? 0)}</span></span>
-                        <span className={`font-bold px-2 py-0.5 rounded-full ${
-                          (project.stats?.completionPercentage ?? 0) > 95 ? 'bg-red-100 text-red-700' :
-                          (project.stats?.completionPercentage ?? 0) > 90 ? 'bg-orange-100 text-orange-700' :
-                          (project.stats?.completionPercentage ?? 0) > 75 ? 'bg-yellow-100 text-yellow-700' :
-                          'bg-emerald-100 text-emerald-700'
-                        }`}>
-                          {(project.stats?.completionPercentage ?? 0) > 95 ? '⚠️' :
-                          (project.stats?.completionPercentage ?? 0) > 90 ? '⚠️' :
-                          (project.stats?.completionPercentage ?? 0) > 75 ? '⚡' :
-                          '✅'} {(project.stats?.completionPercentage ?? 0) < 0.01 ? '<0.01' : (project.stats?.completionPercentage ?? 0).toFixed(1)}%
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Project Details */}
-                  <div className="px-4 pb-3">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-gray-500 flex items-center gap-1">
-                        <Building className="w-3 h-3" />
-                        Phase
+                  {/* Compact Budget */}
+                  <div className="mb-2">
+                    <div className="flex items-center justify-between text-xs mb-1">
+                      <span className="text-gray-600">{formatCurrency(project.stats?.totalBudget ?? 0)}</span>
+                      <span className={`font-medium ${
+                        (project.stats?.completionPercentage ?? 0) > 95 ? 'text-red-600' :
+                        (project.stats?.completionPercentage ?? 0) > 75 ? 'text-yellow-600' :
+                        'text-green-600'
+                      }`}>
+                        {(project.stats?.completionPercentage ?? 0).toFixed(1)}%
                       </span>
-                      <span className="font-semibold text-gray-900 bg-gray-100 px-2 py-0.5 rounded-full text-[10px]">{project.current_phase}</span>
                     </div>
+                    {/* Thin Progress Bar */}
+                    <div className="w-full bg-gray-200 rounded-full h-1.5">
+                      <div
+                        className={`h-1.5 rounded-full ${
+                          (project.stats?.completionPercentage ?? 0) > 95 ? 'bg-red-500' :
+                          (project.stats?.completionPercentage ?? 0) > 90 ? 'bg-orange-500' :
+                          (project.stats?.completionPercentage ?? 0) > 75 ? 'bg-yellow-500' :
+                          'bg-green-500'
+                        }`}
+                        style={{
+                          width: `${Math.min((project.stats?.completionPercentage ?? 0) > 0 ? Math.max((project.stats?.completionPercentage ?? 0), 2) : 0, 100)}%`
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Phase Badge */}
+                  <div className="pt-2 border-t border-gray-100">
+                    <span className="text-xs text-gray-500">{project.current_phase}</span>
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="px-4 pb-4 pt-2 border-t border-gray-100">
-                    <div className="grid grid-cols-2 gap-2 mt-2">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleOpenEditForm(project);
-                        }}
-                        className="flex items-center justify-center gap-1.5 px-3 py-2 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-md transition-all duration-200 text-xs font-semibold"
-                      >
-                        <Edit2 className="w-3.5 h-3.5" />
-                        Edit
-                      </button>
-
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          router.push(`/payments?project=${project.id}&subtab=processing`);
-                        }}
-                        className="flex items-center justify-center gap-1.5 px-3 py-2 bg-gradient-to-r from-brand-navy to-brand-navy-600 text-white hover:shadow-md hover:scale-105 rounded-md transition-all duration-200 text-xs font-semibold"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                        Pay App
-                      </button>
-                    </div>
+                  <div className="grid grid-cols-2 gap-2 mt-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenEditForm(project);
+                      }}
+                      className="flex items-center justify-center gap-1 px-2 py-1.5 text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 rounded transition-colors"
+                    >
+                      <Edit2 className="w-3 h-3" />
+                      Edit
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        router.push(`/payments?project=${project.id}&subtab=processing`);
+                      }}
+                      className="flex items-center justify-center gap-1 px-2 py-1.5 text-xs bg-primary text-white hover:bg-primary/90 rounded transition-colors"
+                    >
+                      <Plus className="w-3 h-3" />
+                      Pay App
+                    </button>
                   </div>
+
+                  {/* At Risk Badge */}
+                  {project.atRisk && (
+                    <div className="mt-2 text-xs px-2 py-1 bg-red-100 text-red-700 rounded inline-flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" />
+                      At Risk
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

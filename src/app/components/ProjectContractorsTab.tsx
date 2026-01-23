@@ -101,7 +101,7 @@ const ProjectContractorsTab: React.FC<ProjectContractorsTabProps> = ({
   onViewContractorDetail,
 }) => {
   // Data fetching using custom hooks
-  const { contractors, loading, refreshContractors, updateLocalContractors } = useContractors(project.id);
+  const { contractors, loading, error, refreshContractors, updateLocalContractors } = useContractors(project.id);
 
   // Contractor actions hook
   const {
@@ -196,6 +196,51 @@ const ProjectContractorsTab: React.FC<ProjectContractorsTabProps> = ({
     setShowDeleteModal(false);
     setContractToDelete(null);
   };
+
+  // Error State
+  if (error) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+        <div className="flex items-start gap-3">
+          <div className="flex-shrink-0">
+            <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+              <span className="text-red-600 text-xl">⚠️</span>
+            </div>
+          </div>
+          <div className="flex-1">
+            <h3 className="text-lg font-semibold text-red-900 mb-2">
+              Failed to Load Contractors
+            </h3>
+            <p className="text-sm text-red-700 mb-4">
+              {error}
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => refreshContractors()}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium text-sm"
+              >
+                Try Again
+              </button>
+              <button
+                onClick={() => window.location.reload()}
+                className="px-4 py-2 bg-white border border-red-300 text-red-700 rounded-lg hover:bg-red-50 transition-colors font-medium text-sm"
+              >
+                Reload Page
+              </button>
+            </div>
+            <div className="mt-4 text-xs text-red-600 bg-red-100 p-3 rounded">
+              <p className="font-semibold mb-1">Troubleshooting:</p>
+              <ul className="list-disc list-inside space-y-1">
+                <li>Check your internet connection</li>
+                <li>Verify database permissions (RLS policies)</li>
+                <li>Open browser console (F12) for detailed errors</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Loading State
   if (loading) {

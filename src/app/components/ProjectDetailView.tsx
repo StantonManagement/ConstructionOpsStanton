@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import ProjectScheduleTab from './schedule/ProjectScheduleTab';
-import { ArrowLeft, Building, Users, DollarSign, FileText, CheckCircle, XCircle, TrendingUp, AlertCircle, ListChecks, Edit2, Calendar, Trash2 } from 'lucide-react';
+import { ArrowLeft, Building, Users, DollarSign, FileText, CheckCircle, XCircle, TrendingUp, AlertCircle, ListChecks, Edit2, Calendar, Trash2, Image, Shield, Clipboard, FileSignature } from 'lucide-react';
 import { Project } from '@/context/DataContext';
 import { supabase } from '@/lib/supabaseClient';
 import ProjectContractorsTab from './ProjectContractorsTab';
@@ -22,6 +22,7 @@ import { LocationDetailView } from './LocationDetailView';
 import { ProjectStatsCard } from './ProjectStatsCard';
 import { authFetch } from '@/lib/authFetch';
 import { addRecentItem } from '@/lib/recentItems';
+import { TabDropdown } from './TabDropdown';
 
 interface ProjectDetailViewProps {
   project: Project;
@@ -34,27 +35,68 @@ interface ProjectDetailViewProps {
 
   // Sub-tab Navigation Component
   function SubTabNavigation({ activeSubTab, onSubTabChange }: { activeSubTab: SubTab; onSubTabChange: (tab: SubTab) => void }) {
-    const subTabs = [
+    // Primary tabs (always visible) - reordered by user frequency
+    const primaryTabs = [
       { id: 'summary' as const, label: 'Summary', icon: Building },
-      { id: 'locations' as const, label: 'Locations', icon: Building },
       { id: 'contractors' as const, label: 'Contractors', icon: Users },
       { id: 'budget' as const, label: 'Budget', icon: TrendingUp },
-      { id: 'schedule' as const, label: 'Schedule', icon: Calendar },
-      { id: 'loan' as const, label: 'Loan', icon: DollarSign },
-      { id: 'cashflow' as const, label: 'Cash Flow', icon: TrendingUp },
       { id: 'payments' as const, label: 'Payments', icon: DollarSign },
+      { id: 'schedule' as const, label: 'Schedule', icon: Calendar },
+      { id: 'locations' as const, label: 'Locations', icon: Building },
       { id: 'punchlists' as const, label: 'Punch Lists', icon: ListChecks },
       { id: 'documents' as const, label: 'Documents', icon: FileText },
-      { id: 'photos' as const, label: 'Photos', icon: FileText },
-      { id: 'warranties' as const, label: 'Warranties', icon: FileText },
-      { id: 'daily-logs' as const, label: 'Daily Logs', icon: FileText },
-      { id: 'change-orders' as const, label: 'Change Orders', icon: FileText }
     ];
+
+    // Financial dropdown tabs
+    const financialTabs = [
+      { id: 'loan', label: 'Loan', icon: DollarSign },
+      { id: 'cashflow', label: 'Cash Flow', icon: TrendingUp },
+    ];
+
+    // More dropdown tabs
+    const moreTabs = [
+      { id: 'photos', label: 'Photos', icon: Image, badge: 'Soon' },
+      { id: 'warranties', label: 'Warranties', icon: Shield },
+      { id: 'daily-logs', label: 'Daily Logs', icon: Clipboard, badge: 'Soon' },
+      { id: 'change-orders', label: 'Change Orders', icon: FileSignature, badge: 'Soon' },
+    ];
+
+    // All tabs combined for mobile dropdown
+    const allTabs = [...primaryTabs, ...financialTabs, ...moreTabs];
 
   return (
     <div className="border-b border-gray-200 mb-6">
-      <nav className="-mb-px flex space-x-8 overflow-x-auto">
-        {subTabs.map((tab) => {
+      {/* Mobile: Show dropdown selector */}
+      <div className="sm:hidden mb-4">
+        <select
+          value={activeSubTab}
+          onChange={(e) => onSubTabChange(e.target.value as SubTab)}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm"
+        >
+          <optgroup label="Main">
+            {primaryTabs.map(tab => (
+              <option key={tab.id} value={tab.id}>{tab.label}</option>
+            ))}
+          </optgroup>
+          <optgroup label="Financial">
+            {financialTabs.map(tab => (
+              <option key={tab.id} value={tab.id}>{tab.label}</option>
+            ))}
+          </optgroup>
+          <optgroup label="More">
+            {moreTabs.map(tab => (
+              <option key={tab.id} value={tab.id}>
+                {tab.label}{tab.badge ? ` (${tab.badge})` : ''}
+              </option>
+            ))}
+          </optgroup>
+        </select>
+      </div>
+
+      {/* Desktop: Show tab buttons with dropdowns */}
+      <nav className="hidden sm:flex -mb-px space-x-8 overflow-x-auto">
+        {/* Primary tabs */}
+        {primaryTabs.map((tab) => {
           const Icon = tab.icon;
           return (
             <button
@@ -65,12 +107,29 @@ interface ProjectDetailViewProps {
                   ? 'border-primary text-primary'
                   : 'border-transparent text-muted-foreground hover:text-foreground hover:border-gray-300'
               }`}
+              type="button"
             >
               <Icon className="w-4 h-4" />
               {tab.label}
             </button>
           );
         })}
+
+        {/* Financial dropdown */}
+        <TabDropdown
+          label="Financial"
+          items={financialTabs}
+          activeTab={activeSubTab}
+          onTabChange={onSubTabChange}
+        />
+
+        {/* More dropdown */}
+        <TabDropdown
+          label="More"
+          items={moreTabs}
+          activeTab={activeSubTab}
+          onTabChange={onSubTabChange}
+        />
       </nav>
     </div>
   );

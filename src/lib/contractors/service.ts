@@ -42,50 +42,70 @@ export class ContractorService {
    * Fetch all contractors for a specific project
    */
   static async fetchProjectContractors(projectId: number): Promise<ContractWithContractor[]> {
-    const { data, error } = await supabase
-      .from('project_contractors')
-      .select(`
-        id,
-        project_id,
-        contract_amount,
-        original_contract_amount,
-        paid_to_date,
-        display_order,
-        contract_status,
-        contractor_id,
-        budget_item_id,
-        contractors (
+    try {
+      const { data, error } = await supabase
+        .from('project_contractors')
+        .select(`
           id,
-          name,
-          trade,
-          phone,
-          email
-        ),
-        property_budgets (
-          id,
-          category_name,
-          original_amount
-        )
-      `)
-      .eq('project_id', projectId)
-      .order('display_order', { ascending: true });
+          project_id,
+          contract_amount,
+          original_contract_amount,
+          paid_to_date,
+          display_order,
+          contract_status,
+          contractor_id,
+          budget_item_id,
+          contractors (
+            id,
+            name,
+            trade,
+            phone,
+            email
+          ),
+          property_budgets (
+            id,
+            category_name,
+            original_amount
+          )
+        `)
+        .eq('project_id', projectId)
+        .order('display_order', { ascending: true });
 
-    if (error) {
-      throw new Error(`Failed to fetch contractors: ${error.message}`);
+      if (error) {
+        console.error('Supabase error fetching contractors:', {
+          error,
+          projectId,
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+        });
+        // Return empty array instead of throwing to prevent UI crash
+        return [];
+      }
+
+      // If no data, return empty array
+      if (!data) {
+        console.warn(`No contractors found for project ${projectId}`);
+        return [];
+      }
+
+      // Fix data structure (handle array responses from joins)
+      const fixedData = data.map((contract) => ({
+        ...contract,
+        contractors: Array.isArray(contract.contractors)
+          ? contract.contractors[0]
+          : contract.contractors,
+        property_budgets: Array.isArray(contract.property_budgets)
+          ? contract.property_budgets[0]
+          : contract.property_budgets,
+      })) as ContractWithContractor[];
+
+      return fixedData;
+    } catch (err) {
+      console.error('Error in fetchProjectContractors:', err);
+      // Return empty array instead of throwing to prevent UI crash
+      return [];
     }
-
-    // Fix data structure (handle array responses from joins)
-    const fixedData = (data || []).map((contract) => ({
-      ...contract,
-      contractors: Array.isArray(contract.contractors)
-        ? contract.contractors[0]
-        : contract.contractors,
-      property_budgets: Array.isArray(contract.property_budgets)
-        ? contract.property_budgets[0]
-        : contract.property_budgets,
-    })) as ContractWithContractor[];
-
-    return fixedData;
   }
 
   /**

@@ -745,7 +745,7 @@ export const ExcelBudgetTable: React.FC<ExcelBudgetTableProps> = ({
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto border border-border rounded-lg">
+      <div className="overflow-x-auto border border-border rounded-lg budget-table-scroll">
         <table className="w-full">
           <thead className="bg-muted">
             <tr>

@@ -56,9 +56,9 @@ const ProjectCard: React.FC<Props> = ({ project, onSelect, onBudgetClick, isLoad
   const statusInfo = getStatusInfo();
 
   return (
-    <div 
-      className={`border border-border rounded-lg p-4 bg-card shadow-sm hover:shadow-md transition-all duration-200 ${
-        onSelect ? 'cursor-pointer hover:shadow-lg hover:border-primary/50 focus:ring-2 focus:ring-primary/20' : ''
+    <div
+      className={`border border-border rounded-lg p-2 bg-card hover:shadow-sm transition-all max-w-full overflow-hidden ${
+        onSelect ? 'cursor-pointer hover:border-primary/50' : ''
       }`}
       onClick={onSelect ? handleClick : undefined}
       onKeyDown={onSelect ? handleKeyDown : undefined}
@@ -66,126 +66,57 @@ const ProjectCard: React.FC<Props> = ({ project, onSelect, onBudgetClick, isLoad
       tabIndex={onSelect ? 0 : undefined}
       aria-label={onSelect ? `View details for ${project.name}` : undefined}
     >
-      {/* Project Header */}
-      <div className="mb-3">
-        <h4 className="font-semibold text-gray-900 text-lg mb-1 line-clamp-2">{project.name}</h4>
-        <p className="text-sm text-gray-700 mb-1">{project.client_name || 'No client specified'}</p>
-        <p className="text-xs text-blue-700 font-medium">
-          Phase: {project.current_phase || 'Not specified'}
-        </p>
+      {/* Compact Header - Single Line */}
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex-1 min-w-0">
+          <h4 className="font-semibold text-sm text-gray-900 truncate">{project.name}</h4>
+          <p className="text-xs text-gray-500 truncate">{project.client_name || 'No client'}</p>
+        </div>
+        <span className="text-xs px-2 py-0.5 bg-blue-50 text-blue-700 rounded ml-2 whitespace-nowrap">
+          {project.current_phase || 'N/A'}
+        </span>
       </div>
 
-      {/* Budget Information - Clickable when onBudgetClick is provided */}
-      <div 
-        className={`mb-3 ${onBudgetClick ? 'cursor-pointer hover:bg-primary/10 rounded-lg p-2 -mx-2 transition-colors' : ''}`}
-        onClick={onBudgetClick ? handleBudgetClick : undefined}
-        onKeyDown={onBudgetClick ? handleBudgetKeyDown : undefined}
-        role={onBudgetClick ? 'button' : undefined}
-        tabIndex={onBudgetClick ? 0 : undefined}
-        aria-label={onBudgetClick ? `View budget details for ${project.name}` : undefined}
-      >
-        <div className="flex justify-between items-center text-sm mb-2">
-          <span className="text-gray-600 font-medium">Budget Progress</span>
-          <span className="text-gray-900 font-semibold">${budget.toLocaleString()}</span>
+      {/* Compact Budget - Single Line with Progress */}
+      <div className="mb-1.5">
+        <div className="flex items-center justify-between text-xs mb-1">
+          <span className="text-gray-600">${budget.toLocaleString()}</span>
+          <span className={`font-medium ${statusInfo.color}`}>
+            {percent < 0.01 ? '<0.01%' : percent.toFixed(1)}%
+          </span>
         </div>
-        
-        {/* Progress Bar */}
-        <div className="w-full bg-gray-200 rounded-full h-3 mb-2 relative overflow-hidden">
+
+        {/* Thin Progress Bar */}
+        <div className="w-full bg-gray-200 rounded-full h-1.5 relative overflow-hidden">
           {isLoading ? (
-            <div className="h-3 bg-gradient-to-r from-gray-300 to-gray-400 rounded-full animate-pulse"></div>
+            <div className="h-1.5 bg-gray-300 rounded-full animate-pulse"></div>
           ) : (
             <div
-              className={`h-3 rounded-full transition-all duration-500 ease-out ${
-                percent > 95 ? 'bg-gradient-to-r from-red-500 to-red-600' :
-                percent > 90 ? 'bg-gradient-to-r from-orange-500 to-orange-600' :
-                percent > 75 ? 'bg-gradient-to-r from-yellow-500 to-yellow-600' :
-                'bg-gradient-to-r from-green-500 to-green-600'
+              className={`h-1.5 rounded-full transition-all ${
+                percent > 95 ? 'bg-red-500' :
+                percent > 90 ? 'bg-orange-500' :
+                percent > 75 ? 'bg-yellow-500' :
+                'bg-green-500'
               }`}
-              style={{ 
-                width: `${Math.min(displayPercent, 100)}%`,
-                transition: 'width 0.5s ease-out'
-              }}
-              role="progressbar"
-              aria-valuenow={percent}
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-label={`Budget utilization: ${percent.toFixed(2)}%`}
-            >
-              {/* Animated shimmer effect for high usage */}
-              {(percent > 75) && (
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse"></div>
-              )}
-            </div>
+              style={{ width: `${Math.min(displayPercent, 100)}%` }}
+            />
           )}
         </div>
-
-        {/* Budget Details */}
-        <div className="flex justify-between items-center text-xs">
-          <span className="text-gray-600">
-            Spent: <span className="font-medium text-gray-900">
-              {isLoading ? (
-                <span className="inline-block w-16 h-3 bg-gray-200 rounded animate-pulse"></span>
-              ) : (
-                `$${spent.toLocaleString()}`
-              )}
-            </span>
-          </span>
-          <span className="text-gray-600">
-            Remaining: <span className="font-medium text-gray-900">
-              {isLoading ? (
-                <span className="inline-block w-16 h-3 bg-gray-200 rounded animate-pulse"></span>
-              ) : (
-                `$${(budget - spent).toLocaleString()}`
-              )}
-            </span>
-          </span>
-        </div>
-        
-        <div className="flex justify-between items-center text-xs mt-1">
-          <span className="text-gray-600 font-medium">
-            {percent < 0.01 ? '<0.01%' : percent.toFixed(2)}% utilized
-          </span>
-          <span className={`font-semibold ${statusInfo.color}`}>
-            {statusInfo.text}
-          </span>
-        </div>
-        
-        {/* Budget click hint */}
-        {onBudgetClick && (
-          <div className="text-xs text-primary mt-1 opacity-70">
-            Click for budget details
-          </div>
-        )}
       </div>
 
-      {/* Project Status Indicators */}
-      <div className="flex flex-wrap gap-2 mb-3">
-        {project.current_phase?.toLowerCase().includes('complete') && (
-          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-            ✅ Completed
+      {/* Minimal Status Badges */}
+      <div className="flex items-center gap-1.5 text-xs">
+        {percent > 90 && (
+          <span className="px-1.5 py-0.5 rounded text-[10px] bg-orange-100 text-orange-700">
+            High Usage
           </span>
         )}
         {(project as any).at_risk && (
-          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-            ⚠️ At Risk
-          </span>
-        )}
-        {percent > 90 && (
-          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-            🔥 High Usage
+          <span className="px-1.5 py-0.5 rounded text-[10px] bg-red-100 text-red-700">
+            At Risk
           </span>
         )}
       </div>
-
-      {/* Action Indicator */}
-      {onSelect && (
-        <div className="pt-2 border-t border-gray-100">
-          <div className="text-xs text-primary font-medium flex items-center gap-1">
-            <span>👆</span>
-            Click to view payments & details
-          </div>
-        </div>
-      )}
     </div>
   );
 };

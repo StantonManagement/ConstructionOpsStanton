@@ -6,7 +6,7 @@ import { Project } from '@/context/DataContext';
 import { useRouter } from 'next/navigation';
 
 // Lazy load components
-const OverviewView = lazy(() => import('./OverviewView'));
+const OverviewView = lazy(() => import('./ImprovedOverviewView'));
 
 const ConstructionDashboard: React.FC = () => {
   const router = useRouter();
@@ -24,7 +24,7 @@ const ConstructionDashboard: React.FC = () => {
 
 
   return (
-    <div className="p-6">
+    <div className="p-4 sm:p-6 max-w-full overflow-x-hidden">
       <Suspense fallback={<LoadingSpinner size="lg" text="Loading..." className="py-20" />}>
         <OverviewView onProjectSelect={handleProjectSelect} onSwitchToPayments={handleSwitchToPayments} searchQuery="" />
       </Suspense>
