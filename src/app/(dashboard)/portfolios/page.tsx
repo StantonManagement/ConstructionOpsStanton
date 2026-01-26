@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePortfolios } from '@/hooks/queries/usePortfolios';
 import { Plus, Building2, DollarSign, FolderOpen, ChevronRight } from 'lucide-react';
+import AppLayout from '@/app/components/AppLayout';
 import PageContainer from '@/app/components/PageContainer';
 
 export default function PortfoliosPage() {
@@ -13,26 +14,30 @@ export default function PortfoliosPage() {
 
   if (isLoading) {
     return (
-      <PageContainer>
-        <div className="animate-pulse space-y-3">
-          <div className="h-6 bg-gray-200 rounded w-32" />
-          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {[1, 2, 3, 4].map(i => (
-              <div key={i} className="h-32 bg-gray-200 rounded-lg" />
-            ))}
+      <AppLayout>
+        <PageContainer>
+          <div className="animate-pulse space-y-3">
+            <div className="h-6 bg-gray-200 rounded w-32" />
+            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {[1, 2, 3, 4].map(i => (
+                <div key={i} className="h-32 bg-gray-200 rounded-lg" />
+              ))}
+            </div>
           </div>
-        </div>
-      </PageContainer>
+        </PageContainer>
+      </AppLayout>
     );
   }
 
   if (error) {
     return (
-      <PageContainer>
-        <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-red-700 text-sm">
-          Error loading portfolios: {error.message}
-        </div>
-      </PageContainer>
+      <AppLayout>
+        <PageContainer>
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-red-700 text-sm">
+            Error loading portfolios: {error.message}
+          </div>
+        </PageContainer>
+      </AppLayout>
     );
   }
 
@@ -45,9 +50,10 @@ export default function PortfoliosPage() {
   };
 
   return (
-    <PageContainer>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-3">
+    <AppLayout>
+      <PageContainer>
+        {/* Header */}
+        <div className="flex items-center justify-between mb-3">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Portfolios</h1>
           <p className="text-xs text-gray-500 mt-0.5">Manage property portfolios and funding sources</p>
@@ -159,6 +165,7 @@ export default function PortfoliosPage() {
           ))}
         </div>
       )}
-    </PageContainer>
+      </PageContainer>
+    </AppLayout>
   );
 }
