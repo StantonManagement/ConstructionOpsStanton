@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { Project } from '@/context/DataContext';
 import { formatCurrency } from '@/lib/theme';
 import { TrendingUp, TrendingDown, DollarSign, FolderOpen, AlertCircle, CheckCircle2, Clock } from 'lucide-react';
+import AuditLog from './AuditLog';
 
 interface OverviewViewProps {
   onProjectSelect?: (project: Project) => void;
@@ -362,6 +363,9 @@ const ImprovedOverviewView: React.FC<OverviewViewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Audit Log */}
+      <AuditLog limit={15} />
     </div>
   );
 };

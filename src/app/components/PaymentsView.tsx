@@ -16,6 +16,7 @@ import PageContainer from './PageContainer';
 import PaymentsSkeleton from './PaymentsSkeleton';
 import SubcontractorSelectionView from './SubcontractorSelectionView';
 import { Project } from '@/context/DataContext';
+import AuditLog from './AuditLog';
 
 // Utility functions
 const formatDate = (dateString: string) => {
@@ -2186,6 +2187,9 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
           </div>
         </div>
       )}
+
+      {/* Audit Log */}
+      <AuditLog limit={15} />
     </PageContainer>
   );
 };

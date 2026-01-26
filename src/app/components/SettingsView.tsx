@@ -9,6 +9,7 @@ import EntityManagementView from './EntityManagementView';
 import SettingsScheduleDefaults from './SettingsScheduleDefaults';
 import { useAuth } from '@/providers/AuthProvider';
 import { ToastContainer, Toast } from '@/components/ui/Toast';
+import AuditLog from './AuditLog';
 
 import { hasRoleAccess, canAccessUserManagement, canAccessPermissionsManagement } from '@/lib/permissions';
 
@@ -561,8 +562,13 @@ const SettingsView: React.FC = () => {
           {activeTab === 'preferences' && <PreferencesTab showToast={showToast} />}
           {activeTab === 'schedule' && <SettingsScheduleDefaults showToast={showToast} />}
         </div>
+
+        {/* Audit Log */}
+        <div className="px-4 sm:px-6 lg:px-8 pb-6">
+          <AuditLog limit={20} />
+        </div>
       </div>
-      
+
       {/* Toast Container */}
       <ToastContainer toasts={toasts} onClose={closeToast} />
     </>

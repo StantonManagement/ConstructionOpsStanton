@@ -15,6 +15,7 @@ import { formatCurrency } from '@/lib/theme';
 import VendorDetailView from './VendorDetailView';
 import PageContainer from './PageContainer';
 import ContractorsSkeleton from './ContractorsSkeleton';
+import AuditLog from './AuditLog';
 
 interface Contractor {
   id: number;
@@ -1090,6 +1091,9 @@ const ContractorsView: React.FC<ContractorsViewProps> = ({ searchQuery = '' }) =
           isLoading={deleteLoading}
         />
       )}
+
+      {/* Audit Log */}
+      <AuditLog limit={15} />
     </PageContainer>
   );
 };

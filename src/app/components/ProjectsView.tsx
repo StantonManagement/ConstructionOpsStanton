@@ -16,6 +16,7 @@ import { getBudgetStatus, formatCurrency, formatPercent, SystemStatus, getPaymen
 import { authFetch } from '@/lib/authFetch';
 import PageContainer from './PageContainer';
 import ProjectsSkeleton from './ProjectsSkeleton';
+import AuditLog from './AuditLog';
 
 // Form validation utilities
 const validators = {
@@ -1036,6 +1037,9 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
               </p>
             </div>
           )}
+
+          {/* Audit Log */}
+          {!selectedProject && <AuditLog limit={15} />}
         </>
       )}
 

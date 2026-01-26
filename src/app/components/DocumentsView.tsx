@@ -9,6 +9,7 @@ import {
   Calendar, User, HardDrive, Search, X
 } from 'lucide-react';
 import { useModal } from '@/context/ModalContext';
+import AuditLog from './AuditLog';
 
 interface DocumentsViewProps {
   projectId: number;
@@ -316,6 +317,9 @@ export default function DocumentsView({ projectId }: DocumentsViewProps) {
           </div>
         )}
       </div>
+
+      {/* Audit Log */}
+      <AuditLog entityType="project" entityId={projectId.toString()} limit={15} />
     </div>
   );
 }
