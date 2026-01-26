@@ -4,13 +4,12 @@ import React, { useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { usePortfolio, useUpdatePortfolio, useDeletePortfolio } from '@/hooks/queries/usePortfolios';
 import { useFundingSources } from '@/hooks/queries/useFundingSources';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import {
   ArrowLeft, Edit, Trash2, Plus, Building2, DollarSign,
   AlertTriangle, ChevronRight
 } from 'lucide-react';
+import AppLayout from '@/app/components/AppLayout';
+import PageContainer from '@/app/components/PageContainer';
 
 export default function PortfolioDetailPage() {
   const router = useRouter();
@@ -52,201 +51,217 @@ export default function PortfolioDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="p-6">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 rounded w-64" />
-          <div className="h-40 bg-gray-200 rounded-lg" />
-        </div>
-      </div>
+      <AppLayout>
+        <PageContainer>
+          <div className="animate-pulse space-y-3">
+            <div className="h-6 bg-gray-200 rounded w-48" />
+            <div className="h-32 bg-gray-200 rounded-lg" />
+            <div className="h-32 bg-gray-200 rounded-lg" />
+          </div>
+        </PageContainer>
+      </AppLayout>
     );
   }
 
   if (error || !portfolio) {
     return (
-      <div className="p-6">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
-          {error?.message || 'Portfolio not found'}
-        </div>
-      </div>
+      <AppLayout>
+        <PageContainer>
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-red-700 text-sm">
+            {error?.message || 'Portfolio not found'}
+          </div>
+        </PageContainer>
+      </AppLayout>
     );
   }
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" onClick={() => router.push('/portfolios')}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
-          </Button>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-semibold text-gray-900">{portfolio.name}</h1>
-              {!portfolio.is_active && <Badge variant="secondary">Inactive</Badge>}
+    <AppLayout>
+      <PageContainer>
+        {/* Header */}
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => router.push('/portfolios')}
+              className="flex items-center gap-1 px-2 py-1.5 text-xs text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors"
+            >
+              <ArrowLeft className="w-3 h-3" />
+              Back
+            </button>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl font-bold text-gray-900">{portfolio.name}</h1>
+                {!portfolio.is_active && (
+                  <span className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded">
+                    Inactive
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-gray-500">{portfolio.code}</p>
             </div>
-            <p className="text-gray-500">{portfolio.code}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => router.push(`/portfolios/${portfolioId}/edit`)}
+              className="flex items-center gap-1 px-3 py-1.5 text-xs border border-gray-300 rounded hover:bg-gray-50 transition-colors"
+            >
+              <Edit className="w-3 h-3" />
+              Edit
+            </button>
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="flex items-center gap-1 px-3 py-1.5 text-xs text-red-600 border border-red-300 rounded hover:bg-red-50 transition-colors"
+            >
+              <Trash2 className="w-3 h-3" />
+              Delete
+            </button>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => router.push(`/portfolios/${portfolioId}/edit`)}>
-            <Edit className="w-4 h-4 mr-2" />
-            Edit
-          </Button>
-          <Button
-            variant="outline"
-            className="text-red-600 hover:bg-red-50"
-            onClick={() => setShowDeleteConfirm(true)}
-          >
-            <Trash2 className="w-4 h-4 mr-2" />
-            Delete
-          </Button>
-        </div>
-      </div>
 
-      {/* Delete confirmation */}
-      {showDeleteConfirm && (
-        <Card className="border-red-200 bg-red-50">
-          <CardContent className="py-4">
+        {/* Delete confirmation */}
+        {showDeleteConfirm && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-3">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <AlertTriangle className="w-5 h-5 text-red-600" />
-                <span className="text-red-800">Are you sure you want to delete this portfolio?</span>
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-red-600" />
+                <span className="text-xs text-red-800">Delete this portfolio?</span>
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={() => setShowDeleteConfirm(false)}>
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-white transition-colors"
+                >
                   Cancel
-                </Button>
-                <Button
-                  size="sm"
-                  className="bg-red-600 hover:bg-red-700"
+                </button>
+                <button
                   onClick={handleDelete}
                   disabled={deleteMutation.isPending}
+                  className="px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700 transition-colors disabled:opacity-50"
                 >
                   {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
-                </Button>
+                </button>
               </div>
             </div>
-          </CardContent>
-        </Card>
-      )}
+          </div>
+        )}
 
-      {/* Description */}
-      {portfolio.description && (
-        <Card>
-          <CardContent className="py-4">
-            <p className="text-gray-600">{portfolio.description}</p>
-          </CardContent>
-        </Card>
-      )}
+        {/* Description */}
+        {portfolio.description && (
+          <div className="bg-white border border-gray-200 rounded-lg p-3 mb-3">
+            <p className="text-xs text-gray-600">{portfolio.description}</p>
+          </div>
+        )}
 
-      {/* Funding Sources Section */}
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-medium text-gray-900">Funding Sources</h2>
-          <Button onClick={() => router.push(`/funding-sources/new?portfolio_id=${portfolioId}`)}>
-            <Plus className="w-4 h-4 mr-2" />
-            Add Funding Source
-          </Button>
-        </div>
+        {/* Funding Sources Section */}
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-sm font-bold text-gray-900">Funding Sources</h2>
+            <button
+              onClick={() => router.push(`/funding-sources/new?portfolio_id=${portfolioId}`)}
+              className="flex items-center gap-1 px-2 py-1 text-xs bg-primary text-white rounded hover:bg-primary/90 transition-colors"
+            >
+              <Plus className="w-3 h-3" />
+              Add
+            </button>
+          </div>
 
-        {fundingSources?.length === 0 ? (
-          <Card>
-            <CardContent className="py-8 text-center">
-              <DollarSign className="w-10 h-10 mx-auto text-gray-400 mb-3" />
-              <p className="text-gray-500 mb-4">No funding sources yet</p>
-              <Button
-                variant="outline"
+          {fundingSources?.length === 0 ? (
+            <div className="bg-white border border-gray-200 rounded-lg p-6 text-center">
+              <DollarSign className="w-8 h-8 mx-auto text-gray-300 mb-2" />
+              <p className="text-xs text-gray-500 mb-3">No funding sources yet</p>
+              <button
                 onClick={() => router.push(`/funding-sources/new?portfolio_id=${portfolioId}`)}
+                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs border border-gray-300 rounded hover:bg-gray-50 transition-colors"
               >
-                <Plus className="w-4 h-4 mr-2" />
-                Add First Funding Source
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-3">
-            {fundingSources?.map((fs) => (
-              <Card
-                key={fs.id}
-                className="cursor-pointer hover:border-blue-300 transition-colors"
-                onClick={() => router.push(`/funding-sources/${fs.id}`)}
-              >
-                <CardContent className="py-4">
+                <Plus className="w-3 h-3" />
+                Add First Source
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {fundingSources?.map((fs) => (
+                <div
+                  key={fs.id}
+                  className="bg-white border border-gray-200 rounded-lg p-3 cursor-pointer hover:shadow-md hover:border-primary/50 transition-all"
+                  onClick={() => router.push(`/funding-sources/${fs.id}`)}
+                >
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <Badge className={getTypeColor(fs.type)}>{fs.type}</Badge>
-                      <div>
-                        <p className="font-medium">{fs.name}</p>
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded ${getTypeColor(fs.type)}`}>
+                        {fs.type}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold text-sm text-gray-900 truncate">{fs.name}</p>
                         {fs.lender_name && (
-                          <p className="text-sm text-gray-500">{fs.lender_name}</p>
+                          <p className="text-xs text-gray-500 truncate">{fs.lender_name}</p>
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-6">
+                    <div className="flex items-center gap-4 shrink-0">
                       <div className="text-right">
-                        <p className="text-sm text-gray-500">Commitment</p>
-                        <p className="font-medium">{formatCurrency(fs.commitment_amount)}</p>
+                        <p className="text-[10px] text-gray-500">Commitment</p>
+                        <p className="text-xs font-semibold text-gray-900">{formatCurrency(fs.commitment_amount)}</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-sm text-gray-500">Remaining</p>
-                        <p className="font-medium">{formatCurrency(fs.remaining || 0)}</p>
+                        <p className="text-[10px] text-gray-500">Remaining</p>
+                        <p className="text-xs font-semibold text-gray-900">{formatCurrency(fs.remaining || 0)}</p>
                       </div>
-                      <ChevronRight className="w-5 h-5 text-gray-400" />
+                      <ChevronRight className="w-4 h-4 text-gray-400" />
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Projects Section */}
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-medium text-gray-900">Projects</h2>
-          <Button variant="outline" onClick={() => router.push('/projects')}>
-            Manage Projects
-          </Button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
-        {portfolio.projects?.length === 0 ? (
-          <Card>
-            <CardContent className="py-8 text-center">
-              <Building2 className="w-10 h-10 mx-auto text-gray-400 mb-3" />
-              <p className="text-gray-500">No projects assigned to this portfolio</p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-2">
-            {portfolio.projects?.map((project: any) => (
-              <Card
-                key={project.id}
-                className="cursor-pointer hover:border-blue-300 transition-colors"
-                onClick={() => router.push(`/projects/${project.id}`)}
-              >
-                <CardContent className="py-3">
+        {/* Projects Section */}
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-sm font-bold text-gray-900">Projects</h2>
+            <button
+              onClick={() => router.push('/projects')}
+              className="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 transition-colors"
+            >
+              Manage Projects
+            </button>
+          </div>
+
+          {portfolio.projects?.length === 0 ? (
+            <div className="bg-white border border-gray-200 rounded-lg p-6 text-center">
+              <Building2 className="w-8 h-8 mx-auto text-gray-300 mb-2" />
+              <p className="text-xs text-gray-500">No projects assigned to this portfolio</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {portfolio.projects?.map((project: any) => (
+                <div
+                  key={project.id}
+                  className="bg-white border border-gray-200 rounded-lg p-3 cursor-pointer hover:shadow-md hover:border-primary/50 transition-all"
+                  onClick={() => router.push(`/projects/${project.id}`)}
+                >
                   <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">{project.name}</p>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-sm text-gray-900 truncate">{project.name}</p>
                       {project.address && (
-                        <p className="text-sm text-gray-500">{project.address}</p>
+                        <p className="text-xs text-gray-500 truncate">{project.address}</p>
                       )}
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 shrink-0">
                       {project.status && (
-                        <Badge variant="outline">{project.status}</Badge>
+                        <span className="text-[10px] px-1.5 py-0.5 border border-gray-300 rounded text-gray-700">
+                          {project.status}
+                        </span>
                       )}
-                      <ChevronRight className="w-5 h-5 text-gray-400" />
+                      <ChevronRight className="w-4 h-4 text-gray-400" />
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </PageContainer>
+    </AppLayout>
   );
 }
