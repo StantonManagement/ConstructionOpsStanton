@@ -32,6 +32,7 @@ export const AuditLog: React.FC<AuditLogProps> = ({
   const [loading, setLoading] = useState(true);
   const [isExpanded, setIsExpanded] = useState(false);
   const [showAll, setShowAll] = useState(false);
+  const [tableExists, setTableExists] = useState(true);
 
   useEffect(() => {
     fetchAuditLogs();
@@ -56,13 +57,21 @@ export const AuditLog: React.FC<AuditLogProps> = ({
       const { data, error } = await query;
 
       if (error) {
-        console.error('Error fetching audit logs:', error);
-        setLogs([]);
+        // Check if table doesn't exist
+        if (error.code === 'PGRST116' || error.message?.includes('does not exist')) {
+          console.warn('[AuditLog] Table does not exist yet. Please run DATABASE_AUDIT_LOGS.sql migration.');
+          setTableExists(false);
+          setLogs([]);
+        } else {
+          console.error('[AuditLog] Error fetching audit logs:', error);
+          setLogs([]);
+        }
       } else {
         setLogs(data || []);
+        setTableExists(true);
       }
     } catch (err) {
-      console.error('Error:', err);
+      console.error('[AuditLog] Unexpected error:', err);
       setLogs([]);
     } finally {
       setLoading(false);
@@ -97,6 +106,11 @@ export const AuditLog: React.FC<AuditLogProps> = ({
     }
     return parts.join(' ');
   };
+
+  // Don't render if table doesn't exist
+  if (!tableExists) {
+    return null;
+  }
 
   if (!isExpanded) {
     return (
