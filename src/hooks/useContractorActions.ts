@@ -4,7 +4,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import { ContractorService, type Contractor, type BudgetLineItem } from '@/lib/contractors/service';
+import { ContractorService, type Contractor, type BudgetLineItem, type ContractWithContractor } from '@/lib/contractors/service';
 import { arrayMove } from '@dnd-kit/sortable';
 import type { DragEndEvent } from '@dnd-kit/core';
 
@@ -13,7 +13,7 @@ interface UseContractorActionsParams {
   existingContractorIds: number[];
   maxDisplayOrder: number;
   onRefresh: () => Promise<void>;
-  onLocalUpdate: (updater: (prev: unknown[]) => unknown[]) => void;
+  onLocalUpdate: (updater: (prev: ContractWithContractor[]) => ContractWithContractor[]) => void;
 }
 
 export function useContractorActions({

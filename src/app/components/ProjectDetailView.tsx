@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import ProjectScheduleTab from './schedule/ProjectScheduleTab';
 import { ArrowLeft, Building, Users, DollarSign, FileText, CheckCircle, XCircle, TrendingUp, AlertCircle, ListChecks, Edit2, Calendar, Trash2, Image, Shield, Clipboard, FileSignature } from 'lucide-react';
-import { Project } from '@/context/DataContext';
+import { Project } from '@/types/schema';
 import { supabase } from '@/lib/supabaseClient';
 import ProjectContractorsTab from './ProjectContractorsTab';
 import ContractorDetailView from './ContractorDetailView';
@@ -121,7 +121,7 @@ interface ProjectDetailViewProps {
           label="Financial"
           items={financialTabs}
           activeTab={activeSubTab}
-          onTabChange={onSubTabChange}
+          onTabChange={(tabId) => onSubTabChange(tabId as SubTab)}
         />
 
         {/* More dropdown */}
@@ -129,7 +129,7 @@ interface ProjectDetailViewProps {
           label="More"
           items={moreTabs}
           activeTab={activeSubTab}
-          onTabChange={onSubTabChange}
+          onTabChange={(tabId) => onSubTabChange(tabId as SubTab)}
         />
       </nav>
     </div>
@@ -715,7 +715,7 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ project, onBack, 
       <CreateLocationModal
         isOpen={showCreateLocationModal}
         onClose={() => setShowCreateLocationModal(false)}
-        projectId={project.id}
+        projectId={String(project.id)}
         onSuccess={() => {
           // React Query will handle cache invalidation automatically
           setPaymentSuccess('Location created successfully');

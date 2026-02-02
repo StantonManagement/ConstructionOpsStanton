@@ -529,7 +529,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
     setShowBudgetModal(true);
 
     try {
-      const project = projects.find(p => p.id === projectId);
+      const project = projects.find(p => p.id === String(projectId));
       if (!project) return;
 
       let modalData: any = {};

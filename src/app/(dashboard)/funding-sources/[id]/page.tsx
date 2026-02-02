@@ -147,14 +147,14 @@ export default function FundingSourceDetailPage() {
       {fs.portfolio && (
         <Card
           className="cursor-pointer hover:border-blue-300 transition-colors"
-          onClick={() => router.push(`/portfolios/${fs.portfolio.id}`)}
+          onClick={() => fs.portfolio?.id && router.push(`/portfolios/${fs.portfolio.id}`)}
         >
           <CardContent className="py-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-sm">
                 <span className="text-gray-500">Portfolio:</span>
-                <span className="font-medium">{fs.portfolio.name}</span>
-                <span className="text-gray-400">({fs.portfolio.code})</span>
+                <span className="font-medium">{fs.portfolio?.name}</span>
+                <span className="text-gray-400">({fs.portfolio?.code})</span>
               </div>
               <span className="text-blue-600 text-sm">View portfolio →</span>
             </div>

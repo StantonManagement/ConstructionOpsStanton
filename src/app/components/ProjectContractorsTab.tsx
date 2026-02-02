@@ -78,7 +78,10 @@ function SortableContractorCard({
         onViewDetails={onViewDetails}
         onDelete={onDelete}
         isRequesting={isRequesting}
-        dragHandleProps={{ attributes, listeners }}
+        dragHandleProps={{
+          attributes: attributes as unknown as Record<string, unknown>,
+          listeners: listeners as unknown as Record<string, unknown>
+        }}
       />
     </div>
   );
