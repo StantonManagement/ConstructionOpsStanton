@@ -10,6 +10,8 @@ interface BacklogItem {
   estimated_cost?: number;
   status: string;
   converted_to_project_id?: number;
+  created_at: string;
+  updated_at?: string;
   portfolio?: {
     id: string;
     name: string;
