@@ -10,13 +10,13 @@ import { StatusFilter } from '@/components/StatusFilter';
 import { useSearchParams } from 'next/navigation';
 
 interface Props {
-  projectId: number;
+  projectId: number | string;
   onLocationClick?: (locationId: string) => void;
   onAddLocation?: () => void;
 }
 
 export const LocationList: React.FC<Props> = ({ projectId, onLocationClick, onAddLocation }) => {
-  const { data: locations, isLoading, error } = useLocations(projectId);
+  const { data: locations, isLoading, error } = useLocations(typeof projectId === 'string' ? Number(projectId) : projectId);
   const searchParams = useSearchParams();
   const filterStatuses = searchParams.getAll('status');
   const [searchQuery, setSearchQuery] = useState('');

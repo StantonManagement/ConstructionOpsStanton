@@ -9,11 +9,11 @@ import { usePathname, useSearchParams } from 'next/navigation';
 import { formatCurrency } from '@/lib/theme';
 
 interface Props {
-  projectId: number;
+  projectId: number | string;
 }
 
 export const ProjectStatsCard: React.FC<Props> = ({ projectId }) => {
-  const { data: stats, isLoading } = useProjectStats(projectId);
+  const { data: stats, isLoading } = useProjectStats(typeof projectId === 'string' ? Number(projectId) : projectId);
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const returnToParams = new URLSearchParams(searchParams.toString());
