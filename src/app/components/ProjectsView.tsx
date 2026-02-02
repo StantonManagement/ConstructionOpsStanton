@@ -924,19 +924,19 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
               {filteredProjects.map((project) => (
                 <div
                   key={project.id}
-                  className="bg-white rounded-lg border border-gray-200 p-3 hover:shadow-md hover:border-primary/50 transition-all cursor-pointer"
+                  className="bg-card rounded-lg border border-border p-3 hover:shadow-md hover:border-primary/50 transition-all cursor-pointer"
                   onClick={() => handleProjectClick(project)}
                 >
                   {/* Compact Header */}
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-sm font-semibold text-gray-900 truncate">{project.name}</h3>
-                      <p className="text-xs text-gray-500 truncate">{project.client_name}</p>
+                      <h3 className="text-sm font-semibold text-card-foreground truncate">{project.name}</h3>
+                      <p className="text-xs text-muted-foreground truncate">{project.client_name}</p>
                     </div>
                     <span className={`text-xs px-2 py-0.5 rounded ml-2 whitespace-nowrap ${
-                      (project.stats?.completionPercentage ?? 0) >= 80 ? 'bg-green-100 text-green-700' :
-                      (project.stats?.completionPercentage ?? 0) >= 50 ? 'bg-yellow-100 text-yellow-700' :
-                      'bg-blue-100 text-blue-700'
+                      (project.stats?.completionPercentage ?? 0) >= 80 ? 'bg-green-500/10 text-green-700 dark:text-green-400' :
+                      (project.stats?.completionPercentage ?? 0) >= 50 ? 'bg-yellow-500/10 text-yellow-700 dark:text-yellow-400' :
+                      'bg-blue-500/10 text-blue-700 dark:text-blue-400'
                     }`}>
                       {(project.stats?.completionPercentage ?? 0).toFixed(0)}%
                     </span>
@@ -944,34 +944,34 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
 
                   {/* Compact Stats */}
                   <div className="grid grid-cols-3 gap-2 mb-2">
-                    <div className="text-center p-1.5 bg-blue-50 rounded">
-                      <p className="text-sm font-bold text-blue-700">{project.stats?.totalContractors ?? 0}</p>
-                      <p className="text-[10px] text-blue-600">Contractors</p>
+                    <div className="text-center p-1.5 bg-blue-500/10 rounded">
+                      <p className="text-sm font-bold text-blue-700 dark:text-blue-400">{project.stats?.totalContractors ?? 0}</p>
+                      <p className="text-[10px] text-blue-600 dark:text-blue-500">Contractors</p>
                     </div>
-                    <div className="text-center p-1.5 bg-amber-50 rounded">
-                      <p className="text-sm font-bold text-amber-700">{project.stats?.activePaymentApps ?? 0}</p>
-                      <p className="text-[10px] text-amber-600">Pending</p>
+                    <div className="text-center p-1.5 bg-amber-500/10 rounded">
+                      <p className="text-sm font-bold text-amber-700 dark:text-amber-400">{project.stats?.activePaymentApps ?? 0}</p>
+                      <p className="text-[10px] text-amber-600 dark:text-amber-500">Pending</p>
                     </div>
-                    <div className="text-center p-1.5 bg-green-50 rounded">
-                      <p className="text-sm font-bold text-green-700">{project.stats?.completedPaymentApps ?? 0}</p>
-                      <p className="text-[10px] text-green-600">Done</p>
+                    <div className="text-center p-1.5 bg-green-500/10 rounded">
+                      <p className="text-sm font-bold text-green-700 dark:text-green-400">{project.stats?.completedPaymentApps ?? 0}</p>
+                      <p className="text-[10px] text-green-600 dark:text-green-500">Done</p>
                     </div>
                   </div>
 
                   {/* Compact Budget */}
                   <div className="mb-2">
                     <div className="flex items-center justify-between text-xs mb-1">
-                      <span className="text-gray-600">{formatCurrency(project.stats?.totalBudget ?? 0)}</span>
+                      <span className="text-muted-foreground">{formatCurrency(project.stats?.totalBudget ?? 0)}</span>
                       <span className={`font-medium ${
-                        (project.stats?.completionPercentage ?? 0) > 95 ? 'text-red-600' :
-                        (project.stats?.completionPercentage ?? 0) > 75 ? 'text-yellow-600' :
-                        'text-green-600'
+                        (project.stats?.completionPercentage ?? 0) > 95 ? 'text-red-600 dark:text-red-400' :
+                        (project.stats?.completionPercentage ?? 0) > 75 ? 'text-yellow-600 dark:text-yellow-400' :
+                        'text-green-600 dark:text-green-400'
                       }`}>
                         {(project.stats?.completionPercentage ?? 0).toFixed(1)}%
                       </span>
                     </div>
                     {/* Thin Progress Bar */}
-                    <div className="w-full bg-gray-200 rounded-full h-1.5">
+                    <div className="w-full bg-muted rounded-full h-1.5">
                       <div
                         className={`h-1.5 rounded-full ${
                           (project.stats?.completionPercentage ?? 0) > 95 ? 'bg-red-500' :
@@ -987,8 +987,8 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
                   </div>
 
                   {/* Phase Badge */}
-                  <div className="pt-2 border-t border-gray-100">
-                    <span className="text-xs text-gray-500">{project.current_phase}</span>
+                  <div className="pt-2 border-t border-border">
+                    <span className="text-xs text-muted-foreground">{project.current_phase}</span>
                   </div>
 
                   {/* Action Buttons */}
@@ -998,7 +998,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
                         e.stopPropagation();
                         handleOpenEditForm(project);
                       }}
-                      className="flex items-center justify-center gap-1 px-2 py-1.5 text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 rounded transition-colors"
+                      className="flex items-center justify-center gap-1 px-2 py-1.5 text-xs bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded transition-colors"
                     >
                       <Edit2 className="w-3 h-3" />
                       Edit
@@ -1008,7 +1008,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
                         e.stopPropagation();
                         router.push(`/payments?project=${project.id}&subtab=processing`);
                       }}
-                      className="flex items-center justify-center gap-1 px-2 py-1.5 text-xs bg-primary text-white hover:bg-primary/90 rounded transition-colors"
+                      className="flex items-center justify-center gap-1 px-2 py-1.5 text-xs bg-primary text-primary-foreground hover:bg-primary/90 rounded transition-colors"
                     >
                       <Plus className="w-3 h-3" />
                       Pay App
@@ -1017,7 +1017,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
 
                   {/* At Risk Badge */}
                   {project.atRisk && (
-                    <div className="mt-2 text-xs px-2 py-1 bg-red-100 text-red-700 rounded inline-flex items-center gap-1">
+                    <div className="mt-2 text-xs px-2 py-1 bg-red-500/10 text-red-700 dark:text-red-400 rounded inline-flex items-center gap-1">
                       <AlertCircle className="w-3 h-3" />
                       At Risk
                     </div>

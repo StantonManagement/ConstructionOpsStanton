@@ -23,6 +23,7 @@ import { ProjectStatsCard } from './ProjectStatsCard';
 import { authFetch } from '@/lib/authFetch';
 import { addRecentItem } from '@/lib/recentItems';
 import { TabDropdown } from './TabDropdown';
+import ProjectRightSidebar from './ProjectRightSidebar';
 
 interface ProjectDetailViewProps {
   project: Project;
@@ -65,13 +66,13 @@ interface ProjectDetailViewProps {
     const allTabs = [...primaryTabs, ...financialTabs, ...moreTabs];
 
   return (
-    <div className="border-b border-gray-200 mb-6">
+    <div className="border-b border-border mb-6">
       {/* Mobile: Show dropdown selector */}
       <div className="sm:hidden mb-4">
         <select
           value={activeSubTab}
           onChange={(e) => onSubTabChange(e.target.value as SubTab)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm"
+          className="w-full px-3 py-2 border border-border rounded-lg bg-card text-card-foreground text-sm"
         >
           <optgroup label="Main">
             {primaryTabs.map(tab => (
@@ -159,48 +160,48 @@ function SummaryTab({ project }: { project: Project }) {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Project Information</h3>
+      <div className="bg-card rounded-lg border border-border p-6">
+        <h3 className="text-lg font-semibold text-card-foreground mb-4">Project Information</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="text-sm font-medium text-gray-500">Project Name</label>
-            <p className="mt-1 text-base text-gray-900">{project.name}</p>
+            <label className="text-sm font-medium text-muted-foreground">Project Name</label>
+            <p className="mt-1 text-base text-card-foreground">{project.name}</p>
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-500">Client</label>
-            <p className="mt-1 text-base text-gray-900">{project.client_name}</p>
+            <label className="text-sm font-medium text-muted-foreground">Client</label>
+            <p className="mt-1 text-base text-card-foreground">{project.client_name}</p>
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-500">Location</label>
-            <p className="mt-1 text-base text-gray-900">{projectExt.location || project.address || 'N/A'}</p>
+            <label className="text-sm font-medium text-muted-foreground">Location</label>
+            <p className="mt-1 text-base text-card-foreground">{projectExt.location || project.address || 'N/A'}</p>
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-500">Phase</label>
-            <p className="mt-1 text-base text-gray-900">{project.current_phase || 'N/A'}</p>
+            <label className="text-sm font-medium text-muted-foreground">Phase</label>
+            <p className="mt-1 text-base text-card-foreground">{project.current_phase || 'N/A'}</p>
           </div>
           {projectExt.start_date && (
             <div>
-              <label className="text-sm font-medium text-gray-500">Start Date</label>
-              <p className="mt-1 text-base text-gray-900">{formatDate(projectExt.start_date)}</p>
+              <label className="text-sm font-medium text-muted-foreground">Start Date</label>
+              <p className="mt-1 text-base text-card-foreground">{formatDate(projectExt.start_date)}</p>
             </div>
           )}
           {projectExt.target_completion_date && (
             <div>
-              <label className="text-sm font-medium text-gray-500">Target Completion</label>
-              <p className="mt-1 text-base text-gray-900">{formatDate(projectExt.target_completion_date)}</p>
+              <label className="text-sm font-medium text-muted-foreground">Target Completion</label>
+              <p className="mt-1 text-base text-card-foreground">{formatDate(projectExt.target_completion_date)}</p>
             </div>
           )}
           {project.budget && (
             <div>
-              <label className="text-sm font-medium text-gray-500">Budget</label>
-              <p className="mt-1 text-base text-gray-900">{formatCurrency(project.budget)}</p>
+              <label className="text-sm font-medium text-muted-foreground">Budget</label>
+              <p className="mt-1 text-base text-card-foreground">{formatCurrency(project.budget)}</p>
             </div>
           )}
         </div>
         {projectExt.description && (
           <div className="mt-6">
-            <label className="text-sm font-medium text-gray-500">Description</label>
-            <p className="mt-1 text-base text-gray-900">{projectExt.description}</p>
+            <label className="text-sm font-medium text-muted-foreground">Description</label>
+            <p className="mt-1 text-base text-card-foreground">{projectExt.description}</p>
           </div>
         )}
       </div>
@@ -447,13 +448,20 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ project, onBack, 
   }
 
   return (
-    <div className="space-y-6">
+    <>
+      {/* Right Sidebar - Hidden on mobile */}
+      <div className="hidden lg:block">
+        <ProjectRightSidebar activeTab={activeSubTab} onTabChange={handleSubTabChange} />
+      </div>
+
+      {/* Main Content - Add right padding to accommodate sidebar on desktop */}
+      <div className="space-y-6 lg:pr-20">
       {/* Header with Back Button */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <button
             onClick={onBack}
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+            className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
             <span className="text-sm font-medium">Back to Projects</span>
@@ -463,7 +471,7 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ project, onBack, 
         {onEdit && (
           <button
             onClick={() => onEdit(project)}
-            className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
+            className="flex items-center gap-2 px-3 py-2 bg-card border border-border text-card-foreground rounded-lg hover:bg-secondary transition-colors text-sm font-medium"
           >
             <Edit2 className="w-4 h-4" />
             <span>Edit Project</span>
@@ -472,7 +480,7 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ project, onBack, 
           {onDelete && (
             <button
               onClick={() => onDelete(project)}
-              className="flex items-center gap-2 px-3 py-2 bg-white border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition-colors text-sm font-medium"
+              className="flex items-center gap-2 px-3 py-2 bg-card border border-destructive/20 text-destructive rounded-lg hover:bg-destructive/10 transition-colors text-sm font-medium"
             >
               <Trash2 className="w-4 h-4" />
               <span>Delete Project</span>
@@ -482,22 +490,24 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ project, onBack, 
       </div>
 
       {/* Project Header */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
+      <div className="bg-card rounded-lg border border-border p-6">
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">{project.name}</h1>
-            <p className="text-gray-600">{project.client_name}</p>
+            <h1 className="text-2xl font-bold text-card-foreground mb-2">{project.name}</h1>
+            <p className="text-muted-foreground">{project.client_name}</p>
           </div>
           <div className="flex items-center gap-2">
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-primary">
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-primary/10 text-primary">
               {project.current_phase || 'Active'}
             </span>
           </div>
         </div>
       </div>
 
-      {/* Project Stats (Phase 4) */}
-      <ProjectStatsCard projectId={project.id} />
+      {/* Project Stats - Only shown on Summary tab */}
+      {activeSubTab === 'summary' && (
+        <ProjectStatsCard projectId={project.id} />
+      )}
 
       {/* Budget Summary Cards */}
       <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 ${activeSubTab === 'summary' ? 'gap-4' : 'gap-2'}`}>
@@ -564,11 +574,11 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ project, onBack, 
 
       {/* Success/Error Messages */}
       {paymentSuccess && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-start gap-3">
-          <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+        <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4 flex items-start gap-3">
+          <CheckCircle className="w-5 h-5 text-green-700 dark:text-green-400 flex-shrink-0 mt-0.5" />
           <div className="flex-1">
-            <p className="text-green-800 font-medium">{paymentSuccess}</p>
-            <p className="text-green-600 text-sm mt-1">
+            <p className="text-green-700 dark:text-green-400 font-medium">{paymentSuccess}</p>
+            <p className="text-green-600 dark:text-green-500 text-sm mt-1">
               The contractor will receive an SMS notification with a link to submit their payment application.
             </p>
           </div>
@@ -576,16 +586,18 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ project, onBack, 
       )}
 
       {paymentError && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
-          <XCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+        <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 flex items-start gap-3">
+          <XCircle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
           <div className="flex-1">
-            <p className="text-red-800 font-medium">{paymentError}</p>
+            <p className="text-destructive font-medium">{paymentError}</p>
           </div>
         </div>
       )}
 
-      {/* Sub-tab Navigation */}
-      <SubTabNavigation activeSubTab={activeSubTab} onSubTabChange={handleSubTabChange} />
+      {/* Sub-tab Navigation - Hidden on desktop, shown on mobile */}
+      <div className="lg:hidden">
+        <SubTabNavigation activeSubTab={activeSubTab} onSubTabChange={handleSubTabChange} />
+      </div>
 
       {/* Sub-tab Content */}
       <div>
@@ -650,36 +662,36 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ project, onBack, 
           <div className="p-4">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-semibold">Photos</h2>
-              <button className="px-3 py-1 bg-blue-600 text-white rounded text-sm">+ Upload Photo</button>
+              <button className="px-3 py-1 bg-primary text-primary-foreground rounded text-sm hover:bg-primary/90 transition-colors">+ Upload Photo</button>
             </div>
-            <p className="text-gray-500">Photo gallery coming soon. Upload and organize project photos here.</p>
+            <p className="text-muted-foreground">Photo gallery coming soon. Upload and organize project photos here.</p>
           </div>
         )}
         {activeSubTab === 'warranties' && (
           <div className="p-4">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-semibold">Warranties</h2>
-              <button className="px-3 py-1 bg-blue-600 text-white rounded text-sm">+ Add Warranty</button>
+              <button className="px-3 py-1 bg-primary text-primary-foreground rounded text-sm hover:bg-primary/90 transition-colors">+ Add Warranty</button>
             </div>
-            <p className="text-gray-500">No warranties recorded for this project.</p>
+            <p className="text-muted-foreground">No warranties recorded for this project.</p>
           </div>
         )}
         {activeSubTab === 'daily-logs' && (
           <div className="p-4">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-semibold">Daily Logs</h2>
-              <button className="px-3 py-1 bg-blue-600 text-white rounded text-sm">+ New Log</button>
+              <button className="px-3 py-1 bg-primary text-primary-foreground rounded text-sm hover:bg-primary/90 transition-colors">+ New Log</button>
             </div>
-            <p className="text-gray-500">No daily logs for this project.</p>
+            <p className="text-muted-foreground">No daily logs for this project.</p>
           </div>
         )}
         {activeSubTab === 'change-orders' && (
           <div className="p-4">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-semibold">Change Orders</h2>
-              <button className="px-3 py-1 bg-blue-600 text-white rounded text-sm">+ New Change Order</button>
+              <button className="px-3 py-1 bg-primary text-primary-foreground rounded text-sm hover:bg-primary/90 transition-colors">+ New Change Order</button>
             </div>
-            <p className="text-gray-500">No change orders for this project.</p>
+            <p className="text-muted-foreground">No change orders for this project.</p>
           </div>
         )}
       </div>
@@ -710,7 +722,8 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ project, onBack, 
           setTimeout(() => setPaymentSuccess(null), 3000);
         }}
       />
-    </div>
+      </div>
+    </>
   );
 };
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin as supabase } from '@/lib/supabaseClient';
 import { twilioClient, TWILIO_PHONE_NUMBER } from '@/lib/twilioClient';
+import { normalizePhoneNumber } from '@/lib/phoneUtils';
 
 // POST: Create payment applications for selected contractors
 export async function POST(req: NextRequest) {
@@ -184,6 +185,17 @@ export async function POST(req: NextRequest) {
         }
       }
 
+      // Normalize phone number to E.164 format for consistent matching
+      const normalizedPhone = normalizePhoneNumber(contractor.phone);
+      if (!normalizedPhone) {
+        console.warn(`Invalid phone number for contractor ${contractorIdNum}: ${contractor.phone}`);
+        results.push({
+          contractorId: contractorIdNum,
+          error: `Invalid phone number format: ${contractor.phone}`
+        });
+        continue;
+      }
+
       // Create payment_sms_conversations with line_items
       const { error: smsConvError } = await supabase
         .from('payment_sms_conversations')
@@ -191,7 +203,7 @@ export async function POST(req: NextRequest) {
           payment_app_id: paymentApp.id,
           project_id: projectIdNum,
           contractor_id: contractorIdNum,
-          contractor_phone: contractor.phone || '',
+          contractor_phone: normalizedPhone,
           conversation_state: 'awaiting_start',
           responses: [],
           line_items: lineItems || [],
@@ -208,27 +220,28 @@ export async function POST(req: NextRequest) {
       }
 
       // Send SMS via Twilio
-      if (contractor.phone && TWILIO_PHONE_NUMBER) {
+      if (normalizedPhone && TWILIO_PHONE_NUMBER) {
         // Format: "project name - contractor name"
         const messageTitle = `${project.name} - ${contractor.name}`;
-        
+
         const message = `Payment app for ${messageTitle}. Ready for some quick questions? Reply YES to start.`;
         try {
+          console.log(`Sending SMS to normalized number: ${normalizedPhone} (original: ${contractor.phone})`);
           await twilioClient.messages.create({
             body: message,
             from: TWILIO_PHONE_NUMBER,
-            to: contractor.phone,
+            to: normalizedPhone,
           });
           results.push({ contractorId: contractor.id, status: 'sms_sent' });
         } catch (smsError: any) {
           console.error('SMS sending error:', smsError);
-          results.push({ 
-            contractorId: contractorIdNum, 
+          results.push({
+            contractorId: contractorIdNum,
             error: `Failed to send SMS: ${smsError?.message || 'Unknown error'}`
           });
         }
       } else {
-        results.push({ contractorId: contractor.id, error: 'Missing phone number' });
+        results.push({ contractorId: contractor.id, error: 'Missing or invalid phone number' });
       }
     }
 

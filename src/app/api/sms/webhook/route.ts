@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin as supabase } from '@/lib/supabaseClient';
 import MessagingResponse from 'twilio/lib/twiml/MessagingResponse';
+import { normalizePhoneNumber } from '@/lib/phoneUtils';
 
 // Force Node.js runtime for better logging
 export const runtime = 'nodejs';
@@ -79,13 +80,27 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Missing From' }, { status: 400 });
   }
 
+  // Normalize the incoming phone number to E.164 format for consistent matching
+  const normalizedFrom = normalizePhoneNumber(from.toString());
+  if (!normalizedFrom) {
+    console.error('Invalid phone number format:', from);
+    const twiml = new MessagingResponse();
+    twiml.message('Invalid phone number format.');
+    return new NextResponse(twiml.toString(), {
+      status: 400,
+      headers: { 'Content-Type': 'text/xml' }
+    });
+  }
+
+  console.log(`Phone normalized: ${from} → ${normalizedFrom}`);
+
   const twiml = new MessagingResponse();
 
   // 1. Check for daily log first
   const { data: project } = await supabase
     .from('properties')
     .select('property_id')
-    .eq('manager_phone', from)
+    .eq('manager_phone', normalizedFrom)
     .single();
 
   if (project) {
@@ -109,17 +124,18 @@ export async function POST(req: NextRequest) {
   const { data: conv, error } = await supabase
     .from('payment_sms_conversations')
     .select('*')
-    .eq('contractor_phone', from)
+    .eq('contractor_phone', normalizedFrom)
     .in('conversation_state', ['awaiting_start', 'in_progress', 'awaiting_confirmation'])
     .order('created_at', { ascending: false })
     .limit(1)
     .single();
 
+  console.log(`Looking for conversation with phone: ${normalizedFrom}`);
   console.log('Found conversation:', conv, 'Error:', error);
 
   if (error || !conv) {
-    console.error('No active payment application conversation found for', from);
-    twiml.message('No active payment application conversation found.');
+    console.error(`No active payment application conversation found for ${normalizedFrom} (original: ${from})`);
+    twiml.message('No active payment application conversation found. Please contact your project manager.');
     return new Response(twiml.toString(), { headers: { 'Content-Type': 'text/xml' } });
   }
 
