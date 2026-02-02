@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useBacklogItems, useCreateBacklogItem } from '@/hooks/queries/usePortfolios';
+import { useBacklog } from '@/hooks/queries/useBacklog';
 import { usePortfolio } from '@/context/PortfolioContext';
 import { usePortfolios } from '@/hooks/queries/usePortfolios';
 import { Button } from '@/components/ui/button';
@@ -13,15 +13,17 @@ import { useRouter } from 'next/navigation';
 export default function BacklogPage() {
   const router = useRouter();
   const { selectedPortfolioId } = usePortfolio();
-  const { data: backlogItems, isLoading } = useBacklogItems(selectedPortfolioId || undefined);
+  const { data: backlogData, isLoading } = useBacklog({
+    portfolioId: selectedPortfolioId || undefined
+  });
   const { data: portfolios } = usePortfolios();
-  const createBacklogItem = useCreateBacklogItem();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [selectedBacklogItem, setSelectedBacklogItem] = useState<any>(null);
   const [showConvertModal, setShowConvertModal] = useState(false);
 
-  const portfolioItems = backlogItems?.filter(item => item.scope_level === 'portfolio') || [];
-  const propertyItems = backlogItems?.filter(item => item.scope_level === 'property') || [];
+  const backlogItems = backlogData?.items || [];
+  const portfolioItems = backlogItems.filter(item => item.scope_level === 'portfolio') || [];
+  const propertyItems = backlogItems.filter(item => item.scope_level === 'property') || [];
 
   const handleConvertClick = (item: any) => {
     setSelectedBacklogItem(item);
@@ -162,7 +164,7 @@ export default function BacklogPage() {
       )}
 
       {/* Empty state */}
-      {backlogItems?.length === 0 && (
+      {backlogItems.length === 0 && (
         <div className="text-center py-12">
           <Building2 className="w-16 h-16 text-gray-300 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">No backlog items yet</h3>
