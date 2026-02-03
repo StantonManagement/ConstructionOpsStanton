@@ -8,6 +8,7 @@ import { AlertTriangle, Calendar, CircleDollarSign, FileText, Loader2, Plus, Tre
 import { formatCurrency } from '@/lib/theme';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 
+// Accepts both number and string to handle Project.id type variations
 interface Props {
   projectId: number | string;
 }

@@ -8,6 +8,7 @@ import EditLoanModal from './EditLoanModal';
 import { ConstructionLoan, LoanBudgetItem, LoanDraw } from '@/types/loan';
 import { Loader2, Plus, AlertCircle } from 'lucide-react';
 
+// Updated to accept both number and string for Project.id type compatibility
 interface LoanBudgetViewProps {
   projectId: number | string;
 }

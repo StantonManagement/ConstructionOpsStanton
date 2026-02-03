@@ -801,6 +801,7 @@ function MobileFilterDrawer({ show, onClose, statusFilter, setStatusFilter, proj
   );
 }
 
+// Interface supports projectId as number or string for flexible project identification
 interface PaymentApplicationsViewProps {
   searchQuery?: string;
   projectId?: number | string;

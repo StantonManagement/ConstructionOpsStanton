@@ -47,6 +47,7 @@ interface PunchListItem {
   }>;
 }
 
+// Interface updated to accept projectId as number or string for type flexibility
 interface PunchListsTabProps {
   projectId: number | string;
   onCreatePunchList: () => void;

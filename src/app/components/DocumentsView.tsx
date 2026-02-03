@@ -11,6 +11,7 @@ import {
 import { useModal } from '@/context/ModalContext';
 import AuditLog from './AuditLog';
 
+// Accepts both number and string for Project.id compatibility across contexts
 interface DocumentsViewProps {
   projectId: number | string;
 }

@@ -28,6 +28,7 @@ interface Contractor {
   phone: string;
 }
 
+// Updated interface to handle Project.id as either number or string
 interface CreatePunchListModalProps {
   projectId: number | string;
   projectName: string;
