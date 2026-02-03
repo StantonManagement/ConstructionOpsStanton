@@ -11,7 +11,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { Plus, Loader2, Users, LayoutGrid, Table as TableIcon, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
-import { Project } from '@/context/DataContext';
+import { Project } from '@/types/schema';
 import { DataTable } from '@/components/ui/DataTable';
 import { SignalBadge } from '@/components/ui/SignalBadge';
 import type { ContractWithContractor } from '@/lib/contractors/service';
@@ -104,7 +104,7 @@ const ProjectContractorsTab: React.FC<ProjectContractorsTabProps> = ({
   onViewContractorDetail,
 }) => {
   // Data fetching using custom hooks
-  const { contractors, loading, error, refreshContractors, updateLocalContractors } = useContractors(project.id);
+  const { contractors, loading, error, refreshContractors, updateLocalContractors } = useContractors(typeof project.id === 'string' ? Number(project.id) : project.id);
 
   // Contractor actions hook
   const {
@@ -116,7 +116,7 @@ const ProjectContractorsTab: React.FC<ProjectContractorsTabProps> = ({
     removeContractor,
     handleReorder,
   } = useContractorActions({
-    projectId: project.id,
+    projectId: typeof project.id === 'string' ? Number(project.id) : project.id,
     existingContractorIds: contractors.map((c) => c.contractor_id),
     maxDisplayOrder: contractors.length > 0 ? Math.max(...contractors.map((c) => c.display_order || 0)) : 0,
     onRefresh: refreshContractors,
