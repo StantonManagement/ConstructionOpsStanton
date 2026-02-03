@@ -83,10 +83,10 @@ function LocationsPageContent() {
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <div>
         <div className="flex items-center gap-2 mb-2">
-          <MapPin className="w-6 h-6 text-gray-600" />
-          <h1 className="text-2xl font-bold text-gray-900">Locations</h1>
+          <MapPin className="w-6 h-6 text-muted-foreground" />
+          <h1 className="text-2xl font-bold text-foreground">Locations</h1>
         </div>
-        <p className="text-gray-500">
+        <p className="text-muted-foreground">
           Manage renovation progress, verify tasks, and resolve blockers across all properties.
         </p>
       </div>
@@ -100,15 +100,15 @@ function LocationsPageContent() {
 
       <div className="min-h-[400px]">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
             {displayedTotal} Locations Found
           </h2>
           <div className="flex items-center gap-2">
-            <div className="flex rounded-md border border-gray-200 overflow-hidden">
+            <div className="flex rounded-md border border-border overflow-hidden">
               <button
                 type="button"
                 onClick={() => setView('grid')}
-                className={`px-2 py-1 text-sm flex items-center gap-1 ${view === 'grid' ? 'bg-gray-100 text-gray-900' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+                className={`px-2 py-1 text-sm flex items-center gap-1 ${view === 'grid' ? 'bg-muted text-foreground' : 'bg-background text-muted-foreground hover:bg-accent'}`}
               >
                 <LayoutGrid className="w-4 h-4" />
                 Grid
@@ -116,13 +116,13 @@ function LocationsPageContent() {
               <button
                 type="button"
                 onClick={() => setView('list')}
-                className={`px-2 py-1 text-sm flex items-center gap-1 border-l border-gray-200 ${view === 'list' ? 'bg-gray-100 text-gray-900' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+                className={`px-2 py-1 text-sm flex items-center gap-1 border-l border-border ${view === 'list' ? 'bg-muted text-foreground' : 'bg-background text-muted-foreground hover:bg-accent'}`}
               >
                 <List className="w-4 h-4" />
                 List
               </button>
             </div>
-            {isFetching && <Loader2 className="w-4 h-4 animate-spin text-gray-400" />}
+            {isFetching && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
           </div>
         </div>
 
