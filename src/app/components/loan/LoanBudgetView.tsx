@@ -9,10 +9,11 @@ import { ConstructionLoan, LoanBudgetItem, LoanDraw } from '@/types/loan';
 import { Loader2, Plus, AlertCircle } from 'lucide-react';
 
 interface LoanBudgetViewProps {
-  projectId: number;
+  projectId: number | string;
 }
 
 export default function LoanBudgetView({ projectId }: LoanBudgetViewProps) {
+  const numericProjectId = typeof projectId === 'string' ? Number(projectId) : projectId;
   const [loading, setLoading] = useState(true);
   const [loan, setLoan] = useState<ConstructionLoan | null>(null);
   const [budgetItems, setBudgetItems] = useState<LoanBudgetItem[]>([]);
@@ -37,7 +38,7 @@ export default function LoanBudgetView({ projectId }: LoanBudgetViewProps) {
 
       // Fetch Loan & Budget
       try {
-        const res = await fetch(`/api/projects/${projectId}/loan`, {
+        const res = await fetch(`/api/projects/${numericProjectId}/loan`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (!res.ok) {
@@ -48,11 +49,11 @@ export default function LoanBudgetView({ projectId }: LoanBudgetViewProps) {
              throw new Error('Failed to fetch loan');
         }
         const data = await res.json();
-      
+
         if (data.success) {
             setLoan(data.data.loan);
             setBudgetItems(data.data.budgetItems || []);
-            
+
             if (data.data.loan) {
             // Fetch Draws
             const drawsRes = await fetch(`/api/loans/${data.data.loan.id}/draws`, {
@@ -73,7 +74,7 @@ export default function LoanBudgetView({ projectId }: LoanBudgetViewProps) {
     } finally {
       setLoading(false);
     }
-  }, [projectId]);
+  }, [numericProjectId]);
 
   useEffect(() => {
     fetchData();
@@ -84,16 +85,16 @@ export default function LoanBudgetView({ projectId }: LoanBudgetViewProps) {
     try {
       const { data: session } = await supabase.auth.getSession();
       const token = session?.session?.access_token;
-      
-      const res = await fetch(`/api/projects/${projectId}/loan`, {
+
+      const res = await fetch(`/api/projects/${numericProjectId}/loan`, {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}` 
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify(newLoanData)
       });
-      
+
       if (res.ok) {
         setShowCreateLoan(false);
         fetchData();
@@ -109,7 +110,7 @@ export default function LoanBudgetView({ projectId }: LoanBudgetViewProps) {
       const { data: session } = await supabase.auth.getSession();
       const token = session?.session?.access_token;
 
-      const res = await fetch(`/api/projects/${projectId}/loan`, {
+      const res = await fetch(`/api/projects/${numericProjectId}/loan`, {
         method: 'PUT',
         headers: { 
           'Content-Type': 'application/json',

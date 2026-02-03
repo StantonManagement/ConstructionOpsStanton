@@ -10,7 +10,7 @@ import { ProjectSchedule, ScheduleTask } from '@/types/schedule';
 import type { FrappeViewMode } from './FrappeGanttChart';
 
 interface ProjectScheduleTabProps {
-  projectId: number;
+  projectId: number | string;
 }
 
 interface BudgetCategory {
@@ -24,6 +24,7 @@ interface BudgetCategory {
 }
 
 export default function ProjectScheduleTab({ projectId }: ProjectScheduleTabProps) {
+  const numericProjectId = typeof projectId === 'string' ? Number(projectId) : projectId;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [schedule, setSchedule] = useState<ProjectSchedule | null>(null);
@@ -53,7 +54,7 @@ export default function ProjectScheduleTab({ projectId }: ProjectScheduleTabProp
       }
 
       // 1. Fetch Schedule & Budget Data
-      const scheduleResponse = await fetch(`/api/projects/${projectId}/schedule-with-budget`, {
+      const scheduleResponse = await fetch(`/api/projects/${numericProjectId}/schedule-with-budget`, {
         cache: 'no-store',
         headers: {
           'Authorization': `Bearer ${session.access_token}`
@@ -65,7 +66,7 @@ export default function ProjectScheduleTab({ projectId }: ProjectScheduleTabProp
       }
 
       const scheduleResult = await scheduleResponse.json();
-      
+
       if (scheduleResult.data) {
         setSchedule(scheduleResult.data.schedule);
         setBudgetCategories(scheduleResult.data.budgetCategories || []);
@@ -78,7 +79,7 @@ export default function ProjectScheduleTab({ projectId }: ProjectScheduleTabProp
     } finally {
       setLoading(false);
     }
-  }, [projectId]);
+  }, [numericProjectId]);
 
   useEffect(() => {
     fetchData();
@@ -229,7 +230,7 @@ export default function ProjectScheduleTab({ projectId }: ProjectScheduleTabProp
           'Authorization': `Bearer ${session.access_token}`
         },
         body: JSON.stringify({
-          project_id: projectId,
+          project_id: numericProjectId,
           start_date: startDate.toISOString().split('T')[0],
           target_end_date: targetEndDate.toISOString().split('T')[0]
         })
@@ -258,7 +259,7 @@ export default function ProjectScheduleTab({ projectId }: ProjectScheduleTabProp
       const { data: session } = await supabase.auth.getSession();
       if (!session) return;
 
-      const res = await fetch(`/api/projects/${projectId}/auto-schedule`, {
+      const res = await fetch(`/api/projects/${numericProjectId}/auto-schedule`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session.session?.access_token}`
