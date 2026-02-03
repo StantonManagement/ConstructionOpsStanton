@@ -38,11 +38,12 @@ interface BudgetSummary {
 }
 
 interface ProjectBudgetDetailProps {
-  projectId: number;
+  projectId: number | string;
   projectName: string;
 }
 
 const ProjectBudgetDetail: React.FC<ProjectBudgetDetailProps> = ({ projectId, projectName }) => {
+  const numericProjectId = typeof projectId === 'string' ? Number(projectId) : projectId;
   const [budgetItems, setBudgetItems] = useState<BudgetLineItem[]>([]);
   const [summary, setSummary] = useState<BudgetSummary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -60,7 +61,7 @@ const ProjectBudgetDetail: React.FC<ProjectBudgetDetailProps> = ({ projectId, pr
       }
 
       // 1. Fetch Budget Line Items
-      const response = await fetch(`/api/budgets?project_id=${projectId}`, {
+      const response = await fetch(`/api/budgets?project_id=${numericProjectId}`, {
         headers: {
           'Authorization': `Bearer ${sessionData.session.access_token}`
         }
@@ -77,7 +78,7 @@ const ProjectBudgetDetail: React.FC<ProjectBudgetDetailProps> = ({ projectId, pr
       const { data: contractsData, error: contractsError } = await supabase
         .from('project_contractors')
         .select('budget_item_id, contract_amount')
-        .eq('project_id', projectId)
+        .eq('project_id', numericProjectId)
         .not('budget_item_id', 'is', null);
 
       if (contractsError) {
@@ -125,7 +126,7 @@ const ProjectBudgetDetail: React.FC<ProjectBudgetDetailProps> = ({ projectId, pr
     } finally {
       setLoading(false);
     }
-  }, [projectId]);
+  }, [numericProjectId]);
 
   useEffect(() => {
     fetchBudget();
@@ -202,7 +203,7 @@ const ProjectBudgetDetail: React.FC<ProjectBudgetDetailProps> = ({ projectId, pr
       },
       body: JSON.stringify({
         ...newBudget,
-        project_id: projectId
+        project_id: numericProjectId
       })
     });
 
@@ -226,7 +227,7 @@ const ProjectBudgetDetail: React.FC<ProjectBudgetDetailProps> = ({ projectId, pr
         'Authorization': `Bearer ${sessionData.session.access_token}`
       },
       body: JSON.stringify({
-        project_id: projectId,
+        project_id: numericProjectId,
         items: items
       })
     });
