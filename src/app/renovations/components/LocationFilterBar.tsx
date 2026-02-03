@@ -69,7 +69,7 @@ export const LocationFilterBar: React.FC<Props> = ({ filters, onFilterChange, pr
   };
 
   return (
-    <div className="space-y-4 bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+    <div className="space-y-4 bg-card p-4 rounded-lg border border-border shadow-sm">
       {/* Mobile View */}
       <div className="md:hidden space-y-3">
         <div className="flex gap-2 items-center">
@@ -106,7 +106,7 @@ export const LocationFilterBar: React.FC<Props> = ({ filters, onFilterChange, pr
 
         {isSearchOpen && (
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input 
               placeholder="Search locations..." 
               className="pl-9"
@@ -121,7 +121,7 @@ export const LocationFilterBar: React.FC<Props> = ({ filters, onFilterChange, pr
       <div className="hidden md:flex flex-col lg:flex-row gap-4">
         {/* Search */}
         <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input 
             placeholder="Search locations..." 
             className="pl-9"
@@ -204,27 +204,27 @@ export const LocationFilterBar: React.FC<Props> = ({ filters, onFilterChange, pr
       </div>
 
       {/* Bottom Row: Presets & Clear (Visible on both but hidden in mobile usually if we move presets to sheet) */}
-      <div className="hidden md:flex flex-wrap items-center justify-between gap-4 pt-2 border-t border-gray-100">
+      <div className="hidden md:flex flex-wrap items-center justify-between gap-4 pt-2 border-t border-border">
         <div className="flex gap-2 overflow-x-auto pb-1 md:pb-0 scrollbar-hide">
           <Button variant="outline" size="sm" onClick={() => applyPreset('needs_attention')} className="whitespace-nowrap">
             Needs Attention
           </Button>
-          <Button variant="outline" size="sm" onClick={() => applyPreset('blocked')} className="whitespace-nowrap text-amber-700 border-amber-200 bg-amber-50 hover:bg-amber-100">
+          <Button variant="outline" size="sm" onClick={() => applyPreset('blocked')} className="whitespace-nowrap text-yellow-700 dark:text-yellow-400 border-yellow-500/30 bg-yellow-500/10 hover:bg-yellow-500/20">
             Blocked
           </Button>
-          <Button variant="outline" size="sm" onClick={() => applyPreset('ready')} className="whitespace-nowrap text-blue-700 border-blue-200 bg-blue-50 hover:bg-blue-100">
+          <Button variant="outline" size="sm" onClick={() => applyPreset('ready')} className="whitespace-nowrap text-blue-700 dark:text-blue-400 border-blue-500/30 bg-blue-500/10 hover:bg-blue-500/20">
             Ready to Verify
           </Button>
-          <Button variant="outline" size="sm" onClick={() => applyPreset('complete')} className="whitespace-nowrap text-green-700 border-green-200 bg-green-50 hover:bg-green-100">
+          <Button variant="outline" size="sm" onClick={() => applyPreset('complete')} className="whitespace-nowrap text-green-700 dark:text-green-400 border-green-500/30 bg-green-500/10 hover:bg-green-500/20">
             Completed
           </Button>
         </div>
 
-        <Button 
-          variant="ghost" 
-          size="sm" 
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={clearFilters}
-          className="text-gray-500 hover:text-gray-900"
+          className="text-muted-foreground hover:text-foreground"
         >
           <X className="w-4 h-4 mr-2" />
           Clear Filters

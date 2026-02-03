@@ -25,29 +25,29 @@ export const LocationCard: React.FC<Props> = ({ location, onClick }) => {
 
   return (
     <div
-      className="bg-white rounded-lg border border-gray-200 p-2 hover:shadow-md hover:border-primary/50 transition-all cursor-pointer"
+      className="bg-card rounded-lg border border-border p-2 hover:shadow-md hover:border-primary/50 transition-all cursor-pointer"
       onClick={onClick}
     >
       {/* Compact Header */}
       <div className="flex items-start justify-between mb-2">
         <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-sm text-gray-900 truncate" title={location.name}>
+          <h3 className="font-semibold text-sm text-foreground truncate" title={location.name}>
             {location.name}
           </h3>
-          <p className="text-xs text-gray-500 truncate" title={location.property_name}>
+          <p className="text-xs text-muted-foreground truncate" title={location.property_name}>
             {location.property_name}
           </p>
         </div>
         <div className="flex gap-1 ml-2 shrink-0">
           {hasPending && (
-            <span className="text-xs px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded">
+            <span className="text-xs px-1.5 py-0.5 bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 rounded">
               Verify
             </span>
           )}
           <span className={`text-xs px-1.5 py-0.5 rounded ${
-            isBlocked ? 'bg-red-100 text-red-700' :
-            location.status === 'complete' ? 'bg-green-100 text-green-700' :
-            'bg-blue-100 text-blue-700'
+            isBlocked ? 'bg-red-500/10 text-red-700 dark:text-red-400' :
+            location.status === 'complete' ? 'bg-green-500/10 text-green-700 dark:text-green-400' :
+            'bg-blue-500/10 text-blue-700 dark:text-blue-400'
           }`}>
             {location.status === 'on_hold' ? 'Blocked' :
              location.status === 'complete' ? 'Done' :
@@ -58,14 +58,14 @@ export const LocationCard: React.FC<Props> = ({ location, onClick }) => {
       </div>
 
       {/* Type and Unit */}
-      <div className="text-xs text-gray-400 mb-2 capitalize">
+      <div className="text-xs text-muted-foreground mb-2 capitalize">
         {location.type.replace('_', ' ')}
         {location.unit_number && ` • #${location.unit_number}`}
       </div>
 
       {/* Blocked Warning - Compact */}
       {isBlocked && (
-        <div className="bg-red-50 text-red-700 p-1.5 rounded text-xs mb-2 flex items-center gap-1">
+        <div className="bg-red-500/10 text-red-700 dark:text-red-400 p-1.5 rounded text-xs mb-2 flex items-center gap-1">
           <AlertCircle className="w-3 h-3 shrink-0" />
           <span className="truncate" title={location.blocked_note || ''}>
             {location.blocked_reason || 'Blocked'}
@@ -74,12 +74,12 @@ export const LocationCard: React.FC<Props> = ({ location, onClick }) => {
       )}
 
       {/* Compact Progress */}
-      <div className="pt-2 border-t border-gray-100">
-        <div className="flex justify-between text-xs text-gray-600 mb-1">
+      <div className="pt-2 border-t border-border">
+        <div className="flex justify-between text-xs text-muted-foreground mb-1">
           <span>{verifiedTasks}/{totalTasks}</span>
           <span>{Math.round(progressPercent)}%</span>
         </div>
-        <div className="w-full bg-gray-200 rounded-full h-1.5">
+        <div className="w-full bg-muted rounded-full h-1.5">
           <div
             className={`h-1.5 rounded-full transition-all ${
               isBlocked ? 'bg-red-500' :
