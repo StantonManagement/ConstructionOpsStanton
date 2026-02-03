@@ -31,7 +31,7 @@ function CashPositionContent() {
       <AppLayout>
         <PageContainer>
           <div className="flex items-center justify-center min-h-[50vh]">
-            <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
           </div>
         </PageContainer>
       </AppLayout>
@@ -42,7 +42,7 @@ function CashPositionContent() {
     return (
       <AppLayout>
         <PageContainer>
-          <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-red-700 text-sm">
+          <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 text-red-700 dark:text-red-400 text-sm">
             Error loading cash position: {error.message}
           </div>
         </PageContainer>
@@ -57,13 +57,13 @@ function CashPositionContent() {
       <AppLayout>
         <PageContainer>
           <div className="mb-3">
-            <h1 className="text-xl font-bold text-gray-900">Cash Position</h1>
-            <p className="text-xs text-gray-500 mt-0.5">Track available funding across portfolios</p>
+            <h1 className="text-xl font-bold text-foreground">Cash Position</h1>
+            <p className="text-xs text-muted-foreground mt-0.5">Track available funding across portfolios</p>
           </div>
-          <div className="bg-white border border-gray-200 rounded-lg p-8 text-center">
-            <DollarSign className="w-10 h-10 mx-auto text-gray-300 mb-3" />
-            <h3 className="text-sm font-semibold text-gray-900 mb-1">No portfolios or funding sources found</h3>
-            <p className="text-xs text-gray-500 mb-3">
+          <div className="bg-card border border-border rounded-lg p-8 text-center">
+            <DollarSign className="w-10 h-10 mx-auto text-muted-foreground mb-3" />
+            <h3 className="text-sm font-semibold text-foreground mb-1">No portfolios or funding sources found</h3>
+            <p className="text-xs text-muted-foreground mb-3">
               Add funding sources to track your cash position.
             </p>
             <button
@@ -85,8 +85,8 @@ function CashPositionContent() {
         {/* Header */}
         <div className="flex items-center justify-between mb-3">
           <div>
-            <h1 className="text-xl font-bold text-gray-900">Cash Position</h1>
-            <p className="text-xs text-gray-500 mt-0.5">Track available funding across portfolios</p>
+            <h1 className="text-xl font-bold text-foreground">Cash Position</h1>
+            <p className="text-xs text-muted-foreground mt-0.5">Track available funding across portfolios</p>
           </div>
           <button
             onClick={() => router.push('/funding-sources/new')}
@@ -100,13 +100,13 @@ function CashPositionContent() {
         {/* Portfolios */}
         <div className="space-y-4">
           {portfolios.map((portfolio) => (
-            <div key={portfolio.id} className="bg-gray-50 rounded-lg p-3">
-              <h2 className="text-sm font-semibold text-gray-900 mb-3 uppercase">
+            <div key={portfolio.id} className="bg-muted rounded-lg p-3">
+              <h2 className="text-sm font-semibold text-foreground mb-3 uppercase">
                 {portfolio.name}
               </h2>
 
               {portfolio.funding_sources.length === 0 ? (
-                <div className="bg-white border border-gray-200 rounded-lg p-3 text-center text-xs text-gray-500">
+                <div className="bg-card border border-border rounded-lg p-3 text-center text-xs text-muted-foreground">
                   No funding sources for this portfolio
                 </div>
               ) : (
@@ -121,14 +121,14 @@ function CashPositionContent() {
                     ))}
                   </div>
 
-                  <div className="bg-white border-t-2 border-gray-300 rounded-lg p-3">
+                  <div className="bg-card border-t-2 border-border rounded-lg p-3">
                     <div className="flex justify-between items-center">
-                      <span className="font-medium text-xs text-gray-700">Portfolio Total:</span>
+                      <span className="font-medium text-xs text-foreground">Portfolio Total:</span>
                       <div className="text-right">
-                        <div className="text-sm font-semibold text-gray-900">
+                        <div className="text-sm font-semibold text-foreground">
                           {formatCurrency(portfolio.totals.remaining)} remaining
                         </div>
-                        <div className="text-xs text-gray-600">
+                        <div className="text-xs text-muted-foreground">
                           {formatCurrency(portfolio.totals.eligible)} eligible to draw
                         </div>
                       </div>
@@ -150,7 +150,7 @@ export default function CashPositionPage() {
       <AppLayout>
         <PageContainer>
           <div className="flex items-center justify-center min-h-[50vh]">
-            <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
           </div>
         </PageContainer>
       </AppLayout>
