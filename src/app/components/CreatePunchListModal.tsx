@@ -29,7 +29,7 @@ interface Contractor {
 }
 
 interface CreatePunchListModalProps {
-  projectId: number;
+  projectId: number | string;
   projectName: string;
   onClose: () => void;
   onSuccess: () => void;
@@ -41,6 +41,7 @@ export default function CreatePunchListModal({
   onClose,
   onSuccess,
 }: CreatePunchListModalProps) {
+  const numericProjectId = typeof projectId === 'string' ? Number(projectId) : projectId;
   const [step, setStep] = useState(1); // 1: Add Items, 2: Select Contractor, 3: Review & Send
   const [items, setItems] = useState<PunchListItemData[]>([
     { description: '', priority: 'medium', locationArea: '', dueDate: '', gcNotes: '' }
@@ -65,7 +66,7 @@ export default function CreatePunchListModal({
               id, name, trade, phone
             )
           `)
-          .eq('project_id', projectId);
+          .eq('project_id', numericProjectId);
 
         if (error) throw error;
 
@@ -86,7 +87,7 @@ export default function CreatePunchListModal({
     };
 
     fetchContractors();
-  }, [projectId]);
+  }, [numericProjectId]);
 
   const addItem = () => {
     setItems([
@@ -150,7 +151,7 @@ export default function CreatePunchListModal({
       const validItems = items.filter(item => item.description.trim() !== '');
 
       // Step 1: Create punch list items
-      const response = await fetch(`/api/punch-lists/${projectId}`, {
+      const response = await fetch(`/api/punch-lists/${numericProjectId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -188,7 +189,7 @@ export default function CreatePunchListModal({
           body: JSON.stringify({
             itemIds: createdItemIds,
             contractorId: selectedContractor,
-            projectId,
+            projectId: numericProjectId,
             userId,
           }),
         });

@@ -663,10 +663,11 @@ function MobileFilterDrawer({ show, onClose, statusFilter, setStatusFilter, proj
 }
 
 interface PaymentApplicationsViewProps {
+  projectId?: number | string;
   searchQuery?: string;
 }
 
-const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searchQuery = '' }) => {
+const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ projectId, searchQuery = '' }) => {
   const searchParams = useSearchParams();
   const { showToast } = useModal();
   const [applications, setApplications] = useState<any[]>([]);

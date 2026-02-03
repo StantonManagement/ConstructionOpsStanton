@@ -342,7 +342,7 @@ export default function ProjectScheduleTab({ projectId }: ProjectScheduleTabProp
         </div>
       ) : (
         <FrappeGanttWrapper
-          projectId={projectId}
+          projectId={numericProjectId}
           tasks={displayTasks}
           loading={loading}
           error={error}
@@ -358,7 +358,7 @@ export default function ProjectScheduleTab({ projectId }: ProjectScheduleTabProp
       {showTaskModal && schedule && (
         <TaskFormModal
           scheduleId={schedule.id}
-          projectId={projectId}
+          projectId={numericProjectId}
           allTasks={allRealTasks}
           existingTask={selectedTaskForEdit}
           onClose={() => {

@@ -48,7 +48,7 @@ interface PunchListItem {
 }
 
 interface PunchListsTabProps {
-  projectId: number;
+  projectId: number | string;
   onCreatePunchList: () => void;
 }
 

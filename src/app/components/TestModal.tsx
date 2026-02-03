@@ -30,7 +30,7 @@ export function TestModal() {
           style={{ zIndex: 99999 }}
           onClick={() => setIsOpen(false)}
         >
-          {console.log('✅✅✅ MODAL IS ACTUALLY VISIBLE ON SCREEN!')}
+          {(() => { console.log('✅✅✅ MODAL IS ACTUALLY VISIBLE ON SCREEN!'); return null; })()}
           <div
             className="bg-white p-12 rounded-lg shadow-2xl border-8 border-yellow-400"
             onClick={(e) => e.stopPropagation()}

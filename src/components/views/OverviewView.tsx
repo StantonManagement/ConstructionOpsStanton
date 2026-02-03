@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useData, Project } from '@/context/DataContext';
 import { useProject } from '@/context/ProjectContext';
+import ProjectCard from '@/components/ProjectCard';
 
 interface OverviewViewProps {
   onProjectSelect: (project: Project) => void;

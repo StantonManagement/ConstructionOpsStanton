@@ -803,7 +803,7 @@ function MobileFilterDrawer({ show, onClose, statusFilter, setStatusFilter, proj
 
 interface PaymentApplicationsViewProps {
   searchQuery?: string;
-  projectId?: number;
+  projectId?: number | string;
 }
 
 const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searchQuery = '', projectId }) => {

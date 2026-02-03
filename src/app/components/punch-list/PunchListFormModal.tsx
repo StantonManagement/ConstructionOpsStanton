@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { useProject } from '@/context/ProjectContext';
+import { useData } from '@/context/DataContext';
 import { supabase } from '@/lib/supabaseClient';
 import { CreatePunchListItemRequest, PunchListSeverity, PunchListCategory } from '@/types/punch-list';
 

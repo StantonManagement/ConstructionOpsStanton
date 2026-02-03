@@ -18,7 +18,7 @@ interface FilterState {
 interface Props {
   filters: FilterState;
   onFilterChange: (newFilters: FilterState) => void;
-  properties?: { id: number; name: string }[]; // List of properties for dropdown
+  properties?: { id: number | string; name: string }[]; // List of properties for dropdown
   totalCount?: number;
 }
 

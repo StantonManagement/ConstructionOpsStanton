@@ -9,22 +9,23 @@ import { formatCurrency } from '@/lib/theme';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 
 interface Props {
-  projectId: number;
+  projectId: number | string;
 }
 
 export default function CashFlowView({ projectId }: Props) {
+  const numericProjectId = typeof projectId === 'string' ? Number(projectId) : projectId;
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const returnToParams = new URLSearchParams(searchParams.toString());
   returnToParams.delete('returnTo');
   const returnTo = `${pathname || '/'}${returnToParams.toString() ? `?${returnToParams.toString()}` : ''}`;
-  const { data: forecast, isLoading: isForecastLoading } = useForecast(projectId);
-  const { data: eligibility, isLoading: isEligibilityLoading } = useDrawEligibility(projectId);
-  const { data: draws, isLoading: isDrawsLoading } = useDraws(projectId);
+  const { data: forecast, isLoading: isForecastLoading } = useForecast(numericProjectId);
+  const { data: eligibility, isLoading: isEligibilityLoading } = useDrawEligibility(numericProjectId);
+  const { data: draws, isLoading: isDrawsLoading } = useDraws(numericProjectId);
 
   const handleCreateDraw = () => {
-    router.push(`/draws/new?project_id=${projectId}&returnTo=${encodeURIComponent(returnTo)}`);
+    router.push(`/draws/new?project_id=${numericProjectId}&returnTo=${encodeURIComponent(returnTo)}`);
   };
 
   const isLoading = isForecastLoading || isEligibilityLoading || isDrawsLoading;

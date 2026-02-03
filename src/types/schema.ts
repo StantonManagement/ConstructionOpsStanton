@@ -64,10 +64,10 @@ export interface Component {
   updated_at?: string;
   project?: Project;
   property?: Property;
-  tasks?: Task[];
+  tasks?: ComponentTask[];
 }
 
-export interface Task {
+export interface ComponentTask {
   id: string;
   component_id: string;
   name: string;

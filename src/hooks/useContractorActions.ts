@@ -87,7 +87,7 @@ export function useContractorActions({
    * Handle drag end event for reordering
    */
   const handleReorder = useCallback(
-    async (event: DragEndEvent, contracts: Array<{ id: number; display_order: number }>) => {
+    async (event: DragEndEvent, contracts: ContractWithContractor[]) => {
       const { active, over } = event;
 
       if (!over || active.id === over.id) {
@@ -99,7 +99,7 @@ export function useContractorActions({
 
       // Optimistic update
       const reordered = arrayMove(contracts, oldIndex, newIndex);
-      onLocalUpdate(() => reordered as unknown[]);
+      onLocalUpdate(() => reordered);
 
       // Update database
       try {

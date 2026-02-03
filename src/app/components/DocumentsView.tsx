@@ -12,7 +12,7 @@ import { useModal } from '@/context/ModalContext';
 import AuditLog from './AuditLog';
 
 interface DocumentsViewProps {
-  projectId: number;
+  projectId: number | string;
 }
 
 interface Document {
@@ -36,12 +36,13 @@ const formatFileSize = (bytes: number) => {
 const getFileIcon = (type: string) => {
   if (type.includes('image')) return <ImageIcon className="w-5 h-5 text-purple-500" />;
   if (type.includes('pdf')) return <FileText className="w-5 h-5 text-red-500" />;
-  if (type.includes('spreadsheet') || type.includes('excel') || type.includes('csv')) 
+  if (type.includes('spreadsheet') || type.includes('excel') || type.includes('csv'))
     return <FileSpreadsheet className="w-5 h-5 text-green-500" />;
   return <File className="w-5 h-5 text-blue-500" />;
 };
 
 export default function DocumentsView({ projectId }: DocumentsViewProps) {
+  const numericProjectId = typeof projectId === 'string' ? Number(projectId) : projectId;
   const { showToast, showConfirm } = useModal();
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
@@ -55,7 +56,7 @@ export default function DocumentsView({ projectId }: DocumentsViewProps) {
       // List all files in the project folder
       const { data, error } = await supabase.storage
         .from('project-documents')
-        .list(`${projectId}/`, {
+        .list(`${numericProjectId}/`, {
           limit: 100,
           offset: 0,
           sortBy: { column: 'created_at', order: 'desc' },
@@ -73,8 +74,8 @@ export default function DocumentsView({ projectId }: DocumentsViewProps) {
           size: file.metadata?.size || 0,
           type: file.metadata?.mimetype || 'application/octet-stream',
           created_at: file.created_at,
-          path: `${projectId}/${file.name}`,
-          url: supabase.storage.from('project-documents').getPublicUrl(`${projectId}/${file.name}`).data.publicUrl
+          path: `${numericProjectId}/${file.name}`,
+          url: supabase.storage.from('project-documents').getPublicUrl(`${numericProjectId}/${file.name}`).data.publicUrl
         }));
         setDocuments(docs);
       }
@@ -89,7 +90,7 @@ export default function DocumentsView({ projectId }: DocumentsViewProps) {
     } finally {
       setLoading(false);
     }
-  }, [projectId, showToast]);
+  }, [numericProjectId, showToast]);
 
   useEffect(() => {
     fetchDocuments();
@@ -107,7 +108,7 @@ export default function DocumentsView({ projectId }: DocumentsViewProps) {
         const file = files[i];
         // Sanitize filename
         const fileName = file.name.replace(/[^\x00-\x7F]/g, '');
-        const filePath = `${projectId}/${fileName}`;
+        const filePath = `${numericProjectId}/${fileName}`;
 
         const { error } = await supabase.storage
           .from('project-documents')
@@ -319,7 +320,7 @@ export default function DocumentsView({ projectId }: DocumentsViewProps) {
       </div>
 
       {/* Audit Log */}
-      <AuditLog entityType="project" entityId={projectId.toString()} limit={15} />
+      <AuditLog entityType="project" entityId={numericProjectId.toString()} limit={15} />
     </div>
   );
 }
