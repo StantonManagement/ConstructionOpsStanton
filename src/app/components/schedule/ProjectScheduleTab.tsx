@@ -9,6 +9,7 @@ import TaskFormModal from './TaskFormModal';
 import { ProjectSchedule, ScheduleTask } from '@/types/schedule';
 import type { FrappeViewMode } from './FrappeGanttChart';
 
+// Updated to accept both number and string for Project.id type flexibility
 interface ProjectScheduleTabProps {
   projectId: number | string;
 }
