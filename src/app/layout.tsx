@@ -4,6 +4,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/providers/AuthProvider";
 import { ReactQueryProvider } from "@/providers/ReactQueryProvider";
+import { ThemeProvider } from "@/providers/ThemeProvider";
 import { ModalProvider } from "@/context/ModalContext";
 import { ProjectProvider } from "@/context/ProjectContext";
 import { PortfolioProvider } from "@/context/PortfolioContext";
@@ -43,19 +44,21 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <ErrorBoundary>
-          <ReactQueryProvider>
-            <AuthProvider>
-              <Suspense fallback={null}>
-                <PortfolioProvider>
-                  <ProjectProvider>
-                    <ModalProvider>
-                      {children}
-                    </ModalProvider>
-                  </ProjectProvider>
-                </PortfolioProvider>
-              </Suspense>
-            </AuthProvider>
-          </ReactQueryProvider>
+          <ThemeProvider>
+            <ReactQueryProvider>
+              <AuthProvider>
+                <Suspense fallback={null}>
+                  <PortfolioProvider>
+                    <ProjectProvider>
+                      <ModalProvider>
+                        {children}
+                      </ModalProvider>
+                    </ProjectProvider>
+                  </PortfolioProvider>
+                </Suspense>
+              </AuthProvider>
+            </ReactQueryProvider>
+          </ThemeProvider>
         </ErrorBoundary>
       </body>
     </html>

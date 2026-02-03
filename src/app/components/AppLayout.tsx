@@ -14,7 +14,7 @@ export default function AppLayout({
   const isAuthPage = pathname === '/auth';
 
   return (
-    <div className="flex min-h-screen bg-gray-50 overflow-x-hidden">
+    <div className="flex min-h-screen bg-background overflow-x-hidden">
       {!isAuthPage && <Navigation activeTab={activeTab} setActiveTab={setActiveTab} />}
       <main className={`flex-1 min-w-0 ${!isAuthPage ? 'lg:ml-64' : ''}`}>
         {children}

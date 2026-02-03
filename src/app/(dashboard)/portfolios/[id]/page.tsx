@@ -1,17 +1,17 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { usePortfolio, useUpdatePortfolio, useDeletePortfolio } from '@/hooks/queries/usePortfolios';
 import { useFundingSources } from '@/hooks/queries/useFundingSources';
 import {
   ArrowLeft, Edit, Trash2, Plus, Building2, DollarSign,
-  AlertTriangle, ChevronRight
+  AlertTriangle, ChevronRight, Loader2
 } from 'lucide-react';
 import AppLayout from '@/app/components/AppLayout';
 import PageContainer from '@/app/components/PageContainer';
 
-export default function PortfolioDetailPage() {
+function PortfolioDetailContent() {
   const router = useRouter();
   const params = useParams();
   const portfolioId = params.id as string;
@@ -263,5 +263,21 @@ export default function PortfolioDetailPage() {
         </div>
       </PageContainer>
     </AppLayout>
+  );
+}
+
+export default function PortfolioDetailPage() {
+  return (
+    <Suspense fallback={
+      <AppLayout>
+        <PageContainer>
+          <div className="flex items-center justify-center min-h-[50vh]">
+            <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+          </div>
+        </PageContainer>
+      </AppLayout>
+    }>
+      <PortfolioDetailContent />
+    </Suspense>
   );
 }

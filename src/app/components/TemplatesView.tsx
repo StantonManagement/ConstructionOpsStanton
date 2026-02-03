@@ -1,12 +1,6 @@
 import React, { useState } from 'react';
 import { useTemplates, useCreateTemplate } from '@/hooks/queries/useTemplates';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Plus, FileText, Search, Loader2 } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Plus, FileText, Search, Loader2, X } from 'lucide-react';
 import { UnitType } from '@/types/schema';
 import { TemplateDetailView } from '@/app/components/TemplateDetailView';
 
@@ -55,133 +49,180 @@ export const TemplatesView: React.FC = () => {
     );
   }
 
-  if (isLoading) {
-    return <div className="p-8 text-center">Loading templates...</div>;
-  }
-
   if (error) {
-    return <div className="p-8 text-center text-red-500">Error loading templates: {error.message}</div>;
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-red-700 text-sm">
+        Error loading templates: {error.message}
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="space-y-3">
+      {/* Header */}
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Scope Templates</h1>
-          <p className="text-gray-500">Manage standard task lists for different unit types</p>
+          <h1 className="text-xl font-bold text-gray-900">Scope Templates</h1>
+          <p className="text-xs text-gray-500 mt-0.5">Manage standard task lists for different unit types</p>
         </div>
-        <Button onClick={() => setShowCreateModal(true)}>
-          <Plus className="w-4 h-4 mr-2" />
-          New Template
-        </Button>
+        <button
+          onClick={() => setShowCreateModal(true)}
+          className="flex items-center gap-1 px-3 py-1.5 bg-primary text-white text-xs rounded hover:bg-primary/90 transition-colors"
+        >
+          <Plus className="w-3 h-3" />
+          New
+        </button>
       </div>
 
-      {/* Filters */}
-      <div className="flex items-center gap-4 bg-white p-3 rounded-lg border shadow-sm max-w-md">
-        <Search className="w-4 h-4 text-gray-500 ml-2" />
-        <Input 
-          placeholder="Search templates..." 
-          className="border-none shadow-none focus-visible:ring-0"
+      {/* Search */}
+      <div className="flex items-center gap-2 bg-white p-2 rounded-lg border border-gray-200 max-w-md">
+        <Search className="w-3 h-3 text-gray-400" />
+        <input
+          type="text"
+          placeholder="Search templates..."
+          className="flex-1 text-xs border-none outline-none bg-transparent"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
       </div>
 
       {/* Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredTemplates?.map(template => (
-          <Card 
-            key={template.id}
-            className="p-4 hover:shadow-md transition-all cursor-pointer border-l-4 border-l-blue-500"
-            onClick={() => setSelectedTemplateId(template.id)}
-          >
-            <div className="flex justify-between items-start mb-2">
-              <div className="flex items-center gap-2">
-                <FileText className="w-5 h-5 text-blue-600" />
-                <h3 className="font-semibold text-lg">{template.name}</h3>
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+            <div key={i} className="bg-white rounded-lg border border-gray-200 p-3 animate-pulse">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-4 h-4 bg-gray-200 rounded" />
+                <div className="h-3 bg-gray-200 rounded flex-1" />
+              </div>
+              <div className="space-y-2 mb-3">
+                <div className="h-2 bg-gray-200 rounded w-full" />
+                <div className="h-2 bg-gray-200 rounded w-3/4" />
+              </div>
+              <div className="flex justify-between items-center border-t border-gray-100 pt-2">
+                <div className="h-2 bg-gray-200 rounded w-16" />
+                <div className="h-2 bg-gray-200 rounded w-12" />
               </div>
             </div>
-            
-            <p className="text-sm text-gray-500 mb-4 line-clamp-2 min-h-[40px]">
-              {template.description || 'No description provided'}
-            </p>
+          ))}
+        </div>
+      ) : filteredTemplates?.length === 0 ? (
+        <div className="bg-white border border-gray-200 rounded-lg p-8 text-center">
+          <FileText className="w-10 h-10 mx-auto text-gray-300 mb-3" />
+          <h3 className="text-sm font-semibold text-gray-900 mb-1">No templates found</h3>
+          <p className="text-xs text-gray-500 mb-3">Create your first scope template.</p>
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="inline-flex items-center gap-1 px-3 py-1.5 bg-primary text-white text-xs rounded hover:bg-primary/90 transition-colors"
+          >
+            <Plus className="w-3 h-3" />
+            Create Template
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+          {filteredTemplates?.map(template => (
+            <div
+              key={template.id}
+              className="bg-white rounded-lg border border-gray-200 p-3 hover:shadow-md hover:border-primary/50 transition-all cursor-pointer border-l-4 border-l-blue-500"
+              onClick={() => setSelectedTemplateId(template.id)}
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <FileText className="w-4 h-4 text-blue-600" />
+                <h3 className="font-semibold text-sm text-gray-900 truncate flex-1">{template.name}</h3>
+              </div>
 
-            <div className="flex justify-between items-center text-xs text-gray-600 border-t pt-3">
-              <span className="bg-gray-100 px-2 py-1 rounded">
-                {template.unit_type || 'Any Unit Type'}
-              </span>
-              <span className="font-medium">
-                {template.task_count || 0} tasks
-              </span>
+              <p className="text-xs text-gray-500 mb-3 line-clamp-2 min-h-[32px]">
+                {template.description || 'No description provided'}
+              </p>
+
+              <div className="flex justify-between items-center text-xs text-gray-600 border-t border-gray-100 pt-2">
+                <span className="bg-gray-100 px-1.5 py-0.5 rounded text-[10px]">
+                  {template.unit_type || 'Any Type'}
+                </span>
+                <span className="font-medium text-[10px]">
+                  {template.task_count || 0} tasks
+                </span>
+              </div>
             </div>
-          </Card>
-        ))}
-
-        {filteredTemplates?.length === 0 && (
-          <div className="col-span-full text-center py-12 bg-gray-50 rounded-lg border border-dashed">
-            <p className="text-gray-500 mb-2">No templates found</p>
-            <Button variant="outline" onClick={() => setShowCreateModal(true)}>
-              Create First Template
-            </Button>
-          </div>
-        )}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* Create Modal */}
-      <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Create New Template</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleCreate} className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Template Name</Label>
-              <Input 
-                placeholder="e.g. 1BR Standard Renovation"
-                value={newTemplateName}
-                onChange={(e) => setNewTemplateName(e.target.value)}
-                required
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label>Description</Label>
-              <Input 
-                placeholder="Brief description of scope..."
-                value={newTemplateDesc}
-                onChange={(e) => setNewTemplateDesc(e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Unit Type</Label>
-              <Select 
-                value={newTemplateUnitType} 
-                onValueChange={(val) => setNewTemplateUnitType(val as UnitType | 'any')}
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="flex items-center justify-between p-3 border-b border-gray-200">
+              <h2 className="text-sm font-bold text-gray-900">Create New Template</h2>
+              <button
+                onClick={() => setShowCreateModal(false)}
+                className="p-1 hover:bg-gray-100 rounded transition-colors"
               >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="any">Any / General</SelectItem>
-                  <SelectItem value="studio">Studio</SelectItem>
-                  <SelectItem value="1BR">1 Bedroom</SelectItem>
-                  <SelectItem value="2BR">2 Bedroom</SelectItem>
-                  <SelectItem value="3BR">3 Bedroom</SelectItem>
-                </SelectContent>
-              </Select>
+                <X className="w-4 h-4 text-gray-500" />
+              </button>
             </div>
 
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setShowCreateModal(false)}>Cancel</Button>
-              <Button type="submit" disabled={isCreating || !newTemplateName}>
-                {isCreating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                Create Template
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+            <form onSubmit={handleCreate} className="p-3 space-y-3">
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-gray-700">Template Name</label>
+                <input
+                  type="text"
+                  placeholder="e.g. 1BR Standard Renovation"
+                  className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-primary"
+                  value={newTemplateName}
+                  onChange={(e) => setNewTemplateName(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-gray-700">Description</label>
+                <input
+                  type="text"
+                  placeholder="Brief description of scope..."
+                  className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-primary"
+                  value={newTemplateDesc}
+                  onChange={(e) => setNewTemplateDesc(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-gray-700">Unit Type</label>
+                <select
+                  className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-primary"
+                  value={newTemplateUnitType}
+                  onChange={(e) => setNewTemplateUnitType(e.target.value as UnitType | 'any')}
+                >
+                  <option value="any">Any / General</option>
+                  <option value="studio">Studio</option>
+                  <option value="1BR">1 Bedroom</option>
+                  <option value="2BR">2 Bedroom</option>
+                  <option value="3BR">3 Bedroom</option>
+                </select>
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowCreateModal(false)}
+                  className="flex-1 px-3 py-1.5 text-xs border border-gray-300 rounded hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isCreating || !newTemplateName}
+                  className="flex-1 px-3 py-1.5 text-xs bg-primary text-white rounded hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-1"
+                >
+                  {isCreating && <Loader2 className="w-3 h-3 animate-spin" />}
+                  Create
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -5,12 +5,10 @@ import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { useBlockingReport } from '@/hooks/queries/useReports';
 import { useUnblockLocation } from '@/hooks/queries/useLocations';
 import { useProjects } from '@/hooks/queries/useProjects';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { ArrowLeft, Construction, User, DollarSign, Link as LinkIcon, HelpCircle, AlertTriangle, CheckCircle, ChevronDown, Loader2 } from 'lucide-react';
 import { formatCurrency } from '@/lib/theme';
-import { StatusFilter } from '@/components/StatusFilter';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import AppLayout from '@/app/components/AppLayout';
+import PageContainer from '@/app/components/PageContainer';
 
 // Icons map for blocking reasons
 const REASON_ICONS: Record<string, any> = {
@@ -87,63 +85,66 @@ function BlockingReportContent() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
-      </div>
+      <AppLayout>
+        <PageContainer>
+          <div className="flex items-center justify-center min-h-[50vh]">
+            <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+          </div>
+        </PageContainer>
+      </AppLayout>
     );
   }
 
   if (!data) return null;
 
   return (
-    <div className="max-w-5xl mx-auto p-6 space-y-8">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" onClick={handleBackNavigation} className="p-0 hover:bg-transparent">
-            <ArrowLeft className="w-5 h-5 text-gray-500" />
-          </Button>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-              <AlertTriangle className="w-6 h-6 text-amber-600" />
-              Blocking Report
-            </h1>
-            <p className="text-gray-500">
-              {data.total_blocked} blocked locations • Total impact: {formatCurrency(data.total_affected_cost)}
-            </p>
+    <AppLayout>
+      <PageContainer>
+        {/* Header */}
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-3">
+            <button onClick={handleBackNavigation} className="p-1 hover:bg-gray-100 rounded transition-colors">
+              <ArrowLeft className="w-4 h-4 text-gray-500" />
+            </button>
+            <div>
+              <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-amber-600" />
+                Blocking Report
+              </h1>
+              <p className="text-xs text-gray-500">
+                {data.total_blocked} blocked • Impact: {formatCurrency(data.total_affected_cost)}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-500">Project:</span>
+            <select
+              value={projectId?.toString() || 'all'}
+              onChange={(e) => handleProjectChange(e.target.value)}
+              className="border border-gray-300 rounded px-2 py-1 text-xs"
+            >
+              <option value="all">All Projects</option>
+              {projects?.map((p) => (
+                <option key={p.id} value={p.id.toString()}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-gray-500 whitespace-nowrap">Project:</span>
-          <Select value={projectId?.toString() || 'all'} onValueChange={handleProjectChange}>
-            <SelectTrigger className="w-[220px]">
-              <SelectValue placeholder="All Projects" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Projects</SelectItem>
-              {projects?.map((p) => (
-                <SelectItem key={p.id} value={p.id.toString()}>
-                  {p.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+        {/* Grouped Lists */}
+        <div className="space-y-3">
+          {Object.entries(data.by_reason).map(([reason, group]) => {
+            const Icon = REASON_ICONS[reason] || HelpCircle;
+            const isOpen = openReasons[reason] !== false;
 
-      {/* Grouped Lists */}
-      <div className="space-y-6">
-        {Object.entries(data.by_reason).map(([reason, group]) => {
-          const Icon = REASON_ICONS[reason] || HelpCircle;
-          const isOpen = openReasons[reason] !== false;
-          
-          return (
-            <Card key={reason} className="border-gray-200 overflow-hidden">
-              <CardHeader className="bg-gray-50 py-3 px-4 border-b border-gray-200">
+            return (
+              <div key={reason} className="bg-white border border-gray-200 rounded-lg overflow-hidden">
                 <button
                   type="button"
-                  className="w-full flex justify-between items-center"
+                  className="w-full bg-gray-50 p-3 border-b border-gray-200 flex justify-between items-center hover:bg-gray-100 transition-colors"
                   onClick={() =>
                     setOpenReasons((prev) => ({
                       ...prev,
@@ -152,82 +153,78 @@ function BlockingReportContent() {
                   }
                 >
                   <div className="flex items-center gap-2">
-                    <Icon className="w-5 h-5 text-gray-600" />
-                    <CardTitle className="text-base font-semibold text-gray-900 capitalize">
+                    <Icon className="w-4 h-4 text-gray-600" />
+                    <span className="text-sm font-bold text-gray-900 capitalize">
                       {REASON_LABELS[reason] || reason}
-                    </CardTitle>
-                    <span className="text-sm text-gray-500 font-normal">
-                      ({group.count} locations)
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      ({group.count})
                     </span>
                   </div>
                   <div className="flex items-center gap-3">
-                    <div className="text-sm font-medium text-gray-700">
-                      Impact: {formatCurrency(group.affected_cost)}
-                    </div>
-                    <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                    <span className="text-xs font-semibold text-gray-700">
+                      {formatCurrency(group.affected_cost)}
+                    </span>
+                    <ChevronDown className={`w-3 h-3 text-gray-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
                   </div>
                 </button>
-              </CardHeader>
-              {isOpen ? (
-                <CardContent className="p-0">
+                {isOpen && (
                   <div className="divide-y divide-gray-100">
                     {group.items.map((item) => (
-                      <div key={item.location_id} className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-gray-50 transition-colors">
-                        <div className="space-y-1">
+                      <div key={item.location_id} className="p-3 flex flex-col md:flex-row md:items-center justify-between gap-3 hover:bg-gray-50 transition-colors">
+                        <div className="space-y-1 flex-1 min-w-0">
                           <div className="flex items-center gap-2">
-                            <h4 className="font-semibold text-gray-900">{item.location_name}</h4>
-                            <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                            <h4 className="font-semibold text-sm text-gray-900 truncate">{item.location_name}</h4>
+                            <span className="text-[10px] text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded shrink-0">
                               {item.project_name}
                             </span>
                           </div>
-                          <p className="text-amber-700 text-sm font-medium">"{item.blocked_note}"</p>
-                          <div className="text-xs text-gray-500 flex gap-3">
-                            <span>Blocked since {new Date(item.blocked_since).toLocaleDateString()}</span>
+                          <p className="text-amber-700 text-xs font-medium truncate">"{item.blocked_note}"</p>
+                          <div className="text-[10px] text-gray-500 flex gap-2">
+                            <span>Since {new Date(item.blocked_since).toLocaleDateString()}</span>
                             <span>•</span>
-                            <span>{item.affected_tasks} tasks affected</span>
+                            <span>{item.affected_tasks} tasks</span>
                           </div>
                         </div>
-                        
-                        <div className="flex items-center gap-4 shrink-0">
+
+                        <div className="flex items-center gap-3 shrink-0">
                           <div className="text-right hidden md:block">
-                            <p className="text-sm font-medium text-gray-900">{formatCurrency(item.affected_cost)}</p>
-                            <p className="text-xs text-gray-500">Value</p>
+                            <p className="text-xs font-semibold text-gray-900">{formatCurrency(item.affected_cost)}</p>
+                            <p className="text-[10px] text-gray-500">Value</p>
                           </div>
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            className="text-green-600 border-green-200 hover:bg-green-50"
+                          <button
                             onClick={() => handleUnblock(item.location_id)}
                             disabled={isUnblocking && unblockingId === item.location_id}
+                            className="flex items-center gap-1 px-2 py-1 text-xs text-green-600 border border-green-200 rounded hover:bg-green-50 transition-colors disabled:opacity-50"
                           >
                             {isUnblocking && unblockingId === item.location_id ? (
-                              <Loader2 className="w-4 h-4 animate-spin" />
+                              <Loader2 className="w-3 h-3 animate-spin" />
                             ) : (
                               <>
-                                <CheckCircle className="w-4 h-4 mr-1.5" />
+                                <CheckCircle className="w-3 h-3" />
                                 Unblock
                               </>
                             )}
-                          </Button>
+                          </button>
                         </div>
                       </div>
                     ))}
                   </div>
-                </CardContent>
-              ) : null}
-            </Card>
-          );
-        })}
+                )}
+              </div>
+            );
+          })}
 
-        {data.total_blocked === 0 && (
-          <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
-            <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-3" />
-            <h3 className="text-lg font-medium text-gray-900">No Blocking Issues</h3>
-            <p className="text-gray-500">Everything is moving smoothly!</p>
-          </div>
-        )}
-      </div>
-    </div>
+          {data.total_blocked === 0 && (
+            <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
+              <CheckCircle className="w-10 h-10 text-green-500 mx-auto mb-3" />
+              <h3 className="text-sm font-semibold text-gray-900 mb-1">No Blocking Issues</h3>
+              <p className="text-xs text-gray-500">Everything is moving smoothly!</p>
+            </div>
+          )}
+        </div>
+      </PageContainer>
+    </AppLayout>
   );
 }
 

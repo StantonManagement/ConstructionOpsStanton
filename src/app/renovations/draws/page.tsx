@@ -6,9 +6,9 @@ import { useRenovationDraws, useDrawEligibility } from '@/hooks/queries/useDraws
 import { usePortfolioProperties } from '@/hooks/queries/usePortfolio';
 import { DrawStatsCards } from './components/DrawStatsCards';
 import { DrawCard } from './components/DrawCard';
-import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, Plus } from 'lucide-react';
+import AppLayout from '@/app/components/AppLayout';
+import PageContainer from '@/app/components/PageContainer';
 
 function DrawsPageContent() {
   const router = useRouter();
@@ -47,81 +47,95 @@ function DrawsPageContent() {
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-8">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Draws Management</h1>
-        <p className="text-gray-500">Track and manage construction loan draws</p>
-      </div>
-
-      {/* Stats */}
-      <DrawStatsCards data={eligibility} isLoading={isLoadingStats} />
-
-      <div className="border-t border-gray-200 my-6"></div>
-
-      {/* Controls */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <Select value={propertyId} onValueChange={(val) => handleFilterChange('property_id', val)}>
-            <SelectTrigger className="w-[200px] bg-white">
-              <SelectValue placeholder="All Properties" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Properties</SelectItem>
-              {portfolio?.properties.map(p => (
-                <SelectItem key={p.project_id} value={p.project_id.toString()}>
-                  {p.project_name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select value={status} onValueChange={(val) => handleFilterChange('status', val)}>
-            <SelectTrigger className="w-[150px] bg-white">
-              <SelectValue placeholder="All Statuses" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
-              <SelectItem value="draft">Draft</SelectItem>
-              <SelectItem value="submitted">Submitted</SelectItem>
-              <SelectItem value="approved">Approved</SelectItem>
-              <SelectItem value="funded">Funded</SelectItem>
-            </SelectContent>
-          </Select>
+    <AppLayout>
+      <PageContainer>
+        {/* Header */}
+        <div className="mb-3">
+          <h1 className="text-xl font-bold text-foreground">Draws Management</h1>
+          <p className="text-xs text-muted-foreground">Track and manage construction loan draws</p>
         </div>
 
-        <Button onClick={handleCreateDraw} className="w-full sm:w-auto">
-          <Plus className="w-4 h-4 mr-2" />
-          New Draw Request
-        </Button>
-      </div>
+        {/* Stats */}
+        <DrawStatsCards data={eligibility} isLoading={isLoadingStats} />
 
-      {/* List */}
-      <div className="space-y-4">
-        {isLoadingDraws ? (
-          <div className="flex justify-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+        <div className="border-t border-border my-3"></div>
+
+        {/* Controls */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-3">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <select
+              value={propertyId}
+              onChange={(e) => handleFilterChange('property_id', e.target.value)}
+              className="w-[200px] px-2 py-1.5 text-xs border border-border rounded bg-background text-foreground focus:ring-1 focus:ring-ring focus:border-ring"
+            >
+              <option value="all">All Properties</option>
+              {portfolio?.properties.map(p => (
+                <option key={p.project_id} value={p.project_id.toString()}>
+                  {p.project_name}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={status}
+              onChange={(e) => handleFilterChange('status', e.target.value)}
+              className="w-[150px] px-2 py-1.5 text-xs border border-border rounded bg-background text-foreground focus:ring-1 focus:ring-ring focus:border-ring"
+            >
+              <option value="all">All Statuses</option>
+              <option value="draft">Draft</option>
+              <option value="submitted">Submitted</option>
+              <option value="approved">Approved</option>
+              <option value="funded">Funded</option>
+            </select>
           </div>
-        ) : drawsData?.draws?.length === 0 ? (
-          <div className="text-center py-16 bg-gray-50 rounded-lg border border-dashed border-gray-300">
-            <p className="text-gray-500 mb-2">No draws found</p>
-            <Button variant="outline" onClick={handleCreateDraw}>
-              Create First Draw
-            </Button>
-          </div>
-        ) : (
-          drawsData?.draws?.map(draw => (
-            <DrawCard key={draw.id} draw={draw} returnTo={returnTo} />
-          ))
-        )}
-      </div>
-    </div>
+
+          <button
+            onClick={handleCreateDraw}
+            className="w-full sm:w-auto px-3 py-1.5 text-xs bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors flex items-center justify-center gap-1"
+          >
+            <Plus className="w-3 h-3" />
+            New Draw Request
+          </button>
+        </div>
+
+        {/* List */}
+        <div className="space-y-3">
+          {isLoadingDraws ? (
+            <div className="flex justify-center py-12">
+              <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : drawsData?.draws?.length === 0 ? (
+            <div className="text-center py-12 bg-muted rounded-lg border border-dashed border-border">
+              <p className="text-xs text-muted-foreground mb-2">No draws found</p>
+              <button
+                onClick={handleCreateDraw}
+                className="px-3 py-1.5 text-xs border border-border rounded hover:bg-accent hover:text-accent-foreground transition-colors"
+              >
+                Create First Draw
+              </button>
+            </div>
+          ) : (
+            drawsData?.draws?.map(draw => (
+              <DrawCard key={draw.id} draw={draw} returnTo={returnTo} />
+            ))
+          )}
+        </div>
+      </PageContainer>
+    </AppLayout>
   );
 }
 
 export default function DrawsPage() {
   return (
-    <Suspense fallback={<div className="p-8"><Loader2 className="w-8 h-8 animate-spin" /></div>}>
+    <Suspense fallback={
+      <AppLayout>
+        <PageContainer>
+          <div className="flex items-center justify-center min-h-[50vh]">
+            <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+          </div>
+        </PageContainer>
+      </AppLayout>
+    }>
       <DrawsPageContent />
     </Suspense>
   );

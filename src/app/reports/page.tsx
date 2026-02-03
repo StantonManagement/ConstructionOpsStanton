@@ -1,13 +1,13 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/providers/AuthProvider';
 import { BarChart3, AlertTriangle, TrendingUp, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import AppLayout from '../components/AppLayout';
 
-export default function ReportsPage() {
+function ReportsContent() {
   const { user, isLoading } = useAuth();
   const router = useRouter();
 
@@ -48,33 +48,33 @@ export default function ReportsPage() {
 
   return (
     <AppLayout>
-      <div className="px-4 sm:px-6 lg:px-8 py-6">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <BarChart3 className="w-6 h-6" />
+      <div className="p-4 sm:p-6">
+        <div className="mb-3">
+          <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
+            <BarChart3 className="w-5 h-5" />
             Reports
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-xs text-muted-foreground mt-0.5">
             View analytics and reports across your projects
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
           {reports.map((report) => {
             const Icon = report.icon;
             return (
               <Link
                 key={report.id}
                 href={report.href}
-                className="bg-white rounded-lg border border-border p-6 hover:shadow-lg transition-shadow duration-200"
+                className="bg-white rounded-lg border border-border p-4 hover:shadow-md hover:border-primary/50 transition-all"
               >
-                <div className={`w-12 h-12 rounded-lg ${report.bgColor} flex items-center justify-center mb-4`}>
-                  <Icon className={`w-6 h-6 ${report.color}`} />
+                <div className={`w-10 h-10 rounded-lg ${report.bgColor} flex items-center justify-center mb-3`}>
+                  <Icon className={`w-5 h-5 ${report.color}`} />
                 </div>
-                <h3 className="text-lg font-semibold text-foreground mb-2">
+                <h3 className="text-sm font-semibold text-foreground mb-1">
                   {report.title}
                 </h3>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-xs text-muted-foreground">
                   {report.description}
                 </p>
               </Link>
@@ -83,5 +83,19 @@ export default function ReportsPage() {
         </div>
       </div>
     </AppLayout>
+  );
+}
+
+export default function ReportsPage() {
+  return (
+    <Suspense fallback={
+      <AppLayout>
+        <div className="flex items-center justify-center min-h-[50vh]">
+          <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+        </div>
+      </AppLayout>
+    }>
+      <ReportsContent />
+    </Suspense>
   );
 }

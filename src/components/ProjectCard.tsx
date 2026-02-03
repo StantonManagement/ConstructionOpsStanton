@@ -47,10 +47,10 @@ const ProjectCard: React.FC<Props> = ({ project, onSelect, onBudgetClick, isLoad
 
   // Determine status based on completion percentage
   const getStatusInfo = () => {
-    if (percent > 95) return { text: '⚠️ Over budget', color: 'text-red-600' };
-    if (percent > 90) return { text: '⚠️ Near limit', color: 'text-orange-600' };
-    if (percent > 75) return { text: '⚡ High usage', color: 'text-yellow-600' };
-    return { text: '✅ On track', color: 'text-green-700' };
+    if (percent > 95) return { text: '⚠️ Over budget', color: 'text-red-600 dark:text-red-400' };
+    if (percent > 90) return { text: '⚠️ Near limit', color: 'text-orange-600 dark:text-orange-400' };
+    if (percent > 75) return { text: '⚡ High usage', color: 'text-yellow-600 dark:text-yellow-400' };
+    return { text: '✅ On track', color: 'text-green-700 dark:text-green-400' };
   };
 
   const statusInfo = getStatusInfo();
@@ -69,10 +69,10 @@ const ProjectCard: React.FC<Props> = ({ project, onSelect, onBudgetClick, isLoad
       {/* Compact Header - Single Line */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex-1 min-w-0">
-          <h4 className="font-semibold text-sm text-gray-900 truncate">{project.name}</h4>
-          <p className="text-xs text-gray-500 truncate">{project.client_name || 'No client'}</p>
+          <h4 className="font-semibold text-sm text-foreground truncate">{project.name}</h4>
+          <p className="text-xs text-muted-foreground truncate">{project.client_name || 'No client'}</p>
         </div>
-        <span className="text-xs px-2 py-0.5 bg-blue-50 text-blue-700 rounded ml-2 whitespace-nowrap">
+        <span className="text-xs px-2 py-0.5 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 rounded ml-2 whitespace-nowrap">
           {project.current_phase || 'N/A'}
         </span>
       </div>
@@ -80,16 +80,16 @@ const ProjectCard: React.FC<Props> = ({ project, onSelect, onBudgetClick, isLoad
       {/* Compact Budget - Single Line with Progress */}
       <div className="mb-1.5">
         <div className="flex items-center justify-between text-xs mb-1">
-          <span className="text-gray-600">${budget.toLocaleString()}</span>
+          <span className="text-muted-foreground">${budget.toLocaleString()}</span>
           <span className={`font-medium ${statusInfo.color}`}>
             {percent < 0.01 ? '<0.01%' : percent.toFixed(1)}%
           </span>
         </div>
 
         {/* Thin Progress Bar */}
-        <div className="w-full bg-gray-200 rounded-full h-1.5 relative overflow-hidden">
+        <div className="w-full bg-muted rounded-full h-1.5 relative overflow-hidden">
           {isLoading ? (
-            <div className="h-1.5 bg-gray-300 rounded-full animate-pulse"></div>
+            <div className="h-1.5 bg-muted-foreground/30 rounded-full animate-pulse"></div>
           ) : (
             <div
               className={`h-1.5 rounded-full transition-all ${
@@ -107,12 +107,12 @@ const ProjectCard: React.FC<Props> = ({ project, onSelect, onBudgetClick, isLoad
       {/* Minimal Status Badges */}
       <div className="flex items-center gap-1.5 text-xs">
         {percent > 90 && (
-          <span className="px-1.5 py-0.5 rounded text-[10px] bg-orange-100 text-orange-700">
+          <span className="px-1.5 py-0.5 rounded text-[10px] bg-orange-100 dark:bg-orange-950 text-orange-700 dark:text-orange-300">
             High Usage
           </span>
         )}
         {(project as any).at_risk && (
-          <span className="px-1.5 py-0.5 rounded text-[10px] bg-red-100 text-red-700">
+          <span className="px-1.5 py-0.5 rounded text-[10px] bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300">
             At Risk
           </span>
         )}

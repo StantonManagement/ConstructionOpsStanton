@@ -12,6 +12,7 @@ import { Project } from '@/context/DataContext';
 import { supabase } from '@/lib/supabaseClient';
 import { useProject } from '@/context/ProjectContext';
 import { CollapsibleNavItem } from '@/components/CollapsibleNavItem';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 type NavigationProps = {
   activeTab: string;
@@ -186,36 +187,36 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab }) => {
       <div className="lg:hidden fixed top-20 left-4 z-50">
         <button
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          className="p-2 bg-white rounded-lg shadow-lg border border-gray-200"
+          className="p-2 bg-card rounded-lg shadow-lg border border-border"
           aria-label="Toggle mobile menu"
         >
-          {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          {isMobileMenuOpen ? <X className="w-5 h-5 text-foreground" /> : <Menu className="w-5 h-5 text-foreground" />}
         </button>
       </div>
 
       {/* Mobile Sidebar Overlay */}
       {isMobileMenuOpen && (
-        <div 
-          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40"
+        <div
+          className="lg:hidden fixed inset-0 bg-black/50 z-40"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
 
       {/* Navigation sidebar */}
       <nav className={`
-        fixed top-0 left-0 h-full w-64 bg-sidebar border-r border-sidebar-border transform transition-transform duration-300 ease-in-out z-40
+        fixed top-0 left-0 h-full w-64 border-r border-border transform transition-transform duration-300 ease-in-out z-40
         ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-        flex flex-col bg-white
+        flex flex-col bg-card
       `}>
         {/* Header */}
-        <div className="p-6 border-b border-gray-200">
+        <div className="p-6 border-b border-border">
           <div className="flex items-center">
             <Building className="w-8 h-8 text-primary" />
-            <h1 className="ml-3 text-xl font-bold text-gray-900">Construction Ops</h1>
+            <h1 className="ml-3 text-xl font-bold text-foreground">Construction Ops</h1>
           </div>
           {/* Portfolio Filter - TODO: Implement dropdown */}
           <div className="mt-4">
-            <select className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary/20">
+            <select className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring">
               <option value="all">All Portfolios</option>
               <option value="90-park-portfolio">90 Park Portfolio</option>
               <option value="north-end-portfolio">North End Portfolio</option>
@@ -240,7 +241,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab }) => {
           </NavButton>
 
           {/* Divider */}
-          <div className="my-2 border-t border-gray-200" />
+          <div className="my-2 border-t border-border" />
 
           <div onClick={closeMobileMenu}>
             <CollapsibleNavItem
@@ -270,7 +271,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab }) => {
           </div>
 
           {/* Divider */}
-          <div className="my-2 border-t border-gray-200" />
+          <div className="my-2 border-t border-border" />
 
           <NavButton
             id="payments"
@@ -334,7 +335,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab }) => {
           </NavButton>
 
           {/* Divider */}
-          <div className="my-2 border-t border-gray-200" />
+          <div className="my-2 border-t border-border" />
 
           <NavButton
             id="blocking"
@@ -373,7 +374,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab }) => {
           </NavButton>
 
           {/* Divider */}
-          <div className="my-2 border-t border-gray-200" />
+          <div className="my-2 border-t border-border" />
 
           <NavButton
             id="settings"
@@ -389,22 +390,28 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab }) => {
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-gray-200">
+        <div className="p-4 border-t border-border space-y-3">
+          {/* Theme Toggle */}
+          <div className="flex justify-center">
+            <ThemeToggle />
+          </div>
+
+          {/* User Profile */}
           <div className="flex items-center justify-between">
             <div className="flex items-center">
-              <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
-                <span className="text-sm font-medium text-gray-600">
+              <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center">
+                <span className="text-sm font-medium text-muted-foreground">
                   {userRole ? userRole.charAt(0).toUpperCase() : 'U'}
                 </span>
               </div>
               <div className="ml-3">
-                <p className="text-sm font-medium text-gray-900">User</p>
-                <p className="text-xs text-gray-500 capitalize">{userRole || 'Loading...'}</p>
+                <p className="text-sm font-medium text-foreground">User</p>
+                <p className="text-xs text-muted-foreground capitalize">{userRole || 'Loading...'}</p>
               </div>
             </div>
             <button
               onClick={handleLogout}
-              className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
+              className="p-2 text-muted-foreground hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950 rounded-lg transition-colors duration-200"
               aria-label="Logout"
               title="Logout"
             >

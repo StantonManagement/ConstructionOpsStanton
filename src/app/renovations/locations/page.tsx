@@ -7,6 +7,8 @@ import { RenovationLocationList } from '@/app/renovations/components/RenovationL
 import { useRenovationLocations } from '@/hooks/queries/useRenovationLocations';
 import { usePortfolioProperties } from '@/hooks/queries/usePortfolio';
 import { LayoutGrid, List, Loader2, MapPin } from 'lucide-react';
+import AppLayout from '@/app/components/AppLayout';
+import PageContainer from '@/app/components/PageContainer';
 
 function LocationsPageContent() {
   const router = useRouter();
@@ -87,17 +89,18 @@ function LocationsPageContent() {
   const hasMore = data ? data.total > limit : false;
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
-      {/* Header */}
-      <div>
-        <div className="flex items-center gap-2 mb-2">
-          <MapPin className="w-6 h-6 text-gray-600" />
-          <h1 className="text-2xl font-bold text-gray-900">Locations</h1>
+    <AppLayout>
+      <PageContainer>
+        {/* Header */}
+        <div className="mb-3">
+          <div className="flex items-center gap-2 mb-1">
+            <MapPin className="w-4 h-4 text-gray-600" />
+            <h1 className="text-xl font-bold text-gray-900">Locations</h1>
+          </div>
+          <p className="text-xs text-gray-500">
+            Manage renovation progress, verify tasks, and resolve blockers across all properties.
+          </p>
         </div>
-        <p className="text-gray-500">
-          Manage renovation progress, verify tasks, and resolve blockers across all properties.
-        </p>
-      </div>
 
       {/* Filter Bar */}
       <LocationFilterBar 
@@ -107,51 +110,60 @@ function LocationsPageContent() {
         totalCount={data?.total || 0}
       />
 
-      {/* Results */}
-      <div className="min-h-[400px]">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">
-            {displayedTotal} Locations Found
-          </h2>
-          <div className="flex items-center gap-2">
-            <div className="flex rounded-md border border-gray-200 overflow-hidden">
-              <button
-                type="button"
-                onClick={() => setView('grid')}
-                className={`px-2 py-1 text-sm flex items-center gap-1 ${view === 'grid' ? 'bg-gray-100 text-gray-900' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
-              >
-                <LayoutGrid className="w-4 h-4" />
-                Grid
-              </button>
-              <button
-                type="button"
-                onClick={() => setView('list')}
-                className={`px-2 py-1 text-sm flex items-center gap-1 border-l border-gray-200 ${view === 'list' ? 'bg-gray-100 text-gray-900' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
-              >
-                <List className="w-4 h-4" />
-                List
-              </button>
+        {/* Results */}
+        <div className="min-h-[400px]">
+          <div className="flex justify-between items-center mb-3">
+            <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              {displayedTotal} Locations Found
+            </h2>
+            <div className="flex items-center gap-2">
+              <div className="flex rounded-md border border-gray-200 overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setView('grid')}
+                  className={`px-2 py-1 text-xs flex items-center gap-1 ${view === 'grid' ? 'bg-gray-100 text-gray-900' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+                >
+                  <LayoutGrid className="w-3 h-3" />
+                  Grid
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setView('list')}
+                  className={`px-2 py-1 text-xs flex items-center gap-1 border-l border-gray-200 ${view === 'list' ? 'bg-gray-100 text-gray-900' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+                >
+                  <List className="w-3 h-3" />
+                  List
+                </button>
+              </div>
+              {isFetching && <Loader2 className="w-3 h-3 animate-spin text-gray-400" />}
             </div>
-            {isFetching && <Loader2 className="w-4 h-4 animate-spin text-gray-400" />}
           </div>
-        </div>
 
-        <RenovationLocationList 
-          locations={data?.locations || []}
-          isLoading={isLoading}
-          onLocationClick={handleLocationClick}
-          onLoadMore={handleLoadMore}
-          hasMore={hasMore}
-          view={view}
-        />
-      </div>
-    </div>
+          <RenovationLocationList
+            locations={data?.locations || []}
+            isLoading={isLoading}
+            onLocationClick={handleLocationClick}
+            onLoadMore={handleLoadMore}
+            hasMore={hasMore}
+            view={view}
+          />
+        </div>
+      </PageContainer>
+    </AppLayout>
   );
 }
 
 export default function LocationsPage() {
   return (
-    <Suspense fallback={<div className="p-8 flex justify-center"><Loader2 className="w-8 h-8 animate-spin" /></div>}>
+    <Suspense fallback={
+      <AppLayout>
+        <PageContainer>
+          <div className="flex items-center justify-center min-h-[50vh]">
+            <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+          </div>
+        </PageContainer>
+      </AppLayout>
+    }>
       <LocationsPageContent />
     </Suspense>
   );

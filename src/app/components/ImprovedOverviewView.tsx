@@ -25,7 +25,7 @@ const MetricCard: React.FC<{
   onClick?: () => void;
 }> = ({ title, value, subtitle, trend, trendValue, icon, onClick }) => (
   <div
-    className={`bg-white rounded-lg p-3 border border-gray-100 shadow-sm hover:shadow-md transition-all ${
+    className={`bg-card text-card-foreground rounded-lg p-3 border border-border shadow-sm hover:shadow-md transition-all ${
       onClick ? 'cursor-pointer hover:border-primary/30' : ''
     }`}
     onClick={onClick}
@@ -36,9 +36,9 @@ const MetricCard: React.FC<{
       </div>
       {trend && trendValue && (
         <div className={`flex items-center gap-1 text-xs font-medium ${
-          trend === 'up' ? 'text-green-600' :
-          trend === 'down' ? 'text-red-600' :
-          'text-gray-600'
+          trend === 'up' ? 'text-green-600 dark:text-green-400' :
+          trend === 'down' ? 'text-red-600 dark:text-red-400' :
+          'text-muted-foreground'
         }`}>
           {trend === 'up' && <TrendingUp className="w-3 h-3" />}
           {trend === 'down' && <TrendingDown className="w-3 h-3" />}
@@ -47,9 +47,9 @@ const MetricCard: React.FC<{
       )}
     </div>
     <div>
-      <p className="text-xs font-medium text-gray-600 mb-0.5">{title}</p>
-      <p className="text-lg font-bold text-gray-900">{value}</p>
-      {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
+      <p className="text-xs font-medium text-muted-foreground mb-0.5">{title}</p>
+      <p className="text-lg font-bold text-foreground">{value}</p>
+      {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
     </div>
   </div>
 );
@@ -64,9 +64,27 @@ const ActionItem: React.FC<{
   daysOld?: number;
 }> = ({ title, subtitle, amount, status, onClick, daysOld }) => {
   const statusConfig = {
-    urgent: { bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-700', dot: 'bg-red-500' },
-    review: { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700', dot: 'bg-amber-500' },
-    ready: { bg: 'bg-green-50', border: 'border-green-200', text: 'text-green-700', dot: 'bg-green-500' },
+    urgent: {
+      bg: 'bg-red-50 dark:bg-red-950',
+      border: 'border-red-200 dark:border-red-800',
+      text: 'text-red-900 dark:text-red-100',
+      subtext: 'text-red-700 dark:text-red-300',
+      dot: 'bg-red-500'
+    },
+    review: {
+      bg: 'bg-amber-50 dark:bg-amber-950',
+      border: 'border-amber-200 dark:border-amber-800',
+      text: 'text-amber-900 dark:text-amber-100',
+      subtext: 'text-amber-700 dark:text-amber-300',
+      dot: 'bg-amber-500'
+    },
+    ready: {
+      bg: 'bg-green-50 dark:bg-green-950',
+      border: 'border-green-200 dark:border-green-800',
+      text: 'text-green-900 dark:text-green-100',
+      subtext: 'text-green-700 dark:text-green-300',
+      dot: 'bg-green-500'
+    },
   };
 
   const config = statusConfig[status];
@@ -80,15 +98,15 @@ const ActionItem: React.FC<{
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-0.5">
             <div className={`w-1.5 h-1.5 rounded-full ${config.dot}`} />
-            <span className="font-semibold text-sm text-gray-900 truncate">{title}</span>
+            <span className={`font-semibold text-sm ${config.text} truncate`}>{title}</span>
             {daysOld !== undefined && daysOld > 0 && (
-              <span className="text-xs text-gray-500">{daysOld}d</span>
+              <span className={`text-xs ${config.subtext}`}>{daysOld}d</span>
             )}
           </div>
-          <p className="text-xs text-gray-600 truncate ml-3.5">{subtitle}</p>
+          <p className={`text-xs ${config.subtext} truncate ml-3.5`}>{subtitle}</p>
         </div>
         <div className="text-right flex-shrink-0">
-          <p className="font-bold text-sm text-gray-900">{amount}</p>
+          <p className={`font-bold text-sm ${config.text}`}>{amount}</p>
         </div>
       </div>
     </div>
@@ -211,7 +229,7 @@ const ImprovedOverviewView: React.FC<OverviewViewProps> = ({
     <div className="space-y-3">
       {/* Header */}
       <div>
-        <h1 className="text-xl font-bold text-gray-900">Dashboard</h1>
+        <h1 className="text-xl font-bold text-foreground">Dashboard</h1>
       </div>
 
       {/* Metric Cards */}
@@ -247,9 +265,9 @@ const ImprovedOverviewView: React.FC<OverviewViewProps> = ({
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
         {/* Projects List - Takes 2 columns */}
-        <div className="lg:col-span-2 bg-white rounded-lg border border-gray-100 shadow-sm">
-          <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-            <h2 className="text-base font-bold text-gray-900">Projects ({filteredProjects.length})</h2>
+        <div className="lg:col-span-2 bg-card rounded-lg border border-border shadow-sm">
+          <div className="px-4 py-3 border-b border-border flex items-center justify-between">
+            <h2 className="text-base font-bold text-foreground">Projects ({filteredProjects.length})</h2>
             <button
               onClick={() => window.location.href = '/projects'}
               className="text-xs font-medium text-primary hover:text-primary/80"
@@ -266,7 +284,7 @@ const ImprovedOverviewView: React.FC<OverviewViewProps> = ({
             ) : filteredProjects.length === 0 ? (
               <div className="text-center py-6">
                 <FolderOpen className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                <p className="text-xs text-gray-600">No projects found</p>
+                <p className="text-xs text-muted-foreground">No projects found</p>
               </div>
             ) : (
               <div className="space-y-2 max-h-[calc(100vh-320px)] overflow-y-auto pr-2">
@@ -288,12 +306,12 @@ const ImprovedOverviewView: React.FC<OverviewViewProps> = ({
         </div>
 
         {/* Action Queue - Takes 1 column */}
-        <div className="bg-white rounded-lg border border-gray-100 shadow-sm">
-          <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-            <h2 className="text-base font-bold text-gray-900">Actions ({totalQueueItems})</h2>
+        <div className="bg-card rounded-lg border border-border shadow-sm">
+          <div className="px-4 py-3 border-b border-border flex items-center justify-between">
+            <h2 className="text-base font-bold text-foreground">Actions ({totalQueueItems})</h2>
             <button
               onClick={fetchQueue}
-              className="text-gray-400 hover:text-gray-600"
+              className="text-gray-400 hover:text-muted-foreground"
             >
               <Clock className="w-4 h-4" />
             </button>
@@ -307,8 +325,8 @@ const ImprovedOverviewView: React.FC<OverviewViewProps> = ({
             ) : totalQueueItems === 0 ? (
               <div className="text-center py-6">
                 <CheckCircle2 className="w-8 h-8 text-green-500 mx-auto mb-2" />
-                <p className="font-medium text-xs text-gray-900 mb-0.5">All caught up!</p>
-                <p className="text-xs text-gray-500">No items need attention</p>
+                <p className="font-medium text-xs text-foreground mb-0.5">All caught up!</p>
+                <p className="text-xs text-muted-foreground">No items need attention</p>
               </div>
             ) : (
               <div className="space-y-2 max-h-[calc(100vh-320px)] overflow-y-auto pr-2">

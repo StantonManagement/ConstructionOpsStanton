@@ -39,7 +39,7 @@ export function CollapsibleNavItem({ icon, label, href, type }: Props) {
         <button
           onClick={() => router.push(href)}
           className={`flex-1 flex items-center gap-3 px-3 py-2 rounded-lg text-left ${
-            isActive ? 'bg-gray-100 font-medium' : 'hover:bg-gray-50'
+            isActive ? 'bg-accent font-medium' : 'hover:bg-accent/50'
           }`}
         >
           {icon}
@@ -51,7 +51,7 @@ export function CollapsibleNavItem({ icon, label, href, type }: Props) {
               e.stopPropagation();
               setExpanded(!expanded);
             }}
-            className="p-2 hover:bg-gray-100 rounded"
+            className="p-2 hover:bg-accent/50 rounded"
             aria-label={expanded ? 'Collapse' : 'Expand'}
           >
             {expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
@@ -65,7 +65,7 @@ export function CollapsibleNavItem({ icon, label, href, type }: Props) {
             <button
               key={item.id}
               onClick={() => router.push(item.href)}
-              className="block w-full text-left px-2 py-1.5 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900 rounded truncate"
+              className="block w-full text-left px-2 py-1.5 text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded truncate"
               title={item.name}
             >
               {item.name}

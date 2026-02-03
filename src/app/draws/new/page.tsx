@@ -5,14 +5,10 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useDrawEligibility } from '@/hooks/queries/useCashFlow';
 import { useProjects } from '@/hooks/queries/useProjects';
 import { useCreateDraw, useAddDrawLineItem } from '@/hooks/queries/useDraws';
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { ArrowLeft, CheckCircle2, CircleDollarSign, Loader2 } from 'lucide-react';
 import { formatCurrency } from '@/lib/theme';
+import AppLayout from '@/app/components/AppLayout';
+import PageContainer from '@/app/components/PageContainer';
 
 function NewDrawContent() {
   const router = useRouter();
@@ -105,159 +101,180 @@ function NewDrawContent() {
 
   if (isEligibilityLoading && projectId) {
     return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
-      </div>
+      <AppLayout>
+        <PageContainer>
+          <div className="flex items-center justify-center min-h-[50vh]">
+            <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+          </div>
+        </PageContainer>
+      </AppLayout>
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-8">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" onClick={handleBackNavigation} className="p-0 hover:bg-transparent">
-          <ArrowLeft className="w-5 h-5 text-gray-500" />
-        </Button>
-        <h1 className="text-2xl font-bold text-gray-900">Create New Draw Request</h1>
-      </div>
+    <AppLayout>
+      <PageContainer>
+        {/* Header */}
+        <div className="flex items-center gap-3 mb-3">
+          <button onClick={handleBackNavigation} className="p-1 hover:bg-gray-100 rounded transition-colors">
+            <ArrowLeft className="w-4 h-4 text-gray-500" />
+          </button>
+          <div>
+            <h1 className="text-xl font-bold text-gray-900">Create New Draw Request</h1>
+            <p className="text-xs text-gray-500 mt-0.5">Select verified tasks to request payment</p>
+          </div>
+        </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left Column: Form & Selection */}
-        <div className="lg:col-span-2 space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Project Details</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label>Select Project</Label>
-                <Select value={projectId?.toString()} onValueChange={handleProjectChange}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select Project" />
-                  </SelectTrigger>
-                  <SelectContent>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* Left Column: Form & Selection */}
+          <div className="lg:col-span-2 space-y-3">
+            {/* Project Details */}
+            <div className="bg-white rounded-lg border border-gray-200 p-3">
+              <h3 className="text-sm font-semibold text-gray-900 mb-3">Project Details</h3>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Select Project</label>
+                  <select
+                    value={projectId?.toString() || ''}
+                    onChange={(e) => handleProjectChange(e.target.value)}
+                    className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-primary focus:border-primary"
+                  >
+                    <option value="">Select Project</option>
                     {projects?.map((p) => (
-                      <SelectItem key={p.id} value={p.id.toString()}>
+                      <option key={p.id} value={p.id.toString()}>
                         {p.name}
-                      </SelectItem>
+                      </option>
                     ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                  </select>
+                </div>
 
-              <div className="space-y-2">
-                <Label>Notes (Optional)</Label>
-                <Input 
-                  placeholder="E.g., Draw #4 for Framing and MEP Rough-in" 
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                />
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Notes (Optional)</label>
+                  <input
+                    type="text"
+                    placeholder="E.g., Draw #4 for Framing and MEP Rough-in"
+                    className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-primary focus:border-primary"
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                  />
+                </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
 
-          {projectId && (
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-lg">Eligible Tasks</CardTitle>
-                {eligibility?.eligible_tasks.length ? (
-                  <Button variant="ghost" size="sm" onClick={selectAll}>
-                    {selectedTaskIds.size === eligibility.eligible_tasks.length ? 'Deselect All' : 'Select All'}
-                  </Button>
-                ) : null}
-              </CardHeader>
-              <CardContent>
+            {/* Eligible Tasks */}
+            {projectId && (
+              <div className="bg-white rounded-lg border border-gray-200 p-3">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-semibold text-gray-900">Eligible Tasks</h3>
+                  {eligibility?.eligible_tasks.length ? (
+                    <button
+                      onClick={selectAll}
+                      className="text-xs text-primary hover:text-primary/90"
+                    >
+                      {selectedTaskIds.size === eligibility.eligible_tasks.length ? 'Deselect All' : 'Select All'}
+                    </button>
+                  ) : null}
+                </div>
+
                 {!eligibility?.eligible_tasks.length ? (
-                  <div className="text-center py-8 text-gray-500">
+                  <div className="text-center py-6 text-xs text-gray-500">
                     No verified tasks eligible for draw.
                   </div>
                 ) : (
-                  <div className="space-y-2 max-h-[500px] overflow-y-auto pr-2">
+                  <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
                     {eligibility.eligible_tasks.map((task) => (
-                      <div 
-                        key={task.task_id} 
-                        className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-colors ${
-                          selectedTaskIds.has(task.task_id) 
-                            ? 'bg-blue-50 border-blue-200' 
+                      <div
+                        key={task.task_id}
+                        className={`flex items-center justify-between p-2 rounded border cursor-pointer transition-colors ${
+                          selectedTaskIds.has(task.task_id)
+                            ? 'bg-blue-50 border-blue-200'
                             : 'bg-white border-gray-100 hover:bg-gray-50'
                         }`}
                         onClick={() => toggleTask(task.task_id)}
                       >
-                        <div className="flex items-center gap-3">
-                          <Checkbox 
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <input
+                            type="checkbox"
                             checked={selectedTaskIds.has(task.task_id)}
-                            onCheckedChange={() => toggleTask(task.task_id)}
+                            onChange={() => toggleTask(task.task_id)}
+                            className="w-3 h-3 rounded border-gray-300"
                           />
-                          <div>
-                            <p className="font-medium text-gray-900">{task.task_name}</p>
-                            <p className="text-xs text-gray-500">
+                          <div className="min-w-0 flex-1">
+                            <p className="font-medium text-xs text-gray-900 truncate">{task.task_name}</p>
+                            <p className="text-xs text-gray-500 truncate">
                               {task.location_name} • Verified {new Date(task.verified_at).toLocaleDateString()}
                             </p>
                           </div>
                         </div>
-                        <div className="text-right font-medium text-gray-900">
+                        <div className="text-xs font-medium text-gray-900 ml-2 shrink-0">
                           {formatCurrency(task.cost)}
                         </div>
                       </div>
                     ))}
                   </div>
                 )}
-              </CardContent>
-            </Card>
-          )}
-        </div>
+              </div>
+            )}
+          </div>
 
-        {/* Right Column: Summary */}
-        <div className="lg:col-span-1">
-          <Card className="sticky top-6 border-l-4 border-l-blue-500">
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <CircleDollarSign className="w-5 h-5 text-blue-600" />
-                Draw Summary
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Selected Tasks</span>
-                <span className="font-medium">{selectedTaskIds.size}</span>
+          {/* Right Column: Summary */}
+          <div className="lg:col-span-1">
+            <div className="bg-white rounded-lg border border-gray-200 border-l-4 border-l-blue-500 p-3 sticky top-6">
+              <div className="flex items-center gap-2 mb-3">
+                <CircleDollarSign className="w-4 h-4 text-blue-600" />
+                <h3 className="text-sm font-semibold text-gray-900">Draw Summary</h3>
               </div>
-              <div className="pt-4 border-t border-gray-100">
-                <div className="flex justify-between items-end">
-                  <span className="text-base font-semibold text-gray-700">Total Request</span>
-                  <span className="text-2xl font-bold text-gray-900">{formatCurrency(selectedTotal)}</span>
+
+              <div className="space-y-3">
+                <div className="flex justify-between text-xs">
+                  <span className="text-gray-500">Selected Tasks</span>
+                  <span className="font-medium">{selectedTaskIds.size}</span>
                 </div>
+
+                <div className="pt-3 border-t border-gray-100">
+                  <div className="flex justify-between items-end">
+                    <span className="text-xs font-semibold text-gray-700">Total Request</span>
+                    <span className="text-lg font-bold text-gray-900">{formatCurrency(selectedTotal)}</span>
+                  </div>
+                </div>
+
+                <button
+                  className="w-full px-3 py-2 text-xs bg-primary text-white rounded hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1"
+                  disabled={!projectId || selectedTaskIds.size === 0 || isSubmitting}
+                  onClick={handleCreateDraw}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                      Creating Draw...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-3 h-3" />
+                      Create Draft Draw
+                    </>
+                  )}
+                </button>
               </div>
-            </CardContent>
-            <CardFooter>
-              <Button 
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white" 
-                size="lg"
-                disabled={!projectId || selectedTaskIds.size === 0 || isSubmitting}
-                onClick={handleCreateDraw}
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Creating Draw...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle2 className="w-4 h-4 mr-2" />
-                    Create Draft Draw
-                  </>
-                )}
-              </Button>
-            </CardFooter>
-          </Card>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
+      </PageContainer>
+    </AppLayout>
   );
 }
 
 export default function NewDrawPage() {
   return (
-    <Suspense fallback={<div className="p-8">Loading...</div>}>
+    <Suspense fallback={
+      <AppLayout>
+        <PageContainer>
+          <div className="flex items-center justify-center min-h-[50vh]">
+            <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+          </div>
+        </PageContainer>
+      </AppLayout>
+    }>
       <NewDrawContent />
     </Suspense>
   );
