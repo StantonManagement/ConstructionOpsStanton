@@ -96,31 +96,8 @@ export async function POST(req: NextRequest) {
 
   const twiml = new MessagingResponse();
 
-  // 1. Check for daily log first
-  const { data: project } = await supabase
-    .from('properties')
-    .select('property_id')
-    .eq('manager_phone', normalizedFrom)
-    .single();
-
-  if (project) {
-    const today = new Date().toISOString().slice(0, 10);
-    await supabase
-      .from('project_daily_logs')
-      .upsert({
-        project_id: project.property_id,
-        manager_id: null,
-        log_date: today,
-        notes: body,
-        status: 'submitted',
-        updated_at: new Date().toISOString(),
-      }, { onConflict: 'project_id,log_date' });
-
-    twiml.message('Thank you! Your daily log has been received.');
-    return new Response(twiml.toString(), { headers: { 'Content-Type': 'text/xml' } });
-  }
-
-  // 2. Find the active conversation for this phone
+  // 1. First check for active payment conversation (higher priority)
+  // This prevents payment app responses from being captured as daily logs
   const { data: conv, error } = await supabase
     .from('payment_sms_conversations')
     .select('*')
@@ -134,8 +111,34 @@ export async function POST(req: NextRequest) {
   console.log('Found conversation:', conv, 'Error:', error);
 
   if (error || !conv) {
-    console.error(`No active payment application conversation found for ${normalizedFrom} (original: ${from})`);
-    twiml.message('No active payment application conversation found. Please contact your project manager.');
+    // 2. No active payment conversation - check for daily log
+    console.log('No payment conversation found, checking for daily log');
+    const { data: project } = await supabase
+      .from('properties')
+      .select('property_id')
+      .eq('manager_phone', normalizedFrom)
+      .single();
+
+    if (project) {
+      const today = new Date().toISOString().slice(0, 10);
+      await supabase
+        .from('project_daily_logs')
+        .upsert({
+          project_id: project.property_id,
+          manager_id: null,
+          log_date: today,
+          notes: body,
+          status: 'submitted',
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'project_id,log_date' });
+
+      twiml.message('Thank you! Your daily log has been received.');
+      return new Response(twiml.toString(), { headers: { 'Content-Type': 'text/xml' } });
+    }
+
+    // 3. Neither payment conversation nor daily log found
+    console.error(`No active payment application conversation or daily log found for ${normalizedFrom} (original: ${from})`);
+    twiml.message('No active conversation found. Please contact your project manager.');
     return new Response(twiml.toString(), { headers: { 'Content-Type': 'text/xml' } });
   }
 
