@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS bid_rounds (
 
   -- Project context
   project_id INTEGER REFERENCES projects(id) ON DELETE CASCADE,
-  portfolio_id INTEGER REFERENCES portfolios(id) ON DELETE SET NULL,
+  portfolio_id UUID REFERENCES portfolios(id) ON DELETE SET NULL,
 
   -- Round details
   name VARCHAR(255) NOT NULL, -- e.g., "Electrical Rough-in - Hartford 1"
