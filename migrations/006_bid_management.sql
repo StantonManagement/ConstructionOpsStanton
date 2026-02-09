@@ -56,7 +56,7 @@ CREATE TABLE IF NOT EXISTS bid_rounds (
   winning_bid_id INTEGER, -- Will reference bids(id) after creating bids table
 
   -- Metadata
-  created_by INTEGER REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -106,7 +106,7 @@ CREATE TABLE IF NOT EXISTS bids (
   variance_percent DECIMAL(5, 2), -- (actual - bid) / bid * 100
 
   -- Metadata
-  created_by INTEGER REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -158,7 +158,7 @@ CREATE TABLE IF NOT EXISTS bid_clarifications (
   -- Can be multiple items being clarified
   scope_items JSONB DEFAULT '[]'::jsonb,
 
-  asked_by INTEGER REFERENCES auth.users(id) ON DELETE SET NULL,
+  asked_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   asked_at TIMESTAMPTZ DEFAULT NOW(),
   responded_at TIMESTAMPTZ,
 
