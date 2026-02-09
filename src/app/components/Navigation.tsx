@@ -322,18 +322,6 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab }) => {
             Portfolios
           </NavButton>
 
-          <NavButton
-            id="funding-sources"
-            activeTab={activeTab}
-            setActiveTab={setActiveTab}
-            icon={<DollarSign className="w-5 h-5"/>}
-            href="/funding-sources"
-            isActive={pathname?.startsWith('/funding-sources')}
-            onMobileClick={closeMobileMenu}
-          >
-            Funding Sources
-          </NavButton>
-
           {/* Divider */}
           <div className="my-2 border-t border-border" />
 
