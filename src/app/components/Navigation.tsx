@@ -6,7 +6,7 @@ import {
   DollarSign, Settings, BarChart2, Menu, X,
   HardHat, Building,
   CreditCard, Wallet,
-  LayoutDashboard, Box, Copy, AlertTriangle, Folder, BarChart3, LogOut
+  LayoutDashboard, Box, Copy, AlertTriangle, Folder, BarChart3, LogOut, FileText
 } from 'lucide-react';
 import { Project } from '@/context/DataContext';
 import { supabase } from '@/lib/supabaseClient';
@@ -269,6 +269,18 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab }) => {
               type="contractors"
             />
           </div>
+
+          <NavButton
+            id="bids"
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            icon={<FileText className="w-5 h-5"/>}
+            href="/bids"
+            isActive={pathname?.startsWith('/bids')}
+            onMobileClick={closeMobileMenu}
+          >
+            Bids
+          </NavButton>
 
           {/* Divider */}
           <div className="my-2 border-t border-border" />
