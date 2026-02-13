@@ -7,13 +7,14 @@ import { UpdateScopeTemplateDTO } from '@/types/bid';
  * GET /api/scope-templates/[id]
  * Get a specific scope template
  */
-export const GET = withAuth(async (request: NextRequest, context: { params: { id: string } }, user: unknown) => {
+export const GET = withAuth(async (request: NextRequest, context: { params: Promise<{ id: string }> }, user: unknown) => {
   try {
     if (!supabaseAdmin) {
       throw new APIError('Service role client not available', 500, 'SERVER_ERROR');
     }
 
-    const { id } = context.params;
+    const params = await context.params;
+    const { id } = params;
 
     const { data: template, error } = await supabaseAdmin
       .from('bid_scope_templates')
@@ -43,13 +44,14 @@ export const GET = withAuth(async (request: NextRequest, context: { params: { id
  * PATCH /api/scope-templates/[id]
  * Update a scope template
  */
-export const PATCH = withAuth(async (request: NextRequest, context: { params: { id: string } }, user: unknown) => {
+export const PATCH = withAuth(async (request: NextRequest, context: { params: Promise<{ id: string }> }, user: unknown) => {
   try {
     if (!supabaseAdmin) {
       throw new APIError('Service role client not available', 500, 'SERVER_ERROR');
     }
 
-    const { id } = context.params;
+    const params = await context.params;
+    const { id } = params;
     const body: UpdateScopeTemplateDTO = await request.json();
 
     const updateData: Record<string, unknown> = {
@@ -89,13 +91,14 @@ export const PATCH = withAuth(async (request: NextRequest, context: { params: { 
  * DELETE /api/scope-templates/[id]
  * Delete a scope template (soft delete by setting is_active to false)
  */
-export const DELETE = withAuth(async (request: NextRequest, context: { params: { id: string } }, user: unknown) => {
+export const DELETE = withAuth(async (request: NextRequest, context: { params: Promise<{ id: string }> }, user: unknown) => {
   try {
     if (!supabaseAdmin) {
       throw new APIError('Service role client not available', 500, 'SERVER_ERROR');
     }
 
-    const { id } = context.params;
+    const params = await context.params;
+    const { id } = params;
 
     // Soft delete by setting is_active to false
     const { error } = await supabaseAdmin

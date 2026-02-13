@@ -7,12 +7,13 @@ import { UpdateBidDTO } from '@/types/bid';
  * GET /api/bids/[id]
  * Get a specific bid
  */
-export const GET = withAuth(async (request: NextRequest, user: any, { params }: { params: { id: string } }) => {
+export const GET = withAuth(async (request: NextRequest, context: { params: Promise<{ id: string }> }, user: any) => {
   try {
     if (!supabaseAdmin) {
       throw new APIError('Service role client not available', 500, 'SERVER_ERROR');
     }
 
+    const params = await context.params;
     const { id } = params;
 
     const { data: bid, error } = await supabaseAdmin
@@ -48,12 +49,13 @@ export const GET = withAuth(async (request: NextRequest, user: any, { params }: 
  * PATCH /api/bids/[id]
  * Update a bid
  */
-export const PATCH = withAuth(async (request: NextRequest, user: any, { params }: { params: { id: string } }) => {
+export const PATCH = withAuth(async (request: NextRequest, context: { params: Promise<{ id: string }> }, user: any) => {
   try {
     if (!supabaseAdmin) {
       throw new APIError('Service role client not available', 500, 'SERVER_ERROR');
     }
 
+    const params = await context.params;
     const { id } = params;
     const body: UpdateBidDTO = await request.json();
 
@@ -111,12 +113,13 @@ export const PATCH = withAuth(async (request: NextRequest, user: any, { params }
  * DELETE /api/bids/[id]
  * Delete a bid
  */
-export const DELETE = withAuth(async (request: NextRequest, user: any, { params }: { params: { id: string } }) => {
+export const DELETE = withAuth(async (request: NextRequest, context: { params: Promise<{ id: string }> }, user: any) => {
   try {
     if (!supabaseAdmin) {
       throw new APIError('Service role client not available', 500, 'SERVER_ERROR');
     }
 
+    const params = await context.params;
     const { id } = params;
 
     const { error } = await supabaseAdmin

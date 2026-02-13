@@ -148,10 +148,10 @@ export async function POST(req: NextRequest) {
         }
 
         // Filter contractors who haven't submitted (status = draft) and have phone numbers
-        const pendingBids = (bids || []).filter(b =>
+        const pendingBids = (bids || []).filter((b: any) =>
           b.status === 'draft' &&
           b.contractor &&
-          b.contractor.phone
+          (b.contractor as any).phone
         );
 
         if (pendingBids.length === 0) {
@@ -176,7 +176,7 @@ export async function POST(req: NextRequest) {
 
         // Send SMS reminder to each contractor
         for (const bid of pendingBids) {
-          const contractor = bid.contractor;
+          const contractor = bid.contractor as any;
 
           if (!contractor || !contractor.phone) {
             roundFailed++;
@@ -191,7 +191,7 @@ export async function POST(req: NextRequest) {
             });
 
             // Prepare SMS reminder message with reply instructions
-            const message = `REMINDER: ${contractor.name}, you have ${daysUntil} day${daysUntil > 1 ? 's' : ''} left to submit your bid for "${bidRound.name}" (${bidRound.project?.name || 'project'}). Deadline: ${deadlineText}. Reply with your bid amount (e.g., "$25000").`;
+            const message = `REMINDER: ${contractor.name}, you have ${daysUntil} day${daysUntil > 1 ? 's' : ''} left to submit your bid for "${bidRound.name}" (${(bidRound.project as any)?.name || 'project'}). Deadline: ${deadlineText}. Reply with your bid amount (e.g., "$25000").`;
 
             // Send SMS via Twilio
             const smsResult = await twilioClient.messages.create({

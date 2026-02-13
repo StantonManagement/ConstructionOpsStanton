@@ -69,8 +69,8 @@ export default function SendSMSInvitationsModal({
 
       const uniqueContractors = bids
         ?.map((b) => b.contractor)
-        .filter((c): c is Contractor => c !== null)
-        .filter((c, index, self) => self.findIndex((other) => other.id === c.id) === index) || [];
+        .filter((c): c is any => c !== null)
+        .filter((c, index, self) => self.findIndex((other) => other.id === c.id) === index) as Contractor[] || [];
 
       setContractors(uniqueContractors);
 

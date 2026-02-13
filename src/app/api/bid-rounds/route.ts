@@ -69,7 +69,7 @@ export const GET = withAuth(async (request: NextRequest, context: unknown, user:
  * POST /api/bid-rounds
  * Create a new bid round
  */
-export const POST = withAuth(async (request: NextRequest, context: unknown, user: { id: string }) => {
+export const POST = withAuth(async (request: NextRequest, context: unknown, user: unknown) => {
   try {
     if (!supabaseAdmin) {
       throw new APIError('Service role client not available', 500, 'SERVER_ERROR');
@@ -85,6 +85,8 @@ export const POST = withAuth(async (request: NextRequest, context: unknown, user
       throw new APIError('trade is required', 400, 'VALIDATION_ERROR');
     }
 
+    const userId = (user as { id: string }).id;
+
     const bidRoundData = {
       project_id: body.project_id || null,
       portfolio_id: body.portfolio_id || null,
@@ -96,7 +98,7 @@ export const POST = withAuth(async (request: NextRequest, context: unknown, user
       scope_items: body.scope_items || [],
       deadline_date: body.deadline_date || null,
       status: 'draft',
-      created_by: user.id,
+      created_by: userId,
     };
 
     const { data: bidRound, error } = await supabaseAdmin
