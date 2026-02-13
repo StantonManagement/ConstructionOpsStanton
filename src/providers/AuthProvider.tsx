@@ -3,7 +3,6 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabaseClient';
-import { withTimeout } from '@/lib/queryHelpers';
 
 interface AuthContextType {
   user: User | null;
@@ -66,34 +65,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     try {
       console.log('[Auth] Fetching role for user:', userId);
-      
-      // Add 10 second timeout (should be plenty with database index)
-      const queryPromise = supabase
+
+      // Query user_role table (RLS ensures users can only see their own role)
+      const { data, error } = await supabase
         .from('user_role')
         .select('role')
         .eq('user_id', userId)
-        .single();
-      
-      const response = await withTimeout(
-        queryPromise as any as Promise<any>,
-        10000, // 10 seconds (reduced from 30s)
-        'user_role'
-      );
+        .maybeSingle(); // Use maybeSingle() to avoid error if no rows found
 
-      if (response.error) {
-        // PGRST116 = no rows found, user hasn't been assigned a role yet
-        if (response.error.code === 'PGRST116') {
-          console.log('[Auth] No role assigned, defaulting to staff');
-          const defaultRole = 'staff';
-          setRole(defaultRole);
-          sessionStorage.setItem(`user_role_${userId}`, defaultRole);
-        } else {
-          console.error('[Auth] Error fetching role:', response.error);
-          setRole('staff'); // Default to staff on error
-          setError(`Failed to fetch user role: ${response.error.message}`);
-        }
+      if (error) {
+        console.error('[Auth] Error fetching role:', error);
+        setRole('staff'); // Default to staff on error
+        setError(`Failed to fetch user role: ${error.message}`);
+      } else if (!data) {
+        // No role assigned yet
+        console.log('[Auth] No role assigned, defaulting to staff');
+        const defaultRole = 'staff';
+        setRole(defaultRole);
+        sessionStorage.setItem(`user_role_${userId}`, defaultRole);
       } else {
-        const fetchedRole = response.data?.role || 'staff';
+        const fetchedRole = data.role || 'staff';
         setRole(fetchedRole);
         // Cache the role in sessionStorage
         sessionStorage.setItem(`user_role_${userId}`, fetchedRole);
@@ -103,15 +94,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (err) {
       console.error('[Auth] Role fetch error:', err);
       const errorMessage = err instanceof Error ? err.message : 'Unknown error fetching role';
-      
-      // Check if it's a timeout error
-      if (errorMessage.includes('timeout')) {
-        console.error('[Auth] ❌ Role query timed out after 10s');
-        setError('Authentication timed out. Please refresh the page or contact support.');
-      } else {
-        setError(errorMessage);
-      }
-      
+      setError(errorMessage);
       setRole('staff'); // Default to staff on error
     } finally {
       isFetchingRole.current = false;

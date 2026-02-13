@@ -21,7 +21,7 @@ export const GET = withAuth(async (request: NextRequest, user: any, { params }: 
         *,
         contractor:contractors(id, name, phone, email, trade),
         project:projects(id, name),
-        bid_round:bid_rounds(id, name, trade, scope_items)
+        bid_round:bid_rounds!bids_bid_round_id_fkey(id, name, trade, scope_items)
       `)
       .eq('id', id)
       .single();
@@ -88,7 +88,7 @@ export const PATCH = withAuth(async (request: NextRequest, user: any, { params }
         *,
         contractor:contractors(id, name, phone, email),
         project:projects(id, name),
-        bid_round:bid_rounds(id, name)
+        bid_round:bid_rounds!bids_bid_round_id_fkey(id, name)
       `)
       .single();
 

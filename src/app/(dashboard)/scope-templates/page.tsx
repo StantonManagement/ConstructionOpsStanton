@@ -6,12 +6,12 @@ import { Loader2 } from 'lucide-react';
 import AppLayout from '@/app/components/AppLayout';
 import PageContainer from '@/app/components/PageContainer';
 
-export default function BidsPage() {
+export default function ScopeTemplatesPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Redirect to bid rounds page with bids tab
-    router.push('/bid-rounds?tab=bids');
+    // Redirect to bid rounds page with templates tab
+    router.push('/bid-rounds?tab=templates');
   }, [router]);
 
   return (

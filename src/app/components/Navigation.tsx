@@ -6,7 +6,7 @@ import {
   DollarSign, Settings, BarChart2, Menu, X,
   HardHat, Building,
   CreditCard, Wallet,
-  LayoutDashboard, Box, Copy, AlertTriangle, Folder, BarChart3, LogOut, FileText
+  LayoutDashboard, Box, Copy, AlertTriangle, Folder, BarChart3, LogOut, FileText, Users
 } from 'lucide-react';
 import { Project } from '@/context/DataContext';
 import { supabase } from '@/lib/supabaseClient';
@@ -271,15 +271,15 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab }) => {
           </div>
 
           <NavButton
-            id="bids"
+            id="bid-rounds"
             activeTab={activeTab}
             setActiveTab={setActiveTab}
-            icon={<FileText className="w-5 h-5"/>}
-            href="/bids"
-            isActive={pathname?.startsWith('/bids')}
+            icon={<Users className="w-5 h-5"/>}
+            href="/bid-rounds"
+            isActive={pathname?.startsWith('/bid-rounds') || pathname?.startsWith('/bids')}
             onMobileClick={closeMobileMenu}
           >
-            Bids
+            Bid Management
           </NavButton>
 
           {/* Divider */}

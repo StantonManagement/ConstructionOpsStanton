@@ -57,7 +57,7 @@ export async function getUserRole(userId: string): Promise<string> {
     .from('user_role')
     .select('role')
     .eq('user_id', userId)
-    .single();
+    .maybeSingle(); // Use maybeSingle() to avoid error if no rows found
 
   if (error || !data) {
     return 'staff'; // Default role

@@ -30,7 +30,7 @@ export const GET = withAuth(async (request: NextRequest, user: any) => {
         *,
         contractor:contractors(id, name, phone, email),
         project:projects(id, name),
-        bid_round:bid_rounds(id, name)
+        bid_round:bid_rounds!bids_bid_round_id_fkey(id, name)
       `)
       .order('created_at', { ascending: false });
 
@@ -104,7 +104,7 @@ export const POST = withAuth(async (request: NextRequest, user: any) => {
         *,
         contractor:contractors(id, name, phone, email),
         project:projects(id, name),
-        bid_round:bid_rounds(id, name)
+        bid_round:bid_rounds!bids_bid_round_id_fkey(id, name)
       `)
       .single();
 

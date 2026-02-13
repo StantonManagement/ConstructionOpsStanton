@@ -35,6 +35,32 @@ export interface BidRound {
   created_by?: number;
   created_at: string;
   updated_at: string;
+
+  // Relations (populated from API joins)
+  project?: {
+    id: number;
+    name: string;
+  };
+  portfolio?: {
+    id: string;
+    name: string;
+  };
+  scope_template?: {
+    id: number;
+    name: string;
+    trade: string;
+    scope_type: string;
+    scope_items: BidScopeItem[];
+  };
+  winning_bid?: {
+    id: number;
+    contractor_id: number;
+    amount: number;
+    contractor?: {
+      name: string;
+    };
+  };
+  bids?: Bid[];
 }
 
 export interface Bid {
@@ -66,6 +92,7 @@ export interface Bid {
     name: string;
     phone?: string;
     email?: string;
+    trade?: string;
   };
   project?: {
     id: number;
@@ -109,4 +136,45 @@ export interface UpdateBidDTO {
   scope_coverage?: BidScopeItem[];
   actual_cost?: number;
   change_orders_total?: number;
+}
+
+export interface CreateBidRoundDTO {
+  project_id?: number;
+  portfolio_id?: string;
+  name: string;
+  trade: string;
+  scope_type?: string;
+  description?: string;
+  scope_template_id?: number;
+  scope_items?: BidScopeItem[];
+  deadline_date?: string;
+}
+
+export interface UpdateBidRoundDTO {
+  name?: string;
+  trade?: string;
+  scope_type?: string;
+  description?: string;
+  scope_items?: BidScopeItem[];
+  deadline_date?: string;
+  awarded_date?: string;
+  status?: 'draft' | 'active' | 'closed' | 'awarded' | 'cancelled';
+  winning_bid_id?: number;
+}
+
+export interface CreateScopeTemplateDTO {
+  trade: string;
+  scope_type: string;
+  name: string;
+  description?: string;
+  scope_items: BidScopeItem[];
+}
+
+export interface UpdateScopeTemplateDTO {
+  trade?: string;
+  scope_type?: string;
+  name?: string;
+  description?: string;
+  scope_items?: BidScopeItem[];
+  is_active?: boolean;
 }
