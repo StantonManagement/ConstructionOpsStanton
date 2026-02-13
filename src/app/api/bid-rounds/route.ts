@@ -12,7 +12,7 @@ import { CreateBidRoundDTO } from '@/types/bid';
  *   - status: Filter by status
  *   - trade: Filter by trade
  */
-export const GET = withAuth(async (request: NextRequest, user: unknown) => {
+export const GET = withAuth(async (request: NextRequest, context: unknown, user: unknown) => {
   try {
     if (!supabaseAdmin) {
       throw new APIError('Service role client not available', 500, 'SERVER_ERROR');
@@ -69,7 +69,7 @@ export const GET = withAuth(async (request: NextRequest, user: unknown) => {
  * POST /api/bid-rounds
  * Create a new bid round
  */
-export const POST = withAuth(async (request: NextRequest, user: { id: string }) => {
+export const POST = withAuth(async (request: NextRequest, context: unknown, user: { id: string }) => {
   try {
     if (!supabaseAdmin) {
       throw new APIError('Service role client not available', 500, 'SERVER_ERROR');
