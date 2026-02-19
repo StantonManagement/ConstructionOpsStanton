@@ -39,23 +39,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ error: 'Invalid token' }, { status: 401, headers: CORS_HEADERS });
     }
 
-    // Get user details
-    const { data: userData, error: userDataError } = await supabase
-      .from('users')
-      .select('id, name, email')
-      .eq('uuid', user.id)
-      .single();
-
-    if (userDataError) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404, headers: CORS_HEADERS });
-    }
+    // Use auth user directly — no longer depends on public.users
+    const userName = user.user_metadata?.name || user.email || user.id;
 
     // Update payment application status to rejected
     const { data: updatedApp, error: updateError } = await supabase
       .from('payment_applications')
       .update({
         status: 'rejected',
-        rejected_by: userData.id,
+        rejected_by: user.id,
         rejected_at: new Date().toISOString(),
         rejection_notes: rejectionNotes || null
       })
@@ -74,7 +66,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         .insert({
           payment_app_id: paymentAppId,
           action: 'rejected',
-          performed_by: userData.id,
+          performed_by: user.id,
           notes: rejectionNotes || 'Payment application rejected',
           created_at: new Date().toISOString()
         });
@@ -82,7 +74,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       console.log('Note: payment_approval_logs table not found, skipping log entry');
     }
 
-    console.log(`Payment application ${paymentAppId} rejected by ${userData.name}${rejectionNotes ? ' - Notes: ' + rejectionNotes : ''}`);
+    console.log(`Payment application ${paymentAppId} rejected by ${userName}${rejectionNotes ? ' - Notes: ' + rejectionNotes : ''}`);
 
     return NextResponse.json({
       message: 'Payment application rejected successfully',

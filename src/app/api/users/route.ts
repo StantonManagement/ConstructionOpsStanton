@@ -1,77 +1,99 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseClient';
-import { canAccessUserManagement } from '@/lib/permissions';
 
-// GET - Fetch all users from auth.users with their roles from user_role table
+// GET - Fetch all users with roles, profiles, and status
 export async function GET(request: NextRequest) {
   try {
     if (!supabaseAdmin) {
       return NextResponse.json({ error: 'Service unavailable' }, { status: 503 });
     }
 
-    // Get the authorization header
+    // Verify the caller is an admin
     const authHeader = request.headers.get('authorization');
-    
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized - No token provided' }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
-    
-    // Verify the token and get user info
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
-    
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized - Invalid token' }, { status: 401 });
+    const token = authHeader.substring(7);
+    const { data: { user: caller }, error: authError } = await supabaseAdmin.auth.getUser(token);
+    if (authError || !caller) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Check if the user has permission to access user management
-    const { data: userRole, error: roleError } = await supabaseAdmin
+    const { data: callerRole } = await supabaseAdmin
       .from('user_role')
       .select('role')
-      .eq('user_id', user.id)
+      .eq('user_id', caller.id)
       .single();
 
-    if (roleError || !userRole || !canAccessUserManagement(userRole.role)) {
-      return NextResponse.json({ error: 'Unauthorized - Insufficient permissions' }, { status: 403 });
+    if (callerRole?.role !== 'admin') {
+      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
-    // Get users from Supabase Auth
-    const { data: { users }, error } = await supabaseAdmin.auth.admin.listUsers();
+    const { searchParams } = new URL(request.url);
+    const search = searchParams.get('search') || '';
+    const roleFilter = searchParams.get('role') || '';
+    const statusFilter = searchParams.get('status') || '';
 
+    // Get all auth users
+    const { data: { users }, error } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    // Get roles from user_role table
-    const { data: userRoles, error: rolesError } = await supabaseAdmin
+    // Get all user_role rows
+    const { data: userRoles } = await supabaseAdmin
       .from('user_role')
-      .select('user_id, role');
+      .select('user_id, role, status, last_login');
 
-    if (rolesError) {
-      return NextResponse.json({ error: rolesError.message }, { status: 500 });
-    }
+    // Get all user_profiles rows
+    const { data: userProfiles } = await supabaseAdmin
+      .from('user_profiles')
+      .select('user_id, first_name, last_name, phone');
 
-    // Create a map of user_id to role
-    const roleMap = new Map();
-    userRoles?.forEach(ur => {
-      roleMap.set(ur.user_id, ur.role);
+    const roleMap = new Map<string, { role: string; status: string; last_login: string | null }>();
+    userRoles?.forEach((ur: { user_id: string; role: string; status: string; last_login: string | null }) => {
+      roleMap.set(ur.user_id, { role: ur.role, status: ur.status || 'active', last_login: ur.last_login });
     });
 
-    // Transform auth users to match expected format
-    const transformedUsers = users.map(user => ({
-      id: user.id,
-      email: user.email,
-      name: user.user_metadata?.name || user.email?.split('@')[0] || 'Unknown',
-      role: roleMap.get(user.id) || 'staff', // Get role from user_role table
-      created_at: user.created_at,
-      is_active: true, // Default to active since we're not using ban functionality
-      uuid: user.id,
-      last_sign_in: user.last_sign_in_at,
-      email_confirmed: user.email_confirmed_at
-    }));
+    const profileMap = new Map<string, { first_name: string | null; last_name: string | null; phone: string | null }>();
+    userProfiles?.forEach((p: { user_id: string; first_name: string | null; last_name: string | null; phone: string | null }) => {
+      profileMap.set(p.user_id, { first_name: p.first_name, last_name: p.last_name, phone: p.phone });
+    });
 
-    return NextResponse.json({ users: transformedUsers });
+    // Build combined list
+    let result = users.map((u) => {
+      const roleData = roleMap.get(u.id);
+      const profileData = profileMap.get(u.id);
+      return {
+        id: u.id,
+        email: u.email ?? '',
+        role: roleData?.role ?? null,
+        status: roleData?.status ?? 'active',
+        first_name: profileData?.first_name ?? null,
+        last_name: profileData?.last_name ?? null,
+        phone: profileData?.phone ?? null,
+        created_at: u.created_at,
+        last_sign_in_at: u.last_sign_in_at ?? null,
+      };
+    });
+
+    // Apply filters
+    if (search) {
+      const q = search.toLowerCase();
+      result = result.filter((u) => {
+        const name = `${u.first_name ?? ''} ${u.last_name ?? ''}`.toLowerCase();
+        return name.includes(q) || u.email.toLowerCase().includes(q);
+      });
+    }
+    if (roleFilter) {
+      result = result.filter((u) => u.role === roleFilter);
+    }
+    if (statusFilter) {
+      result = result.filter((u) => u.status === statusFilter);
+    }
+
+    return NextResponse.json({ data: result });
   } catch (error) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

@@ -6,7 +6,7 @@ import {
   DollarSign, Settings, BarChart2, Menu, X,
   HardHat, Building,
   CreditCard, Wallet,
-  LayoutDashboard, Box, Copy, AlertTriangle, Folder, BarChart3, LogOut, FileText, Users
+  LayoutDashboard, Box, Copy, AlertTriangle, Folder, BarChart3, LogOut, FileText, Users, UserCog
 } from 'lucide-react';
 import { Project } from '@/context/DataContext';
 import { supabase } from '@/lib/supabaseClient';
@@ -375,6 +375,20 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab }) => {
 
           {/* Divider */}
           <div className="my-2 border-t border-border" />
+
+          {userRole === 'admin' && (
+            <NavButton
+              id="users"
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+              icon={<UserCog className="w-5 h-5"/>}
+              href="/users"
+              isActive={pathname?.startsWith('/users')}
+              onMobileClick={closeMobileMenu}
+            >
+              User Management
+            </NavButton>
+          )}
 
           <NavButton
             id="settings"

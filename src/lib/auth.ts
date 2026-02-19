@@ -309,9 +309,9 @@ class AuthService {
   private async updateLastLogin(userId: string): Promise<void> {
     try {
       await supabase
-        .from('users')
+        .from('user_role')
         .update({ last_login: new Date().toISOString() })
-        .eq('uuid', userId);
+        .eq('user_id', userId);
     } catch (error) {
       console.error('Error updating last login:', error);
     }

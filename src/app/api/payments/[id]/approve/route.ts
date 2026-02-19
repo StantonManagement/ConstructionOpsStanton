@@ -65,23 +65,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ error: 'Invalid token' }, { status: 401, headers: CORS_HEADERS });
     }
 
-    // Get user details
-    const { data: userData, error: userDataError } = await supabase
-      .from('users')
-      .select('id, name, email')
-      .eq('uuid', user.id)
-      .single();
-
-    if (userDataError) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404, headers: CORS_HEADERS });
-    }
+    // Use auth user directly — no longer depends on public.users
+    const userName = user.user_metadata?.name || user.email || user.id;
 
     // Update payment application status to approved
     const { data: updatedApp, error: updateError } = await supabase
       .from('payment_applications')
       .update({
         status: 'approved',
-        approved_by: userData.id,
+        approved_by: user.id,
         approved_at: new Date().toISOString(),
         approval_notes: approvalNotes || null
       })
@@ -185,7 +177,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         .insert({
           payment_app_id: paymentAppId,
           action: 'approved',
-          performed_by: userData.id,
+          performed_by: user.id,
           notes: approvalNotes || null,
           created_at: new Date().toISOString()
         });
@@ -193,7 +185,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       console.log('Note: payment_approval_logs table not found, skipping log entry');
     }
 
-    console.log(`Payment application ${paymentAppId} approved by ${userData.name}`);
+    console.log(`Payment application ${paymentAppId} approved by ${userName}`);
 
     // TEMPORARILY COMMENTED OUT: Generate invoice (G703 PDF) after approval
     // This is to isolate the 405 error issue on Railway

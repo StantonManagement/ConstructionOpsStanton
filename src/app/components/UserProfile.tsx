@@ -56,17 +56,30 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onProfileUpd
         }
         
         setUser(user);
-        
-        const { data, error } = await supabase
-          .from('users')
-          .select('name, email, role, phone, avatar_url, company, address, created_at')
-          .eq('uuid', user.id)
-          .single();
-          
-        if (error) {
-          console.error('Profile fetch error:', error);
+
+        // Fetch user role and profile data
+        const [roleResult, profileResult] = await Promise.all([
+          supabase.from('user_role').select('role').eq('user_id', user.id).single(),
+          supabase.from('user_profiles').select('first_name, last_name, phone, avatar_url').eq('user_id', user.id).single()
+        ]);
+
+        if (roleResult.error && roleResult.error.code !== 'PGRST116') {
+          console.error('Role fetch error:', roleResult.error);
+          setError('Failed to fetch role data.');
+        } else if (profileResult.error && profileResult.error.code !== 'PGRST116') {
+          console.error('Profile fetch error:', profileResult.error);
           setError('Failed to fetch profile data.');
         } else {
+          const data = {
+            name: profileResult.data ? `${profileResult.data.first_name || ''} ${profileResult.data.last_name || ''}`.trim() : '',
+            email: user.email || '',
+            role: roleResult.data?.role || null,
+            phone: profileResult.data?.phone || '',
+            avatar_url: profileResult.data?.avatar_url || '',
+            company: '', // No longer stored
+            address: '', // No longer stored
+            created_at: user.created_at
+          };
           setProfile({
             name: data?.name || '',
             email: data?.email || user.email || '',
@@ -177,25 +190,27 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, onProfileUpd
         return;
       }
 
-      // Use upsert to avoid CORS issues with PATCH method
-      const { data, error } = await supabase
-        .from('users')
+      // Split name into first and last
+      const nameParts = profile.name.trim().split(' ');
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
+
+      // Update user_profiles
+      const { error: profileError } = await supabase
+        .from('user_profiles')
         .upsert({
-          uuid: user.id,
-          name: profile.name.trim(),
-          email: profile.email.trim().toLowerCase(),
+          user_id: user.id,
+          first_name: firstName,
+          last_name: lastName,
           phone: profile.phone.trim(),
-          avatar_url: profile.avatar_url.trim(),
-          company: profile.company.trim(),
-          address: profile.address.trim(),
-          role: profile.role, // preserve existing role
+          avatar_url: profile.avatar_url.trim()
         }, {
-          onConflict: 'uuid'
+          onConflict: 'user_id'
         });
-        
-      if (error) {
-        console.error('Update error:', error);
-        setError(`Failed to update profile: ${error.message}`);
+
+      if (profileError) {
+        console.error('Update error:', profileError);
+        setError(`Failed to update profile: ${profileError.message}`);
       } else {
         setSuccess('Profile updated successfully!');
         // Notify parent component about profile update

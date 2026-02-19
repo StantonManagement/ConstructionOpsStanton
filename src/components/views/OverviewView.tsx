@@ -31,9 +31,9 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
 
         if (session?.user) {
           const { data, error } = await supabase
-            .from("users")
+            .from("user_role")
             .select("role")
-            .eq("uuid", session.user.id)
+            .eq("user_id", session.user.id)
             .single();
 
           console.log("User role fetch:", data, error);

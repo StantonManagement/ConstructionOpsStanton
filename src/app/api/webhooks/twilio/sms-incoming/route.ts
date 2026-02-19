@@ -84,33 +84,49 @@ export async function POST(req: NextRequest) {
 
     console.log(`[INCOMING SMS] Parsed bid amount: $${bidAmount}`);
 
+    // Normalize phone number for database lookup
+    // Twilio sends: +18603516816
+    // Database stores: +1 860 351 6816 (with spaces)
+    // We need to compare just the digits
+    const normalizedPhone = from.replace(/\D/g, ''); // Remove all non-digits: 18603516816
+
     // Find the most recent bid invitation sent to this phone number
     // Look for notifications in the last 30 days
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    const { data: recentNotifications, error: notificationError } = await supabaseAdmin
+    console.log(`[INCOMING SMS] Looking for notifications with normalized phone: ${normalizedPhone}`);
+
+    // Get all recent notifications and filter by normalized phone number
+    const { data: allNotifications, error: notificationError } = await supabaseAdmin
       .from('bid_notifications')
       .select(`
         id,
         bid_round_id,
         contractor_id,
+        phone_number,
         contractor:contractors(id, name),
         bid_round:bid_rounds(id, name, status, deadline_date, project:projects(name))
       `)
-      .eq('phone_number', from)
       .eq('notification_type', 'sms')
       .gte('sent_at', thirtyDaysAgo.toISOString())
-      .order('sent_at', { ascending: false })
-      .limit(1);
+      .order('sent_at', { ascending: false });
 
     if (notificationError) {
-      console.error('[INCOMING SMS] Error finding notification:', notificationError);
+      console.error('[INCOMING SMS] Error finding notifications:', notificationError);
       throw notificationError;
     }
 
+    // Filter by normalized phone number (compare digits only)
+    const recentNotifications = allNotifications?.filter((n: any) => {
+      const dbPhone = (n.phone_number || '').replace(/\D/g, '');
+      return dbPhone === normalizedPhone;
+    }) || [];
+
+    console.log(`[INCOMING SMS] Found ${recentNotifications.length} matching notification(s)`);
+
     if (!recentNotifications || recentNotifications.length === 0) {
-      console.log(`[INCOMING SMS] No recent invitations found for ${from}`);
+      console.log(`[INCOMING SMS] No recent invitations found for ${from} (normalized: ${normalizedPhone})`);
 
       // Send error message
       if (twilioClient && TWILIO_PHONE_NUMBER) {

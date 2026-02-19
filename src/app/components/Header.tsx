@@ -119,20 +119,11 @@ const Header: React.FC<HeaderProps> = ({ onShowProfile, onLogout, userData, onSe
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Get user record to get the user ID
-      const { data: userRecord } = await supabase
-        .from('users')
-        .select('id')
-        .eq('uuid', user.id)
-        .single();
-
-      if (!userRecord) return;
-
       // Fetch notifications from the notifications table
       const { data: notificationsData, error } = await supabase
         .from('notifications')
         .select('*')
-        .eq('user_id', userRecord.id)
+        .eq('user_id', user.id)
         .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
         .order('created_at', { ascending: false })
         .limit(20);
@@ -239,19 +230,11 @@ const Header: React.FC<HeaderProps> = ({ onShowProfile, onLogout, userData, onSe
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data: userRecord } = await supabase
-        .from('users')
-        .select('id')
-        .eq('uuid', user.id)
-        .single();
-
-      if (!userRecord) return;
-
       // Mark all unread notifications as read
       const { error } = await supabase
         .from('notifications')
         .update({ read_at: new Date().toISOString() })
-        .eq('user_id', userRecord.id)
+        .eq('user_id', user.id)
         .is('read_at', null);
 
       if (error) {

@@ -8,6 +8,7 @@ import { ThemeProvider } from "@/providers/ThemeProvider";
 import { ModalProvider } from "@/context/ModalContext";
 import { ProjectProvider } from "@/context/ProjectContext";
 import { PortfolioProvider } from "@/context/PortfolioContext";
+import { ToastProvider } from "@/components/ToastContainer";
 import ErrorBoundary from "./components/ErrorBoundary";
 import AppLayout from "@/app/components/AppLayout";
 
@@ -47,15 +48,17 @@ export default function RootLayout({
           <ThemeProvider>
             <ReactQueryProvider>
               <AuthProvider>
-                <Suspense fallback={null}>
-                  <PortfolioProvider>
-                    <ProjectProvider>
-                      <ModalProvider>
-                        {children}
-                      </ModalProvider>
-                    </ProjectProvider>
-                  </PortfolioProvider>
-                </Suspense>
+                <ToastProvider>
+                  <Suspense fallback={null}>
+                    <PortfolioProvider>
+                      <ProjectProvider>
+                        <ModalProvider>
+                          {children}
+                        </ModalProvider>
+                      </ProjectProvider>
+                    </PortfolioProvider>
+                  </Suspense>
+                </ToastProvider>
               </AuthProvider>
             </ReactQueryProvider>
           </ThemeProvider>
