@@ -679,7 +679,7 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ project, onBack, 
         )}
         {activeSubTab === 'daily-logs' && (
           <div className="p-4">
-            <DailyLogsList projectId={project.id} />
+            <DailyLogsList projectId={parseInt(project.id)} />
           </div>
         )}
         {activeSubTab === 'change-orders' && (

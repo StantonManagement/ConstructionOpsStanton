@@ -1,0 +1,345 @@
+
+> cpps@0.1.0 build
+> next build
+
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+   ▲ Next.js 16.0.10 (Turbopack)
+   - Environments: .env
+   - Experiments (use with caution):
+     · optimizePackageImports
+
+   Creating an optimized production build ...
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+Turbopack build encountered 1 warnings:
+./src/app/api/photos/upload/route.ts:174:14
+Next.js can't recognize the exported `config` field in route. Page config in `config` is deprecated and ignored, use individual exports instead.
+[0m [90m 172 |[39m
+ [90m 173 |[39m [90m// Disable Next.js body parsing for multipart form data[39m
+[31m[1m>[22m[39m[90m 174 |[39m [36mexport[39m [36mconst[39m config [33m=[39m {
+ [90m     |[39m              [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+ [90m 175 |[39m   api[33m:[39m {
+ [90m 176 |[39m     bodyParser[33m:[39m [36mfalse[39m[33m,[39m
+ [90m 177 |[39m   }[33m,[39m[0m
+
+The exported configuration object in a source file needs to have a very specific format from which some properties can be statically parsed at compiled-time.
+
+https://nextjs.org/docs/app/api-reference/file-conventions/route-segment-config
+
+
+ ✓ Compiled successfully in 8.7s
+   Running TypeScript ...
+   Collecting page data using 11 workers ...
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[Supabase] Client initialized: Connected to https://iyiqdgmpcuczzigotjhf.supabase.co
+[Supabase] Service role client available for relationship queries: true
+[Supabase] Client initialized: Connected to https://iyiqdgmpcuczzigotjhf.supabase.co
+[Supabase] Service role client available for relationship queries: true
+[Supabase] Client initialized: Connected to https://iyiqdgmpcuczzigotjhf.supabase.co
+[Supabase] Service role client available for relationship queries: true
+[Supabase] Client initialized: Connected to https://iyiqdgmpcuczzigotjhf.supabase.co
+[Supabase] Service role client available for relationship queries: true
+[Supabase] Client initialized: Connected to https://iyiqdgmpcuczzigotjhf.supabase.co
+[Supabase] Service role client available for relationship queries: true
+[Supabase] Client initialized: Connected to https://iyiqdgmpcuczzigotjhf.supabase.co
+[Supabase] Service role client available for relationship queries: true
+[Supabase] Client initialized: Connected to https://iyiqdgmpcuczzigotjhf.supabase.co
+[Supabase] Service role client available for relationship queries: true
+[Supabase] Client initialized: Connected to https://iyiqdgmpcuczzigotjhf.supabase.co
+[Supabase] Service role client available for relationship queries: true
+[Supabase] Client initialized: Connected to https://iyiqdgmpcuczzigotjhf.supabase.co
+[Supabase] Service role client available for relationship queries: true
+[Supabase] Client initialized: Connected to https://iyiqdgmpcuczzigotjhf.supabase.co
+[Supabase] Service role client available for relationship queries: true
+[Supabase] Client initialized: Connected to https://iyiqdgmpcuczzigotjhf.supabase.co
+[Supabase] Service role client available for relationship queries: true
+[Twilio] Client initialized: true
+[Twilio] Phone number configured: true
+[Twilio] Client initialized: true
+[Twilio] Phone number configured: true
+[Twilio] Client initialized: true
+[Twilio] Phone number configured: true
+[Twilio] Client initialized: true
+[Twilio] Phone number configured: true
+[Twilio] Client initialized: true
+[Twilio] Phone number configured: true
+[Twilio] Client initialized: true
+[Twilio] Phone number configured: true
+[Twilio] Client initialized: true
+[Twilio] Phone number configured: true
+[Twilio] Client initialized: true
+[Twilio] Phone number configured: true
+Couldn't load fs
+Couldn't load zlib
+   Generating static pages using 11 workers (0/117) ...
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[Supabase] Client initialized: Connected to https://iyiqdgmpcuczzigotjhf.supabase.co
+[Supabase] Service role client available for relationship queries: true
+[Supabase] Client initialized: Connected to https://iyiqdgmpcuczzigotjhf.supabase.co
+[Supabase] Service role client available for relationship queries: true
+[Supabase] Client initialized: Connected to https://iyiqdgmpcuczzigotjhf.supabase.co
+[Supabase] Service role client available for relationship queries: true
+[Supabase] Client initialized: Connected to https://iyiqdgmpcuczzigotjhf.supabase.co
+[Supabase] Service role client available for relationship queries: true
+[Twilio] Client initialized: true
+[Twilio] Phone number configured: true
+[Twilio] Client initialized: true
+[Twilio] Phone number configured: true
+[Twilio] Client initialized: true
+[Twilio] Phone number configured: true
+[Supabase] Client initialized: Connected to https://iyiqdgmpcuczzigotjhf.supabase.co
+[Supabase] Service role client available for relationship queries: true
+   Generating static pages using 11 workers (29/117) 
+Couldn't load fs
+Couldn't load zlib
+   Generating static pages using 11 workers (58/117) 
+[Supabase] Client initialized: Connected to https://iyiqdgmpcuczzigotjhf.supabase.co
+[Supabase] Service role client available for relationship queries: true
+[Supabase] Client initialized: Connected to https://iyiqdgmpcuczzigotjhf.supabase.co
+[Supabase] Service role client available for relationship queries: true
+   Generating static pages using 11 workers (87/117) 
+ ✓ Generating static pages using 11 workers (117/117) in 597.8ms
+   Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ƒ /api/ai/analyze-photo
+├ ƒ /api/backlog
+├ ƒ /api/backlog/[id]/convert
+├ ƒ /api/bid-rounds
+├ ƒ /api/bid-rounds/[id]
+├ ƒ /api/bid-rounds/[id]/send-invitations
+├ ƒ /api/bids
+├ ƒ /api/bids/[id]
+├ ƒ /api/budgets
+├ ƒ /api/budgets/[id]
+├ ƒ /api/cash-flow/draw-eligibility
+├ ƒ /api/cash-flow/forecast
+├ ƒ /api/cash-position
+├ ƒ /api/change-orders
+├ ƒ /api/change-orders/[id]
+├ ƒ /api/change-orders/[id]/approve
+├ ƒ /api/change-orders/[id]/reject
+├ ƒ /api/components
+├ ƒ /api/contractors
+├ ƒ /api/contractors/[id]
+├ ƒ /api/contractors/with-history
+├ ƒ /api/contracts
+├ ƒ /api/contracts/[id]
+├ ƒ /api/cron/daily-log-requests
+├ ƒ /api/cron/daily-reminders
+├ ƒ /api/cron/pm-notes
+├ ƒ /api/cron/send-bid-reminders
+├ ƒ /api/daily-log/remind
+├ ƒ /api/daily-logs
+├ ƒ /api/daily-logs/[id]
+├ ƒ /api/daily-logs/[id]/audio
+├ ƒ /api/daily-logs/[id]/organize
+├ ƒ /api/daily-logs/[id]/photos
+├ ƒ /api/dashboard/activity
+├ ƒ /api/dashboard/budget-metrics
+├ ƒ /api/dashboard/data-context
+├ ƒ /api/dashboard/pm
+├ ƒ /api/dashboard/queue
+├ ƒ /api/dashboard/summary
+├ ƒ /api/debug/check-line-items
+├ ƒ /api/debug/list-conversations
+├ ƒ /api/debug/sms-conversation
+├ ƒ /api/debug/test-sms
+├ ƒ /api/draws
+├ ƒ /api/draws/[id]
+├ ƒ /api/draws/[id]/approve
+├ ƒ /api/draws/[id]/fund
+├ ƒ /api/draws/[id]/line-items
+├ ƒ /api/draws/[id]/submit
+├ ƒ /api/entities
+├ ƒ /api/entities/[id]
+├ ƒ /api/funding-sources
+├ ƒ /api/funding-sources/[id]
+├ ƒ /api/line-items
+├ ƒ /api/loan-draws
+├ ƒ /api/loan-draws/[id]
+├ ƒ /api/loan-draws/[id]/fund
+├ ƒ /api/loan-draws/[id]/submit
+├ ƒ /api/loans/[id]
+├ ƒ /api/loans/[id]/budget-items
+├ ƒ /api/loans/[id]/draws
+├ ƒ /api/loans/[id]/lock
+├ ƒ /api/locations
+├ ƒ /api/locations/[id]
+├ ƒ /api/locations/[id]/block
+├ ƒ /api/locations/bulk
+├ ƒ /api/notifications/pm-notes
+├ ƒ /api/notifications/vendor
+├ ƒ /api/payment-applications/list
+├ ƒ /api/payments/[id]/approve
+├ ƒ /api/payments/[id]/generate-pdf
+├ ƒ /api/payments/[id]/lien-waiver
+├ ƒ /api/payments/[id]/lien-waiver/generate
+├ ƒ /api/payments/[id]/lien-waiver/send
+├ ƒ /api/payments/[id]/photos
+├ ƒ /api/payments/[id]/recall
+├ ƒ /api/payments/[id]/reject
+├ ƒ /api/payments/[id]/send-docusign
+├ ƒ /api/payments/[id]/update-percentage
+├ ƒ /api/payments/[id]/verify
+├ ƒ /api/payments/applications
+├ ƒ /api/payments/create-manual
+├ ƒ /api/payments/delete
+├ ƒ /api/payments/initiate
+├ ƒ /api/permissions
+├ ƒ /api/photos
+├ ƒ /api/photos/[id]
+├ ƒ /api/photos/upload
+├ ƒ /api/portfolios
+├ ƒ /api/portfolios/[id]
+├ ƒ /api/projects
+├ ƒ /api/projects/[id]
+├ ƒ /api/projects/[id]/auto-schedule
+├ ƒ /api/projects/[id]/cash-flow
+├ ƒ /api/projects/[id]/contractors
+├ ƒ /api/projects/[id]/contractors/with-payments
+├ ƒ /api/projects/[id]/gantt
+├ ƒ /api/projects/[id]/loan
+├ ƒ /api/projects/[id]/schedule-with-budget
+├ ƒ /api/projects/[id]/stats
+├ ƒ /api/projects/list
+├ ƒ /api/properties
+├ ƒ /api/properties/[id]
+├ ƒ /api/properties/[id]/stats
+├ ƒ /api/punch-list
+├ ƒ /api/punch-list/[id]
+├ ƒ /api/punch-list/[id]/comments
+├ ƒ /api/punch-list/[id]/complete
+├ ƒ /api/punch-list/[id]/reject
+├ ƒ /api/punch-list/[id]/verify
+├ ƒ /api/punch-list/categories
+├ ƒ /api/punch-lists/[projectId]
+├ ƒ /api/punch-lists/assign
+├ ƒ /api/punch-lists/contractor/[contractorId]
+├ ƒ /api/punch-lists/items/[itemId]
+├ ƒ /api/punch-lists/items/[itemId]/photos
+├ ƒ /api/renovations/draws
+├ ƒ /api/renovations/draws/eligibility
+├ ƒ /api/renovations/locations
+├ ƒ /api/renovations/portfolio/properties
+├ ƒ /api/renovations/portfolio/stats
+├ ƒ /api/reports/blocking
+├ ƒ /api/reports/trade
+├ ƒ /api/schedules
+├ ƒ /api/schedules/[id]
+├ ƒ /api/schedules/[id]/milestones
+├ ƒ /api/schedules/[id]/tasks
+├ ƒ /api/schedules/[id]/tasks/[taskId]
+├ ƒ /api/schedules/[id]/tasks/[taskId]/dependencies
+├ ƒ /api/schedules/[id]/tasks/[taskId]/dependencies/[dependencyId]
+├ ƒ /api/schedules/tasks/[taskId]/assign-budget
+├ ƒ /api/schedules/tasks/[taskId]/update-dates
+├ ƒ /api/scope-templates
+├ ƒ /api/scope-templates/[id]
+├ ƒ /api/settings/company
+├ ƒ /api/settings/preferences
+├ ƒ /api/settings/schedule-defaults
+├ ƒ /api/sms-logs
+├ ƒ /api/sms/daily-log-response
+├ ƒ /api/sms/send
+├ ƒ /api/sms/webhook
+├ ƒ /api/tasks
+├ ƒ /api/tasks/[id]
+├ ƒ /api/tasks/[id]/dependencies
+├ ƒ /api/tasks/[id]/dependents
+├ ƒ /api/tasks/[id]/status
+├ ƒ /api/template-tasks/[id]
+├ ƒ /api/templates
+├ ƒ /api/templates/[id]
+├ ƒ /api/templates/[id]/apply
+├ ƒ /api/templates/[id]/tasks
+├ ƒ /api/upload/verification-photo
+├ ƒ /api/users
+├ ƒ /api/users/[id]
+├ ƒ /api/users/invite
+├ ƒ /api/users/reset-password
+├ ƒ /api/warranties
+├ ƒ /api/warranties/[id]
+├ ƒ /api/warranties/[id]/claims
+├ ƒ /api/warranties/types
+├ ƒ /api/webhooks/twilio/sms-incoming
+├ ƒ /api/webhooks/twilio/sms-status
+├ ○ /auth
+├ ○ /auth/reset-password
+├ ○ /backlog
+├ ○ /bid-rounds
+├ ƒ /bid-rounds/[id]
+├ ƒ /bid-rounds/[id]/compare
+├ ○ /bid-rounds/new
+├ ○ /bids
+├ ƒ /bids/[id]
+├ ○ /bids/new
+├ ○ /cash-flow
+├ ○ /cash-flow/draw-eligibility
+├ ○ /cash-flow/forecast
+├ ○ /cash-position
+├ ○ /components
+├ ƒ /components/[id]
+├ ƒ /contractor-portal/[token]
+├ ○ /contractors
+├ ƒ /daily-logs/[id]
+├ ○ /daily-logs/new
+├ ○ /dashboard
+├ ○ /draws
+├ ƒ /draws/[id]
+├ ○ /draws/new
+├ ○ /funding-sources
+├ ƒ /funding-sources/[id]
+├ ƒ /funding-sources/[id]/edit
+├ ○ /funding-sources/new
+├ ○ /locations
+├ ƒ /locations/[id]
+├ ○ /payments
+├ ƒ /payments/[id]/review
+├ ƒ /payments/[id]/verify
+├ ƒ /pm-dashboard
+├ ○ /portfolios
+├ ƒ /portfolios/[id]
+├ ƒ /portfolios/[id]/edit
+├ ○ /portfolios/new
+├ ○ /projects
+├ ƒ /projects/[id]/contractors
+├ ƒ /projects/[id]/photos
+├ ○ /properties
+├ ƒ /properties/[id]
+├ ○ /renovations
+├ ○ /renovations/blocking
+├ ○ /renovations/draws
+├ ƒ /renovations/draws/[id]
+├ ○ /renovations/draws/new
+├ ○ /renovations/locations
+├ ƒ /renovations/locations/[id]
+├ ○ /renovations/templates
+├ ○ /reports
+├ ○ /reports/blocking
+├ ○ /reports/trade
+├ ○ /scope-templates
+├ ○ /settings
+├ ○ /sms-logs
+├ ○ /sms-test
+└ ○ /users
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
