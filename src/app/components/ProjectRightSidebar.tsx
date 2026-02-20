@@ -53,7 +53,7 @@ const financialItems: MenuItem[] = [
 const moreItems: MenuItem[] = [
   { id: 'photos', label: 'Photos', icon: Image, badge: 'Soon' },
   { id: 'warranties', label: 'Warranties', icon: Shield },
-  { id: 'daily-logs', label: 'Daily Logs', icon: Clipboard, badge: 'Soon' },
+  { id: 'daily-logs', label: 'Daily Logs', icon: Clipboard },
   { id: 'change-orders', label: 'Change Orders', icon: FileSignature, badge: 'Soon' },
 ];
 

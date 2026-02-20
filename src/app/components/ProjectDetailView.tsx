@@ -24,6 +24,7 @@ import { authFetch } from '@/lib/authFetch';
 import { addRecentItem } from '@/lib/recentItems';
 import { TabDropdown } from './TabDropdown';
 import ProjectRightSidebar from './ProjectRightSidebar';
+import DailyLogsList from '@/components/DailyLogsList';
 
 interface ProjectDetailViewProps {
   project: Project;
@@ -58,7 +59,7 @@ interface ProjectDetailViewProps {
     const moreTabs = [
       { id: 'photos', label: 'Photos', icon: Image, badge: 'Soon' },
       { id: 'warranties', label: 'Warranties', icon: Shield },
-      { id: 'daily-logs', label: 'Daily Logs', icon: Clipboard, badge: 'Soon' },
+      { id: 'daily-logs', label: 'Daily Logs', icon: Clipboard },
       { id: 'change-orders', label: 'Change Orders', icon: FileSignature, badge: 'Soon' },
     ];
 
@@ -678,11 +679,7 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ project, onBack, 
         )}
         {activeSubTab === 'daily-logs' && (
           <div className="p-4">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold">Daily Logs</h2>
-              <button className="px-3 py-1 bg-primary text-primary-foreground rounded text-sm hover:bg-primary/90 transition-colors">+ New Log</button>
-            </div>
-            <p className="text-muted-foreground">No daily logs for this project.</p>
+            <DailyLogsList projectId={project.id} />
           </div>
         )}
         {activeSubTab === 'change-orders' && (

@@ -234,10 +234,11 @@ export async function POST(req: NextRequest) {
       // project_line_items will be updated after PM approval
       await supabase
         .from('payment_line_item_progress')
-        .update({ 
+        .update({
           previous_percent: prevPercent,
           this_period_percent: percent,
           submitted_percent: percent,
+          pm_verified_percent: percent,  // Initialize with submitted value (PM can edit later)
           calculated_amount: amountForThisPeriod
         })
         .eq('payment_app_id', conv.payment_app_id)

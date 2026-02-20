@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { ArrowLeft, DollarSign, TrendingUp, AlertCircle, Send, Plus, FileSpreadsheet, GripVertical, Edit, Trash2, Tag, Check, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
+import { useToast } from '@/components/ToastContainer';
 import ManualPaymentEntryModal from './ManualPaymentEntryModal';
 import PaymentApplicationList from './shared/PaymentApplicationList';
 import type { PaymentApplication } from './shared/PaymentApplicationRow';
@@ -162,6 +163,7 @@ function SortableLineItemRow({
 
 const ContractorDetailView: React.FC<ContractorDetailViewProps> = ({ contract, contractor, onBack }) => {
   const router = useRouter();
+  const toast = useToast();
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddLineItemModal, setShowAddLineItemModal] = useState(false);
@@ -202,57 +204,37 @@ const ContractorDetailView: React.FC<ContractorDetailViewProps> = ({ contract, c
     try {
       // Get the contractor ID - handle both contractor_id and subcontractor_id fields
       const contractorId = (contract as any).contractor_id || (contract as any).subcontractor_id || contractor?.id;
-      
+
+      console.log('[fetchLineItems] Fetching line items for:', {
+        projectId: contract.project_id,
+        contractorId,
+        contractId: contract.id,
+      });
+
       if (!contractorId || !contract.project_id) {
-        console.error('Missing contractor ID or project ID', { contractorId, project_id: contract.project_id });
+        console.error('[fetchLineItems] Missing contractor ID or project ID', { contractorId, project_id: contract.project_id });
         setLineItems([]);
         setLoading(false);
         return;
       }
 
-      // First, try to find the contracts record that matches this project + contractor
-      // Note: contracts table uses 'subcontractor_id', project_contractors uses 'contractor_id'
-      const { data: contractRecord, error: contractError } = await supabase
-        .from('contracts')
-        .select('id')
-        .eq('project_id', contract.project_id)
-        .eq('subcontractor_id', contractorId)
-        .single();
+      // Use API endpoint with service role to bypass RLS
+      const params = new URLSearchParams({
+        projectId: contract.project_id.toString(),
+        contractorId: contractorId.toString(),
+      });
 
-      if (contractError) {
-        console.log('No contract record found in contracts table, trying project_line_items directly');
-        // If no contract found, query project_line_items by project_id + contractor_id directly
-        const { data: fallbackData, error: fallbackError } = await supabase
-          .from('project_line_items')
-          .select('*')
-          .eq('project_id', contract.project_id)
-          .eq('contractor_id', contractorId)
-          .order('display_order', { ascending: true });
-        
-        if (fallbackError) {
-          console.error('Error with fallback query:', fallbackError);
-          setLineItems([]);
-        } else {
-          setLineItems(fallbackData || []);
-        }
-        return;
+      const response = await fetch(`/api/line-items?${params.toString()}`);
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to fetch line items');
       }
 
-      // Now fetch line items using the contracts.id
-      const { data, error } = await supabase
-        .from('project_line_items')
-        .select('*')
-        .eq('contract_id', contractRecord.id)
-        .order('display_order', { ascending: true});
-
-      if (error) {
-        console.error('Error fetching line items:', error);
-        throw error;
-      }
-
-      setLineItems(data || []);
+      console.log('[fetchLineItems] Found line items via API:', result.data?.length || 0);
+      setLineItems(result.data || []);
     } catch (error) {
-      console.error('Error fetching line items:', error);
+      console.error('[fetchLineItems] Error fetching line items:', error);
       setLineItems([]);
     } finally {
       setLoading(false);
@@ -339,7 +321,7 @@ const ContractorDetailView: React.FC<ContractorDetailViewProps> = ({ contract, c
       (contract as any).budget_item_id = budgetItemId;
     } catch (error) {
       console.error('Error updating budget category:', error);
-      alert('Failed to update budget category. Please try again.');
+      toast.error('Failed to update budget category. Please try again.');
     } finally {
       setSavingBudgetItem(false);
     }
@@ -350,7 +332,7 @@ const ContractorDetailView: React.FC<ContractorDetailViewProps> = ({ contract, c
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
-        alert('Authentication required');
+        toast.error('Authentication required');
         return;
       }
 
@@ -372,14 +354,14 @@ const ContractorDetailView: React.FC<ContractorDetailViewProps> = ({ contract, c
 
       const result = await response.json();
       if (result.success && result.success.length > 0) {
-        alert('Payment application deleted successfully!');
+        toast.success('Payment application deleted successfully!');
         fetchPaymentApplications(); // Refresh the list
       } else if (result.failed && result.failed.length > 0) {
-        alert(`Failed to delete: ${result.failed[0].error}`);
+        toast.error(`Failed to delete: ${result.failed[0].error}`);
       }
     } catch (error) {
       console.error('Error deleting payment application:', error);
-      alert(error instanceof Error ? error.message : 'Failed to delete payment application');
+      toast.error(error instanceof Error ? error.message : 'Failed to delete payment application');
     }
   };
 
@@ -401,7 +383,7 @@ const ContractorDetailView: React.FC<ContractorDetailViewProps> = ({ contract, c
       );
 
       if (hasActivePayments) {
-        alert('Cannot remove contractor with active or approved payment applications. Please archive or reject them first.');
+        toast.error('Cannot remove contractor with active or approved payment applications. Please archive or reject them first.');
         setIsRemoving(false);
         return;
       }
@@ -419,7 +401,7 @@ const ContractorDetailView: React.FC<ContractorDetailViewProps> = ({ contract, c
       onBack();
     } catch (error) {
       console.error('Error removing contractor from project:', error);
-      alert(error instanceof Error ? error.message : 'Failed to remove contractor from project');
+      toast.error(error instanceof Error ? error.message : 'Failed to remove contractor from project');
     } finally {
       setIsRemoving(false);
     }
@@ -520,11 +502,11 @@ const ContractorDetailView: React.FC<ContractorDetailViewProps> = ({ contract, c
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      
-      alert('Line items exported successfully!');
+
+      toast.success('Line items exported successfully!');
     } catch (error) {
       console.error('Error exporting to Excel:', error);
-      alert('Failed to export line items. Please try again.');
+      toast.error('Failed to export line items. Please try again.');
     } finally {
       setExportingToExcel(false);
     }
@@ -532,83 +514,56 @@ const ContractorDetailView: React.FC<ContractorDetailViewProps> = ({ contract, c
 
   const handleAddLineItem = async () => {
     if (!newLineItem.description_of_work.trim()) {
-      alert('Please enter a description');
+      toast.error('Please enter a description');
       return;
     }
-    
+
     try {
-      // First, find or create the contracts record
-      let contractRecordId = null;
-      
       // Get the contractor ID - handle both contractor_id and subcontractor_id fields
       const contractorId = (contract as any).contractor_id || (contract as any).subcontractor_id || contractor?.id;
-      
-      const { data: existingContract, error: contractError } = await supabase
-        .from('contracts')
-        .select('id')
-        .eq('project_id', contract.project_id)
-        .eq('subcontractor_id', contractorId)
-        .single();
-      
-      if (contractError && contractError.code === 'PGRST116') {
-        // No contract found, create one
-        const { data: newContract, error: createError } = await supabase
-          .from('contracts')
-          .insert({
-            project_id: contract.project_id,
-            subcontractor_id: contractorId,
-            contract_amount: contract.contract_amount || 0,
-            original_contract_amount: contract.original_contract_amount || contract.contract_amount || 0,
-            start_date: new Date().toISOString().split('T')[0],
-          })
-          .select('id')
-          .single();
-        
-        if (createError) {
-          console.error('Error creating contract record:', createError);
-          throw createError;
-        }
-        contractRecordId = newContract.id;
-      } else if (existingContract) {
-        contractRecordId = existingContract.id;
-      } else {
-        throw new Error('Failed to get or create contract record');
+
+      console.log('[handleAddLineItem] Adding line item with:', {
+        projectId: contract.project_id,
+        contractorId,
+        description: newLineItem.description_of_work,
+        scheduledValue: newLineItem.scheduled_value,
+      });
+
+      // Use API route with service role to bypass RLS
+      const response = await fetch('/api/line-items', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          projectId: contract.project_id,
+          contractorId,
+          descriptionOfWork: newLineItem.description_of_work,
+          scheduledValue: newLineItem.scheduled_value,
+          itemNo: newLineItem.item_no,
+          contractAmount: contract.contract_amount || 0,
+        }),
+      });
+
+      const result = await response.json();
+      console.log('[handleAddLineItem] API response:', result);
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to add line item');
       }
-      
-      // Get the next display order
-      const maxOrder = lineItems.length > 0 
-        ? Math.max(...lineItems.map(item => item.display_order || 0))
-        : 0;
-      
-      const { data, error } = await supabase
-        .from('project_line_items')
-        .insert({
-          contract_id: contractRecordId,
-          project_id: contract.project_id,
-          contractor_id: contractorId,
-          description_of_work: newLineItem.description_of_work,
-          scheduled_value: newLineItem.scheduled_value,
-          item_no: newLineItem.item_no || null,
-          change_order_amount: 0,
-          display_order: maxOrder + 1,
-          from_previous_application: 0,
-          percent_completed: 0,
-        })
-        .select()
-        .single();
-      
-      if (error) throw error;
-      
+
       // Refresh line items
+      console.log('[handleAddLineItem] Refreshing line items...');
       await fetchLineItems();
-      
+      console.log('[handleAddLineItem] Line items refreshed');
+
       // Reset form and close modal
       setNewLineItem({ description_of_work: '', scheduled_value: 0, item_no: '' });
       setShowAddLineItemModal(false);
-      alert('Line item added successfully!');
+      toast.success('Line item added successfully!');
     } catch (error) {
-      console.error('Error adding line item:', error);
-      alert('Failed to add line item. Please try again.');
+      console.error('[handleAddLineItem] Error adding line item:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to add line item. Please try again.');
     }
   };
 
@@ -625,17 +580,17 @@ const ContractorDetailView: React.FC<ContractorDetailViewProps> = ({ contract, c
       });
       
       const data = await res.json();
-      
+
       if (!res.ok || data.error) {
-        alert(data.error || 'Failed to send payment request.');
+        toast.error(data.error || 'Failed to send payment request.');
       } else {
-        alert('Payment request sent successfully!\n\nThe contractor will receive an SMS notification.');
+        toast.success('Payment request sent successfully! The contractor will receive an SMS notification.');
         // Optionally navigate to payment applications view
         // window.location.href = '/?tab=payment-applications';
       }
     } catch (error) {
       console.error('Error requesting payment:', error);
-      alert('Network error. Please try again.');
+      toast.error('Network error. Please try again.');
     } finally {
       setRequestingPayment(false);
     }
@@ -643,12 +598,12 @@ const ContractorDetailView: React.FC<ContractorDetailViewProps> = ({ contract, c
 
   const handleAddChangeOrder = async () => {
     if (!newChangeOrder.description.trim()) {
-      alert('Please enter a change order description');
+      toast.error('Please enter a change order description');
       return;
     }
-    
+
     if (newChangeOrder.amount === 0) {
-      alert('Please enter a change order amount');
+      toast.error('Please enter a change order amount');
       return;
     }
     
@@ -665,19 +620,19 @@ const ContractorDetailView: React.FC<ContractorDetailViewProps> = ({ contract, c
       
       // Note: In a full implementation, you would also create a change_orders record
       // to track the history of all change orders
-      
+
       // Refresh the view by going back and reopening
-      alert(`Change order added successfully!\n\nAmount: ${formatCurrency(newChangeOrder.amount)}\nNew Contract Total: ${formatCurrency(newContractAmount)}`);
-      
+      toast.success(`Change order added successfully! Amount: ${formatCurrency(newChangeOrder.amount)}, New Contract Total: ${formatCurrency(newContractAmount)}`);
+
       // Reset form and close modal
       setNewChangeOrder({ description: '', amount: 0 });
       setShowChangeOrderModal(false);
-      
+
       // Refresh the page or notify parent to refresh
       window.location.reload();
     } catch (error) {
       console.error('Error adding change order:', error);
-      alert('Failed to add change order. Please try again.');
+      toast.error('Failed to add change order. Please try again.');
     }
   };
 

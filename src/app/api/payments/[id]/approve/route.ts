@@ -149,25 +149,34 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       .eq('payment_app_id', paymentAppId);
 
     if (!progressError && lineItemProgress && lineItemProgress.length > 0) {
+      console.log('[APPROVAL] Line item progress data:', lineItemProgress);
+
       // Update each line item's baseline with the approved percentage
       for (const progress of lineItemProgress) {
-        const { error: updateError } = await supabase
+        console.log(`[APPROVAL] Updating line item ${progress.line_item_id} with percent: ${progress.pm_verified_percent}`);
+
+        const { data: updateData, error: updateError } = await supabase
           .from('project_line_items')
           .update({
             from_previous_application: progress.pm_verified_percent,
             percent_completed: progress.pm_verified_percent,
             updated_at: new Date().toISOString()
           })
-          .eq('id', progress.line_item_id);
+          .eq('id', progress.line_item_id)
+          .select();
 
         if (updateError) {
-          console.error(`Error updating line item ${progress.line_item_id} baseline:`, updateError);
+          console.error(`[APPROVAL] Error updating line item ${progress.line_item_id}:`, updateError);
+        } else {
+          console.log(`[APPROVAL] Successfully updated line item ${progress.line_item_id}:`, updateData);
         }
       }
-      
-      console.log(`Updated ${lineItemProgress.length} line item baselines after approval of payment ${paymentAppId}`);
+
+      console.log(`[APPROVAL] Updated ${lineItemProgress.length} line item baselines after approval of payment ${paymentAppId}`);
     } else if (progressError) {
-      console.error('Error fetching line item progress for baseline update:', progressError);
+      console.error('[APPROVAL] Error fetching line item progress for baseline update:', progressError);
+    } else {
+      console.log('[APPROVAL] No line item progress found for payment', paymentAppId);
     }
 
     // Log the approval action (if table exists)
