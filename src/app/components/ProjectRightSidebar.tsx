@@ -123,7 +123,7 @@ export default function ProjectRightSidebar({ activeTab, onTabChange }: ProjectR
                 onClick={() => handleItemClick(item.id)}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${
                   isActive
-                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    ? 'bg-primary text-white shadow-sm'
                     : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
                 }`}
                 title={!isExpanded ? item.label : undefined}
@@ -181,7 +181,7 @@ export default function ProjectRightSidebar({ activeTab, onTabChange }: ProjectR
                       onClick={() => handleItemClick(item.id)}
                       className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all ${
                         isActive
-                          ? 'bg-primary/10 text-primary font-medium'
+                          ? 'bg-primary text-white font-medium shadow-sm'
                           : 'text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
                       }`}
                     >
@@ -239,7 +239,7 @@ export default function ProjectRightSidebar({ activeTab, onTabChange }: ProjectR
                       onClick={() => handleItemClick(item.id)}
                       className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all ${
                         isActive
-                          ? 'bg-primary/10 text-primary font-medium'
+                          ? 'bg-primary text-white font-medium shadow-sm'
                           : 'text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
                       }`}
                       disabled={!!item.badge}
@@ -275,7 +275,7 @@ export default function ProjectRightSidebar({ activeTab, onTabChange }: ProjectR
                 onClick={() => handleItemClick(item.id)}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg whitespace-nowrap transition-all ${
                   isActive
-                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    ? 'bg-primary text-white shadow-sm'
                     : 'bg-secondary text-muted-foreground hover:text-foreground'
                 }`}
               >
@@ -296,7 +296,7 @@ export default function ProjectRightSidebar({ activeTab, onTabChange }: ProjectR
                 onClick={() => handleItemClick(item.id)}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg whitespace-nowrap transition-all ${
                   isActive
-                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    ? 'bg-primary text-white shadow-sm'
                     : 'bg-secondary text-muted-foreground hover:text-foreground'
                 }`}
               >
@@ -319,7 +319,7 @@ export default function ProjectRightSidebar({ activeTab, onTabChange }: ProjectR
                 disabled={isDisabled}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg whitespace-nowrap transition-all ${
                   isActive
-                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    ? 'bg-primary text-white shadow-sm'
                     : isDisabled
                     ? 'bg-secondary text-muted-foreground opacity-50 cursor-not-allowed'
                     : 'bg-secondary text-muted-foreground hover:text-foreground'
