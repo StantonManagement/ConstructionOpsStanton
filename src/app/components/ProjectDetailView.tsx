@@ -452,13 +452,11 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ project, onBack, 
 
   return (
     <>
-      {/* Right Sidebar - Hidden on mobile */}
-      <div className="hidden lg:block">
-        <ProjectRightSidebar activeTab={activeSubTab} onTabChange={handleSubTabChange} />
-      </div>
+      {/* Right Sidebar - Desktop sidebar + Mobile horizontal tabs */}
+      <ProjectRightSidebar activeTab={activeSubTab} onTabChange={handleSubTabChange} />
 
-      {/* Main Content - Add right padding to accommodate sidebar on desktop */}
-      <div className="space-y-6 lg:pr-20">
+      {/* Main Content - Add right padding to accommodate sidebar on desktop, top padding for mobile tab bar */}
+      <div className="space-y-6 pt-20 lg:pt-0 lg:pr-20">
       {/* Header with Back Button */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">

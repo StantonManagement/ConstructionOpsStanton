@@ -93,19 +93,21 @@ export default function ProjectRightSidebar({ activeTab, onTabChange }: ProjectR
   };
 
   return (
-    <div
-      className={`fixed right-0 top-0 h-full bg-card border-l border-border z-40 transition-all duration-300 ${
-        isExpanded ? 'w-56' : 'w-16'
-      }`}
-    >
-      {/* Toggle Button */}
-      <button
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="absolute -left-3 top-20 bg-primary text-primary-foreground rounded-full p-1.5 shadow-lg hover:bg-primary/90 transition-colors"
-        aria-label={isExpanded ? 'Collapse sidebar' : 'Expand sidebar'}
+    <>
+      {/* Desktop Sidebar */}
+      <div
+        className={`hidden lg:block fixed right-0 top-0 h-full bg-card border-l border-border z-40 transition-all duration-300 ${
+          isExpanded ? 'w-56' : 'w-16'
+        }`}
       >
-        {isExpanded ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-      </button>
+        {/* Toggle Button */}
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="absolute -left-3 top-20 bg-primary text-primary-foreground rounded-full p-1.5 shadow-lg hover:bg-primary/90 transition-colors"
+          aria-label={isExpanded ? 'Collapse sidebar' : 'Expand sidebar'}
+        >
+          {isExpanded ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+        </button>
 
       {/* Sidebar Content */}
       <div className="flex flex-col h-full pt-20 pb-4 overflow-y-auto">
@@ -258,5 +260,83 @@ export default function ProjectRightSidebar({ activeTab, onTabChange }: ProjectR
         </div>
       </div>
     </div>
+
+      {/* Mobile Horizontal Tab Bar */}
+      <div className="lg:hidden fixed top-16 left-0 right-0 bg-card border-b border-border z-30 overflow-x-auto scrollbar-hide">
+        <div className="flex items-center gap-2 px-4 py-3 min-w-max">
+          {/* Main Menu Items */}
+          {menuItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeTab === item.id;
+
+            return (
+              <button
+                key={item.id}
+                onClick={() => handleItemClick(item.id)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg whitespace-nowrap transition-all ${
+                  isActive
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'bg-secondary text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <Icon className="w-4 h-4 flex-shrink-0" />
+                <span className="text-sm font-medium">{item.label}</span>
+              </button>
+            );
+          })}
+
+          {/* Financial Items */}
+          {financialItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeTab === item.id;
+
+            return (
+              <button
+                key={item.id}
+                onClick={() => handleItemClick(item.id)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg whitespace-nowrap transition-all ${
+                  isActive
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'bg-secondary text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <Icon className="w-4 h-4 flex-shrink-0" />
+                <span className="text-sm font-medium">{item.label}</span>
+              </button>
+            );
+          })}
+
+          {/* More Items */}
+          {moreItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeTab === item.id;
+            const isDisabled = !!item.badge;
+
+            return (
+              <button
+                key={item.id}
+                onClick={() => !isDisabled && handleItemClick(item.id)}
+                disabled={isDisabled}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg whitespace-nowrap transition-all ${
+                  isActive
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : isDisabled
+                    ? 'bg-secondary text-muted-foreground opacity-50 cursor-not-allowed'
+                    : 'bg-secondary text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <Icon className="w-4 h-4 flex-shrink-0" />
+                <span className="text-sm font-medium">{item.label}</span>
+                {item.badge && (
+                  <span className="text-[10px] px-1.5 py-0.5 bg-muted rounded">
+                    {item.badge}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </>
   );
 }
