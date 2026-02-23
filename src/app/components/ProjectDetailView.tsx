@@ -260,7 +260,7 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ project, onBack, 
       addRecentItem('projects', {
         id: project.id.toString(),
         name: project.name,
-        href: `/projects?project=${project.id}`
+        href: `/projects/${project.id}`
       });
     }
   }, [project?.id, project?.name]);
@@ -417,9 +417,11 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ project, onBack, 
   };
 
   const handleViewContractorDetail = (contract: any) => {
-    setSelectedContract(contract);
-    setSelectedContractor(contract.contractors);
-    setShowContractorDetail(true);
+    // Navigate to contractor detail page
+    const contractorId = contract.contractors?.id || contract.contractor_id;
+    if (contractorId) {
+      router.push(`/projects/${project.id}/contractors/${contractorId}`);
+    }
   };
 
   const handleBackFromContractorDetail = () => {

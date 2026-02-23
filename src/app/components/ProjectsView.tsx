@@ -720,12 +720,8 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
   };
 
   const handleProjectClick = async (project: Project) => {
-    setSelectedProject(project);
-    setShowDetailView(true);
-    // Update URL to include project ID
-    const params = new URLSearchParams(searchParams.toString());
-    params.set('project', project.id.toString());
-    router.replace(`/projects?${params.toString()}`, { scroll: false });
+    // Navigate to the new project detail route
+    router.push(`/projects/${project.id}`);
   };
 
   const handleBackToList = () => {

@@ -13,7 +13,7 @@ const ConstructionDashboard: React.FC = () => {
 
   // Handle project selection and redirect to projects page
   const handleProjectSelect = useCallback((project: Project) => {
-    router.push(`/projects?project=${project.id}`);
+    router.push(`/projects/${project.id}`);
   }, [router]);
 
   // Handle switching to payments page
