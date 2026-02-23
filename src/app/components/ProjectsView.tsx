@@ -251,6 +251,15 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
   const [deletingProject, setDeletingProject] = useState<Project | null>(null);
   const [isDeletingProject, setIsDeletingProject] = useState(false);
 
+  // Redirect old URL format to new format
+  useEffect(() => {
+    const projectId = searchParams.get('project');
+    if (projectId) {
+      // Redirect from /projects?project=61 to /projects/61
+      router.replace(`/projects/${projectId}`);
+    }
+  }, [searchParams, router]);
+
   const contractorColumns = useMemo(() => [
     { 
       header: 'Name', 
