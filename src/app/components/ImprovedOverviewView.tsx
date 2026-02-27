@@ -7,6 +7,8 @@ import { Project } from '@/context/DataContext';
 import { formatCurrency } from '@/lib/theme';
 import { TrendingUp, TrendingDown, DollarSign, FolderOpen, AlertCircle, CheckCircle2, Clock } from 'lucide-react';
 import AuditLog from './AuditLog';
+import { usePortfolio } from '@/context/PortfolioContext';
+import { GlobalFilterBar } from '@/components/GlobalFilterBar';
 
 interface OverviewViewProps {
   onProjectSelect?: (project: Project) => void;
@@ -120,6 +122,7 @@ const ImprovedOverviewView: React.FC<OverviewViewProps> = ({
 }) => {
   const { projects } = useData();
   const { role } = useAuth();
+  const { selectedPortfolioId, selectedYear } = usePortfolio();
   const [queueData, setQueueData] = useState<any>(null);
   const [queueLoading, setQueueLoading] = useState(true);
   const [enhancedProjects, setEnhancedProjects] = useState<any[]>([]);
@@ -194,13 +197,33 @@ const ImprovedOverviewView: React.FC<OverviewViewProps> = ({
 
   // Filter projects
   const filteredProjects = useMemo(() => {
-    if (!searchQuery.trim()) return enhancedProjects;
-    const lower = searchQuery.toLowerCase();
-    return enhancedProjects.filter(p =>
-      p.name.toLowerCase().includes(lower) ||
-      p.client_name?.toLowerCase().includes(lower)
-    );
-  }, [enhancedProjects, searchQuery]);
+    let filtered = enhancedProjects;
+
+    // Apply portfolio filter
+    if (selectedPortfolioId) {
+      filtered = filtered.filter(p => p.id.toString() === selectedPortfolioId);
+    }
+
+    // Apply year filter (filter by created_at year)
+    if (selectedYear) {
+      filtered = filtered.filter(p => {
+        if (!p.created_at) return false;
+        const projectYear = new Date(p.created_at).getFullYear();
+        return projectYear.toString() === selectedYear;
+      });
+    }
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const lower = searchQuery.toLowerCase();
+      filtered = filtered.filter(p =>
+        p.name.toLowerCase().includes(lower) ||
+        p.client_name?.toLowerCase().includes(lower)
+      );
+    }
+
+    return filtered;
+  }, [enhancedProjects, searchQuery, selectedPortfolioId, selectedYear]);
 
   // Calculate stats
   const stats = useMemo(() => {
@@ -231,6 +254,13 @@ const ImprovedOverviewView: React.FC<OverviewViewProps> = ({
       <div>
         <h1 className="text-xl font-bold text-foreground">Dashboard</h1>
       </div>
+
+      {/* Global Filter Bar */}
+      <GlobalFilterBar
+        showPropertyFilter={true}
+        showLocationFilter={false}
+        showYearFilter={true}
+      />
 
       {/* Metric Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">

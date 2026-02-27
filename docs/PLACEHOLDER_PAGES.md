@@ -1,6 +1,6 @@
 # Placeholder and Non-Functional Pages
 
-**Last Updated:** January 13, 2026
+**Last Updated:** February 23, 2026
 
 This document lists all placeholder, non-functional, or "coming soon" pages in the Construction Ops Stanton application.
 
@@ -8,49 +8,56 @@ This document lists all placeholder, non-functional, or "coming soon" pages in t
 
 ## ✅ RECENTLY FIXED (No Longer Placeholders)
 
-These were placeholders but have been removed/fixed:
+### February 23, 2026 - Major Cleanup
+
+1. **Photo Gallery in Project Detail View** - ✅ IMPLEMENTED
+   - Location: `src/app/components/ProjectDetailView.tsx`
+   - Status: Fully functional PhotoGalleryView integrated
+   - Features: Upload, view, organize photos with EXIF metadata
+
+2. **CSV Import in ManageView** - ✅ IMPLEMENTED
+   - Location: `src/app/components/ManageView.tsx`
+   - Status: Full CSV import with PapaParse
+   - Features: Import line items, error handling, toast notifications
+
+3. **Activity Feed in Dashboard** - ✅ IMPLEMENTED
+   - Location: `src/components/views/OverviewView.tsx`
+   - Status: Real-time activity feed from payment apps and daily logs
+   - Features: Status colors, timestamps, amounts
+
+4. **Dashboard Metrics** - ✅ FIXED
+   - Location: `src/components/views/OverviewView.tsx`
+   - Status: Hardcoded 85% replaced with real task completion calculation
+   - Features: Dynamic calculation from schedule_tasks table
+
+5. **Legacy Route Folders** - ✅ DELETED
+   - Deleted: `(dashboard)`, `draws`, `locations`, `components-route`
+   - Status: 14 unused pages removed (117→103 routes)
+   - Result: Cleaner codebase, faster builds
+
+### January 13, 2026
 
 1. **Draws Tab in ConstructionDashboard** - ❌ REMOVED
-   - Location: `src/app/components/ConstructionDashboard.tsx` (lines 242-249)
    - Status: Removed placeholder, now redirects to `/renovations/draws`
-   - Fixed: January 13, 2026
 
 2. **Templates Tab in ConstructionDashboard** - ❌ REMOVED
-   - Location: `src/app/components/ConstructionDashboard.tsx` (line 239)
    - Status: Removed placeholder, now redirects to `/renovations/templates`
-   - Fixed: January 13, 2026
 
 3. **Cash Position Tab in ConstructionDashboard** - ❌ REMOVED
-   - Location: `src/app/components/ConstructionDashboard.tsx` (line 240)
    - Status: Removed placeholder, now redirects to `/cash-flow`
-   - Fixed: January 13, 2026
 
 ---
 
 ## 🟡 ACTIVE PLACEHOLDERS / INCOMPLETE FEATURES
 
-### 1. **Photo Gallery in Project Detail View**
-- **Location:** `src/app/components/ProjectDetailView.tsx:583`
-- **Message:** "Photo gallery coming soon. Upload and organize project photos here."
-- **Status:** Placeholder UI exists, functionality not implemented
-- **Priority:** Medium
-- **Notes:** Upload button exists but non-functional
-
-### 2. **CSV Import in ManageView**
-- **Location:** `src/app/components/ManageView.tsx:1241`
-- **Message:** "Import from CSV (Coming Soon)"
-- **Status:** Button disabled with tooltip
-- **Priority:** Low (Phase 2 feature)
-- **Notes:** Planned for Phase 2 implementation
-
-### 3. **Signature Service in Payment Applications**
+### 1. **Signature Service in Payment Applications**
 - **Location:** `src/app/components/PaymentApplicationsView.tsx:991-993`
 - **Message:** "Signature service not fully configured yet."
-- **Status:** Returns 501 Not Implemented
+- **Status:** Returns 501 Not Implemented (working as designed)
 - **Priority:** Medium
-- **Notes:** Graceful handling with warning toast
+- **Notes:** Graceful handling with warning toast. Requires DocuSign API configuration.
 
-### 4. **Settings - Coming Soon Features**
+### 2. **Settings - Coming Soon Features**
 - **Location:** `src/app/components/SettingsView.tsx:305`
 - **Message:** "Coming Soon" badge on certain settings
 - **Status:** UI elements present but functionality pending
@@ -78,59 +85,44 @@ These pages show empty states but are fully functional - they just have no data:
 
 ---
 
-## 🔴 LEGACY/UNUSED ROUTES (Should Be Deleted)
+## 🗑️ LEGACY/UNUSED ROUTES (CLEANED UP)
 
-These routes exist but are not linked in navigation and should be removed:
+**Status:** ✅ All legacy routes deleted on February 23, 2026
 
-### 1. **Dashboard Route Group** - `src/app/(dashboard)/*`
-- `(dashboard)/backlog/page.tsx` - Fully functional but unused
-- `(dashboard)/cash-position/page.tsx` - Fully functional but unused
-- `(dashboard)/components/page.tsx` - Just imports old locations page
-- `(dashboard)/properties/page.tsx` - Not linked
-- **Action:** Delete entire `(dashboard)` folder
+The following unused routes have been removed:
 
-### 2. **Components Route** - `src/app/components-route/*`
-- `components-route/page.tsx` - Empty file
-- `components-route/[id]/page.tsx` - Duplicate of main components route
-- **Action:** Delete entire `components-route` folder
+### Deleted Folders:
+1. ✅ `src/app/(dashboard)/*` - Dashboard route group (4 pages)
+2. ✅ `src/app/components-route/*` - Duplicate components (2 pages)
+3. ✅ `src/app/draws/*` - Old draws system (3 pages)
+4. ✅ `src/app/locations/*` - Old locations system (2 pages)
 
-### 3. **Old Draws System** - `src/app/draws/*`
-- `draws/page.tsx` - Superseded by `/renovations/draws`
-- `draws/[id]/page.tsx` - Superseded by `/renovations/draws/[id]`
-- `draws/new/page.tsx` - Superseded by `/renovations/draws/new`
-- **Action:** Delete entire `draws` folder
-
-### 4. **Old Locations System** - `src/app/locations/*`
-- `locations/page.tsx` - Superseded by `/renovations/locations`
-- `locations/[id]/page.tsx` - Superseded by `/renovations/locations/[id]`
-- **Action:** Delete entire `locations` folder
+**Result:** Reduced from 117 to 103 routes (-12% cleanup)
 
 ---
 
 ## 📋 SUMMARY
 
-| Category | Count | Action Required |
-|----------|-------|-----------------|
-| Active Placeholders | 4 | Implement or document timeline |
-| Empty States (Functional) | 9 | None - working as designed |
-| Legacy Routes to Delete | 4 folders | Delete to clean up codebase |
-| Recently Fixed | 3 | None - already resolved |
+| Category | Count | Status |
+|----------|-------|--------|
+| Active Placeholders | 2 | Signature service (by design), Settings features |
+| Empty States (Functional) | 9 | Working as designed |
+| Legacy Routes | 0 | ✅ All cleaned up (Feb 23, 2026) |
+| Recently Fixed (Feb 23) | 5 | Photo gallery, CSV import, Activity feed, Metrics, Legacy cleanup |
+| Recently Fixed (Jan 13) | 3 | Dashboard tab redirects |
 
 ---
 
 ## 🎯 RECOMMENDED ACTIONS
 
 ### Immediate (High Priority)
-1. ✅ **DONE:** Remove placeholder tabs from ConstructionDashboard
-2. **Delete legacy route folders** to reduce confusion and maintenance burden
+✅ **ALL DONE** - No immediate actions required
 
 ### Short Term (Medium Priority)
-3. Implement Photo Gallery functionality in ProjectDetailView
-4. Configure Signature Service for Payment Applications
+- Configure DocuSign API for Signature Service (external dependency)
 
 ### Long Term (Low Priority)
-5. Implement CSV Import (Phase 2)
-6. Complete "Coming Soon" settings features
+- Complete "Coming Soon" settings features
 
 ---
 

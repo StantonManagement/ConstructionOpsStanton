@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin as supabase } from '@/lib/supabaseClient';
+import { sendSMSNotification } from '@/lib/notificationService';
+import { formatCurrency } from '@/lib/theme';
 // import { generateG703Pdf } from '../../../../../lib/g703Pdf';
 
 export const runtime = 'nodejs';
@@ -268,6 +270,25 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       // Don't fail the approval if invoice generation fails
     }
     */
+
+    // Send notification to contractor
+    if (updatedApp.contractor?.phone) {
+      const notification = await sendSMSNotification(
+        updatedApp.contractor.phone,
+        'payment_approved',
+        {
+          projectName: updatedApp.project?.name || 'Unknown Project',
+          amount: formatCurrency(updatedApp.current_period_value || 0),
+          applicationNumber: paymentAppId.toString(),
+        }
+      );
+
+      if (!notification.success) {
+        console.error('[Payment Approval] Failed to send notification:', notification.error);
+      } else {
+        console.log('[Payment Approval] Notification sent:', notification.messageId);
+      }
+    }
 
     return NextResponse.json({
       message: 'Payment application approved successfully',

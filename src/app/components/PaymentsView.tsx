@@ -17,6 +17,8 @@ import PaymentsSkeleton from './PaymentsSkeleton';
 import SubcontractorSelectionView from './SubcontractorSelectionView';
 import { Project } from '@/context/DataContext';
 import AuditLog from './AuditLog';
+import { usePortfolio } from '@/context/PortfolioContext';
+import { GlobalFilterBar } from '@/components/GlobalFilterBar';
 
 // Utility functions
 const formatDate = (dateString: string) => {
@@ -810,6 +812,7 @@ interface PaymentApplicationsViewProps {
 const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searchQuery = '', projectId }) => {
   const searchParams = useSearchParams();
   const { showToast, showConfirm } = useModal();
+  const { selectedPortfolioId, setSelectedPortfolioId, selectedYear } = usePortfolio();
 
   // Check if we're in contractor selection mode
   const subtab = searchParams.get('subtab');
@@ -823,9 +826,11 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
   const [statusFilter, setStatusFilter] = useState<string>(
     searchParams.get('statusFilter') || 'submitted'
   );
-  const [projectFilter, setProjectFilter] = useState<string>(
-    projectId ? projectId.toString() : (searchParams.get('project') || 'all')
-  );
+
+  // Use portfolio context for project filtering, but allow override from props
+  const projectFilter = projectId
+    ? projectId.toString()
+    : (selectedPortfolioId || 'all');
 
   // State for contractor selection view
   const [selectedProjectForPayment, setSelectedProjectForPayment] = useState<Project | null>(null);
@@ -1006,17 +1011,17 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
   // Sync project filter from URL (Header project selector) or prop
   useEffect(() => {
     if (projectId) {
-      setProjectFilter(projectId.toString());
+      setSelectedPortfolioId(projectId.toString());
     } else {
-      const urlProjectFilter = searchParams?.get('project') || 'all';
-      if (urlProjectFilter !== projectFilter) {
-        setProjectFilter(urlProjectFilter);
+      const urlProjectFilter = searchParams?.get('project');
+      if (urlProjectFilter && urlProjectFilter !== 'all' && urlProjectFilter !== selectedPortfolioId) {
+        setSelectedPortfolioId(urlProjectFilter);
         // Clear selections when project filter changes from URL
         setSelectedItems([]);
         setCurrentPage(1);
       }
     }
-  }, [searchParams, projectId]);
+  }, [searchParams, projectId, selectedPortfolioId, setSelectedPortfolioId]);
 
   useEffect(() => {
     fetchApplications();
@@ -1677,6 +1682,13 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
         </div>
       </div>
 
+      {/* Global Filter Bar */}
+      <GlobalFilterBar
+        showPropertyFilter={true}
+        showLocationFilter={false}
+        showYearFilter={true}
+      />
+
       {/* Stats */}
               <CompactStats
           pendingSMS={stats.pending_sms}
@@ -1720,7 +1732,7 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
               statusFilter={statusFilter}
               setStatusFilter={setStatusFilter}
               projectFilter={projectFilter}
-              setProjectFilter={setProjectFilter}
+              setProjectFilter={setSelectedPortfolioId}
               projects={projects}
               sortBy={sortBy}
               setSortBy={setSortBy}
@@ -1793,7 +1805,7 @@ const PaymentApplicationsView: React.FC<PaymentApplicationsViewProps> = ({ searc
         statusFilter={statusFilter}
         setStatusFilter={setStatusFilter}
         projectFilter={projectFilter}
-        setProjectFilter={setProjectFilter}
+        setProjectFilter={setSelectedPortfolioId}
         projects={projects}
         sortBy={sortBy}
         setSortBy={setSortBy}

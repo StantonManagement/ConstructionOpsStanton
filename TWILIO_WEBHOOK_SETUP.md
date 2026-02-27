@@ -1,10 +1,19 @@
 # Twilio Webhook Setup Guide
 
 ## Current Status
-- ✅ ngrok running: `https://e44e-2001-4450-4f76-2f00-8152-dde7-579b-11e0.ngrok-free.app`
-- ✅ Dev server running on port 3000
+- ✅ Webhook code implemented and working
+- ✅ Test utility available at `/test-webhook`
 - ✅ Webhook endpoint exists: `/api/webhooks/twilio/sms-incoming`
-- ❌ **Twilio not sending webhook requests**
+- ⚠️ **Twilio configuration required** (manual setup in Twilio Console)
+
+## Overview
+
+The webhook code is **fully functional**. You can test it locally without Twilio using the built-in test page at:
+```
+http://localhost:3000/test-webhook
+```
+
+The issue is that **Twilio needs to be configured** in the Twilio Console to send webhook requests to your server.
 
 ## Problem
 Twilio is receiving incoming SMS but not calling your webhook. This means the configuration in Twilio Console is either:
@@ -12,9 +21,46 @@ Twilio is receiving incoming SMS but not calling your webhook. This means the co
 2. Blocked by Studio Flow
 3. Using wrong settings
 
+**This is a configuration issue, not a code issue.**
+
 ---
 
-## STEP-BY-STEP FIX
+## TEST WEBHOOK LOCALLY (Recommended First Step)
+
+Before configuring Twilio, verify the webhook logic works:
+
+### Option 1: Use Web Interface (Easiest)
+1. Navigate to: `http://localhost:3000/test-webhook`
+2. Enter phone number (e.g., `+18603516816`)
+3. Enter bid amount (e.g., `$777`)
+4. Click "Send Test Webhook"
+5. Check response to see if bid was created/updated
+
+### Option 2: Use cURL
+```bash
+curl -X POST http://localhost:3000/api/webhooks/twilio/test-webhook \
+  -H "Content-Type: application/json" \
+  -d '{"phone":"+18603516816","message":"$777"}'
+```
+
+### Option 3: Direct Webhook Test
+```bash
+curl -X POST http://localhost:3000/api/webhooks/twilio/sms-incoming \
+  -d "From=+18603516816" \
+  -d "Body=\$777" \
+  -d "MessageSid=TEST123"
+```
+
+**Requirements for test to work:**
+- An active bid round exists in the database
+- A bid invitation was sent to the test phone number
+- The phone number matches the one in the notification
+
+If the test works locally, then the webhook code is fine and you just need to configure Twilio.
+
+---
+
+## CONFIGURE TWILIO (After Local Test Passes)
 
 ### Step 1: Go to Twilio Console
 1. Open: https://console.twilio.com

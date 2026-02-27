@@ -1,12 +1,13 @@
 import { NextRequest } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseClient';
-import { 
-  withAuth, 
-  successResponse, 
-  errorResponse, 
-  APIError 
+import {
+  withAuth,
+  successResponse,
+  errorResponse,
+  APIError
 } from '@/lib/apiHelpers';
 import type { PunchListFilters, CreatePunchListItemRequest } from '@/types/punch-list';
+import { sendSMSNotification } from '@/lib/notificationService';
 
 /**
  * GET /api/punch-list
@@ -172,7 +173,27 @@ export const POST = withAuth(async (request: NextRequest, user: any) => {
       assigned_contractor_name: data.assigned_contractors?.name,
     };
 
-    // TODO: Send notification to assigned contractor if assigned_to is set
+    // Send notification to assigned contractor if assigned_to is set
+    if (body.assigned_to && data.assigned_contractors) {
+      const contractor = data.assigned_contractors;
+      if (contractor.phone) {
+        const notification = await sendSMSNotification(
+          contractor.phone,
+          'punch_list_assigned',
+          {
+            projectName: data.projects?.name || 'Unknown Project',
+            itemDescription: body.description,
+            dueDate: due_date ? new Date(due_date).toLocaleDateString() : 'Not set',
+          }
+        );
+
+        if (!notification.success) {
+          console.error('[Punch List] Failed to send assignment notification:', notification.error);
+        } else {
+          console.log('[Punch List] Assignment notification sent:', notification.messageId);
+        }
+      }
+    }
 
     return successResponse({ item }, 201);
   } catch (error) {

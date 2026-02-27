@@ -1,11 +1,12 @@
 import { NextRequest } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseClient';
-import { 
-  withAuth, 
-  successResponse, 
-  errorResponse, 
-  APIError 
+import {
+  withAuth,
+  successResponse,
+  errorResponse,
+  APIError
 } from '@/lib/apiHelpers';
+import { sendSMSNotification } from '@/lib/notificationService';
 
 /**
  * POST /api/punch-list/[id]/complete
@@ -67,7 +68,36 @@ export const POST = withAuth(async (request: NextRequest, context: { params: Pro
       assigned_contractor_name: data.assigned_contractors?.name,
     };
 
-    // TODO: Send notification to project manager
+    // Send notification to project manager
+    // Get project manager from project or created_by user
+    if (data.projects) {
+      const { data: project } = await supabaseAdmin
+        .from('projects')
+        .select('pm_id, users:pm_id(id, phone, name)')
+        .eq('id', data.project_id)
+        .single();
+
+      // Handle users as array or single object
+      const pmUser = Array.isArray(project?.users) ? project.users[0] : project?.users;
+
+      if (pmUser?.phone) {
+        const notification = await sendSMSNotification(
+          pmUser.phone,
+          'punch_list_completed',
+          {
+            projectName: data.projects.name || 'Unknown Project',
+            itemDescription: data.description,
+            contractorName: data.assigned_contractors?.name || 'Unknown',
+          }
+        );
+
+        if (!notification.success) {
+          console.error('[Punch List] Failed to send completion notification:', notification.error);
+        } else {
+          console.log('[Punch List] Completion notification sent:', notification.messageId);
+        }
+      }
+    }
 
     return successResponse({ item });
   } catch (error) {

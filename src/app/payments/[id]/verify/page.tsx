@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
-import { ArrowLeft, Check, X, Download } from 'lucide-react';
+import { ArrowLeft, Check, X, Download, Upload, Image as ImageIcon, Trash2 } from 'lucide-react';
 import { formatCurrency } from '@/lib/theme';
 import { generateG703Pdf } from '@/lib/g703Pdf';
 
@@ -38,6 +38,15 @@ interface PaymentApp {
   status?: string;
   [key: string]: any;
 }
+interface Photo {
+  id: number;
+  photo_url: string;
+  thumbnail_url?: string;
+  caption?: string;
+  created_at: string;
+  line_item_id?: number;
+  [key: string]: any;
+}
 
 function PaymentVerificationContent() {
   const params = useParams();
@@ -60,12 +69,79 @@ function PaymentVerificationContent() {
   const [editingLineItem, setEditingLineItem] = useState<number | null>(null);
   const [editedPercentages, setEditedPercentages] = useState<Record<number, { pm_verified_percent: number }>>({});
 
+  // Photo upload state
+  const [photos, setPhotos] = useState<Photo[]>([]);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [selectedLineItemForPhoto, setSelectedLineItemForPhoto] = useState<number | null>(null);
+
   const handleBackNavigation = () => {
     const returnTo = searchParams.get('returnTo');
     if (returnTo) {
       router.push(returnTo);
     } else {
       router.push('/payments');
+    }
+  };
+
+  const fetchPhotos = async () => {
+    if (!paymentAppId) return;
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return;
+
+      const response = await fetch(`/api/payments/${paymentAppId}/photos`, {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        setPhotos(result.data?.photos || []);
+      }
+    } catch (error) {
+      console.error('Error fetching photos:', error);
+    }
+  };
+
+  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setUploadingPhoto(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error('Authentication required');
+
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('photo_type', 'verification');
+      if (selectedLineItemForPhoto) {
+        formData.append('line_item_id', selectedLineItemForPhoto.toString());
+      }
+
+      const response = await fetch(`/api/payments/${paymentAppId}/photos`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) throw new Error('Failed to upload photo');
+
+      const result = await response.json();
+      setPhotos(prev => [result.data.photo, ...prev]);
+      setSelectedLineItemForPhoto(null);
+
+      // Reset file input
+      event.target.value = '';
+    } catch (error) {
+      console.error('Error uploading photo:', error);
+      setError(error instanceof Error ? error.message : 'Failed to upload photo');
+    } finally {
+      setUploadingPhoto(false);
     }
   };
 
@@ -146,6 +222,9 @@ function PaymentVerificationContent() {
         setContractor(contractorResult.data || { id: appData.contractor_id, name: 'Unknown' });
         setLineItems(lineItemsResult.data || []);
         setLoading(false);
+
+        // Fetch photos after main data is loaded
+        fetchPhotos();
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load');
         setLoading(false);
@@ -382,6 +461,77 @@ function PaymentVerificationContent() {
             <p className="text-sm">{paymentApp.pm_notes}</p>
           </div>
         )}
+
+        {/* Photo Upload & Gallery */}
+        <div className="border border-border rounded-lg p-4">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="font-semibold flex items-center gap-2">
+                <ImageIcon className="w-4 h-4" />
+                Verification Photos
+              </h3>
+              <p className="text-xs text-muted-foreground mt-1">
+                Upload photos to verify completed work ({photos.length} photo{photos.length !== 1 ? 's' : ''})
+              </p>
+            </div>
+            <label className={`px-4 py-2 rounded-lg flex items-center gap-2 ${
+              uploadingPhoto
+                ? 'bg-muted text-muted-foreground cursor-not-allowed'
+                : 'bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer'
+            }`}>
+              <Upload className="w-4 h-4" />
+              {uploadingPhoto ? 'Uploading...' : 'Upload Photo'}
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handlePhotoUpload}
+                disabled={uploadingPhoto}
+                className="hidden"
+              />
+            </label>
+          </div>
+
+          {/* Photo Gallery */}
+          {photos.length > 0 ? (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {photos.map((photo) => (
+                <div key={photo.id} className="relative group">
+                  <div className="aspect-square rounded-lg overflow-hidden border border-border bg-muted">
+                    <img
+                      src={photo.thumbnail_url || photo.photo_url}
+                      alt={photo.caption || 'Verification photo'}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  {photo.caption && (
+                    <p className="text-xs text-muted-foreground mt-1 truncate">
+                      {photo.caption}
+                    </p>
+                  )}
+                  {photo.line_item_id && (
+                    <span className="absolute top-2 left-2 bg-primary/90 text-primary-foreground text-xs px-2 py-1 rounded">
+                      Line #{lineItemsForTable.find(li => li.line_item_id === photo.line_item_id)?.idx || '?'}
+                    </span>
+                  )}
+                  <a
+                    href={photo.photo_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                  >
+                    <span className="text-white text-sm font-medium">View Full Size</span>
+                  </a>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              <ImageIcon className="w-12 h-12 mx-auto mb-2 opacity-50" />
+              <p className="text-sm">No photos uploaded yet</p>
+              <p className="text-xs mt-1">Upload photos to document completed work</p>
+            </div>
+          )}
+        </div>
 
         {/* Actions */}
         <div className="flex items-center justify-end gap-3">

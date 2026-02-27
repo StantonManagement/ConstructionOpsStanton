@@ -13,6 +13,7 @@ import { useModal } from '@/context/ModalContext';
 import { useProject } from '@/context/ProjectContext';
 import { Project, Subcontractor, Contract } from '@/types/schema';
 import { formatCurrency } from '@/lib/theme';
+import Papa from 'papaparse';
 
 // Form validation utilities
 const validators = {
@@ -787,6 +788,7 @@ const AddContractForm: React.FC<{
   const [isContractLocked, setIsContractLocked] = useState(false);
   const [validationError, setValidationError] = useState('');
   const initialItemsLoaded = useRef(false);
+  const csvFileInputRef = useRef<HTMLInputElement>(null);
 
   // Initialize empty rows for new contracts, load existing for edits
   useEffect(() => {
@@ -930,6 +932,46 @@ const AddContractForm: React.FC<{
       return `${fieldName} cannot be greater than 100`;
     }
     return '';
+  };
+
+  const handleCSVImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: (results) => {
+        const parsed: LineItem[] = (results.data as any[]).map((row, index) => ({
+          id: crypto.randomUUID(),
+          itemNo: index + 1,
+          description: row['description'] || row['Description'] || row['description of work'] || '',
+          scheduledValue: row['scheduled value'] || row['Scheduled Value'] || row['scheduledValue'] || '',
+          fromPrevious: row['from previous'] || row['From Previous'] || row['fromPrevious'] || '0.00',
+          thisPeriod: row['this period'] || row['This Period'] || row['thisPeriod'] || '0.00',
+          materialStored: row['material stored'] || row['Material Stored'] || row['materialStored'] || '0.00',
+          percentGC: row['percent gc'] || row['Percent GC'] || row['percentGC'] || row['%GC'] || '0.00',
+        }));
+
+        lineItemsHook.setAllItems(parsed);
+        showToast({
+          message: `Successfully imported ${parsed.length} line items from CSV`,
+          type: 'success'
+        });
+      },
+      error: (error) => {
+        console.error('CSV parse error:', error);
+        showToast({
+          message: 'Failed to parse CSV file. Please check the format.',
+          type: 'error'
+        });
+      }
+    });
+
+    // Reset file input
+    if (csvFileInputRef.current) {
+      csvFileInputRef.current.value = '';
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -1230,17 +1272,29 @@ const AddContractForm: React.FC<{
           </div>
         )}
 
-        {/* CSV Import Placeholder */}
+        {/* CSV Import */}
         <div className="relative inline-block mb-4">
           <button
             type="button"
-            disabled
-            className="flex items-center gap-2 px-4 py-2 text-sm bg-gray-100 text-gray-400 border border-gray-300 rounded cursor-not-allowed"
-            title="CSV import functionality coming in Phase 2"
+            onClick={() => csvFileInputRef.current?.click()}
+            disabled={isContractLocked}
+            className={`flex items-center gap-2 px-4 py-2 text-sm border rounded transition-colors ${
+              isContractLocked
+                ? 'bg-gray-100 text-gray-400 border-gray-300 cursor-not-allowed'
+                : 'bg-green-50 text-green-700 border-green-300 hover:bg-green-100 cursor-pointer'
+            }`}
+            title={isContractLocked ? 'Cannot import CSV when contract is locked' : 'Import line items from CSV file'}
           >
             <Upload className="w-4 h-4" />
-            Import from CSV (Coming Soon)
+            Import from CSV
           </button>
+          <input
+            ref={csvFileInputRef}
+            type="file"
+            accept=".csv"
+            className="hidden"
+            onChange={handleCSVImport}
+          />
         </div>
 
         {/* Line Items Section */}

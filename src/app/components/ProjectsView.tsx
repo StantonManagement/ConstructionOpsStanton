@@ -17,6 +17,8 @@ import { authFetch } from '@/lib/authFetch';
 import PageContainer from './PageContainer';
 import ProjectsSkeleton from './ProjectsSkeleton';
 import AuditLog from './AuditLog';
+import { usePortfolio } from '@/context/PortfolioContext';
+import { GlobalFilterBar } from '@/components/GlobalFilterBar';
 
 // Form validation utilities
 const validators = {
@@ -212,6 +214,7 @@ interface ProjectsViewProps {
 const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { selectedPortfolioId, selectedYear } = usePortfolio();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -401,16 +404,36 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
   }, []);
 
   const filteredProjects = useMemo(() => {
-    const query = (searchQuery || '').trim().toLowerCase();
-    if (!query) return projects;
+    let filtered = projects;
 
-    return projects.filter((p) => {
-      const name = (p.name || '').toLowerCase();
-      const client = ((p as any).client_name || '').toLowerCase();
-      const address = ((p as any).address || '').toLowerCase();
-      return name.includes(query) || client.includes(query) || address.includes(query);
-    });
-  }, [projects, searchQuery]);
+    // Apply portfolio filter
+    if (selectedPortfolioId) {
+      filtered = filtered.filter(p => p.id.toString() === selectedPortfolioId);
+    }
+
+    // Apply year filter (filter by created_at year if available)
+    if (selectedYear) {
+      filtered = filtered.filter(p => {
+        const createdAt = (p as any).created_at;
+        if (!createdAt) return true; // Include projects without created_at
+        const projectYear = new Date(createdAt).getFullYear();
+        return projectYear.toString() === selectedYear;
+      });
+    }
+
+    // Apply search filter
+    const query = (searchQuery || '').trim().toLowerCase();
+    if (query) {
+      filtered = filtered.filter((p) => {
+        const name = (p.name || '').toLowerCase();
+        const client = ((p as any).client_name || '').toLowerCase();
+        const address = ((p as any).address || '').toLowerCase();
+        return name.includes(query) || client.includes(query) || address.includes(query);
+      });
+    }
+
+    return filtered;
+  }, [projects, searchQuery, selectedPortfolioId, selectedYear]);
 
   // Fetch projects on mount
   useEffect(() => {
@@ -890,6 +913,13 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
             </div>
           </div>
 
+          {/* Global Filter Bar */}
+          <GlobalFilterBar
+            showPropertyFilter={true}
+            showLocationFilter={false}
+            showYearFilter={true}
+          />
+
           {/* Error Display */}
           {error && (
             <div className="bg-[var(--status-critical-bg)] border border-[var(--status-critical-border)] rounded p-4">
@@ -996,28 +1026,43 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
                     <span className="text-xs text-muted-foreground">{project.current_phase}</span>
                   </div>
 
-                  {/* Action Buttons */}
-                  <div className="grid grid-cols-2 gap-2 mt-2">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleOpenEditForm(project);
-                      }}
-                      className="flex items-center justify-center gap-1 px-2 py-1.5 text-xs bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded transition-colors"
-                    >
-                      <Edit2 className="w-3 h-3" />
-                      Edit
-                    </button>
+                  {/* Action Buttons - Improved UX */}
+                  <div className="mt-3 space-y-2">
+                    {/* Primary Action: Payment Application (Prominent) */}
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         router.push(`/payments?project=${project.id}&subtab=processing`);
                       }}
-                      className="flex items-center justify-center gap-1 px-2 py-1.5 text-xs bg-primary text-primary-foreground hover:bg-primary/90 rounded transition-colors"
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg transition-all shadow-sm hover:shadow-md"
                     >
-                      <Plus className="w-3 h-3" />
-                      Pay App
+                      <DollarSign className="w-4 h-4" />
+                      Request Payment
                     </button>
+
+                    {/* Secondary Actions */}
+                    <div className="flex gap-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenEditForm(project);
+                        }}
+                        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs bg-secondary/50 text-secondary-foreground hover:bg-secondary/80 rounded transition-colors border border-border/50"
+                      >
+                        <Edit2 className="w-3 h-3" />
+                        Edit Project
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleProjectClick(project);
+                        }}
+                        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs bg-secondary/50 text-secondary-foreground hover:bg-secondary/80 rounded transition-colors border border-border/50"
+                      >
+                        <Eye className="w-3 h-3" />
+                        View Details
+                      </button>
+                    </div>
                   </div>
 
                   {/* At Risk Badge */}

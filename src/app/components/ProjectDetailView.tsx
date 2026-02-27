@@ -25,6 +25,7 @@ import { addRecentItem } from '@/lib/recentItems';
 import { TabDropdown } from './TabDropdown';
 import ProjectRightSidebar from './ProjectRightSidebar';
 import DailyLogsList from '@/components/DailyLogsList';
+import PhotoGalleryView from './PhotoGalleryView';
 
 interface ProjectDetailViewProps {
   project: Project;
@@ -57,7 +58,7 @@ interface ProjectDetailViewProps {
 
     // More dropdown tabs
     const moreTabs = [
-      { id: 'photos', label: 'Photos', icon: Image, badge: 'Soon' },
+      { id: 'photos', label: 'Photos', icon: Image },
       { id: 'warranties', label: 'Warranties', icon: Shield },
       { id: 'daily-logs', label: 'Daily Logs', icon: Clipboard },
       { id: 'change-orders', label: 'Change Orders', icon: FileSignature, badge: 'Soon' },
@@ -660,13 +661,7 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ project, onBack, 
         )}
         {activeSubTab === 'documents' && <DocumentsView projectId={project.id} />}
         {activeSubTab === 'photos' && (
-          <div className="p-4">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold">Photos</h2>
-              <button className="px-3 py-1 bg-primary text-primary-foreground rounded text-sm hover:bg-primary/90 transition-colors">+ Upload Photo</button>
-            </div>
-            <p className="text-muted-foreground">Photo gallery coming soon. Upload and organize project photos here.</p>
-          </div>
+          <PhotoGalleryView initialProjectId={typeof project.id === 'string' ? parseInt(project.id) : project.id} />
         )}
         {activeSubTab === 'warranties' && (
           <div className="p-4">

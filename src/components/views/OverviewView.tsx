@@ -15,6 +15,8 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
   const [role, setRole] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [tasksCompletionRate, setTasksCompletionRate] = useState<number>(0);
+  const [recentActivity, setRecentActivity] = useState<any[]>([]);
 
   useEffect(() => {
     const getRole = async () => {
@@ -57,6 +59,93 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
     };
 
     getRole();
+  }, []);
+
+  // Fetch tasks completion rate
+  useEffect(() => {
+    const fetchTasksStats = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('schedule_tasks')
+          .select('status, id');
+
+        if (error) {
+          console.error('Error fetching tasks:', error);
+          return;
+        }
+
+        if (data && data.length > 0) {
+          const completed = data.filter((task: any) => task.status === 'completed').length;
+          const total = data.length;
+          const rate = Math.round((completed / total) * 100);
+          setTasksCompletionRate(rate);
+        } else {
+          // No tasks exist yet, show 0%
+          setTasksCompletionRate(0);
+        }
+      } catch (err) {
+        console.error('Error calculating tasks completion:', err);
+      }
+    };
+
+    fetchTasksStats();
+  }, []);
+
+  // Fetch recent activity
+  useEffect(() => {
+    const fetchRecentActivity = async () => {
+      try {
+        const activities: any[] = [];
+
+        // Fetch recent payment applications
+        const { data: payments } = await supabase
+          .from('payment_applications')
+          .select('id, status, created_at, current_payment, contractors(name), projects(name)')
+          .order('created_at', { ascending: false })
+          .limit(5);
+
+        if (payments) {
+          payments.forEach((p: any) => {
+            activities.push({
+              type: 'payment',
+              title: `Payment application ${p.status}`,
+              description: `${p.contractors?.name || 'Contractor'} - ${p.projects?.name || 'Project'}`,
+              amount: p.current_payment,
+              timestamp: new Date(p.created_at),
+              status: p.status,
+            });
+          });
+        }
+
+        // Fetch recent daily logs
+        const { data: logs } = await supabase
+          .from('daily_logs')
+          .select('id, log_date, status, properties(name)')
+          .order('created_at', { ascending: false })
+          .limit(3);
+
+        if (logs) {
+          logs.forEach((log: any) => {
+            activities.push({
+              type: 'daily_log',
+              title: 'Daily log created',
+              description: `${log.properties?.name || 'Property'} - ${new Date(log.log_date).toLocaleDateString()}`,
+              timestamp: new Date(log.log_date),
+              status: log.status,
+            });
+          });
+        }
+
+        // Sort by timestamp and take most recent 10
+        activities.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+        setRecentActivity(activities.slice(0, 10));
+
+      } catch (err) {
+        console.error('Error fetching recent activity:', err);
+      }
+    };
+
+    fetchRecentActivity();
   }, []);
 
   // Show main loader while role and initial data is loading
@@ -185,7 +274,7 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
         <div className="bg-card rounded-lg shadow-sm p-4 border flex items-center justify-between">
           <div>
             <div className="text-sm text-muted-foreground font-medium">Tasks Completed</div>
-            <div className="text-2xl font-bold">85%</div> {/* Placeholder */}
+            <div className="text-2xl font-bold">{tasksCompletionRate}%</div>
           </div>
           <div className="bg-[var(--status-warning-bg)] rounded-full p-3">
             <svg className="w-6 h-6 text-[var(--status-warning-text)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12.75l3 3 6-6m7.5 5.25a4.5 4.5 0 01-1.414 3.174c-.872.738-1.985.872-3.037.872c-1.053 0-2.165-.134-3.037-.872a4.5 4.5 0 01-1.414-3.174c0-1.053.134-2.165.872-3.037a4.5 4.5 0 013.174-1.414c1.053 0 2.165.134 3.037.872.738.872.872 1.985.872 3.037z"></path></svg>
@@ -243,8 +332,34 @@ const OverviewView: React.FC<OverviewViewProps> = ({ onProjectSelect, onSwitchTo
             <svg className="w-6 h-6 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
             <h2 className="text-lg font-semibold text-foreground">Recent Activity</h2>
           </div>
-          <div className="text-muted-foreground text-center py-8">
-            <p>Activity feed coming soon...</p>
+          <div className="space-y-3">
+            {recentActivity.length > 0 ? (
+              recentActivity.map((activity, index) => (
+                <div key={index} className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors">
+                  <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
+                    activity.status === 'approved' || activity.status === 'completed' ? 'bg-green-500' :
+                    activity.status === 'submitted' || activity.status === 'draft' ? 'bg-yellow-500' :
+                    activity.status === 'rejected' ? 'bg-red-500' : 'bg-blue-500'
+                  }`} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">{activity.title}</p>
+                    <p className="text-xs text-muted-foreground truncate">{activity.description}</p>
+                    {activity.amount && (
+                      <p className="text-xs font-semibold text-foreground mt-1">
+                        ${activity.amount.toLocaleString()}
+                      </p>
+                    )}
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {activity.timestamp.toLocaleDateString()} {activity.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-center text-muted-foreground py-8">
+                <p>No recent activity</p>
+              </div>
+            )}
           </div>
         </div>
       </div>

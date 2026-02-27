@@ -7,17 +7,19 @@ import ContractorDetailView from '@/app/components/ContractorDetailView';
 import LoadingAnimation from '@/app/components/LoadingAnimation';
 import AppLayout from '@/app/components/AppLayout';
 import { authFetch } from '@/lib/authFetch';
+import { Contractor } from '@/lib/contractors/service';
 
-interface Contractor {
-  id: string;
-  company_name: string;
-  contact_name?: string;
-  email?: string;
-  phone?: string;
-  address?: string;
-  trade?: string;
-  status?: string;
-  [key: string]: any;
+interface Contract {
+  id: number;
+  project_id: number;
+  subcontractor_id: number;
+  contract_amount: number;
+  original_contract_amount: number;
+  paid_to_date: number;
+  start_date?: string;
+  end_date?: string;
+  contract_status?: string;
+  budget_item_id?: number | null;
 }
 
 function ContractorDetailContent() {
@@ -28,44 +30,55 @@ function ContractorDetailContent() {
   const contractorId = params?.contractorId as string;
 
   const [contractor, setContractor] = useState<Contractor | null>(null);
+  const [contract, setContract] = useState<Contract | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchContractor = async () => {
-      if (!contractorId) return;
+    const fetchData = async () => {
+      if (!contractorId || !projectId) return;
 
       try {
         setIsLoading(true);
-        const response = await authFetch(`/api/contractors/${contractorId}`);
 
-        if (!response.ok) {
+        // Fetch contractor
+        const contractorResponse = await authFetch(`/api/contractors/${contractorId}`);
+        if (!contractorResponse.ok) {
           throw new Error('Failed to fetch contractor');
         }
+        const contractorData = await contractorResponse.json();
+        setContractor(contractorData.contractor || contractorData);
 
-        const data = await response.json();
-        setContractor(data);
+        // Fetch contract for this contractor on this project
+        const contractResponse = await authFetch(
+          `/api/projects/${projectId}/contractors/${contractorId}/contract`
+        );
+        if (!contractResponse.ok) {
+          throw new Error('Failed to fetch contract');
+        }
+        const contractData = await contractResponse.json();
+        setContract(contractData.contract || contractData);
       } catch (err) {
-        console.error('Error fetching contractor:', err);
-        setError('Failed to load contractor');
+        console.error('Error fetching data:', err);
+        setError('Failed to load contractor details');
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchContractor();
-  }, [contractorId]);
+    fetchData();
+  }, [contractorId, projectId]);
 
   if (isLoading) {
     return <LoadingAnimation text="Loading contractor..." />;
   }
 
-  if (error || !contractor) {
+  if (error || !contractor || !contract) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] p-8">
         <div className="text-center">
           <h2 className="text-2xl font-semibold text-destructive mb-4">
-            {error || 'Contractor not found'}
+            {error || 'Contractor or contract not found'}
           </h2>
           <button
             onClick={() => router.push(`/projects/${projectId}`)}
@@ -80,15 +93,9 @@ function ContractorDetailContent() {
 
   return (
     <ContractorDetailView
+      contract={contract}
       contractor={contractor}
-      projectId={parseInt(projectId)}
       onBack={() => router.push(`/projects/${projectId}`)}
-      onEdit={(updatedContractor) => {
-        setContractor(updatedContractor);
-      }}
-      onDelete={() => {
-        router.push(`/projects/${projectId}`);
-      }}
     />
   );
 }

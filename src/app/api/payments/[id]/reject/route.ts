@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin as supabase } from '@/lib/supabaseClient';
+import { sendSMSNotification } from '@/lib/notificationService';
+import { formatCurrency } from '@/lib/theme';
 
 export const runtime = 'nodejs';
 
@@ -75,6 +77,26 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
 
     console.log(`Payment application ${paymentAppId} rejected by ${userName}${rejectionNotes ? ' - Notes: ' + rejectionNotes : ''}`);
+
+    // Send notification to contractor
+    if (updatedApp.contractor?.phone) {
+      const notification = await sendSMSNotification(
+        updatedApp.contractor.phone,
+        'payment_rejected',
+        {
+          projectName: updatedApp.project?.name || 'Unknown Project',
+          amount: formatCurrency(updatedApp.current_period_value || 0),
+          applicationNumber: paymentAppId.toString(),
+          reason: rejectionNotes || 'No reason provided',
+        }
+      );
+
+      if (!notification.success) {
+        console.error('[Payment Rejection] Failed to send notification:', notification.error);
+      } else {
+        console.log('[Payment Rejection] Notification sent:', notification.messageId);
+      }
+    }
 
     return NextResponse.json({
       message: 'Payment application rejected successfully',

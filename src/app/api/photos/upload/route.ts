@@ -170,10 +170,3 @@ export const POST = withAuth(async (request: NextRequest, user: any) => {
   }
 });
 
-// Disable Next.js body parsing for multipart form data
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
-
