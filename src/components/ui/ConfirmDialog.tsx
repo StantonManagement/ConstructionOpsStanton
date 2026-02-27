@@ -105,7 +105,8 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   return (
     <div
       className="fixed inset-0 backdrop-blur-sm bg-black/50 flex items-center justify-center z-[9998] p-4"
-      onClick={handleCancel}
+      // Removed onClick={handleCancel} to prevent closing on outside click
+      // Dialog should only close via Cancel button or X button
     >
       <div
         className="bg-card rounded-2xl shadow-2xl max-w-lg w-full border border-border"

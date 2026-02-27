@@ -50,6 +50,7 @@ function DialogContent({
   className,
   children,
   showCloseButton = true,
+  onInteractOutside,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean
@@ -68,6 +69,15 @@ function DialogContent({
           "sm:max-w-lg",
           className
         )}
+        onInteractOutside={(e) => {
+          // Prevent dialog from closing when clicking outside
+          // This is a UX improvement to avoid accidental data loss
+          e.preventDefault();
+          // If a custom handler is provided, call it
+          if (onInteractOutside) {
+            onInteractOutside(e);
+          }
+        }}
         {...props}
       >
         {children}

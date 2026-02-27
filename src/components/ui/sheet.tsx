@@ -56,12 +56,21 @@ interface SheetContentProps
 const SheetContent = React.forwardRef<
   React.ElementRef<typeof SheetPrimitive.Content>,
   SheetContentProps
->(({ side = "right", className, children, ...props }, ref) => (
+>(({ side = "right", className, children, onInteractOutside, ...props }, ref) => (
   <SheetPortal>
     <SheetOverlay />
     <SheetPrimitive.Content
       ref={ref}
       className={cn(sheetVariants({ side }), className)}
+      onInteractOutside={(e) => {
+        // Prevent sheet from closing when clicking outside
+        // This is a UX improvement to avoid accidental data loss
+        e.preventDefault();
+        // If a custom handler is provided, call it
+        if (onInteractOutside) {
+          onInteractOutside(e);
+        }
+      }}
       {...props}
     >
       {children}
