@@ -19,6 +19,7 @@ import ProjectsSkeleton from './ProjectsSkeleton';
 import AuditLog from './AuditLog';
 import { usePortfolio } from '@/context/PortfolioContext';
 import { GlobalFilterBar } from '@/components/GlobalFilterBar';
+import { useModal } from '@/context/ModalContext';
 
 // Form validation utilities
 const validators = {
@@ -215,6 +216,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { selectedPortfolioId, selectedYear } = usePortfolio();
+  const { showToast } = useModal();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -462,6 +464,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
         throw new Error(json.error || 'Failed to create project');
       }
 
+      showToast({ message: 'Project created successfully!', type: 'success' });
       setShowNewProjectForm(false);
       await fetchProjects();
     } catch (err) {
@@ -491,6 +494,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
         throw new Error(json.error || 'Failed to update project');
       }
 
+      showToast({ message: 'Project updated successfully!', type: 'success' });
       setShowEditProjectForm(false);
       setEditingProject(null);
       await fetchProjects();
@@ -526,10 +530,12 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
       }
 
       const result = await response.json();
-      
+
+      showToast({ message: 'Project deleted successfully!', type: 'success' });
+
       // Refresh the projects list
       await fetchProjects();
-      
+
       // If in detail view, go back to list
       if (showDetailView) {
         handleBackToList();

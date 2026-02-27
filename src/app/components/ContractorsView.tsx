@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { 
-  Search, Phone, Mail, CheckCircle, XCircle, AlertCircle, UserPlus, 
+import {
+  Search, Phone, Mail, CheckCircle, XCircle, AlertCircle, UserPlus,
   ChevronRight, Building, Edit2, Trash2, MessageSquare, RefreshCw,
   Star, Shield, MoreVertical, X, HardHat
 } from 'lucide-react';
@@ -16,6 +16,7 @@ import VendorDetailView from './VendorDetailView';
 import PageContainer from './PageContainer';
 import ContractorsSkeleton from './ContractorsSkeleton';
 import AuditLog from './AuditLog';
+import { useModal } from '@/context/ModalContext';
 
 interface Contractor {
   id: number;
@@ -354,6 +355,7 @@ const DeleteConfirmModal: React.FC<{
 };
 
 const ContractorsView: React.FC<ContractorsViewProps> = ({ searchQuery = '' }) => {
+  const { showToast } = useModal();
   const [contractors, setContractors] = useState<Contractor[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -506,7 +508,9 @@ const ContractorsView: React.FC<ContractorsViewProps> = ({ searchQuery = '' }) =
 
       const result = await response.json();
       const data = result.contractor;
-      
+
+      showToast({ message: 'Contractor added successfully!', type: 'success' });
+
       // Add to local state with default aggregated values
       setContractors(prev => [...prev, {
         ...data,
@@ -515,7 +519,7 @@ const ContractorsView: React.FC<ContractorsViewProps> = ({ searchQuery = '' }) =
         total_paid: 0,
         active_projects: 0
       }]);
-      
+
       setShowAddModal(false);
     } catch (error) {
       console.error('Error adding contractor:', error);
@@ -542,16 +546,18 @@ const ContractorsView: React.FC<ContractorsViewProps> = ({ searchQuery = '' }) =
         .eq('id', editingContractor.id)
         .select()
         .single();
-      
+
       if (error) throw error;
-      
+
+      showToast({ message: 'Contractor updated successfully!', type: 'success' });
+
       // Update local state
-      setContractors(prev => prev.map(c => 
-        c.id === editingContractor.id 
+      setContractors(prev => prev.map(c =>
+        c.id === editingContractor.id
           ? { ...c, ...data }
           : c
       ));
-      
+
       setEditingContractor(null);
     } catch (error) {
       console.error('Error updating contractor:', error);
@@ -569,9 +575,11 @@ const ContractorsView: React.FC<ContractorsViewProps> = ({ searchQuery = '' }) =
         .from('contractors')
         .delete()
         .eq('id', deletingContractor.id);
-      
+
       if (error) throw error;
-      
+
+      showToast({ message: 'Contractor deleted successfully!', type: 'success' });
+
       // Remove from local state
       setContractors(prev => prev.filter(c => c.id !== deletingContractor.id));
       setDeletingContractor(null);
