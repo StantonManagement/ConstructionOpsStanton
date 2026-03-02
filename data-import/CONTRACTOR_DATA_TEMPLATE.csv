@@ -1,0 +1,11 @@
+contractor_name,trade,phone,email,status,performance_score,notes
+"[Contractor 1 Name]","Electrical","+1 (555) 123-4567","contractor1@email.com","active","85","Main electrician"
+"[Contractor 2 Name]","Plumbing","+1 (555) 234-5678","contractor2@email.com","active","90","Primary plumber"
+"[Contractor 3 Name]","HVAC","+1 (555) 345-6789","contractor3@email.com","active","75","HVAC specialist"
+"[Contractor 4 Name]","Framing","+1 (555) 456-7890","contractor4@email.com","active","80","Framing crew"
+"[Contractor 5 Name]","Drywall","+1 (555) 567-8901","contractor5@email.com","active","88","Drywall installation"
+"[Contractor 6 Name]","Painting","+1 (555) 678-9012","contractor6@email.com","active","82","Interior/exterior painting"
+"[Contractor 7 Name]","Flooring","+1 (555) 789-0123","contractor7@email.com","active","87","Hardwood and tile"
+"[Contractor 8 Name]","Roofing","+1 (555) 890-1234","contractor8@email.com","active","79","Roofing specialist"
+"[Contractor 9 Name]","Landscaping","+1 (555) 901-2345","contractor9@email.com","active","84","Landscape and hardscape"
+"[Contractor 10 Name]","General","+1 (555) 012-3456","contractor10@email.com","active","86","General contractor"

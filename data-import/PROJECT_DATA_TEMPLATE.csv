@@ -1,0 +1,11 @@
+project_name,address,client_name,budget,start_date,target_completion_date,current_phase,status,project_type,portfolio_name,total_units,notes
+"Studio at Weston","[Address TBD]","[Client Name]","0","2024-01-01","2024-12-31","Rough-In","active","renovation","Park Portfolio","1","Main renovation project"
+"31 Park","[Address TBD]","Park Portfolio LLC","0","2024-01-01","2024-12-31","Finishing","active","renovation","Park Portfolio","1","Near completion"
+"213 Buckingham","213 Buckingham St","[Client Name]","0","2024-01-01","2024-06-30","Planning","active","single_scope","","1","Retaining wall project"
+"Unit Turnovers","[Various Addresses]","Park Portfolio LLC","0","2024-01-01","2024-12-31","Ongoing","active","unit_turnover","Park Portfolio","10","Multiple units being turned over"
+"90 Park","90 Park Ave","Park Portfolio LLC","0","2024-02-01","2024-03-31","Emergency Repairs","active","emergency","Park Portfolio","1","Emergency repair work"
+"15 Whitmore","15 Whitmore St","[Client Name]","0","2024-02-01","2024-03-31","Emergency Repairs","active","emergency","","1","Emergency repair work"
+"Zach's House (New City)","[Address in New City]","Zach","0","2024-01-01","2024-12-31","Framing","active","external","","1","External project for Zach"
+"165 Westland","165 Westland Ave","[Client Name]","0","2024-01-01","2024-08-31","Demo","active","renovation","","1","Renovation project"
+"10 Walkit","10 Walkit Rd","[Client Name]","0","2024-01-01","2024-12-31","Finishing","active","renovation","","1","Near completion"
+"Park Portfolio Water Conservation","[Park Portfolio Properties]","Park Portfolio LLC","0","2026-03-07","2026-12-31","Planning","active","upcoming","Park Portfolio","50","Upcoming water conservation initiative across portfolio"
