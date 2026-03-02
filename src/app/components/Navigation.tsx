@@ -6,7 +6,8 @@ import {
   DollarSign, Settings, BarChart2, Menu, X,
   HardHat, Building,
   CreditCard, Wallet,
-  LayoutDashboard, Box, Copy, AlertTriangle, Folder, BarChart3, LogOut, FileText, Users, UserCog
+  LayoutDashboard, Box, Copy, AlertTriangle, Folder, BarChart3, LogOut, FileText, Users, UserCog,
+  Truck, Package
 } from 'lucide-react';
 import { Project } from '@/context/DataContext';
 import { supabase } from '@/lib/supabaseClient';
@@ -269,6 +270,30 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab }) => {
               type="contractors"
             />
           </div>
+
+          <NavButton
+            id="trucks"
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            icon={<Truck className="w-5 h-5"/>}
+            href="/trucks"
+            isActive={pathname === '/trucks'}
+            onMobileClick={closeMobileMenu}
+          >
+            Trucks
+          </NavButton>
+
+          <NavButton
+            id="inventory"
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            icon={<Package className="w-5 h-5"/>}
+            href="/inventory"
+            isActive={pathname?.startsWith('/inventory')}
+            onMobileClick={closeMobileMenu}
+          >
+            Inventory
+          </NavButton>
 
           <NavButton
             id="bid-rounds"
