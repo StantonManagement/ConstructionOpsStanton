@@ -166,14 +166,14 @@ COMMIT;
 -- Rollback command (if you need to undo immediately):
 -- ROLLBACK;
 
--- Post-migration queries to run manually:
+-- Post-migration verification queries (run these manually if needed):
 /*
--- Verify purge was successful
+-- Check that tables are empty
 SELECT
     (SELECT COUNT(*) FROM projects) as projects,
-    (SELECT COUNT(*) FROM payment_applications) as payment_apps,
-    (SELECT COUNT(*) FROM daily_logs) as daily_logs,
-    (SELECT COUNT(*) FROM tasks) as tasks,
+    (SELECT COUNT(*) FROM contractors) as contractors,
     (SELECT COUNT(*) FROM budgets) as budgets,
-    (SELECT COUNT(*) FROM users) as users_preserved;
+    (SELECT COUNT(*) FROM tasks) as tasks;
+
+-- Note: Users are in auth schema (auth.users), not public schema
 */
