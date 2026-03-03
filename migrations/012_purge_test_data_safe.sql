@@ -19,6 +19,7 @@ DO $$
 DECLARE
     tbl_name TEXT;
     tables_to_purge TEXT[] := ARRAY[
+        -- Most dependent tables first (leaf nodes)
         'lien_waivers',
         'payment_application_photos',
         'payment_applications',
@@ -45,6 +46,7 @@ DECLARE
         'loan_budget_items',
         'loans',
         'project_contractors',
+        'project_line_items',  -- Added: must come before line_items and contracts
         'line_items',
         'budgets',
         'contracts',
