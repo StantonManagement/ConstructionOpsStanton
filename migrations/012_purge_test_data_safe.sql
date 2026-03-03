@@ -120,6 +120,7 @@ DECLARE
     contractor_count INTEGER;
     payment_count INTEGER;
     user_count INTEGER;
+    users_table_exists BOOLEAN;
 BEGIN
     RAISE NOTICE '';
     RAISE NOTICE 'Verification:';
@@ -129,26 +130,35 @@ BEGIN
     SELECT COUNT(*) INTO project_count FROM projects;
     RAISE NOTICE 'Projects remaining: %', project_count;
 
-    IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'contractors') THEN
+    IF EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'contractors') THEN
         SELECT COUNT(*) INTO contractor_count FROM contractors;
         RAISE NOTICE 'Contractors remaining: %', contractor_count;
     END IF;
 
-    IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'payment_applications') THEN
+    IF EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'payment_applications') THEN
         SELECT COUNT(*) INTO payment_count FROM payment_applications;
         RAISE NOTICE 'Payment applications remaining: %', payment_count;
     END IF;
 
-    -- Verify users are preserved
-    SELECT COUNT(*) INTO user_count FROM users;
-    RAISE NOTICE 'Users preserved: %', user_count;
+    -- Check if users table exists (might be in auth schema instead of public)
+    SELECT EXISTS (
+        SELECT FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = 'users'
+    ) INTO users_table_exists;
+
+    IF users_table_exists THEN
+        SELECT COUNT(*) INTO user_count FROM users;
+        RAISE NOTICE 'Users preserved: %', user_count;
+    ELSE
+        RAISE NOTICE 'Users table not in public schema (likely using Supabase auth.users)';
+    END IF;
 
     IF project_count > 0 THEN
         RAISE WARNING 'Some projects were not deleted (likely due to FK constraints)';
     END IF;
 
     RAISE NOTICE '----------------------------------------';
-    RAISE NOTICE 'User accounts and roles were preserved';
+    RAISE NOTICE 'Purge complete! Authentication data preserved.';
 END $$;
 
 COMMIT;
