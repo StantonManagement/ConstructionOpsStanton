@@ -17,7 +17,7 @@ BEGIN;
 -- Helper function to safely delete from table if it exists
 DO $$
 DECLARE
-    table_name TEXT;
+    tbl_name TEXT;
     tables_to_purge TEXT[] := ARRAY[
         'lien_waivers',
         'payment_application_photos',
@@ -68,22 +68,22 @@ BEGIN
     RAISE NOTICE 'Starting safe test data purge...';
     RAISE NOTICE '----------------------------------------';
 
-    FOREACH table_name IN ARRAY tables_to_purge
+    FOREACH tbl_name IN ARRAY tables_to_purge
     LOOP
         -- Check if table exists
         SELECT EXISTS (
             SELECT FROM information_schema.tables
             WHERE table_schema = 'public'
-            AND table_name = table_name
+            AND table_name = tbl_name
         ) INTO table_exists;
 
         IF table_exists THEN
             -- Execute delete and get count
-            EXECUTE format('DELETE FROM %I', table_name);
+            EXECUTE format('DELETE FROM %I', tbl_name);
             GET DIAGNOSTICS deleted_count = ROW_COUNT;
-            RAISE NOTICE 'Deleted % rows from %', deleted_count, table_name;
+            RAISE NOTICE 'Deleted % rows from %', deleted_count, tbl_name;
         ELSE
-            RAISE NOTICE 'Table % does not exist, skipping', table_name;
+            RAISE NOTICE 'Table % does not exist, skipping', tbl_name;
         END IF;
     END LOOP;
 
