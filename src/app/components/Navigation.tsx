@@ -257,7 +257,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab }) => {
             <CollapsibleNavItem
               icon={<Box className="w-5 h-5"/>}
               label="Components"
-              href="/components"
+              href="/showcase"
               type="components"
             />
           </div>
