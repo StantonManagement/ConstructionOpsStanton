@@ -7,7 +7,7 @@ import {
   HardHat, Building,
   CreditCard, Wallet,
   LayoutDashboard, Box, Copy, AlertTriangle, Folder, BarChart3, LogOut, FileText, Users, UserCog,
-  Truck, Package
+  Truck, Package, ListChecks
 } from 'lucide-react';
 import { Project } from '@/context/DataContext';
 import { supabase } from '@/lib/supabaseClient';
@@ -239,6 +239,18 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab }) => {
             onMobileClick={closeMobileMenu}
           >
             Dashboard
+          </NavButton>
+
+          <NavButton
+            id="action-items"
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            icon={<ListChecks className="w-5 h-5"/>}
+            href="/dashboard-action-items"
+            isActive={pathname === '/dashboard-action-items'}
+            onMobileClick={closeMobileMenu}
+          >
+            Action Items
           </NavButton>
 
           {/* Divider */}
