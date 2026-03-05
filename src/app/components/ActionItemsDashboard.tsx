@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Flame, AlertTriangle, TrendingUp, Eye, Archive, Zap, Calendar, User, FileText, CheckCircle2, Clock, XCircle, Plus } from 'lucide-react';
+import { Flame, AlertTriangle, TrendingUp, Eye, Archive, Zap, Calendar, User, FileText, CheckCircle2, Clock, XCircle, Plus, Sparkles } from 'lucide-react';
 import { authFetch } from '@/lib/authFetch';
 import LoadingAnimation from './LoadingAnimation';
 import PageContainer from './PageContainer';
@@ -114,6 +114,7 @@ export default function ActionItemsDashboard() {
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [editingPriorityId, setEditingPriorityId] = useState<number | null>(null);
   const [updatingItemId, setUpdatingItemId] = useState<number | null>(null);
+  const [isAutoGenerating, setIsAutoGenerating] = useState(false);
 
   useEffect(() => {
     fetchActionItems();
@@ -205,6 +206,44 @@ export default function ActionItemsDashboard() {
     }
   };
 
+  const handleAutoGenerate = async () => {
+    if (!confirm('Run auto-generation to create action items for:\n\n• Budget overspend (>80% spent)\n• Overdue tasks (>3 days)\n• Missing documentation (>7 days)\n• Pending payments (>3 days)\n• Upcoming milestones (<14 days)\n\nContinue?')) return;
+
+    try {
+      setIsAutoGenerating(true);
+
+      const response = await authFetch('/api/action-items/auto-generate', {
+        method: 'POST'
+      });
+
+      if (!response.ok) {
+        throw new Error('Auto-generation failed');
+      }
+
+      const result = await response.json();
+      const { summary } = result;
+
+      // Refresh the list
+      await fetchActionItems();
+
+      // Show success message
+      alert(
+        `Auto-generation complete!\n\n` +
+        `Total items created: ${summary.totalItemsCreated}\n` +
+        `Projects affected: ${summary.totalProjectsAffected}\n\n` +
+        `Breakdown:\n` +
+        summary.breakdown.map((b: { trigger: string; itemsCreated: number }) =>
+          `• ${b.trigger}: ${b.itemsCreated} items`
+        ).join('\n')
+      );
+    } catch (error) {
+      console.error('Failed to auto-generate items:', error);
+      alert('Failed to auto-generate items. Please try again.');
+    } finally {
+      setIsAutoGenerating(false);
+    }
+  };
+
   const groupedByPriority = actionItems.reduce((acc, item) => {
     if (!acc[item.priority]) {
       acc[item.priority] = [];
@@ -232,13 +271,23 @@ export default function ActionItemsDashboard() {
             <h1 className="text-3xl font-bold text-foreground mb-2">Action Items Dashboard</h1>
             <p className="text-muted-foreground">Consolidated priority view across all projects</p>
           </div>
-          <button
-            onClick={() => setIsQuickAddOpen(true)}
-            className="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-semibold flex items-center gap-2 shadow-lg"
-          >
-            <Plus className="w-5 h-5" />
-            Quick Add
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleAutoGenerate}
+              disabled={isAutoGenerating}
+              className="px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-semibold flex items-center gap-2 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Sparkles className={`w-5 h-5 ${isAutoGenerating ? 'animate-spin' : ''}`} />
+              {isAutoGenerating ? 'Generating...' : 'Auto-Generate'}
+            </button>
+            <button
+              onClick={() => setIsQuickAddOpen(true)}
+              className="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-semibold flex items-center gap-2 shadow-lg"
+            >
+              <Plus className="w-5 h-5" />
+              Quick Add
+            </button>
+          </div>
         </div>
 
         {/* Summary Stats */}
