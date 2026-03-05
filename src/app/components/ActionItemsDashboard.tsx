@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Flame, AlertTriangle, TrendingUp, Eye, Archive, Zap, Calendar, User, FileText, CheckCircle2, Clock, XCircle, Plus, Sparkles } from 'lucide-react';
+import { Flame, AlertTriangle, TrendingUp, Eye, Archive, Zap, Calendar, User, FileText, CheckCircle2, Clock, XCircle, Plus, Sparkles, RefreshCcw } from 'lucide-react';
 import { authFetch } from '@/lib/authFetch';
 import LoadingAnimation from './LoadingAnimation';
 import PageContainer from './PageContainer';
@@ -115,6 +115,7 @@ export default function ActionItemsDashboard() {
   const [editingPriorityId, setEditingPriorityId] = useState<number | null>(null);
   const [updatingItemId, setUpdatingItemId] = useState<number | null>(null);
   const [isAutoGenerating, setIsAutoGenerating] = useState(false);
+  const [isDetectingStale, setIsDetectingStale] = useState(false);
 
   useEffect(() => {
     fetchActionItems();
@@ -244,6 +245,41 @@ export default function ActionItemsDashboard() {
     }
   };
 
+  const handleStaleDetection = async () => {
+    if (!confirm('Run stale detection to mark items that have been:\n\n• Deprioritized (priority lowered to 4 or 5)\n• Ignored for 3+ days\n• Not updated recently\n\nAlso unmarks items that have been updated or re-prioritized.\n\nContinue?')) return;
+
+    try {
+      setIsDetectingStale(true);
+
+      const response = await authFetch('/api/action-items/stale-detection', {
+        method: 'POST'
+      });
+
+      if (!response.ok) {
+        throw new Error('Stale detection failed');
+      }
+
+      const result = await response.json();
+      const { summary } = result;
+
+      // Refresh the list
+      await fetchActionItems();
+
+      // Show success message
+      alert(
+        `Stale detection complete!\n\n` +
+        `Items marked as stale: ${summary.itemsMarked}\n` +
+        `Items unmarked: ${summary.itemsUnmarked}\n` +
+        `Total changes: ${summary.totalChanges}`
+      );
+    } catch (error) {
+      console.error('Failed to run stale detection:', error);
+      alert('Failed to run stale detection. Please try again.');
+    } finally {
+      setIsDetectingStale(false);
+    }
+  };
+
   const groupedByPriority = actionItems.reduce((acc, item) => {
     if (!acc[item.priority]) {
       acc[item.priority] = [];
@@ -273,9 +309,19 @@ export default function ActionItemsDashboard() {
           </div>
           <div className="flex items-center gap-3">
             <button
+              onClick={handleStaleDetection}
+              disabled={isDetectingStale}
+              className="px-4 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors font-semibold flex items-center gap-2 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Detect and mark stale items"
+            >
+              <RefreshCcw className={`w-5 h-5 ${isDetectingStale ? 'animate-spin' : ''}`} />
+              {isDetectingStale ? 'Detecting...' : 'Detect Stale'}
+            </button>
+            <button
               onClick={handleAutoGenerate}
               disabled={isAutoGenerating}
               className="px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-semibold flex items-center gap-2 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Auto-generate action items"
             >
               <Sparkles className={`w-5 h-5 ${isAutoGenerating ? 'animate-spin' : ''}`} />
               {isAutoGenerating ? 'Generating...' : 'Auto-Generate'}
