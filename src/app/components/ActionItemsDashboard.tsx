@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Flame, AlertTriangle, TrendingUp, Eye, Archive, Zap, Calendar, User, FileText, CheckCircle2, Clock, XCircle, Plus, Sparkles, RefreshCcw } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Flame, AlertTriangle, TrendingUp, Eye, Archive, Zap, Calendar, User, FileText, CheckCircle2, Clock, XCircle, Plus, Sparkles, RefreshCcw, Filter, X } from 'lucide-react';
 import { authFetch } from '@/lib/authFetch';
 import LoadingAnimation from './LoadingAnimation';
 import PageContainer from './PageContainer';
@@ -108,6 +109,9 @@ const isOverdue = (followUpDate: string | null): boolean => {
 };
 
 export default function ActionItemsDashboard() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
   const [actionItems, setActionItems] = useState<ActionItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set());
@@ -116,6 +120,16 @@ export default function ActionItemsDashboard() {
   const [updatingItemId, setUpdatingItemId] = useState<number | null>(null);
   const [isAutoGenerating, setIsAutoGenerating] = useState(false);
   const [isDetectingStale, setIsDetectingStale] = useState(false);
+
+  // Filter state - initialized from URL params
+  const [filterProject, setFilterProject] = useState<string>(searchParams.get('project') || 'all');
+  const [filterPriorities, setFilterPriorities] = useState<Set<number>>(
+    new Set(searchParams.get('priorities')?.split(',').map(Number).filter(n => !isNaN(n)) || [])
+  );
+  const [filterStatuses, setFilterStatuses] = useState<Set<string>>(
+    new Set(searchParams.get('statuses')?.split(',').filter(Boolean) || [])
+  );
+  const [filterAssignedUser, setFilterAssignedUser] = useState<string>(searchParams.get('user') || 'all');
 
   useEffect(() => {
     fetchActionItems();
@@ -280,7 +294,74 @@ export default function ActionItemsDashboard() {
     }
   };
 
-  const groupedByPriority = actionItems.reduce((acc, item) => {
+  // Sync filters to URL
+  useEffect(() => {
+    const params = new URLSearchParams();
+
+    if (filterProject !== 'all') params.set('project', filterProject);
+    if (filterPriorities.size > 0) params.set('priorities', Array.from(filterPriorities).join(','));
+    if (filterStatuses.size > 0) params.set('statuses', Array.from(filterStatuses).join(','));
+    if (filterAssignedUser !== 'all') params.set('user', filterAssignedUser);
+
+    const queryString = params.toString();
+    const newUrl = queryString ? `?${queryString}` : '/dashboard-action-items';
+    router.replace(newUrl, { scroll: false });
+  }, [filterProject, filterPriorities, filterStatuses, filterAssignedUser, router]);
+
+  // Apply filters
+  const filteredItems = useMemo(() => {
+    return actionItems.filter(item => {
+      // Project filter
+      if (filterProject !== 'all' && item.project_id.toString() !== filterProject) {
+        return false;
+      }
+
+      // Priority filter (checkboxes - if any selected, only show those)
+      if (filterPriorities.size > 0 && !filterPriorities.has(item.priority)) {
+        return false;
+      }
+
+      // Status filter (checkboxes - if any selected, only show those)
+      if (filterStatuses.size > 0 && !filterStatuses.has(item.status)) {
+        return false;
+      }
+
+      // Assigned user filter
+      if (filterAssignedUser !== 'all') {
+        if (filterAssignedUser === 'unassigned' && item.assigned_to_user_id !== null) {
+          return false;
+        }
+        if (filterAssignedUser !== 'unassigned' && item.assigned_to_user_id !== filterAssignedUser) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [actionItems, filterProject, filterPriorities, filterStatuses, filterAssignedUser]);
+
+  // Get unique projects and users for dropdowns
+  const uniqueProjects = useMemo(() => {
+    const projectMap = new Map<number, string>();
+    actionItems.forEach(item => {
+      if (!projectMap.has(item.project_id)) {
+        projectMap.set(item.project_id, item.project.name);
+      }
+    });
+    return Array.from(projectMap.entries()).map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name));
+  }, [actionItems]);
+
+  const uniqueUsers = useMemo(() => {
+    const userMap = new Map<string, string>();
+    actionItems.forEach(item => {
+      if (item.assigned_to && item.assigned_to_user_id) {
+        userMap.set(item.assigned_to_user_id, item.assigned_to.email);
+      }
+    });
+    return Array.from(userMap.entries()).map(([id, email]) => ({ id, email })).sort((a, b) => a.email.localeCompare(b.email));
+  }, [actionItems]);
+
+  const groupedByPriority = filteredItems.reduce((acc, item) => {
     if (!acc[item.priority]) {
       acc[item.priority] = [];
     }
@@ -289,9 +370,38 @@ export default function ActionItemsDashboard() {
   }, {} as Record<number, ActionItem[]>);
 
   const stats = {
-    open: actionItems.filter(i => i.status === 'open').length,
-    stale: actionItems.filter(i => i.stale).length,
-    resolved: actionItems.filter(i => i.status === 'resolved').length
+    open: filteredItems.filter(i => i.status === 'open').length,
+    stale: filteredItems.filter(i => i.stale).length,
+    resolved: filteredItems.filter(i => i.status === 'resolved').length
+  };
+
+  const hasActiveFilters = filterProject !== 'all' || filterPriorities.size > 0 || filterStatuses.size > 0 || filterAssignedUser !== 'all';
+
+  const clearAllFilters = () => {
+    setFilterProject('all');
+    setFilterPriorities(new Set());
+    setFilterStatuses(new Set());
+    setFilterAssignedUser('all');
+  };
+
+  const togglePriorityFilter = (priority: number) => {
+    const newSet = new Set(filterPriorities);
+    if (newSet.has(priority)) {
+      newSet.delete(priority);
+    } else {
+      newSet.add(priority);
+    }
+    setFilterPriorities(newSet);
+  };
+
+  const toggleStatusFilter = (status: string) => {
+    const newSet = new Set(filterStatuses);
+    if (newSet.has(status)) {
+      newSet.delete(status);
+    } else {
+      newSet.add(status);
+    }
+    setFilterStatuses(newSet);
   };
 
   if (isLoading) {
@@ -373,6 +483,155 @@ export default function ActionItemsDashboard() {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Quick Filters */}
+        <div className="bg-card border border-border rounded-lg p-6 mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Filter className="w-5 h-5 text-muted-foreground" />
+              <h2 className="text-lg font-semibold text-foreground">Quick Filters</h2>
+            </div>
+            {hasActiveFilters && (
+              <button
+                onClick={clearAllFilters}
+                className="flex items-center gap-2 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
+              >
+                <X className="w-4 h-4" />
+                Clear All
+              </button>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Project Filter */}
+            <div>
+              <label className="block text-sm font-medium text-muted-foreground mb-2">
+                Project
+              </label>
+              <select
+                value={filterProject}
+                onChange={(e) => setFilterProject(e.target.value)}
+                className="w-full px-3 py-2 bg-background border border-input rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                <option value="all">All Projects ({actionItems.length})</option>
+                {uniqueProjects.map(project => (
+                  <option key={project.id} value={project.id.toString()}>
+                    {project.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Priority Filter (Checkboxes) */}
+            <div>
+              <label className="block text-sm font-medium text-muted-foreground mb-2">
+                Priority
+              </label>
+              <div className="space-y-2">
+                {[1, 2, 3, 4, 5].map(priority => (
+                  <label key={priority} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={filterPriorities.has(priority)}
+                      onChange={() => togglePriorityFilter(priority)}
+                      className="w-4 h-4 rounded border-input text-primary focus:ring-2 focus:ring-ring"
+                    />
+                    <span className="text-sm text-foreground">
+                      P{priority} - {PRIORITY_CONFIG[priority as keyof typeof PRIORITY_CONFIG].label}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Status Filter (Checkboxes) */}
+            <div>
+              <label className="block text-sm font-medium text-muted-foreground mb-2">
+                Status
+              </label>
+              <div className="space-y-2">
+                {['open', 'in_progress', 'waiting', 'resolved', 'deferred'].map(status => (
+                  <label key={status} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={filterStatuses.has(status)}
+                      onChange={() => toggleStatusFilter(status)}
+                      className="w-4 h-4 rounded border-input text-primary focus:ring-2 focus:ring-ring"
+                    />
+                    <span className="text-sm text-foreground">
+                      {STATUS_CONFIG[status]?.label || status}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Assigned User Filter */}
+            <div>
+              <label className="block text-sm font-medium text-muted-foreground mb-2">
+                Assigned To
+              </label>
+              <select
+                value={filterAssignedUser}
+                onChange={(e) => setFilterAssignedUser(e.target.value)}
+                className="w-full px-3 py-2 bg-background border border-input rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                <option value="all">All Users</option>
+                <option value="unassigned">Unassigned</option>
+                {uniqueUsers.map(user => (
+                  <option key={user.id} value={user.id}>
+                    {user.email}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Active Filters Summary */}
+          {hasActiveFilters && (
+            <div className="mt-4 pt-4 border-t border-border">
+              <p className="text-sm text-muted-foreground mb-2">Active filters:</p>
+              <div className="flex flex-wrap gap-2">
+                {filterProject !== 'all' && (
+                  <span className="inline-flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary text-sm rounded">
+                    Project: {uniqueProjects.find(p => p.id.toString() === filterProject)?.name}
+                    <button onClick={() => setFilterProject('all')} className="hover:text-primary/70">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                )}
+                {filterPriorities.size > 0 && (
+                  <span className="inline-flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary text-sm rounded">
+                    {filterPriorities.size} {filterPriorities.size === 1 ? 'Priority' : 'Priorities'}
+                    <button onClick={() => setFilterPriorities(new Set())} className="hover:text-primary/70">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                )}
+                {filterStatuses.size > 0 && (
+                  <span className="inline-flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary text-sm rounded">
+                    {filterStatuses.size} {filterStatuses.size === 1 ? 'Status' : 'Statuses'}
+                    <button onClick={() => setFilterStatuses(new Set())} className="hover:text-primary/70">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                )}
+                {filterAssignedUser !== 'all' && (
+                  <span className="inline-flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary text-sm rounded">
+                    User: {filterAssignedUser === 'unassigned' ? 'Unassigned' : uniqueUsers.find(u => u.id === filterAssignedUser)?.email}
+                    <button onClick={() => setFilterAssignedUser('all')} className="hover:text-primary/70">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                )}
+              </div>
+              <p className="text-sm text-muted-foreground mt-2">
+                Showing <strong className="text-foreground">{filteredItems.length}</strong> of{' '}
+                <strong className="text-foreground">{actionItems.length}</strong> items
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Priority Groups */}
