@@ -124,9 +124,10 @@ export default function ActionItemsDashboard() {
       setIsLoading(true);
       const response = await authFetch('/api/action-items');
       const data: ActionItemsResponse = await response.json();
-      setActionItems(data.action_items);
+      setActionItems(data.action_items || []);
     } catch (error) {
       console.error('Failed to fetch action items:', error);
+      setActionItems([]);
     } finally {
       setIsLoading(false);
     }
@@ -205,7 +206,7 @@ export default function ActionItemsDashboard() {
     }
   };
 
-  const groupedByPriority = actionItems.reduce((acc, item) => {
+  const groupedByPriority = (actionItems || []).reduce((acc, item) => {
     if (!acc[item.priority]) {
       acc[item.priority] = [];
     }
@@ -214,9 +215,9 @@ export default function ActionItemsDashboard() {
   }, {} as Record<number, ActionItem[]>);
 
   const stats = {
-    open: actionItems.filter(i => i.status === 'open').length,
-    stale: actionItems.filter(i => i.stale).length,
-    resolved: actionItems.filter(i => i.status === 'resolved').length
+    open: (actionItems || []).filter(i => i.status === 'open').length,
+    stale: (actionItems || []).filter(i => i.stale).length,
+    resolved: (actionItems || []).filter(i => i.status === 'resolved').length
   };
 
   if (isLoading) {
