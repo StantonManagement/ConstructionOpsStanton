@@ -363,10 +363,10 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ project, onBack, 
 
   useEffect(() => {
     // Save last active project to localStorage
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && project?.id) {
       localStorage.setItem('lastActiveProjectId', project.id.toString());
     }
-  }, [project.id]);
+  }, [project?.id]);
 
   // Handle Request Payment
   const handleRequestPayment = async (contractorId: number, contractId: number) => {
