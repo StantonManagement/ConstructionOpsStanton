@@ -86,7 +86,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     // Check if we have a project ID in the URL path (e.g. /projects/123/...)
     const pathMatch = pathname?.match(/\/projects\/(\d+)/);
-    
+
     if (pathMatch && pathMatch[1]) {
       const id = parseInt(pathMatch[1], 10);
       if (!isNaN(id) && id !== selectedProjectId) {
@@ -95,10 +95,10 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
         if (typeof window !== 'undefined') {
           localStorage.setItem('selectedProjectId', id.toString());
         }
-        return;
       }
+      return;
     }
-    
+
     // Check query param if not in path - URL takes precedence over localStorage
     const projectParam = searchParams.get('project');
     if (projectParam) {
@@ -110,14 +110,9 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
           localStorage.setItem('selectedProjectId', id.toString());
         }
       }
-    } else if (selectedProjectId !== null) {
-      // If no project in URL but we have one selected, clear it
-      // This ensures the dropdown shows "All Projects" when viewing all projects
-      setSelectedProjectIdState(null);
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('selectedProjectId');
-      }
     }
+    // Note: We removed the "else if (selectedProjectId !== null)" clause that was causing infinite loop
+    // The selectedProjectId can remain set even when not in URL - it's used for context elsewhere
   }, [pathname, searchParams, selectedProjectId]);
 
   // Handle setting project ID
