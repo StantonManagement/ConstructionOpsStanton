@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { authFetch } from '@/lib/authFetch';
 import { formatDate } from '@/lib/theme';
 import { AlertCircle, Plus, RefreshCw, X } from 'lucide-react';
@@ -74,6 +75,9 @@ const STATUS_LABELS = {
 
 const ConsolidatedDashboard: React.FC = () => {
   const { showToast } = useModal();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
   const [items, setItems] = useState<ActionItem[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
@@ -83,8 +87,12 @@ const ConsolidatedDashboard: React.FC = () => {
   const [priorityPickerId, setPriorityPickerId] = useState<number | null>(null);
   const [resolveId, setResolveId] = useState<number | null>(null);
   const [resolveNote, setResolveNote] = useState("");
-  const [filterProject, setFilterProject] = useState("all");
-  const [filterType, setFilterType] = useState("all");
+
+  // Enhanced filters with URL param initialization
+  const [filterProject, setFilterProject] = useState(searchParams.get('project') || "all");
+  const [filterType, setFilterType] = useState(searchParams.get('type') || "all");
+  const [filterPriority, setFilterPriority] = useState(searchParams.get('priority') || "all");
+  const [filterStatus, setFilterStatus] = useState(searchParams.get('status') || "all");
 
   // Quick add form state
   const [newTitle, setNewTitle] = useState("");
@@ -95,6 +103,18 @@ const ConsolidatedDashboard: React.FC = () => {
   useEffect(() => {
     if (showQuickAdd && titleRef.current) titleRef.current.focus();
   }, [showQuickAdd]);
+
+  // Update URL params when filters change
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (filterProject !== "all") params.set('project', filterProject);
+    if (filterType !== "all") params.set('type', filterType);
+    if (filterPriority !== "all") params.set('priority', filterPriority);
+    if (filterStatus !== "all") params.set('status', filterStatus);
+
+    const newUrl = params.toString() ? `?${params.toString()}` : '/dashboard-consolidated';
+    router.replace(newUrl, { scroll: false });
+  }, [filterProject, filterType, filterPriority, filterStatus, router]);
 
   // Fetch data
   useEffect(() => {
@@ -298,6 +318,15 @@ const ConsolidatedDashboard: React.FC = () => {
     let f = list;
     if (filterProject !== "all") f = f.filter(i => i.project_id === parseInt(filterProject));
     if (filterType !== "all") f = f.filter(i => i.type === filterType);
+
+    // Priority filter
+    if (filterPriority === "p1-2") f = f.filter(i => i.priority === 1 || i.priority === 2);
+    else if (filterPriority === "p3-5") f = f.filter(i => i.priority >= 3 && i.priority <= 5);
+    else if (filterPriority !== "all") f = f.filter(i => i.priority === parseInt(filterPriority));
+
+    // Status filter
+    if (filterStatus !== "all") f = f.filter(i => i.status === filterStatus);
+
     return f;
   };
 
@@ -352,34 +381,87 @@ const ConsolidatedDashboard: React.FC = () => {
       </div>
 
       {/* Filters */}
-      <div className="flex items-center gap-3 mb-6 p-4 bg-card border border-border rounded-lg">
-        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Filter</span>
-        <select
-          value={filterProject}
-          onChange={e => setFilterProject(e.target.value)}
-          className="px-3 py-1.5 text-sm border border-border rounded-md bg-background text-foreground"
-        >
-          <option value="all">All Projects</option>
-          {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-        </select>
-        <select
-          value={filterType}
-          onChange={e => setFilterType(e.target.value)}
-          className="px-3 py-1.5 text-sm border border-border rounded-md bg-background text-foreground"
-        >
-          <option value="all">All Types</option>
-          {Object.entries(TYPE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-        </select>
-        {(filterProject !== "all" || filterType !== "all") && (
-          <button
-            onClick={() => { setFilterProject("all"); setFilterType("all"); }}
-            className="text-sm text-destructive hover:text-destructive/80 font-medium"
+      <div className="mb-6 p-4 bg-card border border-border rounded-lg space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:flex-wrap">
+          <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Filters</span>
+
+          {/* Project Filter */}
+          <select
+            value={filterProject}
+            onChange={e => setFilterProject(e.target.value)}
+            className="w-full sm:w-auto px-3 py-1.5 text-sm border border-border rounded-md bg-background text-foreground"
           >
-            Clear filters
-          </button>
-        )}
-        <div className="ml-auto text-sm text-muted-foreground">
-          {activeItems.length} open · {staleItems.length} needs review · {resolvedCount} resolved
+            <option value="all">All Projects</option>
+            {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+          </select>
+
+          {/* Type Filter */}
+          <select
+            value={filterType}
+            onChange={e => setFilterType(e.target.value)}
+            className="w-full sm:w-auto px-3 py-1.5 text-sm border border-border rounded-md bg-background text-foreground"
+          >
+            <option value="all">All Types</option>
+            {Object.entries(TYPE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+          </select>
+
+          {/* Priority Filter */}
+          <select
+            value={filterPriority}
+            onChange={e => setFilterPriority(e.target.value)}
+            className="w-full sm:w-auto px-3 py-1.5 text-sm border border-border rounded-md bg-background text-foreground"
+          >
+            <option value="all">All Priorities</option>
+            <option value="p1-2">P1-2 (Crisis Mode)</option>
+            <option value="p3-5">P3-5 (Backlog)</option>
+            <option value="1">Priority 1</option>
+            <option value="2">Priority 2</option>
+            <option value="3">Priority 3</option>
+            <option value="4">Priority 4</option>
+            <option value="5">Priority 5</option>
+          </select>
+
+          {/* Status Filter */}
+          <select
+            value={filterStatus}
+            onChange={e => setFilterStatus(e.target.value)}
+            className="w-full sm:w-auto px-3 py-1.5 text-sm border border-border rounded-md bg-background text-foreground"
+          >
+            <option value="all">All Statuses</option>
+            {Object.entries(STATUS_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+          </select>
+
+          {/* Clear Filters Button */}
+          {(filterProject !== "all" || filterType !== "all" || filterPriority !== "all" || filterStatus !== "all") && (
+            <button
+              onClick={() => {
+                setFilterProject("all");
+                setFilterType("all");
+                setFilterPriority("all");
+                setFilterStatus("all");
+              }}
+              className="w-full sm:w-auto text-sm text-destructive hover:text-destructive/80 font-medium"
+            >
+              Clear all filters
+            </button>
+          )}
+        </div>
+
+        {/* Filter Count */}
+        <div className="flex items-center justify-between text-sm">
+          <div className="text-muted-foreground">
+            {(() => {
+              const filteredActive = filtered(activeItems);
+              const filteredStale = filtered(staleItems);
+              const totalFiltered = filteredActive.length + filteredStale.length;
+              const totalAll = activeItems.length + staleItems.length;
+              const hasFilters = filterProject !== "all" || filterType !== "all" || filterPriority !== "all" || filterStatus !== "all";
+
+              return hasFilters
+                ? `Showing ${totalFiltered} of ${totalAll} items`
+                : `${activeItems.length} open · ${staleItems.length} needs review · ${resolvedCount} resolved`;
+            })()}
+          </div>
         </div>
       </div>
 
