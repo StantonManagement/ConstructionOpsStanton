@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
+import { normalizePhoneNumber } from '@/lib/phoneUtils';
 import { FileText, Plus, Edit2, Trash2, Eye, AlertCircle, CheckCircle, Clock, RefreshCw, Phone, Mail, MessageSquare, Save, X } from 'lucide-react';
 import { useModal } from '@/context/ModalContext';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -213,10 +214,17 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
 
     console.log('[DailyLogs] Attempting to insert daily log request...');
     try {
+      // Normalize phone number to E.164 format for consistent matching
+      const normalizedPhone = normalizePhoneNumber(pmPhoneNumber.trim());
+      if (!normalizedPhone) {
+        setPhoneError('Invalid phone number format');
+        return;
+      }
+
       const insertData = {
         project_id: selectedProject.id,
         request_date: new Date().toISOString().split('T')[0],
-        pm_phone_number: pmPhoneNumber.trim(),
+        pm_phone_number: normalizedPhone,
         request_status: 'pending',
         request_time: requestTime
       };
