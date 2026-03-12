@@ -331,6 +331,19 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab }) => {
             Bid Management
           </NavButton>
 
+          <NavButton
+            id="daily-logs"
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            icon={<FileText className="w-5 h-5"/>}
+            href="/daily-logs"
+            isActive={pathname?.startsWith('/daily-logs')}
+            badge={notificationCounts['daily-logs']}
+            onMobileClick={closeMobileMenu}
+          >
+            Daily Logs
+          </NavButton>
+
           {/* Divider */}
           <div className="my-2 border-t border-border" />
 

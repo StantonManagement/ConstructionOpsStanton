@@ -62,7 +62,7 @@ After a call, Dan needs a fast way to get the transcript into the system. Curren
 
 ---
 
-## Task 26: AI Processing Service - Backend Integration
+##  
 
 **Priority:** CRITICAL
 **Effort:** 8-10 hours
@@ -140,7 +140,7 @@ The AI needs to receive both the transcript text AND the current dashboard state
 
 ---
 
-## Task 27: Review Mode - Dashboard State & UI Framework
+##  
 
 **Priority:** CRITICAL
 **Effort:** 5-7 hours

@@ -280,6 +280,43 @@ const ContractorDetailView: React.FC<ContractorDetailViewProps> = ({ contract, c
     fetchPaymentApplications();
   }, [fetchPaymentApplications]);
 
+  // Set up real-time subscription for new payment applications
+  useEffect(() => {
+    if (!contract.project_id || !contractor.id) return;
+
+    console.log('[ContractorDetailView] Setting up real-time subscription for payment applications');
+
+    // Subscribe to INSERT events on payment_applications table
+    const subscription = supabase
+      .channel(`payment_apps_${contract.project_id}_${contractor.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'payment_applications',
+          filter: `project_id=eq.${contract.project_id}`
+        },
+        (payload) => {
+          console.log('[ContractorDetailView] Payment application event detected:', payload);
+          // Check if this payment app is for our contractor
+          const newPaymentApp = payload.new as any;
+          if (newPaymentApp.contractor_id === contractor.id) {
+            console.log('[ContractorDetailView] New payment application for this contractor, refreshing list');
+            // Refresh the payment applications list
+            fetchPaymentApplications();
+          }
+        }
+      )
+      .subscribe();
+
+    // Cleanup subscription on unmount
+    return () => {
+      console.log('[ContractorDetailView] Cleaning up real-time subscription');
+      subscription.unsubscribe();
+    };
+  }, [contract.project_id, contractor.id, fetchPaymentApplications]);
+
   // Fetch budget categories for this project
   const fetchBudgetItems = useCallback(async () => {
     setLoadingBudgetItems(true);

@@ -76,6 +76,11 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+
+  // Debug: Log showAddModal state changes
+  useEffect(() => {
+    console.log('[DailyLogs] showAddModal state changed to:', showAddModal);
+  }, [showAddModal]);
   const [showViewModal, setShowViewModal] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
   const [pmNotes, setPmNotes] = useState<any[]>([]);
@@ -126,16 +131,20 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
   // Fetch projects
   const fetchProjects = useCallback(async () => {
     try {
+      console.log('[DailyLogs] Fetching projects...');
       const { data: projectsData, error } = await supabase
         .from('projects')
         .select('id, name, client_name')
         .order('name');
-      
+
       if (!error && projectsData) {
+        console.log('[DailyLogs] Fetched projects:', projectsData.length, projectsData);
         setProjects(projectsData);
+      } else {
+        console.error('[DailyLogs] Error fetching projects:', error);
       }
     } catch (err) {
-      console.error('Error fetching projects:', err);
+      console.error('[DailyLogs] Error fetching projects:', err);
     }
   }, []);
 
@@ -182,45 +191,88 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
   };
 
   const handleAddRequest = async () => {
+    console.log('[DailyLogs] handleAddRequest called with:', {
+      selectedProject,
+      pmPhoneNumber,
+      requestTime
+    });
+
     if (!selectedProject || !pmPhoneNumber.trim()) {
+      console.log('[DailyLogs] Validation failed - missing fields');
       setError('Please fill in all required fields');
       return;
     }
 
     // Validate phone number
     if (!validatePhoneNumber(pmPhoneNumber)) {
+      console.log('[DailyLogs] Phone number validation failed:', pmPhoneNumber);
       setPhoneError('Please enter a valid phone number (10 or 11 digits)');
       return;
     }
     setPhoneError('');
 
+    console.log('[DailyLogs] Attempting to insert daily log request...');
     try {
-      const { data, error } = await supabase
+      const insertData = {
+        project_id: selectedProject.id,
+        request_date: new Date().toISOString().split('T')[0],
+        pm_phone_number: pmPhoneNumber.trim(),
+        request_status: 'pending',
+        request_time: requestTime
+      };
+      console.log('[DailyLogs] Insert data:', insertData);
+
+      const response = await supabase
         .from('daily_log_requests')
-        .insert({
-          project_id: selectedProject.id,
-          request_date: new Date().toISOString().split('T')[0],
-          pm_phone_number: pmPhoneNumber.trim(),
-          request_status: 'pending',
-          request_time: requestTime
-        })
-        .select()
-        .single();
+        .insert(insertData)
+        .select();
 
-      if (error) throw error;
+      console.log('[DailyLogs] Full response:', response);
+      console.log('[DailyLogs] Response data:', response.data);
+      console.log('[DailyLogs] Response error:', response.error);
+      console.log('[DailyLogs] Response status:', response.status);
+      console.log('[DailyLogs] Response statusText:', response.statusText);
 
-      setRequests(prev => [data, ...prev]);
+      const { data, error } = response;
+
+      if (error) {
+        console.error('[DailyLogs] Supabase insert error:', error);
+
+        // Handle duplicate key error
+        if (error.code === '23505') {
+          setError('A daily log request already exists for this project today. You can only have one request per project per day.');
+          return;
+        }
+
+        throw error;
+      }
+
+      console.log('[DailyLogs] Successfully inserted daily log request:', data);
+
+      // data is an array, get the first item
+      const newRequest = data?.[0];
+      if (newRequest) {
+        setRequests(prev => [newRequest, ...prev]);
+      }
+
       setShowAddModal(false);
       setSelectedProject(null);
       setPmPhoneNumber('');
       setRequestTime('18:00');
       setError(null);
-      
+      setPhoneError('');
+
       // Show success message
       showToast({ message: `Daily log request added successfully! The system will automatically request notes from the PM daily at ${requestTime} EST.`, type: 'success', duration: 7000 });
-    } catch (err) {
-      console.error('Error adding request:', err);
-      setError('Failed to add daily log request');
+    } catch (err: any) {
+      console.error('[DailyLogs] Error adding request:', err);
+
+      // Show specific error message if available
+      if (err?.message) {
+        setError(`Failed to add daily log request: ${err.message}`);
+      } else {
+        setError('Failed to add daily log request');
+      }
     }
   };
 
@@ -342,32 +394,57 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
   // Empty state when no daily log requests exist
   if (requests.length === 0) {
     return (
-      <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Daily Log Requests</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Automated daily updates from your PM
-            </p>
+      <>
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">Daily Log Requests</h1>
+              <p className="text-sm text-muted-foreground mt-1">
+                Automated daily updates from your PM
+              </p>
+            </div>
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('[DailyLogs] Opening Add Request modal, current state:', showAddModal);
+                setShowAddModal(true);
+                console.log('[DailyLogs] setShowAddModal(true) called');
+              }}
+              className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
+            >
+              <Plus className="w-4 h-4" />
+              Add Request
+            </button>
           </div>
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
-          >
-            <Plus className="w-4 h-4" />
-            Add Request
-          </button>
+          <div className="bg-card border border-border rounded-lg">
+            <EmptyState
+              icon={FileText}
+              title="No daily log requests"
+              description="Set up automated SMS requests to get daily updates from your PM. You'll receive project status updates at scheduled times."
+              actionLabel="Add Request"
+              onAction={() => setShowAddModal(true)}
+            />
+          </div>
         </div>
-        <div className="bg-card border border-border rounded-lg">
-          <EmptyState
-            icon={FileText}
-            title="No daily log requests"
-            description="Set up automated SMS requests to get daily updates from your PM. You'll receive project status updates at scheduled times."
-            actionLabel="Add Request"
-            onAction={() => setShowAddModal(true)}
+
+        {/* Add Request Modal */}
+        {showAddModal && (
+          <AddRequestModal
+            projects={projects}
+            selectedProject={selectedProject}
+            setSelectedProject={setSelectedProject}
+            pmPhoneNumber={pmPhoneNumber}
+            setPmPhoneNumber={setPmPhoneNumber}
+            requestTime={requestTime}
+            setRequestTime={setRequestTime}
+            phoneError={phoneError}
+            setPhoneError={setPhoneError}
+            onSave={handleAddRequest}
+            onCancel={() => setShowAddModal(false)}
           />
-        </div>
-      </div>
+        )}
+      </>
     );
   }
 
@@ -383,11 +460,55 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
         </div>
         <div className="flex items-center gap-3">
           <button
-            onClick={() => setShowAddModal(true)}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('[DailyLogs] Opening Add Request modal (main view), current state:', showAddModal);
+              setShowAddModal(true);
+              console.log('[DailyLogs] setShowAddModal(true) called');
+            }}
             className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90"
           >
             <Plus className="w-4 h-4" />
             📝 Add Request
+          </button>
+          <button
+            onClick={async () => {
+              try {
+                setIsRefreshing(true);
+                const response = await fetch('/api/test-daily-log');
+                const data = await response.json();
+
+                if (data.success) {
+                  showToast({
+                    message: `Test SMS sent successfully to ${data.phone} for project: ${data.project}`,
+                    type: 'success',
+                    duration: 5000
+                  });
+                  await handleRefresh();
+                } else {
+                  showToast({
+                    message: `Failed to send test SMS: ${data.error}`,
+                    type: 'error',
+                    duration: 5000
+                  });
+                }
+              } catch (error) {
+                console.error('Error sending test SMS:', error);
+                showToast({
+                  message: 'Failed to send test SMS',
+                  type: 'error',
+                  duration: 5000
+                });
+              } finally {
+                setIsRefreshing(false);
+              }
+            }}
+            disabled={isRefreshing}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50"
+          >
+            <MessageSquare className="w-4 h-4" />
+            {isRefreshing ? 'Sending...' : '📤 Test SMS Now'}
           </button>
           <button
             onClick={handleRefresh}
@@ -499,102 +620,24 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
 
       {/* Add Request Modal */}
       {showAddModal && (
-        <div className="fixed inset-0  bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-md w-full">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h2 className="text-xl font-semibold text-foreground">Add Daily Log Request</h2>
-              <button
-                onClick={() => setShowAddModal(false)}
-                className="text-gray-400 hover:text-muted-foreground"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Project *</label>
-                <select
-                  value={selectedProject?.id || ''}
-                  onChange={(e) => {
-                    const project = projects.find(p => p.id === e.target.value);
-                    setSelectedProject(project);
-                  }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-primary"
-                >
-                  <option value="">Select a project</option>
-                  {projects.map(project => (
-                    <option key={project.id} value={project.id}>
-                      {project.name} - {project.client_name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">PM Phone Number *</label>
-                  <input
-                    type="tel"
-                  value={pmPhoneNumber}
-                  onChange={(e) => {
-                    setPmPhoneNumber(e.target.value);
-                    if (phoneError) setPhoneError('');
-                  }}
-                  className={`w-full px-3 py-2 border rounded-md focus:ring-blue-500 focus:border-primary ${
-                    phoneError ? 'border-red-300' : 'border-gray-300'
-                  }`}
-                  placeholder="+1234567890"
-                />
-                {phoneError && (
-                  <p className="text-sm text-red-600 mt-1">{phoneError}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Request Time (EST) *</label>
-                <input
-                  type="time"
-                  value={requestTime}
-                  onChange={(e) => setRequestTime(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-primary"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Select the time when the system should send daily SMS requests (EST timezone)
-                </p>
-              </div>
-
-              <div className="bg-primary/10 border border-blue-200 rounded-lg p-3">
-                <p className="text-sm text-primary">
-                  <strong>How it works:</strong> The system will automatically send SMS requests to the PM daily at {requestTime} EST, 
-                  asking for notes about each active project. It will retry every 30 minutes until notes are received.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200">
-              <button
-                onClick={() => setShowAddModal(false)}
-                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleAddRequest}
-                disabled={!selectedProject || !pmPhoneNumber.trim()}
-                className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Add Request
-              </button>
-            </div>
-          </div>
-        </div>
+        <AddRequestModal
+          projects={projects}
+          selectedProject={selectedProject}
+          setSelectedProject={setSelectedProject}
+          pmPhoneNumber={pmPhoneNumber}
+          setPmPhoneNumber={setPmPhoneNumber}
+          requestTime={requestTime}
+          setRequestTime={setRequestTime}
+          phoneError={phoneError}
+          setPhoneError={setPhoneError}
+          onSave={handleAddRequest}
+          onCancel={() => setShowAddModal(false)}
+        />
       )}
 
       {/* View Request Modal */}
       {showViewModal && selectedRequest && (
-        <div className="fixed inset-0 backdrop-blur-sm bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden">
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">
@@ -620,51 +663,63 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
                 </div>
 
             <div className="p-6 overflow-y-auto max-h-[60vh]">
-              {loadingNotes ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                  <span className="ml-2 text-muted-foreground">Loading PM notes...</span>
-                </div>
-              ) : pmNotes.length > 0 ? (
-                  <div className="space-y-4">
+              {selectedRequest.request_status === 'received' && selectedRequest.received_notes ? (
+                <div className="space-y-4">
                   <h4 className="text-md font-semibold text-foreground mb-4">
-                    PM Notes from Payment Applications ({pmNotes.length})
+                    Daily Log Response
                   </h4>
-                  {pmNotes.map((note, index) => (
-                    <div key={note.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium text-foreground">
-                          Payment App #{note.id}
-                        </span>
-                        <span className={`text-xs px-2 py-1 rounded-full ${
-                          note.status === 'approved' ? 'bg-green-100 text-green-800' :
-                          note.status === 'rejected' ? 'bg-red-100 text-red-800' :
-                          note.status === 'submitted' ? 'bg-blue-100 text-primary' :
-                          'bg-gray-100 text-gray-800'
-                        }`}>
-                          {note.status}
-                        </span>
-                      </div>
-                      
-                      <div className="text-sm text-muted-foreground mb-2">
-                        <div>Created: {formatDate(note.created_at)}</div>
-                      </div>
-                      
-                      <div className="bg-white rounded p-3 border border-gray-200">
-                        <div className="text-sm text-foreground font-medium mb-1">PM Notes:</div>
-                        <div className="text-sm text-gray-700 whitespace-pre-wrap">
-                          {note.pm_notes}
+
+                  {/* Text Notes */}
+                  <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                    <div className="text-sm text-muted-foreground mb-2">
+                      <div>Received: {selectedRequest.received_at ? formatDate(selectedRequest.received_at) : 'Unknown'}</div>
                     </div>
+
+                    <div className="bg-white rounded p-3 border border-gray-200 mb-4">
+                      <div className="text-sm text-foreground font-medium mb-2">PM Notes:</div>
+                      <div className="text-sm text-gray-700 whitespace-pre-wrap">
+                        {selectedRequest.received_notes}
+                      </div>
+                    </div>
+
+                    {/* Images */}
+                    {selectedRequest.received_media_urls && selectedRequest.received_media_urls.length > 0 && (
+                      <div>
+                        <div className="text-sm text-foreground font-medium mb-2">
+                          Photos ({selectedRequest.received_media_urls.length}):
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          {selectedRequest.received_media_urls.map((url: string, index: number) => (
+                            <a
+                              key={index}
+                              href={url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="relative group rounded-lg overflow-hidden border border-gray-200 hover:border-primary transition-colors"
+                            >
+                              <img
+                                src={url}
+                                alt={`Daily log photo ${index + 1}`}
+                                className="w-full h-48 object-cover group-hover:opacity-90 transition-opacity"
+                              />
+                              <div className="absolute top-2 right-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
+                                Photo {index + 1}
+                              </div>
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
-                  ))}
-              </div>
               ) : (
                 <div className="text-center py-8">
                   <div className="text-4xl mb-4">📝</div>
-                  <p className="text-gray-500 font-medium">No Daily Logs found</p>
+                  <p className="text-gray-500 font-medium">No Response Yet</p>
                   <p className="text-sm text-gray-400">
-                    No Daily Logs have been submitted for this project yet.
+                    {selectedRequest.request_status === 'pending' ? 'Waiting for PM to respond to the SMS request.' :
+                     selectedRequest.request_status === 'sent' ? 'SMS sent. Waiting for PM response.' :
+                     'No daily log response has been received yet.'}
                   </p>
                 </div>
               )}
@@ -693,7 +748,7 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
 
       {/* Edit Request Modal */}
       {showEditModal && editingRequest && (
-        <div className="fixed inset-0 bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg max-w-md w-full">
             <div className="flex items-center justify-between p-6 border-b border-gray-200">
               <h2 className="text-xl font-semibold text-foreground">Edit Daily Log Request</h2>
@@ -777,6 +832,124 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
           </div>
         </div>
       )}
+    </div>
+  );
+};
+
+// Add Request Modal Component
+interface AddRequestModalProps {
+  projects: any[];
+  selectedProject: any;
+  setSelectedProject: (project: any) => void;
+  pmPhoneNumber: string;
+  setPmPhoneNumber: (phone: string) => void;
+  requestTime: string;
+  setRequestTime: (time: string) => void;
+  phoneError: string;
+  setPhoneError: (error: string) => void;
+  onSave: () => void;
+  onCancel: () => void;
+}
+
+const AddRequestModal: React.FC<AddRequestModalProps> = ({
+  projects,
+  selectedProject,
+  setSelectedProject,
+  pmPhoneNumber,
+  setPmPhoneNumber,
+  requestTime,
+  setRequestTime,
+  phoneError,
+  setPhoneError,
+  onSave,
+  onCancel
+}) => {
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSave();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-card rounded-lg p-6 max-w-md w-full">
+        <h2 className="text-xl font-semibold text-foreground mb-6">Add Daily Log Request</h2>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">Project *</label>
+            <select
+              value={selectedProject?.id || ''}
+              onChange={(e) => {
+                const project = projects.find(p => p.id === parseInt(e.target.value));
+                setSelectedProject(project);
+              }}
+              className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
+              required
+            >
+              <option value="">Select a project</option>
+              {projects.map(project => (
+                <option key={project.id} value={project.id}>
+                  {project.name} - {project.client_name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">PM Phone Number *</label>
+            <input
+              type="tel"
+              value={pmPhoneNumber}
+              onChange={(e) => {
+                setPmPhoneNumber(e.target.value);
+                if (phoneError) setPhoneError('');
+              }}
+              className={`w-full px-3 py-2 border rounded-lg bg-background text-foreground ${
+                phoneError ? 'border-red-500' : 'border-border'
+              }`}
+              placeholder="+1234567890"
+              required
+            />
+            {phoneError && <p className="text-sm text-red-500 mt-1">{phoneError}</p>}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">Request Time (EST) *</label>
+            <input
+              type="time"
+              value={requestTime}
+              onChange={(e) => setRequestTime(e.target.value)}
+              className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
+              required
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Time when the system should send daily SMS requests
+            </p>
+          </div>
+
+          <div className="bg-primary/10 border border-primary/20 rounded-lg p-3">
+            <p className="text-sm text-primary">
+              <strong>How it works:</strong> The system will send SMS requests daily at {requestTime} EST
+            </p>
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <button
+              type="button"
+              onClick={onCancel}
+              className="flex-1 px-4 py-2 bg-muted hover:bg-muted/80 rounded-lg text-foreground"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={!selectedProject || !pmPhoneNumber.trim()}
+              className="flex-1 px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Add Request
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 };

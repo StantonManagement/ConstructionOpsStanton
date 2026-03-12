@@ -103,8 +103,34 @@ const ProjectContractorsTab: React.FC<ProjectContractorsTabProps> = ({
   onViewLineItems,
   onViewContractorDetail,
 }) => {
+  // Convert project.id to number, with safety check
+  const projectId = typeof project.id === 'string' ? Number(project.id) : project.id;
+
+  // Safety check - if projectId is NaN or undefined, show error
+  if (!projectId || isNaN(projectId)) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+        <div className="flex items-start gap-3">
+          <div className="flex-shrink-0">
+            <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+              <span className="text-red-600 text-xl">⚠️</span>
+            </div>
+          </div>
+          <div className="flex-1">
+            <h3 className="text-lg font-semibold text-red-900 mb-2">
+              Invalid Project ID
+            </h3>
+            <p className="text-sm text-red-700 mb-4">
+              The project ID is invalid or missing. Please go back and try again.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // Data fetching using custom hooks
-  const { contractors, loading, error, refreshContractors, updateLocalContractors } = useContractors(typeof project.id === 'string' ? Number(project.id) : project.id);
+  const { contractors, loading, error, refreshContractors, updateLocalContractors } = useContractors(projectId);
 
   // Contractor actions hook
   const {
@@ -116,7 +142,7 @@ const ProjectContractorsTab: React.FC<ProjectContractorsTabProps> = ({
     removeContractor,
     handleReorder,
   } = useContractorActions({
-    projectId: typeof project.id === 'string' ? Number(project.id) : project.id,
+    projectId: projectId,
     existingContractorIds: contractors.map((c) => c.contractor_id),
     maxDisplayOrder: contractors.length > 0 ? Math.max(...contractors.map((c) => c.display_order || 0)) : 0,
     onRefresh: refreshContractors,

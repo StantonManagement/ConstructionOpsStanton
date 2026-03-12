@@ -214,7 +214,7 @@ function SummaryTab({ project }: { project: Project }) {
 const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ project, onBack, onEdit, onDelete }) => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  
+
   // Initialize from URL or default to 'contractors'
   const getInitialSubTab = (): SubTab => {
     const subtab = searchParams.get('subtab');
@@ -372,8 +372,39 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ project, onBack, 
   const handleRequestPayment = async (contractorId: number, contractId: number) => {
     setPaymentError(null);
     setPaymentSuccess(null);
-    
+
     try {
+      // First, check if the contractor has any line items
+      const { data: lineItems, error: lineItemsError } = await supabase
+        .from('project_line_items')
+        .select('id, description_of_work, scheduled_value')
+        .eq('project_id', project.id)
+        .eq('contractor_id', contractorId);
+
+      if (lineItemsError) {
+        console.error('Error checking line items:', lineItemsError);
+        setPaymentError('Failed to verify contractor setup. Please try again.');
+        return;
+      }
+
+      // Validate that line items exist
+      if (!lineItems || lineItems.length === 0) {
+        setPaymentError(
+          'This contractor has no line items configured. Please add line items before requesting payment. ' +
+          'Click the "View Details" (👁️) button to add work breakdown items with scheduled values.'
+        );
+        return;
+      }
+
+      // Validate that line items have scheduled values
+      const hasScheduledValues = lineItems.some(item => item.scheduled_value && item.scheduled_value > 0);
+      if (!hasScheduledValues) {
+        setPaymentError(
+          'This contractor\'s line items have no scheduled values. Please update the line items with budget amounts before requesting payment.'
+        );
+        return;
+      }
+
       console.log('Sending payment request:', { projectId: project.id, contractorIds: [contractorId] });
       const res = await authFetch('/api/payments/initiate', {
         method: 'POST',
@@ -383,15 +414,15 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ project, onBack, 
           contractorIds: [contractorId],
         }),
       });
-      
+
       const data = await res.json();
       console.log('Payment request response:', res.status, data);
-      
+
       if (!res.ok || data.error) {
         setPaymentError(data.error || 'Failed to send payment request.');
       } else {
         setPaymentSuccess('Payment request sent successfully!');
-        
+
         // Clear success message after 5 seconds
         setTimeout(() => {
           setPaymentSuccess(null);

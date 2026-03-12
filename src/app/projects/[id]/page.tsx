@@ -32,7 +32,12 @@ function ProjectDetailContent() {
         }
 
         const data = await response.json();
-        setProject(data);
+
+        // The API uses successResponse() which returns { success: true, data: { project: {...} } }
+        // So we need to unwrap: data.data.project
+        const projectData = data.data?.project || data.project || data.data || data;
+
+        setProject(projectData);
       } catch (err) {
         console.error('Error fetching project:', err);
         setError('Failed to load project');

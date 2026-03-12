@@ -71,8 +71,19 @@ export async function POST(req: NextRequest) {
   const formData = await req.formData();
   const from = formData.get('From');
   const body = (formData.get('Body') || '').toString().trim().toUpperCase();
+  const numMedia = parseInt(formData.get('NumMedia')?.toString() || '0');
 
-  console.log('Incoming SMS:', { from, body });
+  // Extract media URLs if present
+  const mediaUrls: Array<{url: string; contentType: string}> = [];
+  for (let i = 0; i < numMedia; i++) {
+    const mediaUrl = formData.get(`MediaUrl${i}`)?.toString();
+    const contentType = formData.get(`MediaContentType${i}`)?.toString() || 'image/jpeg';
+    if (mediaUrl) {
+      mediaUrls.push({ url: mediaUrl, contentType });
+    }
+  }
+
+  console.log('Incoming SMS:', { from, body, numMedia, mediaCount: mediaUrls.length });
   console.error('DEBUG: SMS webhook called at', new Date().toISOString());
 
   if (!from) {
@@ -111,28 +122,155 @@ export async function POST(req: NextRequest) {
   console.log('Found conversation:', conv, 'Error:', error);
 
   if (error || !conv) {
-    // 2. No active payment conversation - check for daily log
-    console.log('No payment conversation found, checking for daily log');
-    const { data: project } = await supabase
-      .from('properties')
-      .select('property_id')
-      .eq('manager_phone', normalizedFrom)
+    // 2. No active payment conversation - check for daily log request
+    console.log('No payment conversation found, checking for daily log request');
+    const { data: dailyLogRequest } = await supabase
+      .from('daily_log_requests')
+      .select('id, project_id, projects(id, name)')
+      .eq('pm_phone_number', normalizedFrom)
+      .eq('request_status', 'sent')
+      .order('created_at', { ascending: false })
+      .limit(1)
       .single();
 
-    if (project) {
+    if (dailyLogRequest) {
       const today = new Date().toISOString().slice(0, 10);
-      await supabase
-        .from('project_daily_logs')
-        .upsert({
-          project_id: project.property_id,
-          manager_id: null,
-          log_date: today,
-          notes: body,
-          status: 'submitted',
-          updated_at: new Date().toISOString(),
-        }, { onConflict: 'project_id,log_date' });
+      const projectId = dailyLogRequest.project_id;
 
-      twiml.message('Thank you! Your daily log has been received.');
+      // Get a system user or first admin user for created_by
+      const { data: adminUser } = await supabase
+        .from('auth.users')
+        .select('id')
+        .limit(1)
+        .single();
+
+      const createdBy = adminUser?.id || '00000000-0000-0000-0000-000000000000';
+
+      // Find or create daily log for today
+      let { data: existingLog } = await supabase
+        .from('daily_logs')
+        .select('id')
+        .eq('property_id', projectId)
+        .eq('log_date', today)
+        .single();
+
+      let logId: number;
+
+      if (!existingLog) {
+        // Create new daily log
+        const { data: newLog, error: createError } = await supabase
+          .from('daily_logs')
+          .insert({
+            property_id: projectId,
+            created_by: createdBy,
+            log_date: today,
+            notes: body,
+            status: 'submitted',
+          })
+          .select('id')
+          .single();
+
+        if (createError || !newLog) {
+          console.error('Error creating daily log:', createError);
+          twiml.message('Error saving daily log. Please try again.');
+          return new Response(twiml.toString(), { headers: { 'Content-Type': 'text/xml' } });
+        }
+        logId = newLog.id;
+      } else {
+        // Update existing log
+        logId = existingLog.id;
+        await supabase
+          .from('daily_logs')
+          .update({
+            notes: body,
+            status: 'submitted',
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', logId);
+      }
+
+      // Handle photo attachments
+      if (mediaUrls.length > 0) {
+        console.log(`Processing ${mediaUrls.length} photos for daily log ${logId}`);
+
+        for (let i = 0; i < mediaUrls.length; i++) {
+          try {
+            const media = mediaUrls[i];
+
+            // Download photo from Twilio
+            const response = await fetch(media.url);
+            if (!response.ok) {
+              console.error(`Failed to download photo ${i + 1}:`, response.statusText);
+              continue;
+            }
+
+            const arrayBuffer = await response.arrayBuffer();
+            const buffer = Buffer.from(arrayBuffer);
+
+            // Determine file extension
+            const fileExt = media.contentType.includes('png') ? 'png' : 'jpg';
+            const timestamp = Date.now();
+            const fileName = `${timestamp}-${i}.${fileExt}`;
+            const filePath = `${projectId}/${today}/${fileName}`;
+
+            // Upload to Supabase Storage
+            const { error: uploadError } = await supabase.storage
+              .from('daily-log-photos')
+              .upload(filePath, buffer, {
+                contentType: media.contentType,
+                upsert: false
+              });
+
+            if (uploadError) {
+              console.error(`Error uploading photo ${i + 1}:`, uploadError);
+              continue;
+            }
+
+            // Get public URL
+            const { data: { publicUrl } } = supabase.storage
+              .from('daily-log-photos')
+              .getPublicUrl(filePath);
+
+            // Save photo record
+            const { error: dbError } = await supabase
+              .from('daily_log_photos')
+              .insert({
+                daily_log_id: logId,
+                photo_url: publicUrl,
+                supabase_storage_path: filePath,
+                caption: null,
+                sort_order: i,
+                taken_at: new Date().toISOString()
+              });
+
+            if (dbError) {
+              console.error(`Error saving photo ${i + 1} to database:`, dbError);
+              // Try to clean up uploaded file
+              await supabase.storage.from('daily-log-photos').remove([filePath]);
+            } else {
+              console.log(`Successfully saved photo ${i + 1} for daily log ${logId}`);
+            }
+          } catch (photoError) {
+            console.error(`Error processing photo ${i + 1}:`, photoError);
+          }
+        }
+      }
+
+      // Update daily log request status
+      await supabase
+        .from('daily_log_requests')
+        .update({
+          request_status: 'received',
+          received_notes: body,
+          received_at: new Date().toISOString()
+        })
+        .eq('id', dailyLogRequest.id);
+
+      const photoMessage = mediaUrls.length > 0
+        ? ` with ${mediaUrls.length} photo${mediaUrls.length > 1 ? 's' : ''}`
+        : '';
+      const projectName = (dailyLogRequest.projects as any)?.name || 'your project';
+      twiml.message(`Thank you! Your daily log${photoMessage} has been received for ${projectName}.`);
       return new Response(twiml.toString(), { headers: { 'Content-Type': 'text/xml' } });
     }
 

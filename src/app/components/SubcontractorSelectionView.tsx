@@ -250,17 +250,47 @@ const SubcontractorSelectionView: React.FC<Props> = ({ selectedProject, setSelec
   useEffect(() => {
     if (!selectedProject) return;
     queueMicrotask(() => setLoading(true));
+
+    // First, let's check what contractors exist for this project WITHOUT status filter
+    console.log(`[SubcontractorSelection] Fetching contractors for project ${selectedProject.id} (${selectedProject.name})`);
+
     supabase
       .from('project_contractors')
-      .select('id, contract_amount, contractor_id, contractors(id, name, trade, phone)')
+      .select('id, contract_amount, contractor_id, contract_status, contractors(id, name, trade, phone)')
       .eq('project_id', selectedProject.id)
-      .eq('contract_status', 'active')
-      .then(({ data }) => {
+      // REMOVED status filter to see ALL contractors regardless of status
+      .then(({ data, error }) => {
+        if (error) {
+          console.error('[SubcontractorSelection] Error fetching contractors:', error);
+          setContracts([]);
+          setLoading(false);
+          return;
+        }
+
+        console.log(`[SubcontractorSelection] Raw data from database:`, data);
+
+        if (!data || data.length === 0) {
+          console.warn(`[SubcontractorSelection] No contractors found in project_contractors table for project ${selectedProject.id}`);
+          setContracts([]);
+          setLoading(false);
+          return;
+        }
+
+        // Log status breakdown
+        const statusCounts = data.reduce((acc: any, c: any) => {
+          const status = c.contract_status || 'null';
+          acc[status] = (acc[status] || 0) + 1;
+          return acc;
+        }, {});
+        console.log(`[SubcontractorSelection] Contract status breakdown:`, statusCounts);
+
         const fixed = (data || []).map((c) => ({
           ...c,
           subcontractor_id: c.contractor_id, // Alias for compatibility with existing code
           contractors: Array.isArray(c.contractors) ? c.contractors[0] : c.contractors,
         }) as unknown as ContractWithVendor);
+
+        console.log(`[SubcontractorSelection] Found ${fixed.length} contractors for project ${selectedProject.id}:`, fixed);
         setContracts(fixed);
         setLoading(false);
       });

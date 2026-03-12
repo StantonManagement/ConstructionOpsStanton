@@ -47,7 +47,11 @@ function ContractorDetailContent() {
           throw new Error('Failed to fetch contractor');
         }
         const contractorData = await contractorResponse.json();
-        setContractor(contractorData.contractor || contractorData);
+
+        // The API uses successResponse() which returns { success: true, data: { contractor: {...} } }
+        // So we need to unwrap: data.data?.contractor
+        const contractorUnwrapped = contractorData.data?.contractor || contractorData.contractor || contractorData.data || contractorData;
+        setContractor(contractorUnwrapped);
 
         // Fetch contract for this contractor on this project
         const contractResponse = await authFetch(
@@ -57,7 +61,11 @@ function ContractorDetailContent() {
           throw new Error('Failed to fetch contract');
         }
         const contractData = await contractResponse.json();
-        setContract(contractData.contract || contractData);
+
+        // The API uses successResponse() which returns { success: true, data: { contract: {...} } }
+        // So we need to unwrap: data.data?.contract
+        const contractUnwrapped = contractData.data?.contract || contractData.contract || contractData.data || contractData;
+        setContract(contractUnwrapped);
       } catch (err) {
         console.error('Error fetching data:', err);
         setError('Failed to load contractor details');
