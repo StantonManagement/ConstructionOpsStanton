@@ -109,8 +109,8 @@ export async function POST(req: NextRequest) {
 
   // PRIORITY 1: Check for daily log request FIRST (newer feature, takes precedence)
   // This prevents old payment conversations from hijacking daily log replies
-  console.log(`Checking for daily log request for phone: ${normalizedFrom}`);
-  const { data: dailyLogRequest } = await supabase
+  console.log(`[DAILY LOG CHECK] Phone: ${normalizedFrom}`);
+  const { data: dailyLogRequest, error: dailyLogError } = await supabase
       .from('daily_log_requests')
       .select('id, project_id, projects(id, name)')
       .eq('pm_phone_number', normalizedFrom)
@@ -118,6 +118,11 @@ export async function POST(req: NextRequest) {
       .order('created_at', { ascending: false })
       .limit(1)
       .single();
+
+  console.log(`[DAILY LOG CHECK] Found: ${dailyLogRequest ? 'YES (ID: ' + dailyLogRequest.id + ')' : 'NO'}`);
+  if (dailyLogError) {
+    console.log(`[DAILY LOG CHECK] Error: ${dailyLogError.message}`);
+  }
 
     if (dailyLogRequest) {
       const today = new Date().toISOString().slice(0, 10);
