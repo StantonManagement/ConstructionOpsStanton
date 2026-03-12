@@ -103,13 +103,14 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  console.log(`Phone normalized: ${from} → ${normalizedFrom}`);
+  console.error(`[WEBHOOK DEBUG] Phone normalized: ${from} → ${normalizedFrom}`);
 
   const twiml = new MessagingResponse();
 
   // PRIORITY 1: Check for daily log request FIRST (newer feature, takes precedence)
   // This prevents old payment conversations from hijacking daily log replies
-  console.log(`[DAILY LOG CHECK] Phone: ${normalizedFrom}`);
+  console.error(`[DAILY LOG CHECK] Phone: ${normalizedFrom}`);
+  console.error(`[DAILY LOG CHECK] Timestamp: ${new Date().toISOString()}`);
 
   // First try to find a 'sent' request (actively waiting for reply)
   let { data: dailyLogRequest, error: dailyLogError } = await supabase
@@ -121,13 +122,16 @@ export async function POST(req: NextRequest) {
       .limit(1)
       .maybeSingle();
 
+  console.error(`[DAILY LOG CHECK] 'sent' status query result:`, dailyLogRequest);
+  console.error(`[DAILY LOG CHECK] 'sent' status query error:`, dailyLogError);
+
   // If no 'sent' request found, check for 'received' requests from today
   // This allows PMs to send multiple updates throughout the day
   if (!dailyLogRequest) {
     const today = new Date().toISOString().slice(0, 10);
-    console.log(`[DAILY LOG CHECK] No 'sent' request found, checking for 'received' requests from today (${today})`);
+    console.error(`[DAILY LOG CHECK] No 'sent' request found, checking for 'received' requests from today (${today})`);
 
-    const { data: receivedRequest } = await supabase
+    const { data: receivedRequest, error: receivedError } = await supabase
       .from('daily_log_requests')
       .select('id, project_id, request_status, projects(id, name)')
       .eq('pm_phone_number', normalizedFrom)
@@ -137,12 +141,15 @@ export async function POST(req: NextRequest) {
       .limit(1)
       .maybeSingle();
 
+    console.error(`[DAILY LOG CHECK] 'received' status query result:`, receivedRequest);
+    console.error(`[DAILY LOG CHECK] 'received' status query error:`, receivedError);
+
     dailyLogRequest = receivedRequest;
   }
 
-  console.log(`[DAILY LOG CHECK] Found: ${dailyLogRequest ? 'YES (ID: ' + dailyLogRequest.id + ')' : 'NO'}`);
+  console.error(`[DAILY LOG CHECK] Final result - Found: ${dailyLogRequest ? 'YES (ID: ' + dailyLogRequest.id + ', status: ' + dailyLogRequest.request_status + ')' : 'NO'}`);
   if (dailyLogError) {
-    console.log(`[DAILY LOG CHECK] Error: ${dailyLogError.message}`);
+    console.error(`[DAILY LOG CHECK] Error: ${dailyLogError.message}`);
   }
 
     if (dailyLogRequest) {
