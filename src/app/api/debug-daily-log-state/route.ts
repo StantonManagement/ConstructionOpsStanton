@@ -5,6 +5,10 @@ import { normalizePhoneNumber } from '@/lib/phoneUtils';
 export const runtime = 'nodejs';
 
 export async function GET(request: NextRequest) {
+  if (!supabase) {
+    return NextResponse.json({ error: 'Database not available' }, { status: 503 });
+  }
+
   const phone = '+18603516816';
   const normalizedPhone = normalizePhoneNumber(phone);
 
