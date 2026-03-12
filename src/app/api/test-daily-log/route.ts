@@ -65,6 +65,22 @@ export async function GET(request: NextRequest) {
 
     console.log(`[TEST] Sending SMS to ${request.pm_phone_number} for project ${projectName}`);
 
+    // Close any active payment conversations for this phone number
+    // This prevents replies from being routed to payment app instead of daily log
+    const { data: activeConvs } = await supabase
+      .from('payment_sms_conversations')
+      .select('id')
+      .eq('contractor_phone', request.pm_phone_number)
+      .in('conversation_state', ['awaiting_start', 'in_progress', 'awaiting_confirmation']);
+
+    if (activeConvs && activeConvs.length > 0) {
+      console.log(`[TEST] Closing ${activeConvs.length} active payment conversation(s) for ${request.pm_phone_number}`);
+      await supabase
+        .from('payment_sms_conversations')
+        .update({ conversation_state: 'completed', completed_at: new Date().toISOString() })
+        .in('id', activeConvs.map(c => c.id));
+    }
+
     const client = twilio(
       process.env.TWILIO_ACCOUNT_SID,
       process.env.TWILIO_AUTH_TOKEN
