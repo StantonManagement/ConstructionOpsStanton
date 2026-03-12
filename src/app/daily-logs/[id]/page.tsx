@@ -2,15 +2,18 @@
 
 import { Suspense, useState, useEffect } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { useDailyLog, useUpdateDailyLog, useUploadPhoto, useUploadAudio } from '@/hooks/useDailyLogs';
 import { ArrowLeft, Camera, Mic, Save, Sparkles, Trash2 } from 'lucide-react';
 import AudioRecorder from '@/components/AudioRecorder';
+import { DailyLogCamera } from '@/components/DailyLogCamera';
 import toast from 'react-hot-toast';
 
 function DailyLogContent() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const queryClient = useQueryClient();
   const logId = params?.id ? parseInt(params.id as string) : undefined;
 
   const { data: log, isLoading, error } = useDailyLog(logId);
@@ -20,6 +23,7 @@ function DailyLogContent() {
 
   const [notes, setNotes] = useState('');
   const [isUploading, setIsUploading] = useState(false);
+  const [showCamera, setShowCamera] = useState(false);
 
   // Initialize notes from log
   useEffect(() => {
@@ -153,19 +157,14 @@ function DailyLogContent() {
         <div className="border border-border rounded-lg p-4">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold">Photos</h3>
-            <label className="flex items-center gap-2 px-3 py-1.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 cursor-pointer text-sm">
+            <button
+              onClick={() => setShowCamera(true)}
+              disabled={log.status === 'submitted'}
+              className="flex items-center gap-2 px-3 py-1.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+            >
               <Camera className="w-4 h-4" />
-              Add Photos
-              <input
-                type="file"
-                accept="image/*"
-                multiple
-                capture="environment"
-                onChange={handlePhotoUpload}
-                className="hidden"
-                disabled={isUploading || log.status === 'submitted'}
-              />
-            </label>
+              Take Photos
+            </button>
           </div>
 
           {log.photos && log.photos.length > 0 ? (
@@ -262,6 +261,19 @@ function DailyLogContent() {
           </div>
         )}
       </div>
+
+      {/* Camera Modal */}
+      {logId && (
+        <DailyLogCamera
+          isOpen={showCamera}
+          onClose={() => setShowCamera(false)}
+          logId={logId}
+          onPhotosUploaded={() => {
+            // Refresh the log data to show new photos
+            queryClient.invalidateQueries({ queryKey: ['daily-log', logId] });
+          }}
+        />
+      )}
     </div>
   );
 }
