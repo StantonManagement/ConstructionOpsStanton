@@ -871,6 +871,13 @@ const AddRequestModal: React.FC<AddRequestModalProps> = ({
   onSave,
   onCancel
 }) => {
+  // Auto-fill phone number on mount if empty
+  React.useEffect(() => {
+    if (!pmPhoneNumber) {
+      setPmPhoneNumber('+18603516816');
+    }
+  }, []);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSave();
