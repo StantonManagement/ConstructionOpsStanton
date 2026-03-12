@@ -7,7 +7,7 @@
     "build": "next build",
     "build:clean": "next build",
     "build:analyze": "ANALYZE=true npm run build",
-    "start": "next start -p ${PORT:-3000}",
+    "start": "next start -H 0.0.0.0 -p ${PORT:-3000}",
     "lint": "eslint .",
     "lint:colors": "tsx scripts/check-colors.ts",
     "test": "jest",
