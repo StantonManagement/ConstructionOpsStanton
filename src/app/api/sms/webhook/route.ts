@@ -153,19 +153,22 @@ export async function POST(req: NextRequest) {
       const isUpdate = dailyLogRequest.request_status === 'received';
 
       // Get a system user or first admin user for created_by
-      const { data: adminUser } = await supabase
-        .from('auth.users')
-        .select('id')
-        .limit(1)
-        .single();
+      // Use supabase.auth.admin to query auth.users
+      const { data: { users }, error: usersError } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1 });
 
-      const createdBy = adminUser?.id || '00000000-0000-0000-0000-000000000000';
+      if (usersError || !users || users.length === 0) {
+        console.error('Error fetching admin user for daily log:', usersError);
+        twiml.message('Error saving daily log. Please contact support.');
+        return new Response(twiml.toString(), { headers: { 'Content-Type': 'text/xml' } });
+      }
+
+      const createdBy = users[0].id;
 
       // Find or create daily log for today
       let { data: existingLog } = await supabase
         .from('daily_logs')
         .select('id')
-        .eq('property_id', projectId)
+        .eq('project_id', projectId)
         .eq('log_date', today)
         .single();
 
@@ -176,7 +179,7 @@ export async function POST(req: NextRequest) {
         const { data: newLog, error: createError } = await supabase
           .from('daily_logs')
           .insert({
-            property_id: projectId,
+            project_id: projectId,
             created_by: createdBy,
             log_date: today,
             notes: body,
