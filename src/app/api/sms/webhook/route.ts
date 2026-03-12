@@ -110,14 +110,35 @@ export async function POST(req: NextRequest) {
   // PRIORITY 1: Check for daily log request FIRST (newer feature, takes precedence)
   // This prevents old payment conversations from hijacking daily log replies
   console.log(`[DAILY LOG CHECK] Phone: ${normalizedFrom}`);
-  const { data: dailyLogRequest, error: dailyLogError } = await supabase
+
+  // First try to find a 'sent' request (actively waiting for reply)
+  let { data: dailyLogRequest, error: dailyLogError } = await supabase
       .from('daily_log_requests')
-      .select('id, project_id, projects(id, name)')
+      .select('id, project_id, request_status, projects(id, name)')
       .eq('pm_phone_number', normalizedFrom)
       .eq('request_status', 'sent')
       .order('created_at', { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
+
+  // If no 'sent' request found, check for 'received' requests from today
+  // This allows PMs to send multiple updates throughout the day
+  if (!dailyLogRequest) {
+    const today = new Date().toISOString().slice(0, 10);
+    console.log(`[DAILY LOG CHECK] No 'sent' request found, checking for 'received' requests from today (${today})`);
+
+    const { data: receivedRequest } = await supabase
+      .from('daily_log_requests')
+      .select('id, project_id, request_status, projects(id, name)')
+      .eq('pm_phone_number', normalizedFrom)
+      .eq('request_status', 'received')
+      .eq('request_date', today)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    dailyLogRequest = receivedRequest;
+  }
 
   console.log(`[DAILY LOG CHECK] Found: ${dailyLogRequest ? 'YES (ID: ' + dailyLogRequest.id + ')' : 'NO'}`);
   if (dailyLogError) {
@@ -127,6 +148,9 @@ export async function POST(req: NextRequest) {
     if (dailyLogRequest) {
       const today = new Date().toISOString().slice(0, 10);
       const projectId = dailyLogRequest.project_id;
+
+      // Track if this is an update to an existing received log
+      const isUpdate = dailyLogRequest.request_status === 'received';
 
       // Get a system user or first admin user for created_by
       const { data: adminUser } = await supabase
@@ -261,7 +285,8 @@ export async function POST(req: NextRequest) {
         ? ` with ${mediaUrls.length} photo${mediaUrls.length > 1 ? 's' : ''}`
         : '';
       const projectName = (dailyLogRequest.projects as any)?.name || 'your project';
-      twiml.message(`Thank you! Your daily log${photoMessage} has been received for ${projectName}.`);
+      const updateMessage = isUpdate ? 'updated' : 'received';
+      twiml.message(`Thank you! Your daily log${photoMessage} has been ${updateMessage} for ${projectName}.`);
       return new Response(twiml.toString(), { headers: { 'Content-Type': 'text/xml' } });
     }
 
