@@ -486,9 +486,16 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
                     duration: 5000
                   });
                   await handleRefresh();
+                } else if (data.message) {
+                  // Handle info messages (like no pending requests)
+                  showToast({
+                    message: data.message,
+                    type: 'info',
+                    duration: 5000
+                  });
                 } else {
                   showToast({
-                    message: `Failed to send test SMS: ${data.error}`,
+                    message: `Failed to send test SMS: ${data.error || 'Unknown error'}`,
                     type: 'error',
                     duration: 5000
                   });
