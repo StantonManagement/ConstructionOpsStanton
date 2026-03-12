@@ -354,12 +354,19 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
     }
     setEditPhoneError('');
 
+    // Normalize phone number to E.164 format
+    const normalizedPhone = normalizePhoneNumber(editPhoneNumber.trim());
+    if (!normalizedPhone) {
+      setEditPhoneError('Invalid phone number format');
+      return;
+    }
+
     setIsSavingEdit(true);
     try {
       const { error } = await supabase
         .from('daily_log_requests')
         .update({
-          pm_phone_number: editPhoneNumber.trim(),
+          pm_phone_number: normalizedPhone,
           request_time: editRequestTime
         })
         .eq('id', editingRequest.id);
@@ -367,9 +374,9 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
       if (error) throw error;
 
       // Update local state
-      setRequests(prev => prev.map(req => 
-        req.id === editingRequest.id 
-          ? { ...req, pm_phone_number: editPhoneNumber.trim(), request_time: editRequestTime }
+      setRequests(prev => prev.map(req =>
+        req.id === editingRequest.id
+          ? { ...req, pm_phone_number: normalizedPhone, request_time: editRequestTime }
           : req
       ));
 
