@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
   const normalizedPhone = normalizePhoneNumber(phone);
 
   // Check daily log requests
-  const { data: dailyLogRequests, error: dlError } = await supabase
+  const { data: dailyLogRequests, error: dlError } = await supabase!
     .from('daily_log_requests')
     .select('id, pm_phone_number, request_status, request_date, created_at, project_id')
     .eq('pm_phone_number', normalizedPhone)
@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     .limit(3);
 
   // Check payment conversations
-  const { data: paymentConvs, error: pcError } = await supabase
+  const { data: paymentConvs, error: pcError } = await supabase!
     .from('payment_sms_conversations')
     .select('id, contractor_phone, conversation_state, created_at')
     .eq('contractor_phone', normalizedPhone)
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     .limit(3);
 
   // Check specifically for the query the webhook uses
-  const { data: sentRequest, error: sentError } = await supabase
+  const { data: sentRequest, error: sentError } = await supabase!
     .from('daily_log_requests')
     .select('id, project_id, projects(id, name)')
     .eq('pm_phone_number', normalizedPhone)
