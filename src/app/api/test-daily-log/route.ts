@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabaseClient';
+import { normalizePhoneNumber } from '@/lib/phoneUtils';
 import twilio from 'twilio';
 
 // Test endpoint to send daily log SMS immediately, bypassing time checks
@@ -67,10 +68,14 @@ export async function GET(request: NextRequest) {
 
     // Close any active payment conversations for this phone number
     // This prevents replies from being routed to payment app instead of daily log
+    // IMPORTANT: Must normalize phone number to match how webhook stores it
+    const normalizedPhone = normalizePhoneNumber(request.pm_phone_number);
+    console.log(`[TEST] Normalized phone: ${request.pm_phone_number} → ${normalizedPhone}`);
+
     const { data: activeConvs } = await supabase
       .from('payment_sms_conversations')
       .select('id')
-      .eq('contractor_phone', request.pm_phone_number)
+      .eq('contractor_phone', normalizedPhone)
       .in('conversation_state', ['awaiting_start', 'in_progress', 'awaiting_confirmation']);
 
     if (activeConvs && activeConvs.length > 0) {
