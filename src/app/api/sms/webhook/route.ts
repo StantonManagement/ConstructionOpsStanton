@@ -107,24 +107,10 @@ export async function POST(req: NextRequest) {
 
   const twiml = new MessagingResponse();
 
-  // 1. First check for active payment conversation (higher priority)
-  // This prevents payment app responses from being captured as daily logs
-  const { data: conv, error } = await supabase
-    .from('payment_sms_conversations')
-    .select('*')
-    .eq('contractor_phone', normalizedFrom)
-    .in('conversation_state', ['awaiting_start', 'in_progress', 'awaiting_confirmation'])
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .single();
-
-  console.log(`Looking for conversation with phone: ${normalizedFrom}`);
-  console.log('Found conversation:', conv, 'Error:', error);
-
-  if (error || !conv) {
-    // 2. No active payment conversation - check for daily log request
-    console.log('No payment conversation found, checking for daily log request');
-    const { data: dailyLogRequest } = await supabase
+  // PRIORITY 1: Check for daily log request FIRST (newer feature, takes precedence)
+  // This prevents old payment conversations from hijacking daily log replies
+  console.log(`Checking for daily log request for phone: ${normalizedFrom}`);
+  const { data: dailyLogRequest } = await supabase
       .from('daily_log_requests')
       .select('id, project_id, projects(id, name)')
       .eq('pm_phone_number', normalizedFrom)
@@ -274,8 +260,22 @@ export async function POST(req: NextRequest) {
       return new Response(twiml.toString(), { headers: { 'Content-Type': 'text/xml' } });
     }
 
-    // 3. Neither payment conversation nor daily log found
-    console.error(`No active payment application conversation or daily log found for ${normalizedFrom} (original: ${from})`);
+  // PRIORITY 2: No daily log - check for active payment conversation
+  console.log('No daily log request found, checking for payment conversation');
+  const { data: conv, error } = await supabase
+    .from('payment_sms_conversations')
+    .select('*')
+    .eq('contractor_phone', normalizedFrom)
+    .in('conversation_state', ['awaiting_start', 'in_progress', 'awaiting_confirmation'])
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single();
+
+  console.log('Found payment conversation:', conv, 'Error:', error);
+
+  if (error || !conv) {
+    // PRIORITY 3: Neither daily log nor payment conversation found
+    console.error(`No active daily log or payment conversation found for ${normalizedFrom} (original: ${from})`);
     twiml.message('No active conversation found. Please contact your project manager.');
     return new Response(twiml.toString(), { headers: { 'Content-Type': 'text/xml' } });
   }
