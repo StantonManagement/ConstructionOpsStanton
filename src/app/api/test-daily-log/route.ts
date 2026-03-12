@@ -7,31 +7,49 @@ export async function GET(request: NextRequest) {
   try {
     const currentDate = new Date().toISOString().split('T')[0];
 
-    // Get the most recent pending daily log request
-    const { data: pendingRequests, error: requestsError } = await supabase
+    // Get the most recent daily log request (any status)
+    const { data: allRequests, error: requestsError } = await supabase
       .from('daily_log_requests')
       .select(`
         id,
         project_id,
         pm_phone_number,
         request_time,
+        request_status,
         project:projects(id, name, client_name)
       `)
       .eq('request_date', currentDate)
-      .eq('request_status', 'pending')
       .order('created_at', { ascending: false })
       .limit(1);
 
     if (requestsError) {
-      console.error('Error fetching pending requests:', requestsError);
-      return NextResponse.json({ error: 'Failed to fetch pending requests' }, { status: 500 });
+      console.error('Error fetching requests:', requestsError);
+      return NextResponse.json({ error: 'Failed to fetch requests' }, { status: 500 });
     }
 
-    if (!pendingRequests || pendingRequests.length === 0) {
-      return NextResponse.json({ message: 'No pending daily log requests found for today' });
+    if (!allRequests || allRequests.length === 0) {
+      return NextResponse.json({
+        message: 'No daily log requests found for today. Create one first using the "Add Request" button.'
+      });
     }
 
-    const request = pendingRequests[0];
+    const request = allRequests[0];
+
+    // If request is not pending, reset it to pending first
+    if (request.request_status !== 'pending') {
+      console.log(`[TEST] Resetting request ${request.id} from '${request.request_status}' to 'pending'`);
+      await supabase
+        .from('daily_log_requests')
+        .update({
+          request_status: 'pending',
+          last_request_sent_at: null,
+          received_at: null,
+          received_notes: null,
+          received_media_urls: null
+        })
+        .eq('id', request.id);
+    }
+
     const projectName = (request.project as any)?.name || 'Unknown Project';
     const projectClient = (request.project as any)?.client_name || 'Unknown Client';
 
