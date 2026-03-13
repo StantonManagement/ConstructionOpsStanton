@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { normalizePhoneNumber } from '@/lib/phoneUtils';
@@ -84,11 +84,17 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
   }, [showAddModal]);
   const [showViewModal, setShowViewModal] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
+  const selectedRequestRef = useRef<any>(null);
   const [pmNotes, setPmNotes] = useState<any[]>([]);
   const [loadingNotes, setLoadingNotes] = useState(false);
   const [projectFilter, setProjectFilter] = useState<string>(
     searchParams.get('project') || 'all'
   );
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    selectedRequestRef.current = selectedRequest;
+  }, [selectedRequest]);
   
   // Add request form state
   const [selectedProject, setSelectedProject] = useState<any>(null);
@@ -175,9 +181,10 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
           fetchRequests();
 
           // If modal is open and this is the selected request, update it
-          if (selectedRequest && payload.new && (payload.new as any).id === selectedRequest.id) {
+          const current = selectedRequestRef.current;
+          if (current && payload.new && (payload.new as any).id === current.id) {
             console.log('[DailyLogs] Updating selected request in modal');
-            setSelectedRequest({ ...selectedRequest, ...(payload.new as any) });
+            setSelectedRequest({ ...current, ...(payload.new as any) });
           }
         }
       )
@@ -189,7 +196,7 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
         supabase.removeChannel(channel);
       }
     };
-  }, [fetchRequests, fetchProjects, selectedRequest]);
+  }, [fetchRequests, fetchProjects]);
 
   // Sync project filter from URL (Header project selector)
   useEffect(() => {
