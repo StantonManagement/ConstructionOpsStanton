@@ -157,14 +157,28 @@ function DailyLogContent() {
         <div className="border border-border rounded-lg p-4">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold">Photos</h3>
-            <button
-              onClick={() => setShowCamera(true)}
-              disabled={log.status === 'submitted'}
-              className="flex items-center gap-2 px-3 py-1.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-            >
-              <Camera className="w-4 h-4" />
-              Take Photos
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowCamera(true)}
+                disabled={log.status === 'submitted' || isUploading}
+                className="flex items-center gap-2 px-3 py-1.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+              >
+                <Camera className="w-4 h-4" />
+                Take Photos
+              </button>
+              <label className="flex items-center gap-2 px-3 py-1.5 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 disabled:opacity-50 disabled:cursor-not-allowed text-sm cursor-pointer">
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handlePhotoUpload}
+                  disabled={log.status === 'submitted' || isUploading}
+                  className="hidden"
+                />
+                <Camera className="w-4 h-4" />
+                {isUploading ? 'Uploading...' : 'Upload Photos'}
+              </label>
+            </div>
           </div>
 
           {log.photos && log.photos.length > 0 ? (
@@ -181,7 +195,7 @@ function DailyLogContent() {
             </div>
           ) : (
             <p className="text-sm text-muted-foreground text-center py-8">
-              No photos yet. Tap "Add Photos" to capture site photos.
+              No photos yet. Use "Take Photos" to capture or "Upload Photos" to select from gallery.
             </p>
           )}
         </div>
