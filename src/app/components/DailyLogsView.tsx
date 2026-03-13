@@ -154,6 +154,11 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
     fetchProjects();
 
     // Setup realtime subscription for auto-refresh when SMS replies are received
+    if (!supabase) {
+      console.error('[DailyLogs] Supabase client not initialized');
+      return;
+    }
+
     const channel = supabase
       .channel('daily-log-requests-changes')
       .on(
@@ -173,7 +178,9 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
 
     // Cleanup subscription on unmount
     return () => {
-      supabase.removeChannel(channel);
+      if (supabase) {
+        supabase.removeChannel(channel);
+      }
     };
   }, [fetchRequests, fetchProjects]);
 
