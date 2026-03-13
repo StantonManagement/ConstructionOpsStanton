@@ -152,6 +152,29 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
   useEffect(() => {
     fetchRequests();
     fetchProjects();
+
+    // Setup realtime subscription for auto-refresh when SMS replies are received
+    const channel = supabase
+      .channel('daily-log-requests-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'daily_log_requests'
+        },
+        (payload) => {
+          console.log('[DailyLogs] Realtime update received:', payload);
+          // Refresh the list when any daily_log_requests change
+          fetchRequests();
+        }
+      )
+      .subscribe();
+
+    // Cleanup subscription on unmount
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [fetchRequests, fetchProjects]);
 
   // Sync project filter from URL (Header project selector)

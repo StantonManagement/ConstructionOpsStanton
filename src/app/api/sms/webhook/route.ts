@@ -257,6 +257,8 @@ export async function POST(req: NextRequest) {
               .from('daily-log-photos')
               .getPublicUrl(filePath);
 
+            console.log(`[PHOTO URL] Generated public URL for photo ${i + 1}:`, publicUrl);
+
             // Save photo record
             const { error: dbError } = await supabase
               .from('daily_log_photos')
@@ -294,6 +296,7 @@ export async function POST(req: NextRequest) {
       // Add Supabase public URLs (not Twilio URLs) if present
       if (supabasePhotoUrls.length > 0) {
         updateData.received_media_urls = supabasePhotoUrls;
+        console.log(`[PHOTO URLs] Saving ${supabasePhotoUrls.length} photo URLs to daily_log_requests:`, supabasePhotoUrls);
       }
 
       await supabase
