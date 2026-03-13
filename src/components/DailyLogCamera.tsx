@@ -43,18 +43,59 @@ export const DailyLogCamera: React.FC<Props> = ({
   const startCamera = useCallback(async () => {
     try {
       setCameraError(null);
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' } // Prefer back camera
-      });
+
+      // Check if running on HTTPS (required for camera access in production)
+      if (typeof window !== 'undefined' && window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+        throw new Error('Camera access requires HTTPS. Please use a secure connection.');
+      }
+
+      // Check if mediaDevices is available
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('Camera API not supported in this browser');
+      }
+
+      console.log('[Camera] Requesting camera access...');
+      console.log('[Camera] Protocol:', window.location.protocol);
+      console.log('[Camera] User Agent:', navigator.userAgent);
+
+      // Try with environment camera first (back camera on mobile)
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment' }
+        });
+        console.log('[Camera] Environment camera access granted');
+      } catch (envError) {
+        // Fallback to any available camera
+        console.log('[Camera] Environment camera not available, trying default camera');
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: true
+        });
+        console.log('[Camera] Default camera access granted');
+      }
 
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         setIsCameraActive(true);
       }
-    } catch (err) {
-      console.error('Camera error:', err);
-      setCameraError('Could not access camera. Please allow camera permissions.');
+    } catch (err: any) {
+      console.error('[Camera] Error:', err);
+      let errorMessage = 'Could not access camera. ';
+
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        errorMessage += 'Please allow camera permissions in your browser settings.';
+      } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+        errorMessage += 'No camera found on this device.';
+      } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+        errorMessage += 'Camera is already in use by another application.';
+      } else if (err.message.includes('not supported')) {
+        errorMessage += 'Your browser does not support camera access. Try using a modern browser like Chrome or Safari.';
+      } else {
+        errorMessage += err.message || 'Unknown error occurred.';
+      }
+
+      setCameraError(errorMessage);
       setIsCameraActive(false);
     }
   }, []);
@@ -184,15 +225,23 @@ export const DailyLogCamera: React.FC<Props> = ({
 
           {cameraError && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/80 p-6">
-              <div className="text-center">
+              <div className="text-center max-w-md">
                 <X className="w-12 h-12 text-red-500 mx-auto mb-4" />
                 <p className="text-white mb-4">{cameraError}</p>
-                <button
-                  onClick={startCamera}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                >
-                  Try Again
-                </button>
+                <div className="flex flex-col gap-2">
+                  <button
+                    onClick={startCamera}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  >
+                    Try Again
+                  </button>
+                  <button
+                    onClick={handleDone}
+                    className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+                  >
+                    Close & Use Gallery Upload Instead
+                  </button>
+                </div>
               </div>
             </div>
           )}
