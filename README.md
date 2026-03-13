@@ -9,8 +9,15 @@ A comprehensive construction operations management platform for Stanton Manageme
 - **Contractors** - Contractor cards with drag-drop ordering and payment status
 - **Payments** - Payment application workflow with verification and approval
 - **Change Orders** - Change order tracking and approval workflow
-- **Field Ops** - Daily logs, punch lists, and site documentation
+- **Field Ops** - Daily logs with SMS integration, punch lists, and site documentation
 - **Budget** - Excel import, line item tracking, and variance analysis
+
+### Daily Logs (Recently Enhanced)
+- **Real-time updates** - Automatic refresh when SMS replies are received
+- **Dual photo upload** - Camera capture or gallery selection
+- **Mobile-first design** - Optimized for on-site use
+- **SMS integration** - Request and receive daily logs via text
+- **Modern UI** - Card-based layout with responsive design
 
 ## Quick Start
 
@@ -61,9 +68,11 @@ npm test             # Run tests
 
 | Document | Description |
 |----------|-------------|
+| [CLAUDE.md](./CLAUDE.md) | AI context and development guidelines |
 | [SYSTEM_ARCHITECTURE.md](./SYSTEM_ARCHITECTURE.md) | System design and data flow |
 | [DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md) | Database tables and relationships |
 | [STYLE_AND_DESIGN_SYSTEM.md](./STYLE_AND_DESIGN_SYSTEM.md) | UI/UX guidelines |
+| [TWILIO_WEBHOOK_SETUP.md](./TWILIO_WEBHOOK_SETUP.md) | SMS integration setup |
 | [docs/](./docs/) | Feature documentation and setup guides |
 
 ## Project Structure
