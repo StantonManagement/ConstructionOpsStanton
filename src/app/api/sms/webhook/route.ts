@@ -281,14 +281,21 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      // Update daily log request status
+      // Update daily log request status and save media URLs
+      const updateData: any = {
+        request_status: 'received',
+        received_notes: body,
+        received_at: new Date().toISOString()
+      };
+
+      // Add media URLs if present
+      if (mediaUrls.length > 0) {
+        updateData.received_media_urls = mediaUrls.map(m => m.url);
+      }
+
       await supabase
         .from('daily_log_requests')
-        .update({
-          request_status: 'received',
-          received_notes: body,
-          received_at: new Date().toISOString()
-        })
+        .update(updateData)
         .eq('id', dailyLogRequest.id);
 
       const photoMessage = mediaUrls.length > 0

@@ -160,7 +160,7 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
     if (urlProjectFilter !== projectFilter) {
       setProjectFilter(urlProjectFilter);
     }
-  }, [searchParams]);
+  }, [searchParams, projectFilter]);
 
   // Filter requests based on search query and project filter
   const filteredRequests = useMemo(() => {
