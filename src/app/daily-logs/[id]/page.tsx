@@ -7,6 +7,7 @@ import { useDailyLog, useUpdateDailyLog, useUploadPhoto, useUploadAudio } from '
 import { ArrowLeft, Camera, Mic, Save, Sparkles, Trash2 } from 'lucide-react';
 import AudioRecorder from '@/components/AudioRecorder';
 import { DailyLogCamera } from '@/components/DailyLogCamera';
+import AppLayout from '@/app/components/AppLayout';
 import toast from 'react-hot-toast';
 
 function DailyLogContent() {
@@ -115,58 +116,59 @@ function DailyLogContent() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="border-b border-border bg-card sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => router.back()}
-                className="p-2 hover:bg-muted rounded-lg"
-              >
-                <ArrowLeft className="w-4 h-4" />
-              </button>
-              <div>
-                <h1 className="text-lg font-semibold">Daily Log</h1>
-                <p className="text-sm text-muted-foreground">
-                  {new Date(log.log_date).toLocaleDateString('en-US', {
-                    weekday: 'long',
-                    month: 'long',
-                    day: 'numeric',
-                    year: 'numeric'
-                  })}
-                </p>
+    <AppLayout>
+      <div className="min-h-screen bg-background">
+        {/* Header */}
+        <div className="border-b border-border bg-card sticky top-0 z-10">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => router.back()}
+                  className="p-2 hover:bg-muted rounded-lg transition-colors"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </button>
+                <div>
+                  <h1 className="text-xl font-bold">Daily Log</h1>
+                  <p className="text-sm text-muted-foreground">
+                    {new Date(log.log_date).toLocaleDateString('en-US', {
+                      weekday: 'long',
+                      month: 'long',
+                      day: 'numeric',
+                      year: 'numeric'
+                    })}
+                  </p>
+                </div>
               </div>
+              <span
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wide ${
+                  log.status === 'submitted'
+                    ? 'bg-green-100 text-green-700 border border-green-200'
+                    : 'bg-yellow-100 text-yellow-700 border border-yellow-200'
+                }`}
+              >
+                {log.status}
+              </span>
             </div>
-            <span
-              className={`px-3 py-1 rounded text-xs font-medium ${
-                log.status === 'submitted'
-                  ? 'bg-green-100 text-green-700'
-                  : 'bg-yellow-100 text-yellow-700'
-              }`}
-            >
-              {log.status}
-            </span>
           </div>
         </div>
-      </div>
 
-      <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
         {/* Photos Section */}
-        <div className="border border-border rounded-lg p-4">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold">Photos</h3>
-            <div className="flex items-center gap-2">
+        <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+            <h3 className="text-lg font-semibold">Photos</h3>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
               <button
                 onClick={() => setShowCamera(true)}
                 disabled={log.status === 'submitted' || isUploading}
-                className="flex items-center gap-2 px-3 py-1.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors"
               >
                 <Camera className="w-4 h-4" />
-                Take Photos
+                <span>Take Photos</span>
               </button>
-              <label className="flex items-center gap-2 px-3 py-1.5 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 disabled:opacity-50 disabled:cursor-not-allowed text-sm cursor-pointer">
+              <label className={`flex items-center justify-center gap-2 px-4 py-2.5 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 text-sm font-medium transition-colors ${(log.status === 'submitted' || isUploading) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}>
                 <input
                   type="file"
                   accept="image/*"
@@ -176,46 +178,49 @@ function DailyLogContent() {
                   className="hidden"
                 />
                 <Camera className="w-4 h-4" />
-                {isUploading ? 'Uploading...' : 'Upload Photos'}
+                <span>{isUploading ? 'Uploading...' : 'Upload Photos'}</span>
               </label>
             </div>
           </div>
 
           {log.photos && log.photos.length > 0 ? (
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
               {log.photos.map((photo) => (
-                <div key={photo.id} className="relative aspect-square">
+                <div key={photo.id} className="relative aspect-square group">
                   <img
                     src={photo.photo_url}
                     alt={photo.caption || 'Daily log photo'}
-                    className="w-full h-full object-cover rounded-lg"
+                    className="w-full h-full object-cover rounded-lg border border-border group-hover:border-primary transition-colors"
                   />
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground text-center py-8">
-              No photos yet. Use "Take Photos" to capture or "Upload Photos" to select from gallery.
-            </p>
+            <div className="text-center py-12 px-4 bg-muted/30 rounded-lg border-2 border-dashed border-muted-foreground/20">
+              <Camera className="w-12 h-12 mx-auto mb-3 text-muted-foreground/50" />
+              <p className="text-sm text-muted-foreground">
+                No photos yet. Use "Take Photos" to capture or "Upload Photos" to select from gallery.
+              </p>
+            </div>
           )}
         </div>
 
         {/* Notes Section */}
-        <div className="border border-border rounded-lg p-4">
-          <h3 className="font-semibold mb-3">Notes</h3>
+        <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
+          <h3 className="text-lg font-semibold mb-4">Notes</h3>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Add quick notes about today's work..."
-            className="w-full px-3 py-2 border border-border rounded-lg resize-none focus:ring-2 focus:ring-primary focus:border-primary"
-            rows={4}
+            className="w-full px-4 py-3 border border-border rounded-lg resize-none focus:ring-2 focus:ring-primary focus:border-primary bg-background transition-colors"
+            rows={5}
             disabled={log.status === 'submitted'}
           />
         </div>
 
         {/* Audio Section */}
-        <div className="border border-border rounded-lg p-4">
-          <h3 className="font-semibold mb-3">Audio Notes</h3>
+        <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
+          <h3 className="text-lg font-semibold mb-4">Audio Notes</h3>
 
           {log.status !== 'submitted' && (
             <div className="mb-4">
@@ -227,39 +232,46 @@ function DailyLogContent() {
           )}
 
           {log.audio && log.audio.length > 0 ? (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {log.audio.map((audio, idx) => (
-                <div key={audio.id} className="flex items-center gap-3 p-3 bg-muted rounded-lg">
-                  <Mic className="w-4 h-4 text-muted-foreground" />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">Audio Note {idx + 1}</p>
-                    {audio.duration_seconds && (
-                      <p className="text-xs text-muted-foreground">
-                        {Math.floor(audio.duration_seconds / 60)}:{(audio.duration_seconds % 60).toString().padStart(2, '0')}
-                      </p>
-                    )}
-                    {audio.transcription && (
-                      <p className="text-xs text-muted-foreground mt-1">{audio.transcription}</p>
-                    )}
+                <div key={audio.id} className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 bg-muted/50 rounded-lg border border-border hover:border-primary/30 transition-colors">
+                  <div className="flex items-start gap-3 flex-1">
+                    <div className="p-2 bg-primary/10 rounded-lg">
+                      <Mic className="w-4 h-4 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium">Audio Note {idx + 1}</p>
+                      {audio.duration_seconds && (
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Duration: {Math.floor(audio.duration_seconds / 60)}:{(audio.duration_seconds % 60).toString().padStart(2, '0')}
+                        </p>
+                      )}
+                      {audio.transcription && (
+                        <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{audio.transcription}</p>
+                      )}
+                    </div>
                   </div>
-                  <audio src={audio.audio_url} controls className="h-8" />
+                  <audio src={audio.audio_url} controls className="w-full sm:w-64 h-10" />
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground text-center py-4">
-              No audio notes yet. Tap "Record Audio Note" to add voice notes.
-            </p>
+            <div className="text-center py-8 px-4 bg-muted/30 rounded-lg border-2 border-dashed border-muted-foreground/20">
+              <Mic className="w-10 h-10 mx-auto mb-2 text-muted-foreground/50" />
+              <p className="text-sm text-muted-foreground">
+                No audio notes yet. Record voice notes to capture details.
+              </p>
+            </div>
           )}
         </div>
 
         {/* Actions */}
         {log.status === 'draft' && (
-          <div className="flex items-center gap-3 sticky bottom-4">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sticky bottom-4 bg-background/80 backdrop-blur-sm py-4 -mx-4 px-4 sm:mx-0 sm:px-0 sm:bg-transparent sm:backdrop-blur-none">
             <button
               onClick={handleSaveDraft}
               disabled={updateLog.isPending}
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border border-border rounded-lg hover:bg-muted"
+              className="flex items-center justify-center gap-2 px-6 py-3 border-2 border-border rounded-lg hover:bg-muted hover:border-primary/50 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-all shadow-sm"
             >
               <Save className="w-4 h-4" />
               Save Draft
@@ -267,10 +279,10 @@ function DailyLogContent() {
             <button
               onClick={handleSubmit}
               disabled={updateLog.isPending}
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700"
+              className="flex items-center justify-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-all shadow-md hover:shadow-lg"
             >
               <Sparkles className="w-4 h-4" />
-              Submit
+              Submit Log
             </button>
           </div>
         )}
