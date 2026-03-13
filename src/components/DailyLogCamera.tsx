@@ -74,9 +74,26 @@ export const DailyLogCamera: React.FC<Props> = ({
         console.log('[Camera] Default camera access granted');
       }
 
+      // Verify stream has video tracks
+      const videoTracks = stream.getVideoTracks();
+      console.log('[Camera] Video tracks:', videoTracks.length, videoTracks);
+
+      if (videoTracks.length === 0) {
+        throw new Error('No video tracks found in stream');
+      }
+
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+
+        // Ensure video plays on mobile
+        try {
+          await videoRef.current.play();
+          console.log('[Camera] Video playback started');
+        } catch (playError) {
+          console.error('[Camera] Video play error:', playError);
+        }
+
         setIsCameraActive(true);
       }
     } catch (err: any) {
@@ -214,12 +231,34 @@ export const DailyLogCamera: React.FC<Props> = ({
       <DialogContent className="sm:max-w-[90vw] md:max-w-[600px] h-[90vh] p-0 overflow-hidden bg-black text-white border-gray-800">
         {/* Camera Viewfinder */}
         <div className="relative flex-1 bg-black flex items-center justify-center overflow-hidden">
+          {/* Loading state */}
+          {!isCameraActive && !cameraError && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black">
+              <div className="text-center">
+                <Loader2 className="w-12 h-12 text-white animate-spin mx-auto mb-4" />
+                <p className="text-white">Starting camera...</p>
+              </div>
+            </div>
+          )}
+
           {isCameraActive && (
             <video
               ref={videoRef}
               autoPlay
               playsInline
+              muted
               className="w-full h-full object-cover"
+              onLoadedMetadata={() => {
+                console.log('[Camera] Video metadata loaded');
+                if (videoRef.current) {
+                  videoRef.current.play().catch(e => {
+                    console.error('[Camera] Play on metadata load failed:', e);
+                  });
+                }
+              }}
+              onCanPlay={() => {
+                console.log('[Camera] Video can play');
+              }}
             />
           )}
 
