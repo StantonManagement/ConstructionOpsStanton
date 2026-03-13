@@ -170,8 +170,15 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
         },
         (payload) => {
           console.log('[DailyLogs] Realtime update received:', payload);
+
           // Refresh the list when any daily_log_requests change
           fetchRequests();
+
+          // If modal is open and this is the selected request, update it
+          if (selectedRequest && payload.new && (payload.new as any).id === selectedRequest.id) {
+            console.log('[DailyLogs] Updating selected request in modal');
+            setSelectedRequest({ ...selectedRequest, ...(payload.new as any) });
+          }
         }
       )
       .subscribe();
@@ -182,7 +189,7 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
         supabase.removeChannel(channel);
       }
     };
-  }, [fetchRequests, fetchProjects]);
+  }, [fetchRequests, fetchProjects, selectedRequest]);
 
   // Sync project filter from URL (Header project selector)
   useEffect(() => {
@@ -741,24 +748,34 @@ const DailyLogsView: React.FC<DailyLogsViewProps> = ({ searchQuery = '' }) => {
                           Photos ({selectedRequest.received_media_urls.length}):
                         </div>
                         <div className="grid grid-cols-2 gap-4">
-                          {selectedRequest.received_media_urls.map((url: string, index: number) => (
-                            <a
-                              key={index}
-                              href={url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="relative group rounded-lg overflow-hidden border border-gray-200 hover:border-primary transition-colors"
-                            >
-                              <img
-                                src={url}
-                                alt={`Daily log photo ${index + 1}`}
-                                className="w-full h-48 object-cover group-hover:opacity-90 transition-opacity"
-                              />
-                              <div className="absolute top-2 right-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
-                                Photo {index + 1}
-                              </div>
-                            </a>
-                          ))}
+                          {selectedRequest.received_media_urls.map((url: string, index: number) => {
+                            console.log(`[PHOTO DISPLAY] Photo ${index + 1} URL:`, url);
+                            return (
+                              <a
+                                key={index}
+                                href={url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="relative group rounded-lg overflow-hidden border border-gray-200 hover:border-primary transition-colors"
+                              >
+                                <img
+                                  src={url}
+                                  alt={`Daily log photo ${index + 1}`}
+                                  className="w-full h-48 object-cover group-hover:opacity-90 transition-opacity"
+                                  onError={(e) => {
+                                    console.error(`[PHOTO ERROR] Failed to load photo ${index + 1}:`, url);
+                                    (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="200"%3E%3Crect fill="%23f3f4f6" width="200" height="200"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" fill="%239ca3af" font-family="sans-serif"%3EImage Error%3C/text%3E%3C/svg%3E';
+                                  }}
+                                  onLoad={() => {
+                                    console.log(`[PHOTO SUCCESS] Photo ${index + 1} loaded successfully`);
+                                  }}
+                                />
+                                <div className="absolute top-2 right-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
+                                  Photo {index + 1}
+                                </div>
+                              </a>
+                            );
+                          })}
                         </div>
                       </div>
                     )}
