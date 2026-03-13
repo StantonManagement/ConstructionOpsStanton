@@ -215,6 +215,7 @@ export async function POST(req: NextRequest) {
       }
 
       // Handle photo attachments
+      const supabasePhotoUrls: string[] = [];
       if (mediaUrls.length > 0) {
         console.log(`Processing ${mediaUrls.length} photos for daily log ${logId}`);
 
@@ -274,6 +275,8 @@ export async function POST(req: NextRequest) {
               await supabase.storage.from('daily-log-photos').remove([filePath]);
             } else {
               console.log(`Successfully saved photo ${i + 1} for daily log ${logId}`);
+              // Add the Supabase public URL to our array
+              supabasePhotoUrls.push(publicUrl);
             }
           } catch (photoError) {
             console.error(`Error processing photo ${i + 1}:`, photoError);
@@ -288,9 +291,9 @@ export async function POST(req: NextRequest) {
         received_at: new Date().toISOString()
       };
 
-      // Add media URLs if present
-      if (mediaUrls.length > 0) {
-        updateData.received_media_urls = mediaUrls.map(m => m.url);
+      // Add Supabase public URLs (not Twilio URLs) if present
+      if (supabasePhotoUrls.length > 0) {
+        updateData.received_media_urls = supabasePhotoUrls;
       }
 
       await supabase
