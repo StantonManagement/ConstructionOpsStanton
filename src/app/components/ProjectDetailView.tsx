@@ -241,7 +241,7 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ project, onBack, 
     const params = new URLSearchParams(searchParams.toString());
     params.set('subtab', tab);
     // Keep the project ID in the URL
-    router.replace(`/projects?${params.toString()}`, { scroll: false });
+    router.replace(`/projects/${project.id}?${params.toString()}`, { scroll: false });
   };
 
   const [paymentSuccess, setPaymentSuccess] = useState<string | null>(null);
