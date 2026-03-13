@@ -300,7 +300,7 @@ function DailyLogContent() {
           }}
         />
       )}
-    </div>
+    </AppLayout>
   );
 }
 
