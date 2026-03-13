@@ -286,6 +286,7 @@ function DailyLogContent() {
             </button>
           </div>
         )}
+        </div>
       </div>
 
       {/* Camera Modal */}
