@@ -85,8 +85,15 @@ function DailyLogContent() {
         data: { notes, status: 'submitted' }
       });
       toast.success('Log submitted!', { id: toastId });
-      router.push(searchParams.get('returnTo') || '/daily-logs');
+
+      // Navigate back after a short delay to ensure toast is visible
+      const returnPath = searchParams.get('returnTo') || '/daily-logs';
+      console.log('[Submit] Navigating to:', returnPath);
+      setTimeout(() => {
+        router.push(returnPath);
+      }, 500);
     } catch (error) {
+      console.error('[Submit] Error:', error);
       toast.error('Failed to submit log', { id: toastId });
     }
   };
