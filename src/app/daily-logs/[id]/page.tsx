@@ -124,7 +124,7 @@ function DailyLogContent() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <button
-                  onClick={() => router.back()}
+                  onClick={() => router.push(searchParams.get('returnTo') || '/daily-logs')}
                   className="p-2 hover:bg-muted rounded-lg transition-colors"
                 >
                   <ArrowLeft className="w-5 h-5" />
