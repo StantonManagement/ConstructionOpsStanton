@@ -16,22 +16,12 @@ export const dynamic = 'force-dynamic';
 function DailyLogsContent() {
   const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
-  const { data: logs, isLoading: logsLoading } = useAllDailyLogs();
-  const { data: projects } = useProjects();
-
   const [selectedProjectId, setSelectedProjectId] = useState<number | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Redirect to login if not authenticated
-  if (!authLoading && !user) {
-    router.replace('/');
-    return <LoadingAnimation fullScreen />;
-  }
-
-  // Show loading state while auth is initializing
-  if (authLoading) {
-    return <LoadingAnimation fullScreen />;
-  }
+  // IMPORTANT: Always call hooks before any conditional returns
+  const { data: logs, isLoading: logsLoading } = useAllDailyLogs();
+  const { data: projects } = useProjects();
 
   // Filter logs by project and search query
   const filteredLogs = useMemo(() => {
@@ -62,6 +52,17 @@ function DailyLogsContent() {
   const getProjectName = (projectId: number) => {
     return projects?.find(p => p.id === projectId)?.name || 'Unknown Project';
   };
+
+  // Redirect to login if not authenticated
+  if (!authLoading && !user) {
+    router.replace('/');
+    return <LoadingAnimation fullScreen />;
+  }
+
+  // Show loading state while auth is initializing
+  if (authLoading) {
+    return <LoadingAnimation fullScreen />;
+  }
 
   return (
     <AppLayout>

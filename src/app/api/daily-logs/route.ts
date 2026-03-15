@@ -3,7 +3,7 @@ import { supabaseAdmin as supabase } from '@/lib/supabaseClient';
 
 export const runtime = 'nodejs';
 
-// GET /api/daily-logs?project_id=X
+// GET /api/daily-logs?project_id=X (optional - if not provided, returns all logs)
 export async function GET(request: NextRequest) {
   try {
     if (!supabase) {
@@ -13,23 +13,25 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const projectId = searchParams.get('project_id');
 
-    if (!projectId) {
-      return NextResponse.json({ error: 'project_id is required' }, { status: 400 });
-    }
+    console.log('[Daily Logs API] Fetching logs' + (projectId ? ` for project: ${projectId}` : ' (all projects)'));
 
-    console.log('[Daily Logs API] Fetching logs for project:', projectId);
-
-    // Fetch daily logs with photos and audio counts
-    const { data, error } = await supabase
+    // Build query
+    let query = supabase
       .from('daily_logs')
       .select(`
         *,
         photos:daily_log_photos(count),
         audio:daily_log_audio(count)
       `)
-      .eq('project_id', projectId)
-      .is('deleted_at', null)
-      .order('log_date', { ascending: false });
+      .is('deleted_at', null);
+
+    // Filter by project if provided
+    if (projectId) {
+      query = query.eq('project_id', projectId);
+    }
+
+    // Execute query
+    const { data, error } = await query.order('log_date', { ascending: false });
 
     if (error) {
       console.error('[Daily Logs API] Error fetching logs:', error);
