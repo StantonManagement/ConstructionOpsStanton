@@ -1050,30 +1050,32 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="mt-4 pt-3 border-t border-border/50 space-y-2">
-                    {/* Primary Action: Payment Application */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        router.push(`/payments?project=${project.id}&subtab=processing`);
-                      }}
-                      className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg transition-all shadow-sm hover:shadow-md"
-                    >
-                      <DollarSign className="w-4 h-4" />
-                      Request Payment
-                    </button>
+                  <div className="mt-4 pt-3 border-t border-border/50">
+                    <div className="flex gap-2">
+                      {/* Primary Action: Payment Application */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          router.push(`/payments?project=${project.id}&subtab=processing`);
+                        }}
+                        className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg transition-all shadow-sm hover:shadow-md"
+                      >
+                        <DollarSign className="w-4 h-4" />
+                        Request Payment
+                      </button>
 
-                    {/* Secondary Action */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleOpenEditForm(project);
-                      }}
-                      className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium bg-muted hover:bg-muted/80 text-foreground rounded-lg transition-colors border border-border"
-                    >
-                      <Edit2 className="w-3.5 h-3.5" />
-                      Edit Project
-                    </button>
+                      {/* Compact Edit Button */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenEditForm(project);
+                        }}
+                        className="flex items-center justify-center p-2.5 bg-muted hover:bg-muted/80 text-foreground rounded-lg transition-colors border border-border"
+                        title="Edit Project"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
 
                   {/* At Risk Badge */}
