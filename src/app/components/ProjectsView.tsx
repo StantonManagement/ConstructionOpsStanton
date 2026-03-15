@@ -1049,7 +1049,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
                     </div>
                   </div>
 
-                  {/* Action Buttons - Enhanced */}
+                  {/* Action Buttons - Clean & Simple */}
                   <div className="mt-4 pt-3 border-t border-border/50 space-y-2">
                     {/* Primary Action: Payment Application */}
                     <button
@@ -1057,7 +1057,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
                         e.stopPropagation();
                         router.push(`/payments?project=${project.id}&subtab=processing`);
                       }}
-                      className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-bold bg-gradient-to-r from-primary to-primary/90 text-primary-foreground hover:from-primary/90 hover:to-primary rounded-lg transition-all shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg transition-all shadow-sm hover:shadow-md"
                     >
                       <DollarSign className="w-4 h-4" />
                       Request Payment
@@ -1070,7 +1070,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
                           e.stopPropagation();
                           handleOpenEditForm(project);
                         }}
-                        className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium bg-secondary/60 text-secondary-foreground hover:bg-secondary rounded-lg transition-all border border-border/50 hover:border-border hover:shadow-sm"
+                        className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium bg-muted hover:bg-muted/80 text-foreground rounded-lg transition-colors border border-border"
                       >
                         <Edit2 className="w-3.5 h-3.5" />
                         Edit
@@ -1080,7 +1080,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
                           e.stopPropagation();
                           handleProjectClick(project);
                         }}
-                        className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium bg-secondary/60 text-secondary-foreground hover:bg-secondary rounded-lg transition-all border border-border/50 hover:border-border hover:shadow-sm"
+                        className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium bg-muted hover:bg-muted/80 text-foreground rounded-lg transition-colors border border-border"
                       >
                         <Eye className="w-3.5 h-3.5" />
                         Details
