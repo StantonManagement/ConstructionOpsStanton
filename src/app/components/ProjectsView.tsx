@@ -1049,7 +1049,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
                     </div>
                   </div>
 
-                  {/* Action Buttons - Clean & Simple */}
+                  {/* Action Buttons */}
                   <div className="mt-4 pt-3 border-t border-border/50 space-y-2">
                     {/* Primary Action: Payment Application */}
                     <button
@@ -1063,29 +1063,17 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ searchQuery = '' }) => {
                       Request Payment
                     </button>
 
-                    {/* Secondary Actions */}
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleOpenEditForm(project);
-                        }}
-                        className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium bg-muted hover:bg-muted/80 text-foreground rounded-lg transition-colors border border-border"
-                      >
-                        <Edit2 className="w-3.5 h-3.5" />
-                        Edit
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleProjectClick(project);
-                        }}
-                        className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium bg-muted hover:bg-muted/80 text-foreground rounded-lg transition-colors border border-border"
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                        Details
-                      </button>
-                    </div>
+                    {/* Secondary Action */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenEditForm(project);
+                      }}
+                      className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium bg-muted hover:bg-muted/80 text-foreground rounded-lg transition-colors border border-border"
+                    >
+                      <Edit2 className="w-3.5 h-3.5" />
+                      Edit Project
+                    </button>
                   </div>
 
                   {/* At Risk Badge */}
