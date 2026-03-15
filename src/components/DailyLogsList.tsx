@@ -11,6 +11,9 @@ interface DailyLogsListProps {
 export default function DailyLogsList({ projectId }: DailyLogsListProps) {
   const { data: logs, isLoading, error } = useDailyLogs(projectId);
 
+  // URL-encode the returnTo path to handle query parameters correctly
+  const returnToPath = encodeURIComponent(`/projects/${projectId}?subtab=daily-logs`);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -33,7 +36,7 @@ export default function DailyLogsList({ projectId }: DailyLogsListProps) {
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold">Daily Logs</h3>
         <Link
-          href={`/daily-logs/new?project=${projectId}&returnTo=/projects/${projectId}?subtab=daily-logs`}
+          href={`/daily-logs/new?project=${projectId}&returnTo=${returnToPath}`}
           className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 text-sm"
         >
           <Plus className="w-4 h-4" />
@@ -47,7 +50,7 @@ export default function DailyLogsList({ projectId }: DailyLogsListProps) {
           <Calendar className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
           <p className="text-muted-foreground text-sm mb-4">No daily logs yet</p>
           <Link
-            href={`/daily-logs/new?project=${projectId}&returnTo=/projects/${projectId}?subtab=daily-logs`}
+            href={`/daily-logs/new?project=${projectId}&returnTo=${returnToPath}`}
             className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 text-sm"
           >
             <Plus className="w-4 h-4" />
@@ -59,7 +62,7 @@ export default function DailyLogsList({ projectId }: DailyLogsListProps) {
           {logs.map((log) => (
             <Link
               key={log.id}
-              href={`/daily-logs/${log.id}?returnTo=/projects/${projectId}?subtab=daily-logs`}
+              href={`/daily-logs/${log.id}?returnTo=${returnToPath}`}
               className="block p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors"
             >
               <div className="flex items-center justify-between">
