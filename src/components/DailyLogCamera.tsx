@@ -83,18 +83,16 @@ export const DailyLogCamera: React.FC<Props> = ({
       }
 
       streamRef.current = stream;
+
+      // Wait for video element to be ready
       if (videoRef.current) {
+        console.log('[Camera] Assigning stream to video element');
         videoRef.current.srcObject = stream;
 
-        // Ensure video plays on mobile
-        try {
-          await videoRef.current.play();
-          console.log('[Camera] Video playback started');
-        } catch (playError) {
-          console.error('[Camera] Video play error:', playError);
-        }
-
-        setIsCameraActive(true);
+        // Don't set camera active until video can play
+        // The onLoadedMetadata or onCanPlay event will confirm it's working
+      } else {
+        console.error('[Camera] Video ref is null');
       }
     } catch (err: any) {
       console.error('[Camera] Error:', err);
@@ -241,26 +239,40 @@ export const DailyLogCamera: React.FC<Props> = ({
             </div>
           )}
 
-          {isCameraActive && (
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              muted
-              className="w-full h-full object-cover"
-              onLoadedMetadata={() => {
-                console.log('[Camera] Video metadata loaded');
-                if (videoRef.current) {
-                  videoRef.current.play().catch(e => {
-                    console.error('[Camera] Play on metadata load failed:', e);
-                  });
-                }
-              }}
-              onCanPlay={() => {
-                console.log('[Camera] Video can play');
-              }}
-            />
-          )}
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+            className="w-full h-full object-cover"
+            style={{ display: isCameraActive ? 'block' : 'none' }}
+            onLoadedMetadata={(e) => {
+              const video = e.target as HTMLVideoElement;
+              console.log('[Camera] Video metadata loaded - dimensions:', video.videoWidth, 'x', video.videoHeight);
+              if (videoRef.current && video.videoWidth > 0 && video.videoHeight > 0) {
+                videoRef.current.play().catch(e => {
+                  console.error('[Camera] Play on metadata load failed:', e);
+                });
+              }
+            }}
+            onCanPlay={() => {
+              console.log('[Camera] Video can play');
+              // Video is ready - show it
+              setIsCameraActive(true);
+            }}
+            onError={(e) => {
+              console.error('[Camera] Video element error:', e);
+              setCameraError('Video playback error. Please try again.');
+            }}
+            onLoadStart={() => {
+              console.log('[Camera] Video load started');
+            }}
+            onPlaying={() => {
+              console.log('[Camera] Video is playing!');
+              // Ensure camera is shown when video starts playing
+              setIsCameraActive(true);
+            }}
+          />
 
           {cameraError && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/80 p-6">
