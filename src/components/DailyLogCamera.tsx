@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import { X, Check, Trash2, Loader2 } from 'lucide-react';
 import Image from 'next/image';
 
@@ -227,6 +228,9 @@ export const DailyLogCamera: React.FC<Props> = ({
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleDone()}>
       <DialogContent className="sm:max-w-[90vw] md:max-w-[600px] h-[90vh] p-0 overflow-hidden bg-black text-white border-gray-800">
+        <VisuallyHidden>
+          <DialogTitle>Camera</DialogTitle>
+        </VisuallyHidden>
         {/* Camera Viewfinder */}
         <div className="relative flex-1 bg-black flex items-center justify-center overflow-hidden">
           {/* Loading state */}
