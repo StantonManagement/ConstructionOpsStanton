@@ -3,11 +3,11 @@
 import { Suspense, useState, useMemo } from 'react';
 import { useAuth } from '@/providers/AuthProvider';
 import { useRouter } from 'next/navigation';
-import { useAllDailyLogs } from '@/hooks/useDailyLogs';
 import { useProjects } from '@/hooks/useProjects';
+import { useDailyLogs } from '@/hooks/useDailyLogs';
 import AppLayout from '@/app/components/AppLayout';
 import LoadingAnimation from '@/app/components/LoadingAnimation';
-import { Calendar, Camera, Mic, Plus, Building, Filter } from 'lucide-react';
+import { Building, ChevronRight, FileText, Search, Calendar, Camera, Mic, ArrowLeft, Plus } from 'lucide-react';
 import Link from 'next/link';
 
 // Force dynamic rendering since we rely on client-side auth
@@ -16,42 +16,31 @@ export const dynamic = 'force-dynamic';
 function DailyLogsContent() {
   const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
-  const [selectedProjectId, setSelectedProjectId] = useState<number | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
 
   // IMPORTANT: Always call hooks before any conditional returns
-  const { data: logs, isLoading: logsLoading } = useAllDailyLogs();
-  const { data: projects } = useProjects();
+  const { data: projects, isLoading: projectsLoading } = useProjects();
+  const { data: logs, isLoading: logsLoading } = useDailyLogs(selectedProjectId || undefined);
 
-  // Filter logs by project and search query
-  const filteredLogs = useMemo(() => {
-    if (!logs) return [];
+  // Filter projects by search
+  const filteredProjects = useMemo(() => {
+    if (!projects) return [];
 
-    let filtered = logs;
+    if (!searchQuery.trim()) return projects;
 
-    // Filter by project
-    if (selectedProjectId !== 'all') {
-      filtered = filtered.filter(log => log.project_id === selectedProjectId);
-    }
-
-    // Filter by search query
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(log =>
-        log.notes?.toLowerCase().includes(query)
-      );
-    }
-
-    // Sort by date (newest first)
-    return filtered.sort((a, b) =>
-      new Date(b.log_date).getTime() - new Date(a.log_date).getTime()
+    const query = searchQuery.toLowerCase();
+    return projects.filter(p =>
+      p.name?.toLowerCase().includes(query) ||
+      p.client_name?.toLowerCase().includes(query)
     );
-  }, [logs, selectedProjectId, searchQuery]);
+  }, [projects, searchQuery]);
 
-  // Get project name by ID
-  const getProjectName = (projectId: number) => {
-    return projects?.find(p => p.id === projectId)?.name || 'Unknown Project';
-  };
+  // Get selected project details
+  const selectedProject = useMemo(() => {
+    if (!selectedProjectId || !projects) return null;
+    return projects.find(p => p.id === selectedProjectId);
+  }, [selectedProjectId, projects]);
 
   // Redirect to login if not authenticated
   if (!authLoading && !user) {
@@ -64,107 +53,66 @@ function DailyLogsContent() {
     return <LoadingAnimation fullScreen />;
   }
 
-  return (
-    <AppLayout>
-      <div className="min-h-screen bg-background">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* Header */}
-          <div className="mb-6">
-            <h1 className="text-3xl font-bold text-foreground mb-2">Daily Logs</h1>
-            <p className="text-muted-foreground">View and manage daily field logs across all projects</p>
-          </div>
+  // If a project is selected, show its logs
+  if (selectedProjectId && selectedProject) {
+    const returnToPath = encodeURIComponent(`/daily-logs`);
 
-          {/* Filters */}
-          <div className="flex flex-col sm:flex-row gap-4 mb-6">
-            {/* Project Filter */}
-            <div className="flex-1">
-              <label htmlFor="project-filter" className="block text-sm font-medium text-foreground mb-2">
-                <Filter className="w-4 h-4 inline mr-2" />
-                Filter by Project
-              </label>
-              <select
-                id="project-filter"
-                value={selectedProjectId}
-                onChange={(e) => setSelectedProjectId(e.target.value === 'all' ? 'all' : Number(e.target.value))}
-                className="w-full px-4 py-2 border border-border rounded-lg bg-card text-foreground focus:ring-2 focus:ring-primary focus:border-primary"
+    return (
+      <AppLayout>
+        <div className="min-h-screen bg-background">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            {/* Header with Back Button */}
+            <div className="mb-6">
+              <button
+                onClick={() => setSelectedProjectId(null)}
+                className="flex items-center gap-2 text-muted-foreground hover:text-foreground mb-4 transition-colors"
               >
-                <option value="all">All Projects</option>
-                {projects?.map((project) => (
-                  <option key={project.id} value={project.id}>
-                    {project.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Search */}
-            <div className="flex-1">
-              <label htmlFor="search" className="block text-sm font-medium text-foreground mb-2">
-                Search Notes
-              </label>
-              <input
-                id="search"
-                type="text"
-                placeholder="Search in notes..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full px-4 py-2 border border-border rounded-lg bg-card text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-primary focus:border-primary"
-              />
-            </div>
-          </div>
-
-          {/* Stats */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-            <div className="bg-card border border-border rounded-lg p-4">
-              <div className="text-2xl font-bold text-foreground">{filteredLogs.length}</div>
-              <div className="text-sm text-muted-foreground">Total Logs</div>
-            </div>
-            <div className="bg-card border border-border rounded-lg p-4">
-              <div className="text-2xl font-bold text-green-600">
-                {filteredLogs.filter(l => l.status === 'submitted').length}
+                <ArrowLeft className="w-5 h-5" />
+                <span>Back to Projects</span>
+              </button>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-3xl font-bold text-foreground mb-2">{selectedProject.name}</h1>
+                  <p className="text-muted-foreground">Daily field logs for this project</p>
+                </div>
+                <Link
+                  href={`/daily-logs/new?project=${selectedProjectId}&returnTo=${returnToPath}`}
+                  className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+                >
+                  <Plus className="w-5 h-5" />
+                  New Log
+                </Link>
               </div>
-              <div className="text-sm text-muted-foreground">Submitted</div>
             </div>
-            <div className="bg-card border border-border rounded-lg p-4">
-              <div className="text-2xl font-bold text-yellow-600">
-                {filteredLogs.filter(l => l.status === 'draft').length}
+
+            {/* Logs List */}
+            {logsLoading ? (
+              <div className="flex items-center justify-center p-8">
+                <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
               </div>
-              <div className="text-sm text-muted-foreground">Drafts</div>
-            </div>
-          </div>
-
-          {/* Logs List */}
-          {logsLoading ? (
-            <div className="flex items-center justify-center p-8">
-              <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
-            </div>
-          ) : !filteredLogs || filteredLogs.length === 0 ? (
-            <div className="text-center p-12 border border-dashed border-border rounded-lg bg-card">
-              <Calendar className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-              <p className="text-lg font-medium text-foreground mb-2">No daily logs found</p>
-              <p className="text-sm text-muted-foreground mb-6">
-                {selectedProjectId !== 'all'
-                  ? 'No logs for this project yet. Create one from the project page.'
-                  : 'Get started by creating a daily log from a project page.'}
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredLogs.map((log) => {
-                const returnToPath = encodeURIComponent(`/daily-logs`);
-
-                return (
+            ) : !logs || logs.length === 0 ? (
+              <div className="text-center p-12 border border-dashed border-border rounded-lg bg-card">
+                <Calendar className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                <p className="text-lg font-medium text-foreground mb-2">No daily logs yet</p>
+                <p className="text-sm text-muted-foreground mb-6">
+                  Create your first daily log for this project
+                </p>
+                <Link
+                  href={`/daily-logs/new?project=${selectedProjectId}&returnTo=${returnToPath}`}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+                >
+                  <Plus className="w-5 h-5" />
+                  New Log
+                </Link>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {logs.map((log) => (
                   <Link
                     key={log.id}
                     href={`/daily-logs/${log.id}?returnTo=${returnToPath}`}
                     className="block bg-card border border-border rounded-lg p-4 hover:shadow-md hover:border-primary/50 transition-all"
                   >
-                    {/* Project Name */}
-                    <div className="flex items-center gap-2 mb-3 text-sm text-muted-foreground">
-                      <Building className="w-4 h-4" />
-                      <span className="font-medium">{getProjectName(log.project_id)}</span>
-                    </div>
-
                     {/* Date & Status */}
                     <div className="flex items-center justify-between mb-3">
                       <p className="font-semibold text-foreground">
@@ -209,8 +157,96 @@ function DailyLogsContent() {
                       )}
                     </div>
                   </Link>
-                );
-              })}
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  // Default view: Show projects grid
+  return (
+    <AppLayout>
+      <div className="min-h-screen bg-background">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Header */}
+          <div className="mb-6">
+            <h1 className="text-3xl font-bold text-foreground mb-2">Daily Logs</h1>
+            <p className="text-muted-foreground">Select a project to view its daily field logs</p>
+          </div>
+
+          {/* Search */}
+          <div className="mb-6">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+              <input
+                id="search"
+                type="text"
+                placeholder="Search projects by name or client..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 border border-border rounded-lg bg-card text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-primary focus:border-primary"
+              />
+            </div>
+          </div>
+
+          {/* Projects Grid */}
+          {projectsLoading ? (
+            <div className="flex items-center justify-center p-8">
+              <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+            </div>
+          ) : !filteredProjects || filteredProjects.length === 0 ? (
+            <div className="text-center p-12 border border-dashed border-border rounded-lg bg-card">
+              <Building className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+              <p className="text-lg font-medium text-foreground mb-2">No projects found</p>
+              <p className="text-sm text-muted-foreground">
+                {searchQuery ? 'Try a different search term' : 'No projects available'}
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredProjects.map((project) => (
+                <button
+                  key={project.id}
+                  onClick={() => {
+                    setSelectedProjectId(project.id);
+                    setSearchQuery(''); // Clear search when selecting
+                  }}
+                  className="group bg-card border border-border rounded-lg p-6 hover:shadow-lg hover:shadow-primary/10 hover:border-primary/50 transition-all duration-200 cursor-pointer text-left"
+                >
+                  {/* Project Icon */}
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="p-3 bg-primary/10 rounded-lg group-hover:bg-primary/20 transition-colors">
+                      <Building className="w-6 h-6 text-primary" />
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                  </div>
+
+                  {/* Project Name */}
+                  <h3 className="text-lg font-semibold text-foreground mb-1 group-hover:text-primary transition-colors">
+                    {project.name}
+                  </h3>
+
+                  {/* Client Name */}
+                  {project.client_name && (
+                    <p className="text-sm text-muted-foreground mb-3">
+                      {project.client_name}
+                    </p>
+                  )}
+
+                  {/* Phase */}
+                  {project.current_phase && (
+                    <div className="flex items-center gap-2 mt-4 pt-4 border-t border-border">
+                      <FileText className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground">
+                        Phase: <span className="font-medium text-foreground">{project.current_phase}</span>
+                      </span>
+                    </div>
+                  )}
+                </button>
+              ))}
             </div>
           )}
         </div>

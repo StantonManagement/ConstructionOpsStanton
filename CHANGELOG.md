@@ -2,6 +2,43 @@
 
 All notable changes to the Construction Operations Center project.
 
+## [2.2.0] - 2026-03-16
+
+### Daily Logs - Independent Navigation & UX Improvements
+
+#### Added
+- **Independent daily logs page** - Completely separate navigation flow from project sidebar
+- **Project-centric view** - Shows project cards first, then logs when project is clicked
+- **State-based navigation** - Uses local state instead of URL navigation for cleaner UX
+- **Back button navigation** - Easy return to projects grid from log view
+- **Search functionality** - Filter projects by name or client
+- **New Log button** - Create logs directly from the independent daily logs page
+
+#### Changed
+- **Separated daily log features** - Split into two distinct menu items:
+  - "Daily Logs" (/daily-logs) - View and manage field logs by project
+  - "Daily Log Requests" (/daily-logs/requests) - Track SMS requests
+- **Simplified camera component** - Fixed video element lifecycle for reliable camera capture
+- **Improved accessibility** - Added VisuallyHidden DialogTitle for Radix UI dialogs
+- **Enhanced project cards** - Better visual design with gradients and hover effects
+- **Streamlined buttons** - Request Payment and Edit on single row, icon-only Edit button
+
+#### Fixed
+- **Camera black screen issue** - Fixed video element timing with proper event handlers
+- **Submit navigation delay** - Added 500ms timeout for reliable page transitions
+- **URL encoding** - Properly encode returnTo parameters with special characters
+- **React Hooks order** - Fixed hooks called after conditional returns
+- **API flexibility** - Made project_id optional in daily logs API endpoint
+
+#### Technical Details
+- Created useProjects hook for fetching project list
+- Created useAllDailyLogs hook for fetching logs across all projects
+- Implemented conditional rendering based on selectedProjectId state
+- Added comprehensive event handlers (onLoadedMetadata, onCanPlay, onPlaying)
+- Used encodeURIComponent for returnTo parameter URL safety
+
+---
+
 ## [2.1.0] - 2026-03-13
 
 ### Daily Logs - Major Enhancement
