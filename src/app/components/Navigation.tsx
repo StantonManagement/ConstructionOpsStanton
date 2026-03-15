@@ -7,7 +7,7 @@ import {
   HardHat, Building,
   CreditCard, Wallet,
   LayoutDashboard, Box, Copy, AlertTriangle, Folder, BarChart3, LogOut, FileText, Users, UserCog,
-  Truck, Package, ListChecks, Activity
+  Truck, Package, ListChecks, Activity, MessageSquare
 } from 'lucide-react';
 import { Project } from '@/context/DataContext';
 import { supabase } from '@/lib/supabaseClient';
@@ -337,11 +337,23 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab }) => {
             setActiveTab={setActiveTab}
             icon={<FileText className="w-5 h-5"/>}
             href="/daily-logs"
-            isActive={pathname?.startsWith('/daily-logs')}
-            badge={notificationCounts['daily-logs']}
+            isActive={pathname === '/daily-logs' && !pathname.includes('/requests')}
             onMobileClick={closeMobileMenu}
           >
             Daily Logs
+          </NavButton>
+
+          <NavButton
+            id="daily-log-requests"
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            icon={<MessageSquare className="w-5 h-5"/>}
+            href="/daily-logs/requests"
+            isActive={pathname === '/daily-logs/requests'}
+            badge={notificationCounts['daily-logs']}
+            onMobileClick={closeMobileMenu}
+          >
+            Daily Log Requests
           </NavButton>
 
           {/* Divider */}

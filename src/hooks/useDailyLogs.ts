@@ -71,6 +71,24 @@ export function useDailyLogs(projectId?: number) {
   });
 }
 
+// Fetch ALL daily logs across all projects
+export function useAllDailyLogs() {
+  return useQuery({
+    queryKey: ['daily-logs', 'all'],
+    queryFn: async () => {
+      const response = await fetch('/api/daily-logs');
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to fetch daily logs');
+      }
+
+      const result = await response.json();
+      return result.data as DailyLog[];
+    },
+  });
+}
+
 // Fetch single daily log with details
 export function useDailyLog(logId?: number) {
   return useQuery({
